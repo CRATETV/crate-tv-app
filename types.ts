@@ -116,6 +116,7 @@ export interface RokuMovie extends Movie {
   isUnlocked?: boolean;
   purchaseUrl?: string;
   isWatchPartyEnabled?: boolean;
+  isFestival?: boolean;
   bufferingStrategy?: string;
   bufferSize?: number;
   minBandwidth?: number;
@@ -131,6 +132,7 @@ export interface RokuFeed {
     title: string; 
     type?: 'standard' | 'ranked' | 'live';
     categoryType?: string; // Identifier for row logic
+    festivalIsLive?: boolean;
     showNumbers?: boolean;
     children: RokuMovie[];
   }[];

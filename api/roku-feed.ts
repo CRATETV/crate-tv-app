@@ -23,7 +23,7 @@ function isReleased(movie: Movie | undefined | null): boolean {
     return !date || date <= new Date();
 }
 
-function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = false, isLiveOverride: boolean = false): RokuMovie {
+function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = false, isLiveOverride: boolean = false, isFestivalOverride: boolean = false): RokuMovie {
     const fullStreamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const trailerUrl = sanitizeUrl(movie.trailer || '');
     
@@ -82,6 +82,7 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
         salePrice: movie.salePrice,
         live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true || isLiveOverride,
         isWatchPartyEnabled: movie.isWatchPartyEnabled === true,
+        isFestival: isFestivalOverride,
         isUnlocked: isUnlocked,
         purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`
     } as RokuMovie;
@@ -126,18 +127,40 @@ export async function GET(request: Request) {
 
     if (db) {
         console.log("Fetching data from Firestore...");
-        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, partiesSnap] = await Promise.all([
+        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, configSettingsDoc, partiesSnap] = await Promise.all([
             db.collection('roku').doc('config').get(),
             db.collection('roku_assets').get(),
             db.collection('view_counts').get(),
             db.collection('movies').get(),
             db.collection('categories').get(),
             db.collection('content').doc('settings').get(),
+            db.collection('settings').doc('config').get(),
             db.collection('watch_parties').get()
         ]);
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
-        if (settingsDoc.exists) {
+        
+        // Crate Fest Config (from settings/config)
+        if (configSettingsDoc.exists) {
+            const configData = configSettingsDoc.data();
+            if (configData?.crateFestConfig) {
+                const fest = configData.crateFestConfig;
+                // isLive is the primary flag requested by the user
+                const isCrateFestLive = fest.isLive === true;
+                const isCrateFestActive = fest.isActive && fest.startDate && fest.endDate && 
+                                        (new Date() >= new Date(fest.startDate) && new Date() <= new Date(fest.endDate));
+                
+                if (isCrateFestActive || isCrateFestLive) {
+                    (config as any).crateFest = {
+                        ...fest,
+                        isLive: isCrateFestLive
+                    };
+                }
+            }
+        }
+
+        // Fallback or legacy settings (from content/settings)
+        if (settingsDoc.exists && !(config as any).crateFest) {
             const settingsData = settingsDoc.data();
             if (settingsData?.crateFestConfig) {
                 const fest = settingsData.crateFestConfig;
@@ -266,6 +289,7 @@ export async function GET(request: Request) {
     // 1. CRATE FEST (Highest Priority)
     if ((config as any).crateFest) {
         const fest = (config as any).crateFest;
+        const isLive = fest.isLive === true;
         const movieKeys = fest.movieBlocks?.flatMap((b: any) => b.movieKeys) || [];
         const children = movieKeys
             .map((k: string) => moviesObj[k])
@@ -273,7 +297,7 @@ export async function GET(request: Request) {
             .map((m: Movie) => {
                 const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
-                return formatMovieForRoku(m, assets[m.key], isUnlocked, true);
+                return formatMovieForRoku(m, assets[m.key], isUnlocked, isLive, true);
             });
         
         if (children.length > 0) {
@@ -281,6 +305,7 @@ export async function GET(request: Request) {
                 title: fest.title || "Film Festival",
                 type: 'standard',
                 categoryType: 'crateFest',
+                festivalIsLive: isLive,
                 children
             });
         }
@@ -522,7 +547,7 @@ export async function GET(request: Request) {
                 const isExplicitlyLive = (config as any).activeParties?.[m.key];
                 const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
-                return formatMovieForRoku(m, assets[m.key], isUnlocked, isCrateFest || isExplicitlyLive);
+                return formatMovieForRoku(m, assets[m.key], isUnlocked, isCrateFest || isExplicitlyLive, isCrateFest);
             })
     };
 

@@ -106,7 +106,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       previewLimitTimeoutRef.current = setTimeout(() => {
         stopPreview();
       }, 45000);
-    }, 600);
+    }, 1000);
   };
 
   const handleMouseLeave = () => {

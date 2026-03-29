@@ -51,7 +51,7 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { toggleLikeMovie, likedMovies: likedMoviesArray } = useAuth();
+  const { toggleLikeMovie, likedMovies: likedMoviesArray, user, updatePlaybackProgress, markAsWatched } = useAuth();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
   const [allCategories, setAllCategories] = useState<Record<string, Category>>({});
@@ -62,7 +62,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEnded, setIsEnded] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
   const hasTrackedViewRef = useRef(false);
+  const hasResumedRef = useRef(false);
 
   const [playerMode, setPlayerMode] = useState<'poster' | 'full'>('poster');
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,8 +73,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
+  
+  // Player Settings
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showSettings, setShowSettings] = useState(false);
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(true);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
+  const isComingSoon = !released;
+
+  const handleRemindMe = () => {
+      toggleLikeMovie(movieKey);
+      // In a real app, we'd also schedule a notification here
+      alert("We'll remind you when this title is released!");
+  };
 
   const playContent = useCallback(() => {
     if (videoRef.current) {
@@ -84,15 +98,50 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 body: JSON.stringify({ movieKey: movie.key }),
             }).catch(() => {});
         }
+
+        // Resume Playback Logic
+        if (!hasResumedRef.current && user?.playbackProgress?.[movieKey]) {
+            const savedTime = user.playbackProgress[movieKey];
+            // Only resume if not near the end
+            if (savedTime > 10 && savedTime < (videoRef.current.duration - 30)) {
+                videoRef.current.currentTime = savedTime;
+                console.log(`Resuming playback at ${savedTime}s`);
+            }
+            hasResumedRef.current = true;
+        }
+
         videoRef.current.play().catch(e => console.error("Content play failed", e));
     }
-  }, [movie?.key]);
+  }, [movie?.key, movieKey, user?.playbackProgress]);
 
   useEffect(() => {
     if (playerMode === 'full' && !hasTrackedViewRef.current) {
         playContent();
     }
   }, [playerMode, playContent]);
+
+  // Periodic Progress Saving
+  useEffect(() => {
+    if (playerMode !== 'full' || !videoRef.current || isEnded) return;
+
+    const interval = setInterval(() => {
+        if (videoRef.current && !videoRef.current.paused) {
+            const currentTime = Math.floor(videoRef.current.currentTime);
+            if (currentTime > 0) {
+                updatePlaybackProgress(movieKey, currentTime);
+            }
+        }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [playerMode, movieKey, updatePlaybackProgress, isEnded]);
+
+  // Apply Playback Speed
+  useEffect(() => {
+    if (videoRef.current) {
+        videoRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed, playerMode]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -115,6 +164,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               setMovie({ ...sourceMovie });
               if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
                 setPlayerMode('full');
+                setIsEnded(false);
               } else {
                 setPlayerMode('poster');
               }
@@ -174,17 +224,105 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-0' : ''}`}>
             <div ref={videoContainerRef} className={`relative w-full ${playerMode === 'full' ? 'aspect-video' : 'min-h-[85vh]'} bg-black secure-video-container group overflow-hidden shadow-2xl`}>
                 {playerMode === 'full' && (
-                    <video 
-                        ref={videoRef} 
-                        src={movie.fullMovie} 
-                        className={`w-full h-full transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`}
-                        controls={!isEnded}
-                        playsInline
-                        autoPlay
-                        onContextMenu={(e) => e.preventDefault()} 
-                        controlsList="nodownload"
-                        onEnded={() => setIsEnded(true)}
-                    />
+                    <div className="relative w-full h-full">
+                        <video 
+                            ref={videoRef} 
+                            src={movie.fullMovie} 
+                            className={`w-full h-full transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`}
+                            controls
+                            playsInline
+                            autoPlay
+                            onContextMenu={(e) => e.preventDefault()} 
+                            controlsList="nodownload"
+                            onEnded={() => {
+                                setIsEnded(true);
+                                setIsPaused(true);
+                                updatePlaybackProgress(movieKey, 0); // Reset progress when finished
+                                markAsWatched(movieKey);
+                            }}
+                            onPlay={() => {
+                                setIsEnded(false);
+                                setIsPaused(false);
+                            }}
+                            onPause={() => setIsPaused(true)}
+                        >
+                            {movie.subtitleUrl && subtitlesEnabled && (
+                                <track 
+                                    label="English"
+                                    kind="subtitles"
+                                    srcLang="en"
+                                    src={movie.subtitleUrl}
+                                    default
+                                />
+                            )}
+                        </video>
+
+                        {/* Play Button Overlay (if autoplay fails) */}
+                        {!isEnded && isPaused && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                <button 
+                                    onClick={() => videoRef.current?.play()}
+                                    className="p-8 bg-red-600/90 rounded-full text-white shadow-2xl transform transition-transform hover:scale-110 pointer-events-auto"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Player Settings Gear */}
+                        {!isEnded && (
+                            <div className="absolute top-4 right-4 z-50">
+                                <button 
+                                    onClick={() => setShowSettings(!showSettings)}
+                                    className="p-3 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white hover:bg-white/20 transition-all"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-transform duration-500 ${showSettings ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 00-1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </button>
+
+                                {showSettings && (
+                                    <div className="absolute top-full right-0 mt-2 w-64 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+                                        <div className="space-y-6">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Playback Speed</p>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {[0.75, 1, 1.25, 1.5, 2].map(speed => (
+                                                        <button 
+                                                            key={speed}
+                                                            onClick={() => setPlaybackSpeed(speed)}
+                                                            className={`py-2 rounded-lg text-[10px] font-bold transition-all ${playbackSpeed === speed ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                                                        >
+                                                            {speed}x
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {movie.subtitleUrl && (
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Subtitles</p>
+                                                    <button 
+                                                        onClick={() => setSubtitlesEnabled(!subtitlesEnabled)}
+                                                        className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-between px-4 ${subtitlesEnabled ? 'bg-white text-black' : 'bg-white/5 text-gray-400'}`}
+                                                    >
+                                                        English CC
+                                                        <div className={`w-8 h-4 rounded-full relative transition-colors ${subtitlesEnabled ? 'bg-black' : 'bg-gray-700'}`}>
+                                                            <div className={`absolute top-1 w-2 h-2 rounded-full bg-white transition-all ${subtitlesEnabled ? 'right-1' : 'left-1'}`}></div>
+                                                        </div>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {playerMode !== 'full' && (
@@ -214,13 +352,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-6">
-                                    <button 
-                                        onClick={() => setPlayerMode('full')} 
-                                        className="group flex items-center gap-4 bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
-                                        Watch Now
-                                    </button>
+                                    {isComingSoon ? (
+                                        <button 
+                                            onClick={handleRemindMe}
+                                            className={`group flex items-center gap-4 px-10 py-5 rounded-full font-black uppercase tracking-widest transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)] ${isLiked ? 'bg-white/10 text-white border border-white/20' : 'bg-white text-black hover:bg-red-600 hover:text-white'}`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isLiked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                            </svg>
+                                            {isLiked ? 'Reminder Set' : 'Remind Me'}
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={() => setPlayerMode('full')} 
+                                            className="group flex items-center gap-4 bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                                            Watch Now
+                                        </button>
+                                    )}
                                     
                                     <button 
                                         onClick={() => setIsSupportModalOpen(true)}
@@ -256,10 +406,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                             {movie.cast.length > 3 && <span className="text-xs font-bold text-white/40">+{movie.cast.length - 3} More</span>}
                                         </div>
                                         <button 
-                                            onClick={() => setPlayerMode('full')}
+                                            onClick={() => isComingSoon ? handleRemindMe() : setPlayerMode('full')}
                                             className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition-colors text-[10px]"
                                         >
-                                            Unlock Now
+                                            {isComingSoon ? (isLiked ? 'Reminder Set' : 'Remind Me') : 'Unlock Now'}
                                         </button>
                                     </div>
                                 </div>

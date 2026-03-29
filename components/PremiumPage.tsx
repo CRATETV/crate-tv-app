@@ -49,7 +49,10 @@ const PremiumPage: React.FC = () => {
         return categories.premium.movieKeys.map(key => movies[key]).filter(Boolean);
     }, [movies, categories]);
 
-    const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
+    const handleSelectMovie = (movie: Movie) => {
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
     const handleCloseDetailsModal = () => setDetailsMovie(null);
     const handleSelectActor = (actor: Actor) => setSelectedActor(actor);
     const handleCloseActorModal = () => setSelectedActor(null);

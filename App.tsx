@@ -265,12 +265,9 @@ const App: React.FC = () => {
             window.history.pushState({}, '', `/watchparty/${movie.key}`);
             window.dispatchEvent(new Event('pushstate'));
         } else {
-            if (movie.isWatchPartyEnabled && !isActuallyLive) {
-                setDetailsMovie(movie);
-            } else {
-                window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
-                window.dispatchEvent(new Event('pushstate'));
-            }
+            // Always go to movie page with play=true
+            window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+            window.dispatchEvent(new Event('pushstate'));
         }
     };
 
@@ -432,7 +429,7 @@ const App: React.FC = () => {
                             {vaultMovies.length > 0 && (
                                 <CrateVaultRow 
                                     movies={vaultMovies} 
-                                    onSelectMovie={handleSelectMovie} 
+                                    onSelectMovie={handlePlayMovie} 
                                     likedMovies={likedMovies} 
                                     onToggleLike={toggleLikeMovie} 
                                     watchlist={watchlist} 
@@ -442,7 +439,7 @@ const App: React.FC = () => {
                             )}
 
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
-                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
+                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
@@ -482,7 +479,7 @@ const App: React.FC = () => {
             <BackToTopButton />
             <BottomNavBar onSearchClick={handleSearchClick} />
 
-            {detailsMovie && <MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} />}
+            {detailsMovie && <MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} />}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
             {isMobileSearchOpen && <SearchOverlay searchQuery={searchQuery} onSearch={onSearch} onClose={() => setIsMobileSearchOpen(false)} results={searchResults} onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }} />}
         </div>
