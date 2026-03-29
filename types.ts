@@ -127,6 +127,7 @@ export interface RokuMovie extends Movie {
 export interface RokuFeed {
   version: number;
   timestamp: string;
+  announcement?: string;
   heroItems: RokuMovie[];
   categories: { 
     title: string; 

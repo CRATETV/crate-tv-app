@@ -127,7 +127,7 @@ export async function GET(request: Request) {
 
     if (db) {
         console.log("Fetching data from Firestore...");
-        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, configSettingsDoc, partiesSnap] = await Promise.all([
+        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, configSettingsDoc, partiesSnap, rokuSettingsDoc] = await Promise.all([
             db.collection('roku').doc('config').get(),
             db.collection('roku_assets').get(),
             db.collection('view_counts').get(),
@@ -135,10 +135,19 @@ export async function GET(request: Request) {
             db.collection('categories').get(),
             db.collection('content').doc('settings').get(),
             db.collection('settings').doc('config').get(),
-            db.collection('watch_parties').get()
+            db.collection('watch_parties').get(),
+            db.collection('settings').doc('roku').get()
         ]);
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
+        
+        // Roku Announcement Banner
+        if (rokuSettingsDoc.exists) {
+            const rokuData = rokuSettingsDoc.data();
+            if (rokuData?.announcement) {
+                (config as any).announcement = rokuData.announcement;
+            }
+        }
         
         // Crate Fest Config (from settings/config)
         if (configSettingsDoc.exists) {
@@ -531,6 +540,7 @@ export async function GET(request: Request) {
     const response: RokuFeed = {
         version: Date.now(),
         timestamp: new Date().toISOString(),
+        announcement: (config as any).announcement || '',
         heroItems: (categories[0]?.children || publicSquare[0]?.children || []).slice(0, 5),
         categories,
         publicSquare,

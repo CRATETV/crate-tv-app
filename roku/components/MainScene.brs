@@ -2,6 +2,8 @@ sub init()
     m.viewport = m.top.findNode("viewport")
     m.navBar = m.top.findNode("navBar")
     m.spinner = m.top.findNode("spinner")
+    m.announcementBanner = m.top.findNode("announcementBanner")
+    m.announcementText = m.top.findNode("announcementText")
     
     ' Get device ID for personalized feed
     di = CreateObject("roDeviceInfo")
@@ -18,6 +20,20 @@ sub onContentReady()
     m.spinner.visible = false
     m.viewport.visible = true
     m.navBar.visible = true
+    
+    ' Handle Announcement Banner (Requirement 6.3)
+    announcement = m.contentTask.announcement
+    if announcement <> invalid and announcement <> ""
+        m.announcementText.text = announcement
+        m.announcementBanner.visible = true
+        ' Shift UI down to make room for banner
+        m.navBar.translation = [0, 90] ' 40 + 50
+        m.viewport.translation = [0, 210] ' 160 + 50
+    else
+        m.announcementBanner.visible = false
+        m.navBar.translation = [0, 40]
+        m.viewport.translation = [0, 160]
+    end if
     
     ShowHome()
 end sub

@@ -14,6 +14,7 @@ sub getContent()
         if json <> ""
             data = ParseJson(json)
             if data <> invalid
+                if data.announcement <> invalid then m.top.announcement = data.announcement
                 m.top.content = CreateContentTree(data)
                 return
             end if

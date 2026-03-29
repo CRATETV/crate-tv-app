@@ -6,6 +6,8 @@
         <field id="url" type="string" />
         <!-- The parsed content result -->
         <field id="content" type="node" />
+        <!-- The announcement banner text -->
+        <field id="announcement" type="string" />
     </interface>
     
     <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />

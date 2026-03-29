@@ -13,6 +13,20 @@
     <children>
         <!-- Pure Black Cinematic Base -->
         <Rectangle width="1920" height="1080" color="0x050505FF" />
+        
+        <!-- Announcement Banner (Requirement 6.2) -->
+        <Group id="announcementBanner" visible="false">
+            <Rectangle width="1920" height="50" color="0xEF4444FF" />
+            <Label 
+                id="announcementText" 
+                width="1920" 
+                height="50" 
+                horizAlign="center" 
+                vertAlign="center" 
+                font="font:SmallBoldSystemFont" 
+                color="0xFFFFFFFF" 
+            />
+        </Group>
 
         <!-- Initialized as hidden to prevent text flashes -->
         <Header id="navBar" translation="[0, 40]" visible="false" />

@@ -243,6 +243,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} 
                                         controls={true} 
                                         playsInline 
+                                        autoPlay
                                         onPause={() => !isEnded && setIsPaused(true)} 
                                         onPlay={() => {
                                             setIsEnded(false);
