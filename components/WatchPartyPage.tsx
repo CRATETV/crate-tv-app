@@ -147,6 +147,7 @@ const EmbeddedChat = React.memo<{
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isTogglingQA, setIsTogglingQA] = useState(false);
+    const [isPushingPoll, setIsPushingPoll] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -215,6 +216,39 @@ const EmbeddedChat = React.memo<{
             alert("Failed to toggle Q&A mode.");
         } finally {
             setIsTogglingQA(false);
+        }
+    };
+
+    const handlePushPoll = async () => {
+        if (!backstageKey) return;
+        const question = window.prompt("Enter Poll Question:");
+        if (!question) return;
+        const optionsInput = window.prompt("Enter Options (comma separated):", "Yes, No");
+        if (!optionsInput) return;
+        const options = optionsInput.split(',').map(o => o.trim()).filter(Boolean);
+        if (options.length < 2) {
+            alert("Minimum 2 options required.");
+            return;
+        }
+
+        setIsPushingPoll(true);
+        try {
+            const res = await fetch('/api/create-poll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    movieKey: partyKey, 
+                    backstageKey, 
+                    question, 
+                    options 
+                }),
+            });
+            if (!res.ok) throw new Error("Failed to push poll.");
+        } catch (error) {
+            console.error("Push Poll Error:", error);
+            alert("Failed to push poll.");
+        } finally {
+            setIsPushingPoll(false);
         }
     };
 
@@ -295,6 +329,14 @@ const EmbeddedChat = React.memo<{
                 <div className="flex items-center gap-3">
                     {isBackstageVerified && (
                         <>
+                            <button 
+                                onClick={handlePushPoll}
+                                disabled={isPushingPoll}
+                                className="text-[8px] font-black uppercase tracking-widest text-pink-500 hover:text-white transition-colors flex items-center gap-1"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                Push Poll
+                            </button>
                             <button 
                                 onClick={toggleQA}
                                 disabled={isTogglingQA}
@@ -790,6 +832,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({ emoji, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
     };
 
+    const handleBackstageVerify = useCallback((key: string) => {
+        if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
+            setIsBackstageVerified(true);
+            unlockWatchParty(movieKey);
+        } else {
+            alert("Invalid Protocol Key.");
+        }
+    }, [partyState?.backstageKey, movieKey, unlockWatchParty]);
+
+    const emptyDirectors = useMemo(() => [] as string[], []);
+
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
 
     if (isControllerMode) {
@@ -816,8 +869,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         );
     }
 
+    const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+    useEffect(() => {
+        const handleFocus = () => setIsKeyboardOpen(true);
+        const handleBlur = () => setIsKeyboardOpen(false);
+        
+        window.addEventListener('focusin', handleFocus);
+        window.addEventListener('focusout', handleBlur);
+        
+        return () => {
+            window.removeEventListener('focusin', handleFocus);
+            window.removeEventListener('focusout', handleBlur);
+        };
+    }, []);
+
     return (
-        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
+        <div className={`flex flex-col ${isKeyboardOpen ? 'h-screen' : 'h-[100svh]'} bg-black text-white overflow-hidden transition-all duration-300`}>
                 <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
                 <div className="flex-grow flex flex-col relative h-full">
                     <div className="p-3 bg-black/90 flex items-center justify-between border-b border-white/5">
@@ -965,6 +1033,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         webkit-playsinline="true"
                                         controls={false}
                                         preload="auto"
+                                        disableRemotePlayback
+                                        style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                                         onLoadedMetadata={() => {
                                             syncClock();
                                         }}
@@ -1016,23 +1086,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ))}
                     </div>
 
-                    <div className="md:hidden h-80 flex flex-col overflow-hidden bg-[#0a0a0a]">
+                    <div className={`md:hidden ${isKeyboardOpen ? 'h-40' : 'h-80'} flex flex-col overflow-hidden bg-[#0a0a0a] transition-all duration-300`}>
                         <EmbeddedChat 
                             partyKey={movieKey} 
-                            directors={[]} 
+                            directors={emptyDirectors} 
                             isQALive={partyState?.isQALive} 
                             qaEmbed={partyState?.qaEmbed}
                             user={user} 
                             isBackstageVerified={isBackstageVerified} 
                             backstageKey={partyState?.backstageKey}
-                            onBackstageVerify={(key) => {
-                                if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-                                    setIsBackstageVerified(true);
-                                    unlockWatchParty(movieKey);
-                                } else {
-                                    alert("Invalid Protocol Key.");
-                                }
-                            }}
+                            onBackstageVerify={handleBackstageVerify}
                         />
                     </div>
                 </div>
@@ -1040,20 +1103,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 <div className="hidden md:flex w-96 flex-shrink-0 h-full border-l border-white/5">
                     <EmbeddedChat 
                         partyKey={movieKey} 
-                        directors={[]} 
+                        directors={emptyDirectors} 
                         isQALive={partyState?.isQALive} 
                         qaEmbed={partyState?.qaEmbed}
                         user={user} 
                         isBackstageVerified={isBackstageVerified} 
                         backstageKey={partyState?.backstageKey}
-                        onBackstageVerify={(key) => {
-                            if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-                                setIsBackstageVerified(true);
-                                unlockWatchParty(movieKey);
-                            } else {
-                                alert("Invalid Protocol Key.");
-                            }
-                        }}
+                        onBackstageVerify={handleBackstageVerify}
                     />
                 </div>
             </div>

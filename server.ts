@@ -13,6 +13,16 @@ import { POST as getSalesData } from './api/get-sales-data.js';
 import { POST as getGrowthAnalytics } from './api/get-growth-analytics.js';
 import { POST as trackView } from './api/track-view.js';
 import { POST as getRecommendations } from './api/get-recommendations.js';
+import { POST as createPoll } from './api/create-poll.js';
+import { POST as votePoll } from './api/vote-poll.js';
+import { POST as endPoll } from './api/end-poll.js';
+import { POST as claimTicketStub } from './api/claim-ticket-stub.js';
+import { POST as generateHighlights } from './api/generate-highlights.js';
+import { POST as toggleQA } from './api/toggle-qa.js';
+import { POST as sendChatMessage } from './api/send-chat-message.js';
+import { POST as clearChat } from './api/clear-chat.js';
+import { POST as toggleLike } from './api/toggle-like.js';
+import { POST as trackSubscription } from './api/track-subscription.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +71,16 @@ async function startServer() {
   app.post('/api/get-growth-analytics', wrapHandler(getGrowthAnalytics));
   app.post('/api/track-view', wrapHandler(trackView));
   app.post('/api/get-recommendations', wrapHandler(getRecommendations));
+  app.post('/api/create-poll', wrapHandler(createPoll));
+  app.post('/api/vote-poll', wrapHandler(votePoll));
+  app.post('/api/end-poll', wrapHandler(endPoll));
+  app.post('/api/claim-ticket-stub', wrapHandler(claimTicketStub));
+  app.get('/api/generate-highlights', wrapHandler(generateHighlights));
+  app.post('/api/toggle-qa', wrapHandler(toggleQA));
+  app.post('/api/send-chat-message', wrapHandler(sendChatMessage));
+  app.post('/api/clear-chat', wrapHandler(clearChat));
+  app.post('/api/toggle-like', wrapHandler(toggleLike));
+  app.post('/api/track-subscription', wrapHandler(trackSubscription));
 
   // Health check
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

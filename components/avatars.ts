@@ -101,32 +101,27 @@ export const avatars: { [key: string]: string } = {
     `,
     crate_fire: `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="100" height="100" rx="20" fill="#DB2777"/>
-            <text x="50" y="70" font-size="60" text-anchor="middle">🔥</text>
+            <text x="50" y="70" font-size="80" text-anchor="middle">🔥</text>
         </svg>
     `,
     crate_heart: `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="100" height="100" rx="20" fill="#DB2777"/>
-            <text x="50" y="70" font-size="60" text-anchor="middle">❤️</text>
+            <text x="50" y="70" font-size="80" text-anchor="middle">❤️</text>
         </svg>
     `,
     crate_wow: `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="100" height="100" rx="20" fill="#DB2777"/>
-            <text x="50" y="70" font-size="60" text-anchor="middle">😲</text>
+            <text x="50" y="70" font-size="80" text-anchor="middle">😲</text>
         </svg>
     `,
     crate_clap: `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="100" height="100" rx="20" fill="#DB2777"/>
-            <text x="50" y="70" font-size="60" text-anchor="middle">👏</text>
+            <text x="50" y="70" font-size="80" text-anchor="middle">👏</text>
         </svg>
     `,
     crate_sad: `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="100" height="100" rx="20" fill="#DB2777"/>
-            <text x="50" y="70" font-size="60" text-anchor="middle">😢</text>
+            <text x="50" y="70" font-size="80" text-anchor="middle">😢</text>
         </svg>
     `,
 };

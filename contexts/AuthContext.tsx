@@ -324,12 +324,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }).catch(err => console.warn('Subscription tracking failed', err));
     };
 
-    const value = {
+    const value = useMemo(() => ({
         user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
         watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
         unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
-    };
+    }), [
+        user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
+        watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
+        hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
+        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
+    ]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
