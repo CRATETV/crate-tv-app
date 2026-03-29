@@ -117,16 +117,29 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   };
 
   const playContent = useCallback(async () => {
-    if (videoRef.current && movie?.key) {
-        try {
-            markAsWatched(movie.key);
-            
-            // Resume from last position
-            const savedProgress = user?.playbackProgress?.[movie.key];
-            if (savedProgress && savedProgress > 10 && !isEnded) {
-                videoRef.current.currentTime = savedProgress;
-            }
+    if (!videoRef.current || !movie?.key) return;
+    
+    const video = videoRef.current;
+    
+    try {
+        // Resume from last position
+        const savedProgress = user?.playbackProgress?.[movie.key];
+        if (savedProgress && savedProgress > 10 && !isEnded && video.currentTime < 1) {
+            video.currentTime = savedProgress;
+        }
 
+        // Apply playback speed if valid
+        if (settings.playbackSpeed && settings.playbackSpeed > 0) {
+            video.playbackRate = settings.playbackSpeed;
+        }
+        
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+            await playPromise;
+            setIsPaused(false);
+            
+            // Track view after successful play
+            markAsWatched(movie.key);
             if (!hasTrackedViewRef.current) {
                 hasTrackedViewRef.current = true;
                 const token = await getUserIdToken();
@@ -138,20 +151,29 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     }).catch(() => {});
                 }
             }
-            
-            // Apply playback speed before playing
-            if (settings.playbackSpeed) {
-                videoRef.current.playbackRate = settings.playbackSpeed;
-            }
-            
-            await videoRef.current.play();
-            setIsPaused(false);
-        } catch (e) {
-            console.error("Playback failed:", e);
-            setIsPaused(true);
         }
+    } catch (e) {
+        console.error("Playback failed:", e);
+        setIsPaused(true);
     }
   }, [movie, getUserIdToken, markAsWatched, user?.playbackProgress, isEnded, settings.playbackSpeed]);
+
+  useEffect(() => {
+      if (playerMode === 'full' && hasAccess && videoRef.current) {
+          playContent();
+      }
+  }, [playerMode, hasAccess, movieKey, playContent]);
+
+  // Global click listener to kickstart playback if blocked by browser
+  useEffect(() => {
+      const handleGlobalClick = () => {
+          if (playerMode === 'full' && isPaused && videoRef.current && videoRef.current.currentTime < 1) {
+              playContent();
+          }
+      };
+      window.addEventListener('click', handleGlobalClick);
+      return () => window.removeEventListener('click', handleGlobalClick);
+  }, [playerMode, isPaused, playContent]);
 
   const toggleManualPause = (e: React.MouseEvent) => {
       if (isEnded) return;
@@ -174,7 +196,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   useEffect(() => {
       if (playerMode === 'full' && videoRef.current && hasAccess) {
-          playContent();
+          // Playback is now handled by the dedicated playContent effect
       }
   }, [playerMode, hasAccess, playContent, currentSearch]);
 
@@ -221,7 +243,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} 
                                         controls={true} 
                                         playsInline 
-                                        autoPlay 
                                         onPause={() => !isEnded && setIsPaused(true)} 
                                         onPlay={() => {
                                             setIsEnded(false);

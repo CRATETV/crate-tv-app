@@ -26,6 +26,7 @@ import UserIntelligenceTab from './components/UserIntelligenceTab';
 import AnalyticsPage from './components/AnalyticsPage';
 import RokuForge from './components/RokuForge';
 import RokuAnalyticsTab from './components/RokuAnalyticsTab';
+import RokuManagementTab from './components/RokuManagementTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -45,6 +46,7 @@ const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Stats',
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
+    rokuControl: '📺 Roku Control',
     forge: '🔨 Roku Forge',
     rokuAnalytics: '📈 Roku Intel',
     audit: '📜 Audit Log',
@@ -369,6 +371,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
+                    {activeTab === 'rokuControl' && <RokuManagementTab allMovies={Object.values(movies) as Movie[]} onSaveMovie={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'forge' && <RokuForge />}
                     {activeTab === 'rokuAnalytics' && <RokuAnalyticsTab />}
                     {activeTab === 'audit' && <AuditTerminal />}

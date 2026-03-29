@@ -7,6 +7,7 @@ import RokuAssetManager from './RokuAssetManager';
 import RokuStreamManager from './RokuStreamManager';
 import RokuPreviewTab from './RokuPreviewTab';
 import RokuDeployTab from './RokuDeployTab';
+import RokuAnnouncementManager from './RokuAnnouncementManager';
 import { useRokuConfig } from '../hooks/useRokuConfig';
 
 interface RokuManagementTabProps {
@@ -15,7 +16,7 @@ interface RokuManagementTabProps {
 }
 
 const RokuManagementTab: React.FC<RokuManagementTabProps> = ({ allMovies, onSaveMovie }) => {
-    const [activeTab, setActiveTab] = useState<'rows' | 'hero' | 'assets' | 'stream' | 'preview' | 'deploy' | 'forge'>('rows');
+    const [activeTab, setActiveTab] = useState<'rows' | 'hero' | 'assets' | 'stream' | 'preview' | 'deploy' | 'forge' | 'announcement'>('rows');
     const { config, loading, saveConfig } = useRokuConfig();
 
     if (loading) return <div className="h-64 flex items-center justify-center"><div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -41,6 +42,7 @@ const RokuManagementTab: React.FC<RokuManagementTabProps> = ({ allMovies, onSave
                     { id: 'rows', label: '📂 Rows', color: 'bg-indigo-600' },
                     { id: 'hero', label: '⭐ Spotlight', color: 'bg-red-600' },
                     { id: 'assets', label: '🖼️ Art', color: 'bg-purple-600' },
+                    { id: 'announcement', label: '📢 Announcement', color: 'bg-orange-600' },
                     { id: 'stream', label: '⚡ Compatibility', color: 'bg-cyan-600' },
                     { id: 'deploy', label: '🚀 Deploy', color: 'bg-white text-black' }
                 ].map(tab => (
@@ -58,6 +60,7 @@ const RokuManagementTab: React.FC<RokuManagementTabProps> = ({ allMovies, onSave
                 {activeTab === 'rows' && <RokuRowManager />}
                 {activeTab === 'hero' && <RokuHeroManager allMovies={allMovies} />}
                 {activeTab === 'assets' && <RokuAssetManager allMovies={allMovies} />}
+                {activeTab === 'announcement' && <RokuAnnouncementManager />}
                 {activeTab === 'stream' && <RokuStreamManager allMovies={allMovies} onSave={onSaveMovie} />}
                 {activeTab === 'deploy' && <RokuDeployTab />}
             </div>
