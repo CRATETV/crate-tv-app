@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, backstageKey, isQALive, qaEmbed } = await request.json();
+    const { movieKey, backstageKey, isQALive, qaEmbed, isWebcamLive } = await request.json();
 
     if (!movieKey || !backstageKey) {
       return new Response(JSON.stringify({ error: 'Movie key and Backstage key required.' }), { status: 400 });
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     await partyRef.update({
       isQALive: !!isQALive,
       qaEmbed: qaEmbed || '',
+      isWebcamLive: !!isWebcamLive,
       lastUpdated: FieldValue.serverTimestamp()
     });
 

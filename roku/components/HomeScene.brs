@@ -38,5 +38,5 @@ sub onItemSelected()
     row = m.rowList.content.getChild(selectedIndex[0])
     item = row.getChild(selectedIndex[1])
     
-    m.top.command = { action: "details", content: item }
+    m.top.command = { action: "play", content: item }
 end sub

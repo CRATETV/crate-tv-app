@@ -40,6 +40,11 @@ function CreateContentTree(data)
                 item.description = itemData.description
                 item.hdPosterUrl = itemData.hdPosterUrl
                 item.url = itemData.streamUrl
+                if itemData.streamFormat <> invalid
+                    item.streamFormat = itemData.streamFormat
+                else
+                    item.streamFormat = "mp4"
+                end if
                 
                 ' Custom fields
                 item.addFields({
@@ -104,6 +109,11 @@ function CreateContentTree(data)
             item.description = itemData.description
             item.hdPosterUrl = itemData.hdPosterUrl
             item.url = itemData.streamUrl
+            if itemData.streamFormat <> invalid
+                item.streamFormat = itemData.streamFormat
+            else
+                item.streamFormat = "mp4"
+            end if
             
             ' Custom fields
             item.addFields({

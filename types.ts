@@ -276,6 +276,7 @@ export interface WatchPartyState {
   backstageKey?: string;
   isQALive?: boolean;
   qaEmbed?: string;
+  isWebcamLive?: boolean;
   activeBlockId?: string;
   activeMovieIndex?: number;
   actualStartTime?: any; 

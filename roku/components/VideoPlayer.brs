@@ -16,8 +16,8 @@ sub onContentChange()
             m.paywall.visible = false
             m.video.visible = true
             m.video.content = content
-            m.video.control = "play"
             m.video.setFocus(true)
+            m.video.control = "play"
         else
             m.paywall.visible = true
             m.video.visible = false

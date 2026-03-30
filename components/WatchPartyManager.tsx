@@ -45,9 +45,11 @@ const EmbeddedChat: React.FC<{
     user: { name?: string; email: string | null; avatar?: string; } | null;
     isQALive?: boolean;
     qaEmbed?: string;
+    isWebcamLive?: boolean;
     isBackstageVerified?: boolean;
     backstageKey?: string;
-}> = ({ movieKey, user, isQALive, qaEmbed, isBackstageVerified, backstageKey }) => {
+    allMovies?: Record<string, Movie>;
+}> = ({ movieKey, user, isQALive, qaEmbed, isBackstageVerified, backstageKey, allMovies }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -101,14 +103,39 @@ const EmbeddedChat: React.FC<{
         try {
             const newQAState = !isQALive;
             let embedUrl = qaEmbed || '';
+            let useWebcam = false;
             
             if (newQAState && !embedUrl) {
-                const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream):");
-                if (!input) {
+                const mode = window.prompt("Director Video Mode:\n1. Select Movie from Library\n2. Enter URL (YouTube/Vimeo/Direct)\n3. Use Live Webcam (In-House)\n\nEnter 1, 2, or 3:", "3");
+                
+                if (mode === "1" && allMovies) {
+                    const movieKeys = Object.keys(allMovies);
+                    const movieTitles = movieKeys.map(k => `${k}: ${allMovies[k].title}`).join('\n');
+                    const input = window.prompt(`Select a movie by entering its key:\n\n${movieTitles}`);
+                    if (!input) {
+                        setIsTogglingQA(false);
+                        return;
+                    }
+                    if (allMovies[input]) {
+                        embedUrl = allMovies[input].fullMovie;
+                    } else {
+                        alert("Invalid movie key. Using input as raw URL.");
+                        embedUrl = input;
+                    }
+                } else if (mode === "2") {
+                    const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream, or direct .mp4 link):");
+                    if (!input) {
+                        setIsTogglingQA(false);
+                        return;
+                    }
+                    embedUrl = input;
+                } else if (mode === "3") {
+                    useWebcam = true;
+                    embedUrl = "WEBCAM_LIVE";
+                } else {
                     setIsTogglingQA(false);
                     return;
                 }
-                embedUrl = input;
             }
 
             const res = await fetch('/api/toggle-qa', {
@@ -118,7 +145,8 @@ const EmbeddedChat: React.FC<{
                     movieKey, 
                     backstageKey, 
                     isQALive: newQAState,
-                    qaEmbed: embedUrl
+                    qaEmbed: embedUrl,
+                    isWebcamLive: useWebcam
                 }),
             });
             if (!res.ok) throw new Error("Failed to toggle Q&A.");
@@ -308,14 +336,39 @@ const WatchPartyControlRoom: React.FC<{
         try {
             const newQAState = !partyState.isQALive;
             let embedUrl = partyState.qaEmbed || '';
+            let useWebcam = false;
             
             if (newQAState && !embedUrl) {
-                const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream):");
-                if (!input) {
+                const mode = window.prompt("Director Video Mode:\n1. Select Movie from Library\n2. Enter URL (YouTube/Vimeo/Direct)\n3. Use Live Webcam (In-House)\n\nEnter 1, 2, or 3:", "3");
+                
+                if (mode === "1" && allMovies) {
+                    const movieKeys = Object.keys(allMovies);
+                    const movieTitles = movieKeys.map(k => `${k}: ${allMovies[k].title}`).join('\n');
+                    const input = window.prompt(`Select a movie by entering its key:\n\n${movieTitles}`);
+                    if (!input) {
+                        setIsTogglingQA(false);
+                        return;
+                    }
+                    if (allMovies[input]) {
+                        embedUrl = allMovies[input].fullMovie;
+                    } else {
+                        alert("Invalid movie key. Using input as raw URL.");
+                        embedUrl = input;
+                    }
+                } else if (mode === "2") {
+                    const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream, or direct .mp4 link):");
+                    if (!input) {
+                        setIsTogglingQA(false);
+                        return;
+                    }
+                    embedUrl = input;
+                } else if (mode === "3") {
+                    useWebcam = true;
+                    embedUrl = "WEBCAM_LIVE";
+                } else {
                     setIsTogglingQA(false);
                     return;
                 }
-                embedUrl = input;
             }
 
             const res = await fetch('/api/toggle-qa', {
@@ -325,7 +378,8 @@ const WatchPartyControlRoom: React.FC<{
                     movieKey: item.id, 
                     backstageKey: partyState.backstageKey, 
                     isQALive: newQAState,
-                    qaEmbed: embedUrl
+                    qaEmbed: embedUrl,
+                    isWebcamLive: useWebcam
                 }),
             });
             if (!res.ok) throw new Error("Failed to toggle Q&A.");
@@ -438,8 +492,10 @@ const WatchPartyControlRoom: React.FC<{
                         user={user} 
                         isQALive={partyState?.isQALive} 
                         qaEmbed={partyState?.qaEmbed} 
+                        isWebcamLive={partyState?.isWebcamLive}
                         isBackstageVerified={true} 
                         backstageKey={partyState?.backstageKey}
+                        allMovies={allMovies}
                     />
                 </div>
             </div>

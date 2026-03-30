@@ -1,8 +1,8 @@
 import React from 'react';
-import { moviesData } from './constants';
-import { festivalData } from './constants';
-import { festivalConfigData } from './constants';
-import FestivalView from './components/FestivalView';
+import { moviesData } from '../constants';
+import { festivalData } from '../constants';
+import { festivalConfigData } from '../constants';
+import FestivalView from './FestivalView';
 
 // This is a special, self-contained component created to demonstrate
 // the visual appearance of the Film Festival module.

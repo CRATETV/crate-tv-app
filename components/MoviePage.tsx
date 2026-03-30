@@ -26,9 +26,16 @@ const getEmbedUrl = (url: string): string | null => {
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = url.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = url.match(youtubeRegex);
     if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
+    
+    // Support Restream.io
+    if (url.includes('restream.io/player/')) {
+        const restreamId = url.split('/player/')[1]?.split('?')[0];
+        if (restreamId) return `https://restream.io/player/${restreamId}`;
+    }
+    
     return null;
 };
 
@@ -137,11 +144,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         if (playPromise !== undefined) {
             await playPromise;
             setIsPaused(false);
-            
-            // Track view after successful play
-            markAsWatched(movie.key);
-            if (!hasTrackedViewRef.current) {
-                hasTrackedViewRef.current = true;
+        }
+    } catch (e) {
+        console.error("Playback failed:", e);
+        setIsPaused(true);
+    }
+  }, [movie, user?.playbackProgress, isEnded, settings.playbackSpeed]);
+
+  // Track the view via API - works for both iframe and native video
+  useEffect(() => {
+    if (playerMode === 'full' && hasAccess && movie && !hasTrackedViewRef.current) {
+        const trackView = async () => {
+            try {
                 const token = await getUserIdToken();
                 if (token) {
                     fetch('/api/track-view', {
@@ -149,14 +163,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({ movieKey: movie.key }),
                     }).catch(() => {});
+                    hasTrackedViewRef.current = true;
                 }
+            } catch (e) {
+                console.error("Failed to track view:", e);
             }
-        }
-    } catch (e) {
-        console.error("Playback failed:", e);
-        setIsPaused(true);
+        };
+        trackView();
     }
-  }, [movie, getUserIdToken, markAsWatched, user?.playbackProgress, isEnded, settings.playbackSpeed]);
+  }, [playerMode, hasAccess, movie, getUserIdToken]);
 
   useEffect(() => {
       if (playerMode === 'full' && hasAccess && videoRef.current) {
@@ -249,7 +264,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                             setIsEnded(false);
                                             setIsPaused(false);
                                         }} 
-                                        onEnded={() => { setIsEnded(true); updatePlaybackProgress(movie.key, 0); }} 
+                                        onEnded={() => { 
+                                            setIsEnded(true); 
+                                            updatePlaybackProgress(movie.key, 0);
+                                            markAsWatched(movie.key);
+                                        }} 
                                         controlsList="nodownload" 
                                         crossOrigin="anonymous"
                                     >

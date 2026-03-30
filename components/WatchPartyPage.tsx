@@ -5,6 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
+
+if (typeof window !== 'undefined' && !(window as any).global) {
+    (window as any).global = window;
+}
+
+import Peer from 'simple-peer';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
@@ -79,7 +85,12 @@ const processLiveEmbed = (input: string, startTimeOffset: number = 0): string =>
     // 1. RAW IFRAME PASSTHROUGH
     if (trimmed.startsWith('<iframe')) return trimmed;
 
-    // 2. YOUTUBE RECOGNITION
+    // 2. VIDEO ELEMENT (DIRECT LINK)
+    if (trimmed.match(/\.(mp4|m3u8|webm|mov)(\?.*)?$/i) || trimmed.includes('m3u8') || trimmed.includes('blob:')) {
+        return `<video src="${trimmed}" autoplay controls playsinline style="width:100%;height:100%;object-fit:contain;background:#000;"></video>`;
+    }
+
+    // 3. YOUTUBE RECOGNITION
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = trimmed.match(ytRegex);
     if (ytMatch && ytMatch[1]) {
@@ -137,16 +148,19 @@ const EmbeddedChat = React.memo<{
     directors: string[]; 
     isQALive?: boolean; 
     qaEmbed?: string;
+    isWebcamLive?: boolean;
     user: any; 
     isMobileController?: boolean; 
     isBackstageVerified?: boolean; 
     onBackstageVerify?: (key: string) => void;
     backstageKey?: string;
-}>(({ partyKey, directors, isQALive, qaEmbed, user, isMobileController, isBackstageVerified, onBackstageVerify, backstageKey }) => {
+    allMovies?: Record<string, Movie>;
+}>(({ partyKey, directors, isQALive, qaEmbed, user, isMobileController, isBackstageVerified, onBackstageVerify, backstageKey, allMovies }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isTogglingQA, setIsTogglingQA] = useState(false);
+    const [isStartingWebcam, setIsStartingWebcam] = useState(false);
     const [isPushingPoll, setIsPushingPoll] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -190,14 +204,39 @@ const EmbeddedChat = React.memo<{
         try {
             const newQAState = !isQALive;
             let embedUrl = qaEmbed || '';
+            let useWebcam = false;
             
             if (newQAState && !embedUrl) {
-                const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream):");
-                if (!input) {
+                const mode = window.prompt("Director Video Mode:\n1. Select Movie from Library\n2. Enter URL (YouTube/Vimeo/Direct)\n3. Use Live Webcam (In-House)\n\nEnter 1, 2, or 3:", "3");
+                
+                if (mode === "1" && allMovies) {
+                    const movieKeys = Object.keys(allMovies);
+                    const movieTitles = movieKeys.map(k => `${k}: ${allMovies[k].title}`).join('\n');
+                    const input = window.prompt(`Select a movie by entering its key:\n\n${movieTitles}`);
+                    if (!input) {
+                        setIsTogglingQA(false);
+                        return;
+                    }
+                    if (allMovies[input]) {
+                        embedUrl = allMovies[input].fullMovie;
+                    } else {
+                        alert("Invalid movie key. Using input as raw URL.");
+                        embedUrl = input;
+                    }
+                } else if (mode === "2") {
+                    const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream, or direct .mp4 link):");
+                    if (!input) {
+                        setIsTogglingQA(false);
+                        return;
+                    }
+                    embedUrl = input;
+                } else if (mode === "3") {
+                    useWebcam = true;
+                    embedUrl = "WEBCAM_LIVE";
+                } else {
                     setIsTogglingQA(false);
                     return;
                 }
-                embedUrl = input;
             }
 
             const res = await fetch('/api/toggle-qa', {
@@ -207,7 +246,8 @@ const EmbeddedChat = React.memo<{
                     movieKey: partyKey, 
                     backstageKey, 
                     isQALive: newQAState,
-                    qaEmbed: embedUrl
+                    qaEmbed: embedUrl,
+                    isWebcamLive: useWebcam
                 }),
             });
             if (!res.ok) throw new Error("Failed to toggle Q&A.");
@@ -440,6 +480,129 @@ const SuggestionsSection: React.FC<{ currentMovie: Movie; allMovies: Record<stri
                         </div>
                     </button>
                 ))}
+            </div>
+        </div>
+    );
+};
+
+const DirectorWebcam = ({ movieKey, isDirector, userId }: { movieKey: string; isDirector: boolean; userId: string }) => {
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const peersRef = useRef<Record<string, any>>({});
+
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+
+        if (isDirector) {
+            // Director Logic: Broadcast webcam
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(currentStream => {
+                    setStream(currentStream);
+                    if (videoRef.current) videoRef.current.srcObject = currentStream;
+
+                    // Listen for viewer requests
+                    const sessionsRef = db.collection('watch_parties').doc(movieKey).collection('webcam_sessions');
+                    const unsubscribe = sessionsRef.onSnapshot(snapshot => {
+                        snapshot.docChanges().forEach(async change => {
+                            const viewerId = change.doc.id;
+                            const data = change.doc.data();
+
+                            if (change.type === 'added' || (change.type === 'modified' && data.status === 'requesting')) {
+                                // New viewer requesting connection
+                                if (peersRef.current[viewerId]) peersRef.current[viewerId].destroy();
+
+                                const peer = new Peer({
+                                    initiator: true,
+                                    trickle: false,
+                                    stream: currentStream
+                                });
+
+                                peer.on('signal', (signal: any) => {
+                                    sessionsRef.doc(viewerId).set({
+                                        offer: JSON.stringify(signal),
+                                        status: 'offering',
+                                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                                    }, { merge: true });
+                                });
+
+                                peersRef.current[viewerId] = peer;
+                            } else if (change.type === 'modified' && data.status === 'answering' && data.answer) {
+                                // Viewer sent answer
+                                const peer = peersRef.current[viewerId];
+                                if (peer) {
+                                    peer.signal(JSON.parse(data.answer));
+                                }
+                            }
+                        });
+                    });
+
+                    return () => {
+                        unsubscribe();
+                        currentStream.getTracks().forEach(track => track.stop());
+                    };
+                })
+                .catch(err => console.error("Webcam error:", err));
+        } else {
+            // Viewer Logic: Receive stream
+            const sessionsRef = db.collection('watch_parties').doc(movieKey).collection('webcam_sessions');
+            const mySessionRef = sessionsRef.doc(userId);
+
+            // 1. Request connection
+            mySessionRef.set({
+                status: 'requesting',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // 2. Listen for offer
+            const unsubscribe = mySessionRef.onSnapshot(doc => {
+                const data = doc.data();
+                if (data?.status === 'offering' && data.offer) {
+                    const peer = new Peer({
+                        initiator: false,
+                        trickle: false
+                    });
+
+                    peer.on('signal', (signal: any) => {
+                        mySessionRef.set({
+                            answer: JSON.stringify(signal),
+                            status: 'answering'
+                        }, { merge: true });
+                    });
+
+                    peer.on('stream', (stream: MediaStream) => {
+                        setRemoteStream(stream);
+                        if (videoRef.current) videoRef.current.srcObject = stream;
+                    });
+
+                    peer.signal(JSON.parse(data.offer));
+                    peersRef.current['director'] = peer;
+                }
+            });
+
+            return () => {
+                unsubscribe();
+                mySessionRef.delete().catch(() => {});
+                if (peersRef.current['director']) peersRef.current['director'].destroy();
+            };
+        }
+    }, [movieKey, isDirector, userId]);
+
+    return (
+        <div className="w-full h-full bg-black relative flex items-center justify-center overflow-hidden">
+            <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted={isDirector}
+                className="w-full h-full object-contain"
+            />
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                    {isDirector ? 'Broadcasting Live' : 'Director Live'}
+                </span>
             </div>
         </div>
     );
@@ -795,7 +958,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!db) return;
         const partyRef = db.collection('watch_parties').doc(movieKey);
         const unsubscribe = partyRef.onSnapshot(doc => { if (doc.exists) setPartyState(doc.data() as WatchPartyState); });
-        const reactionsRef = partyRef.collection('live_reactions').where('timestamp', '>=', new Date(Date.now() - 5000))
+        const reactionsRef = partyRef.collection('live_reactions')
+            .where('timestamp', '>=', new Date(Date.now() - 3600000)) // 1 hour buffer for clock drift
+            .limitToLast(20)
             .onSnapshot(snapshot => {
                 snapshot.docChanges().forEach(change => {
                     if (change.type === 'added') setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
@@ -853,7 +1018,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <button onClick={() => window.location.href = '/'} className="text-[10px] font-bold">EXIT</button>
                 </div>
                 <div className="flex-grow flex flex-col overflow-hidden">
-                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
+                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} isWebcamLive={partyState?.isWebcamLive} user={user} isMobileController={true} allMovies={allMovies} />
                 </div>
                 <div className="p-4 bg-white/5 grid grid-cols-5 gap-2 border-t border-white/10">
                     {REACTION_TYPES.map(reaction => (
@@ -1000,17 +1165,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     <button onClick={() => window.history.back()} className="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-[0.5em] transition-all">Return to Main Terminal</button>
                                 </div>
                             </div>
-                        ) : partyState?.isQALive && partyState?.qaEmbed ? (
+                        ) : partyState?.isQALive ? (
                             <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black animate-[fadeIn_0.5s_ease-out] relative">
                                 {partyState.activePoll && partyState.activePoll.isOpen && user && (
                                     <PollOverlay poll={partyState.activePoll} onVote={handleVote} userId={user.uid} />
                                 )}
                                 <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-emerald-500/30 relative">
-                                    <div className="absolute top-8 left-8 z-[200] flex items-center gap-2 bg-emerald-600 px-3 py-1 rounded-full shadow-lg">
-                                        <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Director Live</span>
-                                    </div>
-                                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: processLiveEmbed(partyState.qaEmbed) }} />
+                                    {partyState.isWebcamLive ? (
+                                        <DirectorWebcam movieKey={movieKey} isDirector={isBackstageVerified} userId={user?.uid || 'anonymous'} />
+                                    ) : (
+                                        <>
+                                            <div className="absolute top-8 left-8 z-[200] flex items-center gap-2 bg-emerald-600 px-3 py-1 rounded-full shadow-lg">
+                                                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-white">Director Live</span>
+                                            </div>
+                                            <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: processLiveEmbed(partyState.qaEmbed || '') }} />
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ) : (
@@ -1092,10 +1263,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             directors={emptyDirectors} 
                             isQALive={partyState?.isQALive} 
                             qaEmbed={partyState?.qaEmbed}
+                            isWebcamLive={partyState?.isWebcamLive}
                             user={user} 
                             isBackstageVerified={isBackstageVerified} 
                             backstageKey={partyState?.backstageKey}
                             onBackstageVerify={handleBackstageVerify}
+                            allMovies={allMovies}
                         />
                     </div>
                 </div>
@@ -1106,10 +1279,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         directors={emptyDirectors} 
                         isQALive={partyState?.isQALive} 
                         qaEmbed={partyState?.qaEmbed}
+                        isWebcamLive={partyState?.isWebcamLive}
                         user={user} 
                         isBackstageVerified={isBackstageVerified} 
                         backstageKey={partyState?.backstageKey}
                         onBackstageVerify={handleBackstageVerify}
+                        allMovies={allMovies}
                     />
                 </div>
             </div>

@@ -537,11 +537,47 @@ export async function GET(request: Request) {
         }
     }
 
+    // 6. HERO SELECTION (Requirement 2.1)
+    let heroItems: RokuMovie[] = [];
+    if (config.hero?.mode === 'manual' && Array.isArray(config.hero.items) && config.hero.items.length > 0) {
+        console.log(`Using manual hero selection with ${config.hero.items.length} items.`);
+        heroItems = config.hero.items
+            .sort((a, b) => a.order - b.order)
+            .map(item => moviesObj[item.movieKey])
+            .filter(m => m && isValidForRoku(m))
+            .map(m => {
+                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
+                return formatMovieForRoku(m, assets[m.key], isUnlocked);
+            });
+    }
+
+    // Intelligent Fallback if manual is empty or mode is auto
+    if (heroItems.length === 0) {
+        console.log("Using intelligent fallback for hero selection (Top Views).");
+        const topViewedMovies = (Object.values(moviesObj) as Movie[])
+            .filter(m => isValidForRoku(m))
+            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
+            .slice(0, 5)
+            .map(m => {
+                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
+                return formatMovieForRoku(m, assets[m.key], isUnlocked);
+            });
+        
+        if (topViewedMovies.length > 0) {
+            heroItems = topViewedMovies;
+        } else {
+            // Absolute fallback: first category children
+            heroItems = (categories[0]?.children || publicSquare[0]?.children || []).slice(0, 5);
+        }
+    }
+
     const response: RokuFeed = {
         version: Date.now(),
         timestamp: new Date().toISOString(),
         announcement: (config as any).announcement || '',
-        heroItems: (categories[0]?.children || publicSquare[0]?.children || []).slice(0, 5),
+        heroItems,
         categories,
         publicSquare,
         liveNow: (Object.values(moviesObj) as Movie[])
