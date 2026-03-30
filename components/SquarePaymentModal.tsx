@@ -118,20 +118,41 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
     useEffect(() => {
         let card: any;
+        let retryCount = 0;
+        const maxRetries = 3;
+
         const initializeSquare = async () => {
             try {
+                // Fetch Square config from API
                 const configRes = await fetch('/api/square-config');
-                if (!configRes.ok) throw new Error("Failed to load payment configuration.");
+                if (!configRes.ok) {
+                    const errorData = await configRes.json().catch(() => ({}));
+                    throw new Error(errorData.error || "Failed to load payment configuration.");
+                }
                 const { applicationId, locationId } = await configRes.json();
 
+                if (!applicationId || !locationId) {
+                    throw new Error("Payment system is not configured. Please contact support.");
+                }
+
+                // Load Square SDK if not already loaded
                 if (!(window as any).Square) {
                     const script = document.createElement('script');
                     script.src = "https://web.squarecdn.com/v1/square.js";
                     script.async = true;
-                    await new Promise((resolve) => {
+                    
+                    await new Promise((resolve, reject) => {
                         script.onload = resolve;
+                        script.onerror = () => reject(new Error("Failed to load payment processor."));
                         document.head.appendChild(script);
                     });
+
+                    // Wait a moment for Square to initialize
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                if (!(window as any).Square) {
+                    throw new Error("Payment processor not available. Please refresh and try again.");
                 }
 
                 const payments = (window as any).Square.payments(applicationId, locationId);
@@ -139,9 +160,19 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 await card.attach('#card-container');
                 cardRef.current = card;
                 setIsLoading(false);
-            } catch (err) {
+                setError(''); // Clear any previous errors
+            } catch (err: any) {
                 console.error("Square Init Error:", err);
-                setError("Payment system could not be initialized.");
+                
+                // Retry logic for transient failures
+                if (retryCount < maxRetries && err.message?.includes("Failed to load")) {
+                    retryCount++;
+                    console.log(`Retrying Square init (${retryCount}/${maxRetries})...`);
+                    setTimeout(initializeSquare, 1000 * retryCount);
+                    return;
+                }
+                
+                setError(err.message || "Payment system could not be initialized. Please try again.");
                 setIsLoading(false);
             }
         };

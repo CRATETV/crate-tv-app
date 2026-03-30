@@ -2,42 +2,42 @@
 // It securely reads credentials from environment variables on the server.
 export async function GET(request: Request) {
   try {
-    console.log('--- [API /square-config] Diagnostic Start ---');
-    console.log('VERCEL_ENV:', process.env.VERCEL_ENV);
-    const isProduction = process.env.VERCEL_ENV === 'production';
-    console.log(`Mode Detected: ${isProduction ? 'PRODUCTION' : 'SANDBOX'}`);
+    const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
 
-    const config = {
-      applicationId: isProduction 
-        ? process.env.SQUARE_APPLICATION_ID 
-        : process.env.SQUARE_SANDBOX_APPLICATION_ID,
-      locationId: isProduction 
-        ? process.env.SQUARE_LOCATION_ID 
-        : process.env.SQUARE_SANDBOX_LOCATION_ID,
-    };
+    // Try production keys first if in production, otherwise try sandbox
+    let applicationId = isProduction 
+      ? (process.env.SQUARE_APPLICATION_ID || process.env.SQUARE_SANDBOX_APPLICATION_ID)
+      : (process.env.SQUARE_SANDBOX_APPLICATION_ID || process.env.SQUARE_APPLICATION_ID);
+    
+    let locationId = isProduction
+      ? (process.env.SQUARE_LOCATION_ID || process.env.SQUARE_SANDBOX_LOCATION_ID)
+      : (process.env.SQUARE_SANDBOX_LOCATION_ID || process.env.SQUARE_LOCATION_ID);
 
-    console.log('Serving Config:', {
-        applicationId: config.applicationId ? `...${config.applicationId.slice(-4)}` : 'NOT FOUND',
-        locationId: config.locationId ? `...${config.locationId.slice(-4)}` : 'NOT FOUND',
-    });
-    console.log('--- [API /square-config] Diagnostic End ---');
-
-    if (!config.applicationId || !config.locationId) {
-      const missingVar = isProduction ? 'Production' : 'Sandbox';
-      console.error(`Square ${missingVar} Application ID or Location ID is not configured on the server.`);
-      throw new Error(`Square payments are not configured on the server for the current environment.`);
+    if (!applicationId || !locationId) {
+      console.error('Square configuration missing:', {
+        hasAppId: !!applicationId,
+        hasLocationId: !!locationId,
+        env: process.env.VERCEL_ENV || process.env.NODE_ENV
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Payment system is not configured. Please contact support.',
+        code: 'CONFIG_MISSING'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(JSON.stringify(config), {
+    return new Response(JSON.stringify({ applicationId, locationId }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        // Cache the public config to reduce redundant requests
         'Cache-Control': 'public, max-age=3600',
       },
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
+    console.error('Square config error:', error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

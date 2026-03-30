@@ -6,11 +6,23 @@ import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 
-if (typeof window !== 'undefined' && !(window as any).global) {
-    (window as any).global = window;
+// Polyfill global for simple-peer compatibility
+if (typeof window !== 'undefined') {
+    if (!(window as any).global) (window as any).global = window;
+    if (!(window as any).process) (window as any).process = { env: {} };
+    if (!(window as any).Buffer) (window as any).Buffer = { isBuffer: () => false };
 }
 
-import Peer from 'simple-peer';
+// Dynamic import for simple-peer to prevent SSR/build crashes
+let Peer: any = null;
+if (typeof window !== 'undefined') {
+    try {
+        Peer = require('simple-peer');
+    } catch (e) {
+        console.warn('simple-peer not available:', e);
+    }
+}
+
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
@@ -509,6 +521,8 @@ const DirectorWebcam = ({ movieKey, isDirector, userId }: { movieKey: string; is
                             const viewerId = change.doc.id;
                             const data = change.doc.data();
 
+                            if (!Peer) return; // Skip if Peer not available
+
                             if (change.type === 'added' || (change.type === 'modified' && data.status === 'requesting')) {
                                 // New viewer requesting connection
                                 if (peersRef.current[viewerId]) peersRef.current[viewerId].destroy();
@@ -558,7 +572,7 @@ const DirectorWebcam = ({ movieKey, isDirector, userId }: { movieKey: string; is
             // 2. Listen for offer
             const unsubscribe = mySessionRef.onSnapshot(doc => {
                 const data = doc.data();
-                if (data?.status === 'offering' && data.offer) {
+                if (data?.status === 'offering' && data.offer && Peer) {
                     const peer = new Peer({
                         initiator: false,
                         trickle: false

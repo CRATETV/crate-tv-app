@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AuditEntry } from '../types';
 import { getDbInstance, initializeFirebaseAuth } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
@@ -8,6 +8,21 @@ const AuditTerminal: React.FC = () => {
     const [logs, setLogs] = useState<AuditEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filter logs based on search query
+    const filteredLogs = useMemo(() => {
+        if (!searchQuery.trim()) return logs;
+        const query = searchQuery.toLowerCase();
+        return logs.filter(log => 
+            log.action?.toLowerCase().includes(query) ||
+            log.details?.toLowerCase().includes(query) ||
+            log.role?.toLowerCase().includes(query) ||
+            log.type?.toLowerCase().includes(query) ||
+            log.id?.toLowerCase().includes(query) ||
+            (log.ipAddress || log.ip || '').toLowerCase().includes(query)
+        );
+    }, [logs, searchQuery]);
 
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
@@ -136,7 +151,28 @@ const AuditTerminal: React.FC = () => {
                     </div>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Immutable modification history for the global infrastructure.</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
+                    {/* Search Input */}
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search logs..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30 transition-all w-48 md:w-64"
+                        />
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
                     <button 
                         onClick={handleTestLog}
                         className="bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-red-600/30"
@@ -163,16 +199,20 @@ const AuditTerminal: React.FC = () => {
                     </button>
                     <div className="flex items-center gap-3 text-[10px] font-black text-gray-700 uppercase tracking-widest">
                         <span className={`w-2 h-2 rounded-full ${logs.length > 0 ? 'bg-green-500' : 'bg-amber-500'}`}></span>
-                        {logs.length > 0 ? 'Immutable Stream Active' : 'Waiting for Data...'}
+                        {logs.length > 0 ? `${filteredLogs.length} of ${logs.length} Records` : 'Waiting for Data...'}
                     </div>
                 </div>
             </div>
 
             <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,1)]">
-                {logs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                     <div className="p-20 text-center space-y-4">
-                        <p className="text-gray-600 font-black uppercase tracking-[0.3em] text-sm">No Audit Records Found</p>
-                        <p className="text-gray-700 text-xs italic">The manifest is currently empty. Perform an administrative action to generate a trace.</p>
+                        <p className="text-gray-600 font-black uppercase tracking-[0.3em] text-sm">
+                            {searchQuery ? 'No Matching Records' : 'No Audit Records Found'}
+                        </p>
+                        <p className="text-gray-700 text-xs italic">
+                            {searchQuery ? `No records match "${searchQuery}". Try a different search term.` : 'The manifest is currently empty. Perform an administrative action to generate a trace.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -188,7 +228,7 @@ const AuditTerminal: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {logs.map(log => (
+                                {filteredLogs.map(log => (
                                     <tr key={log.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="p-5 text-gray-700 select-all">{log.id.substring(0, 8)}</td>
                                         <td className="p-5 font-black text-gray-400 uppercase tracking-tighter">{log.role}</td>
