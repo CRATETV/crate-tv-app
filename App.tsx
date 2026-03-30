@@ -260,6 +260,7 @@ const App: React.FC = () => {
 
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
+    // Handle movie playback navigation with instant-on logic
     const handlePlayMovie = (movie: Movie) => {
         const partyState = activeParties[movie.key];
         const isActuallyLive = !!partyState && partyState.status === 'live';
@@ -268,7 +269,7 @@ const App: React.FC = () => {
             window.history.pushState({}, '', `/watchparty/${movie.key}`);
             window.dispatchEvent(new Event('pushstate'));
         } else {
-            // Always go to movie page with play=true
+            // Always go to movie page with play=true for instant playback
             window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
             window.dispatchEvent(new Event('pushstate'));
         }

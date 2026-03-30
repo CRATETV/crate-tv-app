@@ -52,7 +52,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   });
 
   const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default to muted for reliable autoplay
   const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -63,9 +63,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isDeepLinkOpen, setIsDeepLinkOpen] = useState(false);
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTrackedViewRef = useRef(false);
+  const playAttemptRef = useRef(0);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
 
@@ -129,8 +131,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         if (!videoRef.current || !movie?.key) return;
         
         const video = videoRef.current;
+        playAttemptRef.current += 1;
+        const currentAttempt = playAttemptRef.current;
         
         try {
+            // Ensure video is loaded
+            if (video.readyState === 0) {
+                video.load();
+            }
+
             // Resume from last position
             const savedProgress = user?.playbackProgress?.[movie.key];
             if (savedProgress && savedProgress > 10 && !isEnded && video.currentTime < 1) {
@@ -142,26 +151,31 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 video.playbackRate = settings.playbackSpeed;
             }
             
-            // ATTEMPT 1: Play with sound (requires user gesture)
+            // ATTEMPT 1: Play muted (Highest success rate for autoplay)
+            video.muted = true;
+            setIsMuted(true);
+            
             try {
                 await video.play();
-                setIsPaused(false);
-                setIsMuted(false);
-                setShowUnmutePrompt(false);
-            } catch (soundError) {
-                console.warn("Autoplay with sound blocked, trying muted fallback...", soundError);
+                if (currentAttempt !== playAttemptRef.current) return;
                 
-                // ATTEMPT 2: Play muted (usually allowed by browsers)
-                video.muted = true;
-                setIsMuted(true);
+                setIsPaused(false);
+                setShowUnmutePrompt(true); // Show "Tap to Unmute"
+                
+                // ATTEMPT 2: Try to unmute automatically (might fail, but worth a shot)
                 try {
-                    await video.play();
-                    setIsPaused(false);
-                    setShowUnmutePrompt(true); // Show "Tap to Unmute"
-                } catch (mutedError) {
-                    console.error("Muted autoplay also failed:", mutedError);
-                    setIsPaused(true);
+                    video.muted = false;
+                    setIsMuted(false);
+                    setShowUnmutePrompt(false);
+                } catch (unmuteError) {
+                    // If unmute fails, keep it muted and show prompt
+                    video.muted = true;
+                    setIsMuted(true);
+                    setShowUnmutePrompt(true);
                 }
+            } catch (playError) {
+                console.error("Autoplay failed completely:", playError);
+                setIsPaused(true);
             }
         } catch (e) {
             console.error("Playback logic failed:", e);
@@ -277,16 +291,24 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <div className="relative w-full h-full" onClick={toggleManualPause}>
                                 <video 
                                     ref={videoRef} 
-                                    src={hasAccess ? movie.fullMovie : ''} 
+                                    key={`video-${movie.key}`}
+                                    src={hasAccess ? encodeURI(movie.fullMovie) : ''} 
                                     className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'} ${!hasAccess ? 'hidden' : ''}`} 
                                     controls={false} 
                                     playsInline 
-                                    autoPlay
                                     muted={isMuted}
+                                    onWaiting={() => setIsBuffering(true)}
+                                    onPlaying={() => setIsBuffering(false)}
+                                    onCanPlay={() => {
+                                        if (playerMode === 'full' && hasAccess && videoRef.current?.paused) {
+                                            playContent();
+                                        }
+                                    }}
                                     onPause={() => !isEnded && setIsPaused(true)} 
                                     onPlay={() => {
                                         setIsEnded(false);
                                         setIsPaused(false);
+                                        setIsBuffering(false);
                                     }} 
                                     onEnded={() => { 
                                         setIsEnded(true); 
@@ -297,6 +319,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     crossOrigin="anonymous"
                                 >
                                 </video>
+                                
+                                {isBuffering && !isPaused && !isEnded && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-[115] pointer-events-none">
+                                        <div className="w-16 h-16 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+                                    </div>
+                                )}
                                 
                                 {hasAccess && (
                                     <>
