@@ -319,7 +319,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {!['donation', 'billSavingsDeposit'].includes(paymentType) && !isFree && (
+                            {!isFree && (
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
                                     <div className="bg-black/40 border-2 border-white/10 rounded-2xl p-6 focus-within:border-red-600 transition-all">

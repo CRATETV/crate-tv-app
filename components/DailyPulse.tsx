@@ -34,6 +34,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
     const [recentAudits, setRecentAudits] = useState<AuditEntry[]>([]);
     const [aiStatus, setAiStatus] = useState<'nominal' | 'throttled'>('nominal');
+    const [catalogSearch, setCatalogSearch] = useState('');
 
     useEffect(() => {
         const db = getDbInstance();
@@ -93,6 +94,15 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         })).sort((a, b) => b.views - a.views);
     }, [movies, liveViewCounts, analytics]);
 
+    const filteredCatalogAudit = useMemo(() => {
+        if (!catalogSearch.trim()) return catalogAudit;
+        const query = catalogSearch.toLowerCase();
+        return catalogAudit.filter(film => 
+            film.title.toLowerCase().includes(query) ||
+            film.key.toLowerCase().includes(query)
+        );
+    }, [catalogAudit, catalogSearch]);
+
     const totalViews = useMemo(() => {
         // Use live counts if available, otherwise fallback to analytics
         const counts = Object.keys(liveViewCounts).length > 0 ? liveViewCounts : (analytics?.viewCounts || {});
@@ -116,10 +126,30 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                 <div className="lg:col-span-2 space-y-8">
                     {/* Catalog Integrity Audit */}
                     <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
-                        <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-white/5 pb-4">
                             <div>
                                 <h3 className="text-xl font-black uppercase tracking-tighter italic">Catalog Integrity Audit</h3>
                                 <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Verification of all live database nodes</p>
+                            </div>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search films..."
+                                    value={catalogSearch}
+                                    onChange={(e) => setCatalogSearch(e.target.value)}
+                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 pl-10 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30 transition-all w-48"
+                                />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                {catalogSearch && (
+                                    <button 
+                                        onClick={() => setCatalogSearch('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                                    >
+                                        ×
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="overflow-x-auto">
@@ -136,7 +166,13 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {catalogAudit.map(film => (
+                                    {filteredCatalogAudit.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="py-8 text-center text-gray-600 text-sm">
+                                                {catalogSearch ? `No films matching "${catalogSearch}"` : 'No films in catalog'}
+                                            </td>
+                                        </tr>
+                                    ) : filteredCatalogAudit.map(film => (
                                         <tr key={film.key} className="group hover:bg-white/[0.01]">
                                             <td className="py-4">
                                                 <p className="text-white font-black uppercase tracking-tight">{film.title}</p>
