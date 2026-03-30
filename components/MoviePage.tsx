@@ -127,16 +127,31 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   };
 
     const playContent = useCallback(async () => {
-        if (!videoRef.current) return;
+        if (!videoRef.current || !hasAccess) return;
+        
+        const video = videoRef.current;
         
         try {
-            await videoRef.current.play();
+            // Ensure video is muted for reliable autoplay
+            video.muted = true;
+            setIsMuted(true);
+            
+            // Resume from saved progress if available
+            const savedProgress = user?.playbackProgress?.[movieKey];
+            if (savedProgress && savedProgress > 10 && video.currentTime < 1) {
+                video.currentTime = savedProgress;
+            }
+            
+            await video.play();
             setIsPaused(false);
+            
+            // Show unmute prompt after successful muted autoplay
+            setShowUnmutePrompt(true);
         } catch (e) {
-            console.error("Playback failed", e);
+            console.error("Autoplay failed, showing play button:", e);
             setIsPaused(true);
         }
-    }, []);
+    }, [hasAccess, user?.playbackProgress, movieKey]);
 
     const handleUnmute = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -169,11 +184,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [playerMode, hasAccess, movie, getUserIdToken]);
 
+    // Trigger playback when entering full mode with a slight delay to ensure video element is mounted
     useEffect(() => {
-        if (playerMode === 'full' && videoRef.current) {
-            playContent();
+        if (playerMode === 'full' && hasAccess) {
+            // Small delay to ensure video element is in the DOM
+            const timer = setTimeout(() => {
+                if (videoRef.current) {
+                    playContent();
+                }
+            }, 100);
+            return () => clearTimeout(timer);
         }
-    }, [playerMode, movieKey, playContent]);
+    }, [playerMode, hasAccess, movieKey, playContent]);
 
   // Global click listener to kickstart playback if blocked by browser
   useEffect(() => {
@@ -307,24 +329,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         </button>
                                     </div>
 
-                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); setIsMuted(false); setShowUnmutePrompt(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-                                    
-                                    {/* Tap to Play Overlay (if stuck) */}
-                                    {isPaused && !isEnded && !showUnmutePrompt && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-auto">
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    videoRef.current?.play();
-                                                }}
-                                                className="w-20 h-20 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center transition-all transform hover:scale-110 group"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white fill-current group-hover:scale-110 transition-transform" viewBox="0 0 20 20">
-                                                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    )}
+                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { if(videoRef.current) { videoRef.current.muted = false; videoRef.current.play(); } setIsPaused(false); setIsMuted(false); setShowUnmutePrompt(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
 
                                     {/* Tap to Unmute Overlay (Netflix Style) */}
                                     {showUnmutePrompt && !isPaused && (
