@@ -272,15 +272,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         controlsList="nodownload" 
                                         crossOrigin="anonymous"
                                     >
-                                        {movie.subtitleUrl && (
-                                            <track 
-                                                kind="subtitles" 
-                                                src={movie.subtitleUrl} 
-                                                srcLang="en" 
-                                                label="English" 
-                                                default 
-                                            />
-                                        )}
                                     </video>
                                     <CastButton videoElement={videoRef.current} />
                                     
@@ -304,10 +295,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                                             {speed}x
                                                         </button>
                                                     ))}
-                                                </div>
-                                                <div className="mt-4 pt-4 border-t border-white/5">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Captions</p>
-                                                    <button className="w-full text-left text-[10px] font-bold py-2 px-3 rounded-lg bg-white/5 text-gray-400">Off (Auto-detecting...)</button>
                                                 </div>
                                             </div>
                                         )}
