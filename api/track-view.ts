@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     }
     
     const country = request.headers.get('x-vercel-ip-country') || 'unknown';
+    const referrer = request.headers.get('referer') || 'direct';
     const timestamp = FieldValue.serverTimestamp();
     
     const batch = db.batch();
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     batch.set(eventRef, {
         movieKey,
         country,
+        referrer,
         platform: 'WEB',
         timestamp,
         type: 'VIEW'

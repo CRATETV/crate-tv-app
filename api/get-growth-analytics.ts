@@ -104,7 +104,8 @@ export async function POST(request: Request) {
             usersDocs,
             moviesDocs,
             viewsDocs,
-            aboutDoc
+            aboutDoc,
+            trafficEventsDocs
         ] = await Promise.all([
             listAllAuthUsers(),
             fetchAllSquarePayments(accessToken, isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID),
@@ -112,7 +113,38 @@ export async function POST(request: Request) {
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('content').doc('about').get(),
+            db.collection('traffic_events').get()
         ]);
+
+        const trafficEvents = trafficEventsDocs.docs.map((d: any) => d.data());
+        const referrerCounts: Record<string, number> = {};
+        const countryCounts: Record<string, number> = {};
+        
+        trafficEvents.forEach((event: any) => {
+            if (event.referrer) {
+                // Clean up referrer
+                let ref = event.referrer;
+                try {
+                    const url = new URL(ref);
+                    ref = url.hostname;
+                } catch(e) {}
+                if (ref.includes('cratetv.net') || ref.includes('localhost')) ref = 'direct';
+                referrerCounts[ref] = (referrerCounts[ref] || 0) + 1;
+            }
+            if (event.country) {
+                countryCounts[event.country] = (countryCounts[event.country] || 0) + 1;
+            }
+        });
+
+        const topReferrers = Object.entries(referrerCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10)
+            .reduce((obj, [key, val]) => ({ ...obj, [key]: val }), {});
+
+        const topCountries = Object.entries(countryCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10)
+            .map(([country, count]) => ({ country, count }));
 
         const registeredUsers = allAuthUsers.filter(u => u.email);
         const totalVisitors = usersDocs.size;
@@ -190,8 +222,9 @@ export async function POST(request: Request) {
                 totalDonations: Object.values(donationsByFilmTitle).reduce((s, a) => s + a, 0),
                 totalSales: allPayments.filter(p => !p.note?.includes('Support for film')).reduce((s, p) => s + p.amount_money.amount, 0),
                 audienceBreakdown: { total: totalUsers, actors: actorCount, filmmakers: filmmakerCount },
-                topCountries: [],
+                topCountries,
                 topEarningFilms: [],
+                topReferrers,
             },
             aboutData: aboutData || undefined,
             avgMoMUserGrowth: 0,

@@ -12,6 +12,7 @@ import { GET as getWatchPartyStatus } from './api/get-watch-party-status.js';
 import { POST as getSalesData } from './api/get-sales-data.js';
 import { POST as getGrowthAnalytics } from './api/get-growth-analytics.js';
 import { POST as trackView } from './api/track-view.js';
+import { POST as trackVisit } from './api/track-visit.js';
 import { POST as getRecommendations } from './api/get-recommendations.js';
 import { POST as createPoll } from './api/create-poll.js';
 import { POST as votePoll } from './api/vote-poll.js';
@@ -72,6 +73,7 @@ async function startServer() {
   app.post('/api/get-sales-data', wrapHandler(getSalesData));
   app.post('/api/get-growth-analytics', wrapHandler(getGrowthAnalytics));
   app.post('/api/track-view', wrapHandler(trackView));
+  app.post('/api/track-visit', wrapHandler(trackVisit));
   app.post('/api/get-recommendations', wrapHandler(getRecommendations));
   app.post('/api/create-poll', wrapHandler(createPoll));
   app.post('/api/vote-poll', wrapHandler(votePoll));

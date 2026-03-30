@@ -247,6 +247,47 @@ const GrowthAnalyticsTab: React.FC = () => {
                     <BarChart historicalData={historical.revenue} projectedData={projections.revenue} label="Revenue" isCurrency={true} />
                 </div>
             </div>
+
+            {/* Traffic & Geography */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-gray-800/40 p-8 rounded-3xl border border-white/5">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight mb-8 italic">Traffic Sources</h3>
+                    <div className="space-y-4">
+                        {keyMetrics.topReferrers && Object.entries(keyMetrics.topReferrers).length > 0 ? (
+                            Object.entries(keyMetrics.topReferrers).map(([ref, count]) => (
+                                <div key={ref} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <span className="text-sm font-bold text-gray-400 truncate max-w-[200px]">{ref}</span>
+                                    <span className="text-xl font-black text-blue-500">{count} Hits</span>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500 text-center py-10 font-medium italic">No referral data recorded yet.</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-gray-800/40 p-8 rounded-3xl border border-white/5">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight mb-8 italic">Geographic Distribution</h3>
+                    <div className="space-y-4">
+                        {keyMetrics.topCountries && keyMetrics.topCountries.length > 0 ? (
+                            keyMetrics.topCountries.map(({ country, count }: any) => {
+                                const total = keyMetrics.topCountries.reduce((sum: number, c: any) => sum + c.count, 0);
+                                const percentage = ((count / total) * 100).toFixed(0);
+                                return (
+                                    <div key={country} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-bold text-gray-400">{country}</span>
+                                        </div>
+                                        <span className="text-xl font-black text-green-500">{percentage}%</span>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p className="text-gray-500 text-center py-10 font-medium italic">No geographic data recorded yet.</p>
+                        )}
+                    </div>
+                </div>
+            </div>
             
             {/* Investor Snapshot */}
             <div className="pt-8">

@@ -175,9 +175,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   useEffect(() => {
       if (playerMode === 'full' && hasAccess && videoRef.current) {
-          playContent();
+          // Small delay to ensure video element is fully mounted and ready
+          const timer = setTimeout(() => {
+              playContent();
+          }, 100);
+          return () => clearTimeout(timer);
       }
-  }, [playerMode, hasAccess, movieKey, playContent]);
+  }, [playerMode, hasAccess, movieKey, playContent, currentSearch]);
 
   // Global click listener to kickstart playback if blocked by browser
   useEffect(() => {
@@ -208,12 +212,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       setIsPurchaseModalOpen(false);
       setPlayerMode('full');
   };
-
-  useEffect(() => {
-      if (playerMode === 'full' && videoRef.current && hasAccess) {
-          // Playback is now handled by the dedicated playContent effect
-      }
-  }, [playerMode, hasAccess, playContent, currentSearch]);
 
   // Periodic progress saving
   useEffect(() => {
@@ -256,9 +254,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         ref={videoRef} 
                                         src={movie.fullMovie} 
                                         className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} 
-                                        controls={true} 
+                                        controls={false} 
                                         playsInline 
                                         autoPlay
+                                        muted={false}
                                         onPause={() => !isEnded && setIsPaused(true)} 
                                         onPlay={() => {
                                             setIsEnded(false);
@@ -309,7 +308,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         </button>
                                     </div>
 
-                                    {isPaused && !isEnded && videoRef.current && videoRef.current.currentTime > 0.5 && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
+                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                             <div className="max-w-2xl w-full space-y-12">

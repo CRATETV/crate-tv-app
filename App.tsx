@@ -64,6 +64,9 @@ const App: React.FC = () => {
     }, []);
     
     useEffect(() => {
+        // Track general site visit
+        fetch('/api/track-visit', { method: 'POST' }).catch(() => {});
+        
         const db = getDbInstance();
         if (!db || !user) return;
 

@@ -502,6 +502,7 @@ export interface GrowthAnalyticsData {
     audienceBreakdown: { total: number; actors: number; filmmakers: number };
     topCountries: any[];
     topEarningFilms: any[];
+    topReferrers?: Record<string, number>;
   };
   aboutData?: AboutData;
   avgMoMUserGrowth: number;
@@ -643,6 +644,7 @@ export interface AnalyticsData {
   festivalUsers: string[];
   crateFestRevenue: number;
   viewLocations: Record<string, Record<string, number>>;
+  topReferrers?: Record<string, number>;
   rokuEngagement?: {
     totalDevices: number;
     totalRokuViews: number;
