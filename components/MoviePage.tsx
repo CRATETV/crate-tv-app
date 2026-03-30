@@ -26,23 +26,15 @@ const getEmbedUrl = (url: string): string | null => {
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = url.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = url.match(youtubeRegex);
     if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
-    
-    // Support Restream.io
-    if (url.includes('restream.io/player/')) {
-        const restreamId = url.split('/player/')[1]?.split('?')[0];
-        if (restreamId) return `https://restream.io/player/${restreamId}`;
-    }
-    
     return null;
 };
 
-// MoviePage.tsx - Optimized for instant-on playback and resilient buffering (v1.2)
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, updatePlaybackProgress } = useAuth();
-  const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, settings } = useFestival();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched } = useAuth();
+  const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
@@ -53,11 +45,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   });
 
   const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(true); // Default to muted for reliable autoplay
-  const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [showSettings, setShowSettings] = useState(false);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -94,8 +82,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
     if (movie) {
         const params = new URLSearchParams(currentSearch);
-        // FIX: Go to full mode if play=true, even if access is locked (will show locked UI in player area)
-        if (params.get('play') === 'true' && isMovieReleased(movie)) {
+        if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
             setPlayerMode('full');
             setIsEnded(false);
             if (videoRef.current && videoRef.current.ended) {
@@ -105,14 +92,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setPlayerMode('poster');
         }
     }
-  }, [movie, movieKey, currentSearch]);
-
-  // FIX: Apply playback speed setting to the video element
-  useEffect(() => {
-    if (videoRef.current && settings.playbackSpeed) {
-        videoRef.current.playbackRate = settings.playbackSpeed;
-    }
-  }, [settings.playbackSpeed, playerMode]);
+  }, [movie, hasAccess, movieKey, currentSearch]);
 
   const handleGoHome = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -126,47 +106,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     setTimeout(() => setIsAnimatingLike(false), 600);
   };
 
-    const playContent = useCallback(async () => {
-        if (!videoRef.current || !hasAccess) return;
-        
-        const video = videoRef.current;
-        
+  const playContent = useCallback(async () => {
+    if (videoRef.current && movie?.key) {
         try {
-            // Ensure video is muted for reliable autoplay
-            video.muted = true;
-            setIsMuted(true);
-            
-            // Resume from saved progress if available
-            const savedProgress = user?.playbackProgress?.[movieKey];
-            if (savedProgress && savedProgress > 10 && video.currentTime < 1) {
-                video.currentTime = savedProgress;
-            }
-            
-            await video.play();
-            setIsPaused(false);
-            
-            // Show unmute prompt after successful muted autoplay
-            setShowUnmutePrompt(true);
-        } catch (e) {
-            console.error("Autoplay failed, showing play button:", e);
-            setIsPaused(true);
-        }
-    }, [hasAccess, user?.playbackProgress, movieKey]);
-
-    const handleUnmute = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (videoRef.current) {
-            videoRef.current.muted = false;
-            setIsMuted(false);
-            setShowUnmutePrompt(false);
-        }
-    };
-
-  // Track the view via API - works for both iframe and native video
-  useEffect(() => {
-    if (playerMode === 'full' && hasAccess && movie && !hasTrackedViewRef.current) {
-        const trackView = async () => {
-            try {
+            markAsWatched(movie.key);
+            if (!hasTrackedViewRef.current) {
+                hasTrackedViewRef.current = true;
                 const token = await getUserIdToken();
                 if (token) {
                     fetch('/api/track-view', {
@@ -174,39 +119,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({ movieKey: movie.key }),
                     }).catch(() => {});
-                    hasTrackedViewRef.current = true;
                 }
-            } catch (e) {
-                console.error("Failed to track view:", e);
             }
-        };
-        trackView();
-    }
-  }, [playerMode, hasAccess, movie, getUserIdToken]);
-
-    // Trigger playback when entering full mode with a slight delay to ensure video element is mounted
-    useEffect(() => {
-        if (playerMode === 'full' && hasAccess) {
-            // Small delay to ensure video element is in the DOM
-            const timer = setTimeout(() => {
-                if (videoRef.current) {
-                    playContent();
-                }
-            }, 100);
-            return () => clearTimeout(timer);
+            await videoRef.current.play();
+        } catch (e) {
+            setIsPaused(true);
         }
-    }, [playerMode, hasAccess, movieKey, playContent]);
-
-  // Global click listener to kickstart playback if blocked by browser
-  useEffect(() => {
-      const handleGlobalClick = () => {
-          if (playerMode === 'full' && isPaused && videoRef.current && videoRef.current.currentTime < 1) {
-              playContent();
-          }
-      };
-      window.addEventListener('click', handleGlobalClick);
-      return () => window.removeEventListener('click', handleGlobalClick);
-  }, [playerMode, isPaused, playContent]);
+    }
+  }, [movie, getUserIdToken, markAsWatched]);
 
   const toggleManualPause = (e: React.MouseEvent) => {
       if (isEnded) return;
@@ -227,29 +147,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       setPlayerMode('full');
   };
 
-  // Periodic progress saving
   useEffect(() => {
-    if (playerMode === 'full' && !isPaused && !isEnded && videoRef.current && movie?.key) {
-        const interval = setInterval(() => {
-            if (videoRef.current) {
-                const currentTime = Math.floor(videoRef.current.currentTime);
-                // Don't save if near the end (95%+)
-                if (currentTime > 10 && currentTime < videoRef.current.duration * 0.95) {
-                    updatePlaybackProgress(movie.key, currentTime);
-                } else if (currentTime >= videoRef.current.duration * 0.95) {
-                    updatePlaybackProgress(movie.key, 0); // Reset if finished
-                }
-            }
-        }, 10000); // Save every 10 seconds
-        return () => clearInterval(interval);
-    }
-  }, [playerMode, isPaused, isEnded, movie?.key, updatePlaybackProgress]);
+      if (playerMode === 'full' && videoRef.current && hasAccess) {
+          playContent();
+      }
+  }, [playerMode, hasAccess, playContent, currentSearch]);
 
-    // Remove early return for loading to preserve user gesture chain
-    // if (isDataLoading) return <LoadingSpinner />;
-    
-    if (!movie && !isDataLoading) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
-    if (!movie && isDataLoading) return <LoadingSpinner />;
+  if (isDataLoading) return <LoadingSpinner />;
+  if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
 
@@ -261,93 +166,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
             <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
                 {playerMode === 'full' ? (
-                    <div className="relative w-full h-full">
-                        {embedUrl ? (
-                            <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
-                        ) : (
-                            <div className="relative w-full h-full" onClick={toggleManualPause}>
-                                <video 
-                                    ref={videoRef} 
-                                    key={`video-${movie.key}`}
-                                    src={movie.fullMovie} 
-                                    poster={movie.poster}
-                                    className={`w-full h-full object-contain block ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'} ${!hasAccess ? 'hidden' : ''}`} 
-                                    controls={false} 
-                                    playsInline 
-                                    autoPlay
-                                    muted={isMuted}
-                                    onPause={() => !isEnded && setIsPaused(true)} 
-                                    onPlay={() => {
-                                        setIsEnded(false);
-                                        setIsPaused(false);
-                                    }} 
-                                    onEnded={() => { 
-                                        setIsEnded(true); 
-                                        updatePlaybackProgress(movie.key, 0);
-                                        markAsWatched(movie.key);
-                                    }} 
-                                    controlsList="nodownload" 
-                                    crossOrigin="anonymous"
-                                >
-                                </video>
-                                
-                                {hasAccess && (
-                                    <>
-                                        <CastButton videoElement={videoRef.current} />
-                                    
-                                    {/* Playback Settings Gear */}
-                                    <div className="absolute bottom-6 right-6 z-[110] flex flex-col items-end gap-2">
-                                        {showSettings && (
-                                            <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 w-48">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Playback Speed</p>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[0.75, 1, 1.25, 1.5, 2].map(speed => (
-                                                        <button 
-                                                            key={speed}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setPlaybackSpeed(speed);
-                                                                if (videoRef.current) videoRef.current.playbackRate = speed;
-                                                                setShowSettings(false);
-                                                            }}
-                                                            className={`text-[10px] font-bold py-2 rounded-lg transition-all ${playbackSpeed === speed ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                                                        >
-                                                            {speed}x
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
-                                            className="p-3 bg-black/40 backdrop-blur-md rounded-full border border-white/10 hover:bg-white/10 transition-all group"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-white/70 group-hover:text-white transition-transform duration-500 ${showSettings ? 'rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                        </button>
-                                    </div>
-
-                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { if(videoRef.current) { videoRef.current.muted = false; videoRef.current.play(); } setIsPaused(false); setIsMuted(false); setShowUnmutePrompt(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-
-                                    {/* Tap to Unmute Overlay (Netflix Style) */}
-                                    {showUnmutePrompt && !isPaused && (
-                                        <button 
-                                            onClick={handleUnmute}
-                                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[120] bg-black/60 backdrop-blur-xl border border-white/20 px-8 py-4 rounded-2xl flex items-center gap-4 hover:bg-red-600 transition-all group animate-in zoom-in duration-300 shadow-2xl"
-                                        >
-                                            <div className="bg-white/10 p-3 rounded-full group-hover:bg-white/20">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" />
-                                                </svg>
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-white font-black uppercase tracking-widest text-sm">Tap to Unmute</p>
-                                                <p className="text-white/60 text-[10px] font-bold uppercase tracking-tight">Audio is currently restricted</p>
-                                            </div>
-                                        </button>
-                                    )}
+                    hasAccess ? (
+                        <>
+                            {embedUrl ? (
+                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
+                            ) : (
+                                <div className="relative w-full h-full" onClick={toggleManualPause}>
+                                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
+                                    <CastButton videoElement={videoRef.current} />
+                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                             <div className="max-w-2xl w-full space-y-12">
@@ -376,32 +203,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                             </div>
                                         </div>
                                     )}
-                                </>
+                                </div>
                             )}
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
+                             <img src={movie.poster} alt="" className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
+                             <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
+                             <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
+                             <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${movie.salePrice}</button>
+                             <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>
-                    )}
-                    
-                    {!hasAccess && (
-                            <div className="absolute inset-0 z-[150] flex flex-col items-center justify-center p-8 text-center space-y-6 bg-gray-900/90 backdrop-blur-md">
-                                 <img src={movie.poster} alt="" className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
-                                 <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
-                                 <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
-                                 <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${movie.salePrice}</button>
-                                 <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
-                            </div>
-                        )}
-                    </div>
+                    )
                 ) : (
-                    <div 
-                        className="relative w-full h-full flex items-center justify-center group cursor-pointer" 
-                        onClick={() => {
-                            // FIX: Clicking the poster should go straight to the movie
-                            const params = new URLSearchParams(currentSearch);
-                            params.set('play', 'true');
-                            window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
-                            window.dispatchEvent(new Event('pushstate'));
-                        }}
-                    >
+                    <div className="relative w-full h-full flex items-center justify-center group cursor-pointer" onClick={() => setIsDetailsModalOpen(true)}>
                          <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
                          <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
                          <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
