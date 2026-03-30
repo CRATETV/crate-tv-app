@@ -260,7 +260,7 @@ const App: React.FC = () => {
 
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
-    // Handle movie playback navigation with instant-on logic
+    // Handle movie playback navigation with instant-on logic (v1.1 - optimized for immediate playback)
     const handlePlayMovie = (movie: Movie) => {
         const partyState = activeParties[movie.key];
         const isActuallyLive = !!partyState && partyState.status === 'live';

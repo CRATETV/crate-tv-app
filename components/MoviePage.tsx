@@ -39,6 +39,7 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
+// MoviePage.tsx - Optimized for instant-on playback and resilient buffering (v1.2)
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, updatePlaybackProgress } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, settings } = useFestival();
@@ -63,11 +64,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isDeepLinkOpen, setIsDeepLinkOpen] = useState(false);
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTrackedViewRef = useRef(false);
-  const playAttemptRef = useRef(0);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
 
@@ -128,60 +127,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   };
 
     const playContent = useCallback(async () => {
-        if (!videoRef.current || !movie?.key) return;
-        
-        const video = videoRef.current;
-        playAttemptRef.current += 1;
-        const currentAttempt = playAttemptRef.current;
+        if (!videoRef.current) return;
         
         try {
-            // Ensure video is loaded
-            if (video.readyState === 0) {
-                video.load();
-            }
-
-            // Resume from last position
-            const savedProgress = user?.playbackProgress?.[movie.key];
-            if (savedProgress && savedProgress > 10 && !isEnded && video.currentTime < 1) {
-                video.currentTime = savedProgress;
-            }
-
-            // Apply playback speed if valid
-            if (settings.playbackSpeed && settings.playbackSpeed > 0) {
-                video.playbackRate = settings.playbackSpeed;
-            }
-            
-            // ATTEMPT 1: Play muted (Highest success rate for autoplay)
-            video.muted = true;
-            setIsMuted(true);
-            
-            try {
-                await video.play();
-                if (currentAttempt !== playAttemptRef.current) return;
-                
-                setIsPaused(false);
-                setShowUnmutePrompt(true); // Show "Tap to Unmute"
-                
-                // ATTEMPT 2: Try to unmute automatically (might fail, but worth a shot)
-                try {
-                    video.muted = false;
-                    setIsMuted(false);
-                    setShowUnmutePrompt(false);
-                } catch (unmuteError) {
-                    // If unmute fails, keep it muted and show prompt
-                    video.muted = true;
-                    setIsMuted(true);
-                    setShowUnmutePrompt(true);
-                }
-            } catch (playError) {
-                console.error("Autoplay failed completely:", playError);
-                setIsPaused(true);
-            }
+            await videoRef.current.play();
+            setIsPaused(false);
         } catch (e) {
-            console.error("Playback logic failed:", e);
+            console.error("Playback failed", e);
             setIsPaused(true);
         }
-    }, [movie, user?.playbackProgress, isEnded, settings.playbackSpeed]);
+    }, []);
 
     const handleUnmute = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -215,10 +170,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [playerMode, hasAccess, movie, getUserIdToken]);
 
     useEffect(() => {
-        if (playerMode === 'full' && hasAccess && videoRef.current) {
+        if (playerMode === 'full' && videoRef.current) {
             playContent();
         }
-    }, [playerMode, hasAccess, movieKey, playContent, currentSearch]);
+    }, [playerMode, movieKey, playContent]);
 
   // Global click listener to kickstart playback if blocked by browser
   useEffect(() => {
@@ -292,23 +247,17 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <video 
                                     ref={videoRef} 
                                     key={`video-${movie.key}`}
-                                    src={hasAccess ? encodeURI(movie.fullMovie) : ''} 
-                                    className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'} ${!hasAccess ? 'hidden' : ''}`} 
+                                    src={movie.fullMovie} 
+                                    poster={movie.poster}
+                                    className={`w-full h-full object-contain block ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'} ${!hasAccess ? 'hidden' : ''}`} 
                                     controls={false} 
                                     playsInline 
+                                    autoPlay
                                     muted={isMuted}
-                                    onWaiting={() => setIsBuffering(true)}
-                                    onPlaying={() => setIsBuffering(false)}
-                                    onCanPlay={() => {
-                                        if (playerMode === 'full' && hasAccess && videoRef.current?.paused) {
-                                            playContent();
-                                        }
-                                    }}
                                     onPause={() => !isEnded && setIsPaused(true)} 
                                     onPlay={() => {
                                         setIsEnded(false);
                                         setIsPaused(false);
-                                        setIsBuffering(false);
                                     }} 
                                     onEnded={() => { 
                                         setIsEnded(true); 
@@ -319,12 +268,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     crossOrigin="anonymous"
                                 >
                                 </video>
-                                
-                                {isBuffering && !isPaused && !isEnded && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-[115] pointer-events-none">
-                                        <div className="w-16 h-16 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
-                                    </div>
-                                )}
                                 
                                 {hasAccess && (
                                     <>
@@ -366,6 +309,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); setIsMuted(false); setShowUnmutePrompt(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     
+                                    {/* Tap to Play Overlay (if stuck) */}
+                                    {isPaused && !isEnded && !showUnmutePrompt && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-auto">
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    videoRef.current?.play();
+                                                }}
+                                                className="w-20 h-20 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center transition-all transform hover:scale-110 group"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white fill-current group-hover:scale-110 transition-transform" viewBox="0 0 20 20">
+                                                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {/* Tap to Unmute Overlay (Netflix Style) */}
                                     {showUnmutePrompt && !isPaused && (
                                         <button 
