@@ -46,7 +46,7 @@ const MaintenanceScreen: React.FC = () => (
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings, analytics, activeParties, livePartyMovie, viewCounts } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -121,10 +121,13 @@ const App: React.FC = () => {
 
         const isWatchPartyActuallyLive = livePartyMovie && activeParties[livePartyMovie.key]?.status === 'live';
 
+        // Check if the party was explicitly ended - don't show banner for ended parties
+        const isWatchPartyEnded = livePartyMovie && allPartyStates[livePartyMovie.key]?.status === 'ended';
+
         // Priority: 
         // 1. LIVE Watch Party (Always show if just turned live, even if upcoming was dismissed)
         // 2. Crate Fest (General event)
-        // 3. Upcoming Watch Party (If not dismissed)
+        // 3. Upcoming Watch Party (If not dismissed AND not ended)
         // 4. General Festival (If not dismissed)
         
         if (isWatchPartyActuallyLive) {
@@ -134,12 +137,13 @@ const App: React.FC = () => {
 
         if (isCrateFestWindow && !dismissedBannerKeys.has('cratefest')) return 'CRATE_FEST';
         
-        if (livePartyMovie && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
+        // Don't show upcoming banner if party was terminated
+        if (livePartyMovie && !isWatchPartyEnded && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
         
         if (isFestivalLive && !dismissedBannerKeys.has('festival')) return 'GENERAL_FESTIVAL';
         
         return 'NONE';
-    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, dismissedBannerKeys, activeParties]);
+    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, dismissedBannerKeys, activeParties, allPartyStates]);
 
     const currentLiveHeroConfig = useMemo(() => {
         const crateFestConfig = settings.crateFestConfig;

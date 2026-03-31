@@ -24,8 +24,6 @@ import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
 import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
-import RokuForge from './RokuForge';
-import RokuAnalyticsTab from './RokuAnalyticsTab';
 import RokuManagementTab from './RokuManagementTab';
 import TicketCodesTab from './TicketCodesTab';
 
@@ -49,8 +47,6 @@ const ALL_TABS: Record<string, string> = {
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
     rokuControl: '📺 Roku Control',
-    forge: '🔨 Roku Forge',
-    rokuAnalytics: '📈 Roku Intel',
     audit: '📜 Audit Log',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
@@ -377,8 +373,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'rokuControl' && <RokuManagementTab allMovies={Object.values(movies) as Movie[]} onSaveMovie={async (m) => handleSaveData('movies', { [m.key]: m })} />}
-                    {activeTab === 'forge' && <RokuForge />}
-                    {activeTab === 'rokuAnalytics' && <RokuAnalyticsTab />}
                     {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
