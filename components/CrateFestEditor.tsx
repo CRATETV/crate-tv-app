@@ -34,14 +34,14 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ catalog, submis
             key: s.id,
             title: s.title,
             director: s.director,
-            poster: s.posterUrl,
+            poster: s.poster || s.posterUrl || '',
             isSubmission: true
         })),
         ...catalog.map(m => ({
             key: m.key,
             title: m.title,
             director: m.director,
-            poster: m.poster,
+            poster: m.poster || '',
             isSubmission: false
         }))
     ];

@@ -31,12 +31,12 @@ const CrateFestPage: React.FC = () => {
                 key: sub.id,
                 title: sub.title,
                 director: sub.director,
-                synopsis: sub.synopsis,
-                poster: sub.posterUrl,
-                fullMovie: sub.movieUrl,
+                synopsis: sub.synopsis || '',
+                poster: sub.poster || sub.posterUrl || '',
+                fullMovie: sub.fullMovie || sub.movieUrl || '',
                 cast: [],
                 trailer: '',
-                tvPoster: sub.posterUrl,
+                tvPoster: sub.poster || sub.posterUrl || '',
                 likes: 0,
             };
         }

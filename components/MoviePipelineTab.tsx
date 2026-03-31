@@ -90,11 +90,12 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
         const rows = pipeline.map(item => [
             `"${item.title.replace(/"/g, '""')}"`,
             `"${item.director.replace(/"/g, '""')}"`,
-            `"${item.cast.replace(/"/g, '""')}"`,
-            `"${item.synopsis.replace(/"/g, '""')}"`,
-            `"${item.posterUrl}"`,
-            `"${item.movieUrl}"`,
-            `"${item.submitterEmail}"`,
+            `"${(item.cast || '').replace(/"/g, '""')}"`,
+            `"${(item.synopsis || '').replace(/"/g, '""')}"`,
+            `"${item.poster || item.posterUrl || ''}"`,
+            `"${item.fullMovie || item.movieUrl || ''}"`,
+            `"${item.email || item.submitterEmail || ''}"`,
+            item.submittedAt?.seconds ? new Date(item.submittedAt.seconds * 1000).toISOString() : 
             item.submissionDate?.seconds ? new Date(item.submissionDate.seconds * 1000).toISOString() : '---'
         ]);
 
