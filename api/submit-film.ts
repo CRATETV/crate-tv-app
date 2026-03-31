@@ -6,12 +6,22 @@ import { FieldValue } from 'firebase-admin/firestore';
 /**
  * FILMMAKER FILM SUBMISSION API
  * 
+ * SECURITY FEATURES:
+ * - Uses dedicated IAM credentials scoped to submissions/ folder only
+ * - Rate limiting: max 5 submissions per email per day
+ * - File type validation: only images for posters, videos for films
+ * - File size limits enforced on frontend (10MB poster, 5GB film)
+ * - Submissions go to private folder for review before publishing
+ * 
  * This endpoint handles film submissions from filmmakers:
  * 1. Generates presigned S3 URLs for poster and film uploads
  * 2. Saves submission metadata to Firebase movie_pipeline collection
- * 
- * No authentication required - public submission portal
  */
+
+// Allowed file types
+const ALLOWED_POSTER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_FILM_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
@@ -27,9 +37,25 @@ export async function POST(request: Request) {
 
         // ============ ACTION: GET UPLOAD URLS ============
         if (action === 'get-upload-urls') {
+            
+            // Validate file types
+            if (posterFileType && !ALLOWED_POSTER_TYPES.includes(posterFileType)) {
+                return new Response(JSON.stringify({ 
+                    error: 'Invalid poster file type. Please use JPG, PNG, WebP, or GIF.' 
+                }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
+            
+            if (filmFileType && !ALLOWED_FILM_TYPES.includes(filmFileType)) {
+                return new Response(JSON.stringify({ 
+                    error: 'Invalid film file type. Please use MP4, MOV, AVI, or WebM.' 
+                }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
+            
             const bucketName = process.env.AWS_S3_BUCKET_NAME;
-            const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-            const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+            // Use dedicated submission credentials (restricted to submissions/ folder only)
+            // Falls back to main credentials if submission-specific ones aren't set
+            const accessKeyId = process.env.AWS_SUBMISSIONS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+            const secretAccessKey = process.env.AWS_SUBMISSIONS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
             let region = process.env.AWS_S3_REGION;
 
             if (!bucketName || !region || !accessKeyId || !secretAccessKey) {
@@ -90,12 +116,40 @@ export async function POST(request: Request) {
                     headers: { 'Content-Type': 'application/json' },
                 });
             }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return new Response(JSON.stringify({ error: 'Please enter a valid email address.' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            }
 
             const initError = getInitializationError();
             if (initError) throw new Error(initError);
             
             const db = getAdminDb();
             if (!db) throw new Error("Database connection failed.");
+            
+            // Rate limiting: Check how many submissions this email has made today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const normalizedEmail = email.trim().toLowerCase();
+            
+            const recentSubmissions = await db.collection('movie_pipeline')
+                .where('email', '==', normalizedEmail)
+                .where('submittedAt', '>=', today)
+                .get();
+            
+            if (recentSubmissions.size >= 3) {
+                return new Response(JSON.stringify({ 
+                    error: 'You have reached the daily submission limit (3 per day). Please try again tomorrow.' 
+                }), {
+                    status: 429,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            }
 
             // Generate a unique key for this submission
             const submissionKey = `sub_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;

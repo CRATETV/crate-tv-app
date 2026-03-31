@@ -209,7 +209,7 @@ const SubmitPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-black text-white flex flex-col">
-            <Header searchQuery="" onSearch={() => {}} />
+            <Header searchQuery="" onSearch={() => {}} onMobileSearchClick={() => {}} />
             
             <main className="flex-grow px-4 py-12 max-w-3xl mx-auto w-full">
                 {step === 'success' ? (
