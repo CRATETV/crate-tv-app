@@ -254,17 +254,32 @@ export interface AboutData {
 
 export interface MoviePipelineEntry {
   id: string;
+  key?: string;
   title: string;
   director: string;
-  cast: string;
+  cast?: string;
   synopsis: string;
-  posterUrl: string;
-  movieUrl: string;
-  submitterEmail: string;
-  submissionDate: any;
-  status: 'pending' | 'approved' | 'rejected';
+  posterUrl?: string;
+  poster?: string;
+  movieUrl?: string;
+  fullMovie?: string;
+  submitterEmail?: string;
+  email?: string;
+  submissionDate?: any;
+  submittedAt?: any;
+  createdAt?: any;
+  status?: 'pending' | 'submitted' | 'approved' | 'rejected';
   source?: string;
   musicRightsConfirmation?: boolean;
+  runtime?: string;
+  year?: string;
+  genre?: string;
+  website?: string;
+  instagram?: string;
+  submitterName?: string;
+  isReviewed?: boolean;
+  isApproved?: boolean;
+  reviewNotes?: string;
 }
 
 export interface WatchPartyState {

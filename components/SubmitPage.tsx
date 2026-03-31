@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import { getStorageInstance, getDbInstance, initializeFirebaseAuth } from '../services/firebaseClient';
+import firebase from 'firebase/compat/app';
 
 interface UploadProgress {
     poster: number;
@@ -10,6 +12,7 @@ interface UploadProgress {
 const SubmitPage: React.FC = () => {
     const [step, setStep] = useState<'form' | 'uploading' | 'success' | 'error'>('form');
     const [error, setError] = useState('');
+    const [isFirebaseReady, setIsFirebaseReady] = useState(false);
     
     // Form fields
     const [title, setTitle] = useState('');
@@ -32,6 +35,13 @@ const SubmitPage: React.FC = () => {
     
     const posterInputRef = useRef<HTMLInputElement>(null);
     const filmInputRef = useRef<HTMLInputElement>(null);
+
+    // Initialize Firebase on mount
+    useEffect(() => {
+        initializeFirebaseAuth().then(() => {
+            setIsFirebaseReady(true);
+        });
+    }, []);
 
     const handlePosterSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -66,32 +76,36 @@ const SubmitPage: React.FC = () => {
         }
     };
 
-    const uploadFileWithProgress = async (
-        file: File, 
-        signedUrl: string, 
+    const uploadToFirebaseStorage = (
+        file: File,
+        path: string,
         onProgress: (progress: number) => void
-    ): Promise<boolean> => {
-        return new Promise((resolve) => {
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    onProgress(percent);
+    ): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const storage = getStorageInstance();
+            if (!storage) {
+                reject(new Error('Firebase Storage not initialized'));
+                return;
+            }
+
+            const storageRef = storage.ref(path);
+            const uploadTask = storageRef.put(file);
+
+            uploadTask.on(
+                'state_changed',
+                (snapshot) => {
+                    const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                    onProgress(progress);
+                },
+                (error) => {
+                    console.error('Upload error:', error);
+                    reject(error);
+                },
+                async () => {
+                    const downloadUrl = await uploadTask.snapshot.ref.getDownloadURL();
+                    resolve(downloadUrl);
                 }
-            });
-            
-            xhr.addEventListener('load', () => {
-                resolve(xhr.status >= 200 && xhr.status < 300);
-            });
-            
-            xhr.addEventListener('error', () => {
-                resolve(false);
-            });
-            
-            xhr.open('PUT', signedUrl);
-            xhr.setRequestHeader('Content-Type', file.type);
-            xhr.send(file);
+            );
         });
     };
 
@@ -116,59 +130,91 @@ const SubmitPage: React.FC = () => {
             setError('Please agree to the submission terms.');
             return;
         }
+        if (!isFirebaseReady) {
+            setError('Please wait for the page to fully load and try again.');
+            return;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError('Please enter a valid email address.');
+            return;
+        }
 
         setStep('uploading');
         setUploadProgress({ poster: 0, film: 0 });
 
         try {
-            // Step 1: Get presigned URLs
-            const urlResponse = await fetch('/api/submit-film', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'get-upload-urls',
-                    posterFileName: posterFile.name,
-                    posterFileType: posterFile.type,
-                    filmFileName: filmFile.name,
-                    filmFileType: filmFile.type,
-                }),
-            });
+            const timestamp = Date.now();
+            const sanitize = (name: string) => name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            
+            // Generate unique paths
+            const posterPath = `submissions/posters/${timestamp}-${sanitize(posterFile.name)}`;
+            const filmPath = `submissions/films/${timestamp}-${sanitize(filmFile.name)}`;
 
-            if (!urlResponse.ok) {
-                const data = await urlResponse.json();
-                throw new Error(data.error || 'Failed to get upload URLs.');
-            }
-
-            const { poster: posterUrls, film: filmUrls } = await urlResponse.json();
-
-            // Step 2: Upload poster
-            const posterSuccess = await uploadFileWithProgress(
+            // Upload poster to Firebase Storage
+            const posterUrl = await uploadToFirebaseStorage(
                 posterFile,
-                posterUrls.signedUrl,
+                posterPath,
                 (progress) => setUploadProgress(prev => ({ ...prev, poster: progress }))
             );
 
-            if (!posterSuccess) {
-                throw new Error('Failed to upload poster. Please try again.');
-            }
-
-            // Step 3: Upload film
-            const filmSuccess = await uploadFileWithProgress(
+            // Upload film to Firebase Storage
+            const filmUrl = await uploadToFirebaseStorage(
                 filmFile,
-                filmUrls.signedUrl,
+                filmPath,
                 (progress) => setUploadProgress(prev => ({ ...prev, film: progress }))
             );
 
-            if (!filmSuccess) {
-                throw new Error('Failed to upload film. Please try again.');
+            // Save submission to Firestore
+            const db = getDbInstance();
+            if (!db) {
+                throw new Error('Database not initialized');
             }
 
-            // Step 4: Save submission metadata
-            const saveResponse = await fetch('/api/submit-film', {
+            const submissionKey = `sub_${timestamp}_${Math.random().toString(36).substring(2, 8)}`;
+            
+            await db.collection('movie_pipeline').doc(submissionKey).set({
+                key: submissionKey,
+                title: title.trim(),
+                director: director.trim(),
+                email: email.trim().toLowerCase(),
+                synopsis: synopsis.trim() || '',
+                runtime: runtime || '',
+                year: year || new Date().getFullYear().toString(),
+                genre: genre || 'Drama',
+                poster: posterUrl,
+                fullMovie: filmUrl,
+                website: website.trim() || '',
+                instagram: instagram.trim() || '',
+                submitterName: submitterName.trim() || director.trim(),
+                
+                // Pipeline metadata
+                status: 'submitted',
+                source: 'filmmaker-portal',
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                
+                // Flags for review
+                isReviewed: false,
+                isApproved: false,
+                reviewNotes: '',
+            });
+
+            // Log to audit
+            await db.collection('audit_log').add({
+                action: 'film_submitted',
+                details: `Film "${title}" submitted by ${director} (${email})`,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                metadata: { submissionKey, title, director, email }
+            });
+
+            // Send notification email to admin (fire and forget)
+            fetch('/api/notify-film-submission', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'save-submission',
                     title,
                     director,
                     email,
@@ -176,18 +222,13 @@ const SubmitPage: React.FC = () => {
                     runtime,
                     year,
                     genre,
-                    posterUrl: posterUrls.publicUrl,
-                    filmUrl: filmUrls.publicUrl,
-                    website,
+                    posterUrl,
+                    filmUrl,
                     instagram,
-                    submitterName: submitterName || director,
-                }),
-            });
-
-            if (!saveResponse.ok) {
-                const data = await saveResponse.json();
-                throw new Error(data.error || 'Failed to save submission.');
-            }
+                    website,
+                    submissionKey
+                })
+            }).catch(err => console.warn('Notification email failed:', err));
 
             setStep('success');
 
@@ -507,10 +548,10 @@ const SubmitPage: React.FC = () => {
                                 
                                 <button 
                                     type="submit"
-                                    disabled={!agreedToTerms}
+                                    disabled={!agreedToTerms || !isFirebaseReady}
                                     className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl text-lg uppercase tracking-wider transition-colors"
                                 >
-                                    Submit Film
+                                    {isFirebaseReady ? 'Submit Film' : 'Loading...'}
                                 </button>
                             </section>
                         </form>

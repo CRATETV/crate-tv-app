@@ -4,6 +4,7 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
+import 'firebase/compat/storage';
 
 // FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
@@ -11,6 +12,7 @@ import { User } from '../types';
 let authInstance: firebase.auth.Auth | null = null;
 let app: firebase.app.App | null = null;
 let db: firebase.firestore.Firestore | null = null;
+let storage: firebase.storage.Storage | null = null;
 
 let firebaseInitializationPromise: Promise<firebase.auth.Auth | null> | null = null;
 let firebaseInitializationError: string | null = null;
@@ -42,6 +44,7 @@ const initializeFirebase = () => {
             }
             db = app.firestore();
             authInstance = app.auth();
+            storage = app.storage();
             await authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
             console.log("Firebase initialized successfully.");
             return authInstance;
@@ -51,6 +54,7 @@ const initializeFirebase = () => {
             firebaseInitializationError = error instanceof Error ? error.message : String(error);
             db = null;
             authInstance = null;
+            storage = null;
             return null;
         }
     })();
@@ -76,6 +80,14 @@ export const getDbInstance = (): firebase.firestore.Firestore | null => {
          console.warn("getDbInstance called before Firebase has been initialized.");
     }
     return db;
+};
+
+// Export a function to get the Storage instance
+export const getStorageInstance = (): firebase.storage.Storage | null => {
+    if (!storage) {
+         console.warn("getStorageInstance called before Firebase has been initialized.");
+    }
+    return storage;
 };
 
 // --- User Profile Functions ---

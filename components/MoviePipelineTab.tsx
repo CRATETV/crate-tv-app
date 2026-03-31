@@ -176,39 +176,95 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
 
             {pipeline.length > 0 ? (
                 <div className="space-y-4">
-                    {pipeline.map(item => (
-                        <div key={item.id} className="bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5 hover:border-white/10 transition-colors">
-                            <div className="flex flex-col md:flex-row gap-8">
-                                <img src={item.posterUrl} alt={item.title} className="w-32 h-48 object-cover rounded-2xl flex-shrink-0 shadow-2xl border border-white/10" />
-                                <div className="flex-grow min-w-0 flex flex-col justify-center">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">{item.title}</h3>
-                                            <p className="text-red-500 font-bold uppercase text-[9px] tracking-[0.4em] mt-3">DIRECTOR: {item.director}</p>
-                                        </div>
+                    {pipeline.map(item => {
+                        const isSubmission = item.source === 'filmmaker-portal';
+                        const submittedDate = item.submittedAt?.toDate?.() || item.createdAt?.toDate?.();
+                        
+                        return (
+                            <div key={item.id} className={`bg-white/[0.02] p-6 rounded-[2.5rem] border transition-colors ${isSubmission ? 'border-amber-500/30 hover:border-amber-500/50' : 'border-white/5 hover:border-white/10'}`}>
+                                {isSubmission && (
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <span className="bg-amber-500/20 text-amber-400 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                                            📤 Filmmaker Submission
+                                        </span>
+                                        {submittedDate && (
+                                            <span className="text-gray-500 text-[9px]">
+                                                {submittedDate.toLocaleDateString()} at {submittedDate.toLocaleTimeString()}
+                                            </span>
+                                        )}
+                                        <span className={`ml-auto text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                                            item.status === 'submitted' ? 'bg-blue-500/20 text-blue-400' :
+                                            item.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                                            item.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                            'bg-gray-500/20 text-gray-400'
+                                        }`}>
+                                            {item.status || 'pending'}
+                                        </span>
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-6 line-clamp-2 italic leading-relaxed font-medium">"{item.synopsis}"</p>
-                                    
-                                    <div className="mt-8 flex flex-wrap gap-4">
-                                        <button
-                                            onClick={() => handleCreate(item)}
-                                            disabled={processingId === item.id}
-                                            className="bg-white text-black font-black py-2.5 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 transition-all disabled:opacity-50"
-                                        >
-                                            {processingId === item.id ? 'Creating...' : 'Finalize Catalog Entry'}
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(item.id)}
-                                            disabled={processingId === item.id}
-                                            className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all"
-                                        >
-                                            Purge
-                                        </button>
+                                )}
+                                
+                                <div className="flex flex-col md:flex-row gap-8">
+                                    {item.poster || item.posterUrl ? (
+                                        <a href={item.poster || item.posterUrl} target="_blank" rel="noopener noreferrer">
+                                            <img src={item.poster || item.posterUrl} alt={item.title} className="w-32 h-48 object-cover rounded-2xl flex-shrink-0 shadow-2xl border border-white/10 hover:scale-105 transition-transform cursor-pointer" />
+                                        </a>
+                                    ) : (
+                                        <div className="w-32 h-48 bg-gray-800 rounded-2xl flex items-center justify-center text-gray-500 text-xs">No Poster</div>
+                                    )}
+                                    <div className="flex-grow min-w-0 flex flex-col justify-center">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">{item.title}</h3>
+                                                <p className="text-red-500 font-bold uppercase text-[9px] tracking-[0.4em] mt-3">DIRECTOR: {item.director}</p>
+                                                {isSubmission && (
+                                                    <div className="mt-2 space-y-1">
+                                                        {item.email && <p className="text-gray-500 text-[9px]">📧 {item.email}</p>}
+                                                        {item.runtime && <p className="text-gray-500 text-[9px]">⏱️ {item.runtime}</p>}
+                                                        {item.genre && <p className="text-gray-500 text-[9px]">🎭 {item.genre}</p>}
+                                                        {item.year && <p className="text-gray-500 text-[9px]">📅 {item.year}</p>}
+                                                        {item.instagram && <p className="text-gray-500 text-[9px]">📷 {item.instagram}</p>}
+                                                        {item.website && <p className="text-gray-500 text-[9px]">🌐 <a href={item.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{item.website}</a></p>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-6 line-clamp-2 italic leading-relaxed font-medium">"{item.synopsis}"</p>
+                                        
+                                        {/* Preview Links */}
+                                        {(item.fullMovie || item.movieUrl) && (
+                                            <div className="mt-4">
+                                                <a 
+                                                    href={item.fullMovie || item.movieUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-[9px] text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-widest"
+                                                >
+                                                    ▶️ Preview Film
+                                                </a>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="mt-8 flex flex-wrap gap-4">
+                                            <button
+                                                onClick={() => handleCreate(item)}
+                                                disabled={processingId === item.id}
+                                                className="bg-white text-black font-black py-2.5 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 transition-all disabled:opacity-50"
+                                            >
+                                                {processingId === item.id ? 'Creating...' : '✓ Approve & Add to Catalog'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(item.id)}
+                                                disabled={processingId === item.id}
+                                                className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all"
+                                            >
+                                                ✕ Reject
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20">
