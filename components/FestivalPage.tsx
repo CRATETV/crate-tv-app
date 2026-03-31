@@ -10,6 +10,7 @@ import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
 import { Movie } from '../types';
 import LiveWatchPartyBanner from './LiveWatchPartyBanner';
+import WatchPartyLiveModal from './WatchPartyLiveModal';
 
 const FestivalPage: React.FC = () => {
     const { 
@@ -19,13 +20,16 @@ const FestivalPage: React.FC = () => {
         festivalConfig, 
         isFestivalLive, 
         dataSource,
-        livePartyMovie
+        livePartyMovie,
+        activeParties
     } = useFestival();
     
     const [isStaging, setIsStaging] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+    const [showWatchPartyModal, setShowWatchPartyModal] = useState(false);
+    const [hasShownModal, setHasShownModal] = useState(false);
     
     useEffect(() => {
         const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
@@ -33,6 +37,23 @@ const FestivalPage: React.FC = () => {
             setIsStaging(true);
         }
     }, []);
+
+    // Show Watch Party Live Modal once when user lands and there's a live party
+    useEffect(() => {
+        if (hasShownModal || isLoading) return;
+        
+        // Check if any watch party is live
+        const hasLiveParty = Object.values(activeParties).some(p => p.status === 'live');
+        
+        if (hasLiveParty) {
+            // Small delay for better UX - let the page load first
+            const timer = setTimeout(() => {
+                setShowWatchPartyModal(true);
+                setHasShownModal(true);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [activeParties, hasShownModal, isLoading]);
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -122,6 +143,11 @@ const FestivalPage: React.FC = () => {
                     results={searchResults}
                     onSelectMovie={handleSelectFromSearch}
                 />
+            )}
+            
+            {/* Watch Party Live Modal - shows once on landing if a party is live */}
+            {showWatchPartyModal && (
+                <WatchPartyLiveModal onClose={() => setShowWatchPartyModal(false)} />
             )}
         </div>
     );

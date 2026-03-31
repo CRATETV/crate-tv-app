@@ -50,6 +50,7 @@ import ZinePage from './components/ZinePage';
 import JuryRoomPage from './components/JuryRoomPage';
 import InstitutionalGatewayPage from './components/InstitutionalGatewayPage';
 import LibraryPage from './components/LibraryPage';
+import ClaimPage from './components/ClaimPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -142,6 +143,8 @@ const AppRouter: React.FC = () => {
       return user ? <LinkRokuPage /> : <RedirectToLogin />;
     case '/festival':
        return <FestivalPage />;
+    case '/claim':
+       return <ClaimPage />;
     case '/cratefest':
        return <CrateFestPage />;
     case '/watchlist':

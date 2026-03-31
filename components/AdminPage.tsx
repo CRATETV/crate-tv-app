@@ -27,6 +27,7 @@ import AnalyticsPage from './AnalyticsPage';
 import RokuForge from './RokuForge';
 import RokuAnalyticsTab from './RokuAnalyticsTab';
 import RokuManagementTab from './RokuManagementTab';
+import TicketCodesTab from './TicketCodesTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -40,6 +41,7 @@ const ALL_TABS: Record<string, string> = {
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
+    ticketCodes: '🎟️ Ticket Codes',
     festHub: '🎪 Festival Hub',
     crateFestHub: '🎟️ Crate Fest Hub',
     vouchers: '🎫 Promo Codes',
@@ -343,6 +345,9 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
+                    {activeTab === 'ticketCodes' && (
+                        <TicketCodesTab festivalDays={festivalData} />
+                    )}
                     {activeTab === 'festHub' && (
                         <div className="space-y-16">
                             <FestivalEditor 
