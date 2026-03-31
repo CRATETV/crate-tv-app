@@ -68,6 +68,11 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
         setIsLoading(true);
         try {
             const db = getDbInstance();
+            if (!db) {
+                setError('Database not available');
+                setIsLoading(false);
+                return;
+            }
             const codesRef = collection(db, 'ticket_codes');
             const q = query(codesRef, orderBy('createdAt', 'desc'));
             const snapshot = await getDocs(q);
@@ -103,6 +108,11 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
 
         try {
             const db = getDbInstance();
+            if (!db) {
+                setError('Database not available');
+                setIsGenerating(false);
+                return;
+            }
             const codesRef = collection(db, 'ticket_codes');
             const generatedCodes: string[] = [];
 
@@ -216,6 +226,10 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
         
         try {
             const db = getDbInstance();
+            if (!db) {
+                setError('Database not available');
+                return;
+            }
             await deleteDoc(doc(db, 'ticket_codes', codeId));
             setCodes(codes.filter(c => c.id !== codeId));
             setSuccess('Code deleted');

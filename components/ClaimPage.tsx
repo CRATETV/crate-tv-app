@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getDbInstance } from '../services/firebaseClient';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -30,6 +30,14 @@ const ClaimPage: React.FC = () => {
     } | null>(null);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [pendingCode, setPendingCode] = useState('');
+
+    // When user logs in with pending code, redeem it
+    useEffect(() => {
+        if (user && pendingCode && !showAuthModal) {
+            redeemCode(pendingCode);
+            setPendingCode('');
+        }
+    }, [user, pendingCode, showAuthModal]);
 
     const formatCode = (input: string): string => {
         // Remove any existing dashes and convert to uppercase
@@ -72,6 +80,12 @@ const ClaimPage: React.FC = () => {
 
         try {
             const db = getDbInstance();
+            if (!db) {
+                setError('Database not available. Please try again.');
+                setIsLoading(false);
+                return;
+            }
+            
             const codesRef = collection(db, 'ticket_codes');
             
             // Find the code
@@ -142,6 +156,8 @@ const ClaimPage: React.FC = () => {
         if (!user) return;
         
         const db = getDbInstance();
+        if (!db) return;
+        
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, {
             hasFestivalAllAccess: true,
@@ -156,13 +172,13 @@ const ClaimPage: React.FC = () => {
     const grantDayAccess = async (dayNumber: number) => {
         if (!user) return;
         
-        // For day passes, we need to get all block IDs for that day
-        // This would ideally come from festival config, but we'll store day access separately
         const db = getDbInstance();
+        if (!db) return;
+        
         const userRef = doc(db, 'users', user.uid);
         
         // Get current unlocked days
-        const currentDays = user.unlockedFestivalDays || [];
+        const currentDays = (user as any).unlockedFestivalDays || [];
         if (!currentDays.includes(dayNumber)) {
             await updateDoc(userRef, {
                 unlockedFestivalDays: [...currentDays, dayNumber]
@@ -331,9 +347,7 @@ const ClaimPage: React.FC = () => {
                         setShowAuthModal(false);
                         setPendingCode('');
                     }}
-                    onSuccess={handleAuthSuccess}
-                    initialMode="signup"
-                    message="Create an account or log in to claim your festival access"
+                    initialView="signup"
                 />
             )}
 
