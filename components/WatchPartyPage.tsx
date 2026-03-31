@@ -74,6 +74,16 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [showQABanner, setShowQABanner] = useState(false);
+
+    // Show Q&A banner animation when Q&A goes live
+    useEffect(() => {
+        if (isQALive) {
+            setShowQABanner(true);
+            const timer = setTimeout(() => setShowQABanner(false), 8000);
+            return () => clearTimeout(timer);
+        }
+    }, [isQALive]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -114,6 +124,15 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
             className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800'} overflow-hidden min-h-0`}
             onClick={(e) => e.stopPropagation()}
         >
+            {/* Q&A Live Banner */}
+            {isQALive && (
+                <div className={`bg-gradient-to-r from-amber-600 via-red-600 to-purple-600 px-4 py-2 flex items-center justify-center gap-2 animate-pulse flex-shrink-0 ${showQABanner ? 'animate-[pulse_0.5s_ease-in-out_3]' : ''}`}>
+                    <span className="text-xl">🎤</span>
+                    <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white">Director Q&A is Live!</span>
+                    <span className="text-xl">🎬</span>
+                </div>
+            )}
+            
             {isMobileController && (
                 <div className="p-4 bg-red-600/10 border-b border-red-500/20 flex items-center justify-between">
                     <p className="text-[10px] font-black uppercase text-red-500">Roku Controller Node</p>
@@ -121,40 +140,65 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                 </div>
             )}
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
+                {/* Director Backstage Verification */}
                 {!isBackstageVerified && (
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
-                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Director Verification Required</p>
+                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Are you the Director?</p>
                         <button 
                             onClick={() => {
-                                const key = window.prompt("Enter Backstage Key:");
+                                const key = window.prompt("Enter your Backstage Key to join as Director:");
                                 if (key && onBackstageVerify) onBackstageVerify(key);
                             }}
                             className="text-[10px] font-black text-red-500 hover:text-white transition-colors uppercase tracking-tighter"
                         >
-                            Authorize Backstage Node →
+                            Enter Backstage Key →
                         </button>
                     </div>
                 )}
-                {messages.map(msg => (
-                    <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
-                        <div className="w-8 h-8 rounded-full flex-shrink-0 p-1 border border-white/5 bg-gray-800" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <p className="font-black text-[11px] uppercase tracking-tighter text-red-500">{msg.userName}</p>
-                                {msg.isVerifiedDirector && (
-                                    <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Director</span>
-                                )}
-                            </div>
-                            <p className="text-sm break-words leading-snug text-gray-300">{msg.text}</p>
+                
+                {/* Backstage Verified Badge */}
+                {isBackstageVerified && (
+                    <div className="bg-gradient-to-r from-red-600/20 to-purple-600/20 border border-red-500/30 rounded-2xl p-3 mb-4 flex items-center gap-2">
+                        <span className="text-lg">🎬</span>
+                        <div>
+                            <p className="text-[9px] font-black text-red-400 uppercase tracking-widest">Director Mode Active</p>
+                            <p className="text-[8px] text-gray-400">Your messages will be highlighted</p>
                         </div>
                     </div>
+                )}
+                
+                {messages.map(msg => (
+                    msg.isSystemMessage ? (
+                        // System message (Q&A announcements, etc.)
+                        <div key={msg.id} className="bg-gradient-to-r from-amber-600/20 via-red-600/20 to-purple-600/20 border border-amber-500/30 rounded-xl p-3 text-center animate-[fadeIn_0.3s_ease-out]">
+                            <p className="text-sm font-bold text-white">{msg.text}</p>
+                        </div>
+                    ) : (
+                        <div 
+                            key={msg.id} 
+                            className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${msg.isVerifiedDirector ? 'bg-gradient-to-r from-red-600/10 to-purple-600/10 -mx-4 px-4 py-3 border-l-2 border-red-500' : ''}`}
+                        >
+                            <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 ${msg.isVerifiedDirector ? 'border-2 border-red-500 bg-red-900/50' : 'border border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <p className={`font-black text-[11px] uppercase tracking-tighter ${msg.isVerifiedDirector ? 'text-red-400' : 'text-red-500'}`}>{msg.userName}</p>
+                                    {msg.isVerifiedDirector && (
+                                        <span className="bg-gradient-to-r from-red-600 to-purple-600 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                                            <span>🎬</span> Director
+                                        </span>
+                                    )}
+                                </div>
+                                <p className={`text-sm break-words leading-snug ${msg.isVerifiedDirector ? 'text-white font-medium' : 'text-gray-300'}`}>{msg.text}</p>
+                            </div>
+                        </div>
+                    )
                 ))}
                 <div ref={messagesEndRef} />
             </div>
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0">
-                <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageVerified ? "Speak as Director..." : "Type a message..."} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
-                    <button type="submit" className="text-red-500" disabled={!user || isSending || !newMessage.trim()}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                <div className={`flex items-center gap-2 rounded-full px-4 py-1 border ${isBackstageVerified ? 'bg-red-900/30 border-red-500/30' : 'bg-gray-800/80 border-white/10'}`}>
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageVerified ? "Answer a question..." : (isQALive ? "Ask the director a question..." : "Type a message...")} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
+                    <button type="submit" className={isBackstageVerified ? "text-red-400" : "text-red-500"} disabled={!user || isSending || !newMessage.trim()}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                 </div>
             </form>
         </div>

@@ -102,42 +102,9 @@ const EmbeddedChat: React.FC<{
         setIsTogglingQA(true);
         try {
             const newQAState = !isQALive;
-            let embedUrl = qaEmbed || '';
-            let useWebcam = false;
             
-            if (newQAState && !embedUrl) {
-                const mode = window.prompt("Director Video Mode:\n1. Select Movie from Library\n2. Enter URL (YouTube/Vimeo/Direct)\n3. Use Live Webcam (In-House)\n\nEnter 1, 2, or 3:", "3");
-                
-                if (mode === "1" && allMovies) {
-                    const movieKeys = Object.keys(allMovies);
-                    const movieTitles = movieKeys.map(k => `${k}: ${allMovies[k].title}`).join('\n');
-                    const input = window.prompt(`Select a movie by entering its key:\n\n${movieTitles}`);
-                    if (!input) {
-                        setIsTogglingQA(false);
-                        return;
-                    }
-                    if (allMovies[input]) {
-                        embedUrl = allMovies[input].fullMovie;
-                    } else {
-                        alert("Invalid movie key. Using input as raw URL.");
-                        embedUrl = input;
-                    }
-                } else if (mode === "2") {
-                    const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream, or direct .mp4 link):");
-                    if (!input) {
-                        setIsTogglingQA(false);
-                        return;
-                    }
-                    embedUrl = input;
-                } else if (mode === "3") {
-                    useWebcam = true;
-                    embedUrl = "WEBCAM_LIVE";
-                } else {
-                    setIsTogglingQA(false);
-                    return;
-                }
-            }
-
+            // For text-only Q&A, no video embed needed
+            // Just toggle the Q&A state - this shows the Q&A banner and prompts viewers to ask questions
             const res = await fetch('/api/toggle-qa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -145,11 +112,38 @@ const EmbeddedChat: React.FC<{
                     movieKey, 
                     backstageKey, 
                     isQALive: newQAState,
-                    qaEmbed: embedUrl,
-                    isWebcamLive: useWebcam
+                    qaEmbed: '',
+                    isWebcamLive: false
                 }),
             });
             if (!res.ok) throw new Error("Failed to toggle Q&A.");
+            
+            // Send a system message to chat announcing Q&A
+            if (newQAState) {
+                await fetch('/api/send-chat-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        movieKey, 
+                        userName: '🎬 SYSTEM', 
+                        userAvatar: 'fox', 
+                        text: '🎤 Director Q&A is starting! Ask your questions now!',
+                        isSystemMessage: true
+                    }),
+                });
+            } else {
+                await fetch('/api/send-chat-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        movieKey, 
+                        userName: '🎬 SYSTEM', 
+                        userAvatar: 'fox', 
+                        text: 'Director Q&A has ended. Thank you for joining!',
+                        isSystemMessage: true
+                    }),
+                });
+            }
         } catch (error) {
             console.error("QA Toggle Error:", error);
             alert("Failed to toggle Q&A mode.");
@@ -217,8 +211,8 @@ const EmbeddedChat: React.FC<{
                             disabled={isTogglingQA}
                             className={`text-[8px] font-black uppercase tracking-widest ${isQALive ? 'text-red-500' : 'text-emerald-500'} hover:text-white transition-colors flex items-center gap-1`}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                            {isQALive ? 'End Video' : 'Join w/ Video'}
+                            <span>🎤</span>
+                            {isTogglingQA ? 'Updating...' : (isQALive ? 'End Q&A' : 'Start Q&A')}
                         </button>
                     )}
                     <button 

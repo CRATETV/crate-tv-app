@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Movie } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -11,8 +11,10 @@ interface LiveWatchPartyBannerProps {
 
 const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose }) => {
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
-    const { festivalData, activeParties } = useFestival();
+    const { festivalData, activeParties, refreshData } = useFestival();
     const [now, setNow] = useState(new Date());
+    const [isAutoStarting, setIsAutoStarting] = useState(false);
+    const [autoStartAttempted, setAutoStartAttempted] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
@@ -23,10 +25,54 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     const isExplicitlyLive = partyState?.status === 'live';
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
-    if (!startTime && !isExplicitlyLive) return null;
+    
+    // Only show banner if party is explicitly live in Firebase OR if it's upcoming
+    // Don't show if start time has passed but party isn't in activeParties (means it was terminated or never started)
+    const isUpcoming = startTime && now < startTime;
+    const timeUntilStart = startTime ? startTime.getTime() - now.getTime() : 0;
+    
+    // Auto-start when countdown reaches zero
+    const attemptAutoStart = useCallback(async () => {
+        if (isAutoStarting || autoStartAttempted || isExplicitlyLive) return;
+        
+        setIsAutoStarting(true);
+        setAutoStartAttempted(true);
+        
+        try {
+            const response = await fetch('/api/auto-start-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: movie.key })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                console.log('[AUTO-START] Watch party started successfully');
+                // Refresh data to pick up the new live state
+                if (refreshData) refreshData();
+            } else {
+                console.log('[AUTO-START] Could not auto-start:', data.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('[AUTO-START] Error:', error);
+        } finally {
+            setIsAutoStarting(false);
+        }
+    }, [movie.key, isAutoStarting, autoStartAttempted, isExplicitlyLive, refreshData]);
 
-    const isLive = isExplicitlyLive || (startTime ? now >= startTime : false);
-    const isUpcoming = !isLive && startTime && now < startTime;
+    // Trigger auto-start when countdown reaches zero (within 5 second window)
+    useEffect(() => {
+        if (!isExplicitlyLive && startTime && timeUntilStart <= 0 && timeUntilStart > -5000 && !autoStartAttempted) {
+            attemptAutoStart();
+        }
+    }, [timeUntilStart, isExplicitlyLive, startTime, autoStartAttempted, attemptAutoStart]);
+    
+    // If party is not explicitly live and not upcoming, don't show banner
+    // But give a grace period for auto-start to kick in
+    if (!isExplicitlyLive && !isUpcoming && timeUntilStart < -10000 && !isAutoStarting) return null;
+    
+    const isLive = isExplicitlyLive;
     
     // Authorization check for the banner button
     const alreadyHasAccess = useMemo(() => {
@@ -71,7 +117,12 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                 <p className="text-[9px] md:text-xs font-black truncate uppercase tracking-tight hidden sm:block">
                     {movie.title}
                 </p>
-                {isUpcoming ? (
+                {isAutoStarting ? (
+                    <div className="bg-green-500/30 px-3 md:px-4 py-1 rounded-full border border-green-400/50 flex items-center gap-2 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-spin"></span>
+                        <span className="text-[9px] md:text-[10px] font-black text-green-200 uppercase tracking-widest">Launching...</span>
+                    </div>
+                ) : isUpcoming ? (
                     <div className="bg-black/40 px-3 md:px-4 py-1 rounded-full border border-white/10 flex items-center gap-2">
                         <span className="text-[7px] md:text-[8px] font-black text-gray-400 uppercase tracking-widest hidden md:block">
                             {isUnderOneHour ? 'Commencing In' : 'Synchronizing Uplink In'}

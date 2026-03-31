@@ -19,6 +19,7 @@ interface FestivalContextType {
     analytics: AnalyticsData | null;
     viewCounts: Record<string, number>;
     activeParties: Record<string, WatchPartyState>;
+    allPartyStates: Record<string, WatchPartyState>; // All parties including ended ones
     livePartyMovie: Movie | null;
     refreshData: () => Promise<void>;
 }
@@ -47,6 +48,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
+    const [allPartyStates, setAllPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
     const [now, setNow] = useState(new Date());
 
@@ -105,12 +107,16 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             }
         }
 
-        // 2. Fallback to upcoming scheduled parties
+        // 2. Fallback to upcoming scheduled parties (exclude any that have been explicitly ended)
         const upcomingParties = movieArray
             .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
             .filter(m => {
                 const start = new Date(m.watchPartyStartTime!);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                
+                // Don't show if party was explicitly ended
+                const partyState = allPartyStates[m.key];
+                if (partyState?.status === 'ended') return false;
                 
                 // If the movie has already started, ONLY show it if it's in activeParties (handled above)
                 // Otherwise, show it if it's starting in the next 7 days
@@ -120,7 +126,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
         return upcomingParties[0] || null;
-    }, [activeParties, movies, festivalData, now]);
+    }, [activeParties, allPartyStates, movies, festivalData, now, settings]);
 
     const fetchData = async (forceNoCache = false) => {
         try {
@@ -185,14 +191,17 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
 
                 db.collection('watch_parties').onSnapshot(snapshot => {
-                    const states: Record<string, WatchPartyState> = {};
+                    const liveStates: Record<string, WatchPartyState> = {};
+                    const allStates: Record<string, WatchPartyState> = {};
                     snapshot.forEach(doc => {
                         const data = doc.data() as WatchPartyState;
+                        allStates[doc.id] = data;
                         if (data.status === 'live') {
-                            states[doc.id] = data;
+                            liveStates[doc.id] = data;
                         }
                     });
-                    setActiveParties(states);
+                    setActiveParties(liveStates);
+                    setAllPartyStates(allStates);
                 });
             }
         };
@@ -215,6 +224,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         analytics,
         viewCounts,
         activeParties,
+        allPartyStates,
         livePartyMovie,
         refreshData: () => fetchData(true)
     };

@@ -301,6 +301,7 @@ export interface ChatMessage {
   timestamp: any;
   isVerifiedDirector?: boolean;
   isAdmin?: boolean;
+  isSystemMessage?: boolean;
 }
 
 export interface SentimentPoint {

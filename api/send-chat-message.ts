@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, userName, userAvatar, text, isVerifiedDirector, isAdmin } = await request.json();
+    const { movieKey, userName, userAvatar, text, isVerifiedDirector, isAdmin, isSystemMessage } = await request.json();
 
     if (!movieKey || !userName || !userAvatar || !text) {
       return new Response(JSON.stringify({ error: 'Missing required fields for chat message.' }), {
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       text,
       isVerifiedDirector: isVerifiedDirector === true,
       isAdmin: isAdmin === true,
+      isSystemMessage: isSystemMessage === true,
       timestamp: FieldValue.serverTimestamp(),
     };
 
