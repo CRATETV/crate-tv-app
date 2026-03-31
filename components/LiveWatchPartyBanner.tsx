@@ -26,10 +26,15 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
     
-    // Only show banner if party is explicitly live in Firebase OR if it's upcoming
-    // Don't show if start time has passed but party isn't in activeParties (means it was terminated or never started)
+    // STRICT RULES:
+    // 1. If party is explicitly LIVE in Firebase → show banner
+    // 2. If start time is in the FUTURE → show countdown banner
+    // 3. Otherwise → DO NOT SHOW
     const isUpcoming = startTime && now < startTime;
     const timeUntilStart = startTime ? startTime.getTime() - now.getTime() : 0;
+    
+    // If not live AND not upcoming → hide immediately
+    if (!isExplicitlyLive && !isUpcoming) return null;
     
     // Auto-start when countdown reaches zero
     const attemptAutoStart = useCallback(async () => {
@@ -67,10 +72,6 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
             attemptAutoStart();
         }
     }, [timeUntilStart, isExplicitlyLive, startTime, autoStartAttempted, attemptAutoStart]);
-    
-    // If party is not explicitly live and not upcoming, don't show banner
-    // But give a grace period for auto-start to kick in
-    if (!isExplicitlyLive && !isUpcoming && timeUntilStart < -10000 && !isAutoStarting) return null;
     
     const isLive = isExplicitlyLive;
     

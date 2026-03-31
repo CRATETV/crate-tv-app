@@ -107,21 +107,24 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             }
         }
 
-        // 2. Fallback to upcoming scheduled parties (exclude any that have been explicitly ended)
+        // 2. Fallback to FUTURE scheduled parties only
+        // Key fix: Do NOT show any party whose start time has passed unless it's explicitly live (handled above)
         const upcomingParties = movieArray
             .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
             .filter(m => {
                 const start = new Date(m.watchPartyStartTime!);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
                 
+                // CRITICAL: If start time has passed, DO NOT show it
+                // The party should only show as "upcoming" if it's in the FUTURE
+                if (start.getTime() <= now.getTime()) return false;
+                
                 // Don't show if party was explicitly ended
                 const partyState = allPartyStates[m.key];
                 if (partyState?.status === 'ended') return false;
                 
-                // If the movie has already started, ONLY show it if it's in activeParties (handled above)
-                // Otherwise, show it if it's starting in the next 7 days
-                return start.getTime() > now.getTime() && 
-                       start.getTime() < (now.getTime() + sevenDaysInMs);
+                // Show if it's starting in the next 7 days
+                return start.getTime() < (now.getTime() + sevenDaysInMs);
             })
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
