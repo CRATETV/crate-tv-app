@@ -297,6 +297,9 @@ export interface WatchPartyState {
   actualStartTime?: any; 
   type: 'movie' | 'block';
   activePoll?: Poll;
+  directorWelcome?: string;
+  directorThankYou?: string;
+  applauseCount?: number;
 }
 
 export interface Poll {

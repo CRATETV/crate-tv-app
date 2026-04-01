@@ -288,7 +288,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             {playerMode !== 'full' && (
                 <div className="max-w-6xl mx-auto p-8 md:p-12">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-12">
-                        <div className="md:w-2/3 space-y-8">
+                        <div className={`space-y-8 ${hasAccess ? 'md:w-2/3' : 'w-full'}`}>
                             <div>
                                 <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">{movie.title}</h1>
                                 <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mt-4">Directed by {movie.director}</p>
@@ -296,28 +296,33 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <div className="text-gray-300 text-lg leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                             <RokuBanner />
                         </div>
-                        <div className="md:w-1/3 bg-white/5 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-8">
-                            <button 
-                                onClick={() => (hasAccess && isMovieReleased(movie)) ? setPlayerMode('full') : (movie.isForSale ? setIsPurchaseModalOpen(true) : setIsDetailsModalOpen(true))}
-                                className="w-full bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl hover:scale-105 transition-all active:scale-95"
-                            >
-                                {hasAccess ? 'Play Selection' : 'Unlock Now'}
-                            </button>
-                            <div className="space-y-4">
-                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-white/5 pb-2">Talent Involved</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {movie.cast.map(actor => (
-                                        <button key={actor.name} onClick={() => setSelectedActor(actor)} className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-white font-bold text-[10px] transition-all uppercase">{actor.name}</button>
-                                    ))}
+                        {/* Only show sidebar if user has access */}
+                        {hasAccess && (
+                            <div className="md:w-1/3 bg-white/5 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-8">
+                                <button 
+                                    onClick={() => isMovieReleased(movie) ? setPlayerMode('full') : setIsDetailsModalOpen(true)}
+                                    className="w-full bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl hover:scale-105 transition-all active:scale-95"
+                                >
+                                    Play Selection
+                                </button>
+                                {movie.cast && movie.cast.length > 0 && (
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-white/5 pb-2">Talent Involved</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {movie.cast.map(actor => (
+                                                <button key={actor.name} onClick={() => setSelectedActor(actor)} className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-white font-bold text-[10px] transition-all uppercase">{actor.name}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="pt-6 border-t border-white/5">
+                                    <button onClick={() => setIsDeepLinkOpen(true)} className="flex items-center gap-2 text-gray-600 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                        Deep Link Protocol
+                                    </button>
                                 </div>
                             </div>
-                            <div className="pt-6 border-t border-white/5">
-                                <button onClick={() => setIsDeepLinkOpen(true)} className="flex items-center gap-2 text-gray-600 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest">
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                                    Deep Link Protocol
-                                </button>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}
