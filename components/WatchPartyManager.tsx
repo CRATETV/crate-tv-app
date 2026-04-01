@@ -385,112 +385,231 @@ const WatchPartyControlRoom: React.FC<{
         }
     };
 
+    // Countdown state
+    const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+    const [autoStartEnabled, setAutoStartEnabled] = useState(true);
+    const [hasAutoStarted, setHasAutoStarted] = useState(false);
+
+    // Countdown timer
+    useEffect(() => {
+        if (!item.watchPartyStartTime) return;
+        
+        const updateCountdown = () => {
+            const now = new Date().getTime();
+            const target = new Date(item.watchPartyStartTime!).getTime();
+            const diff = target - now;
+            
+            if (diff <= 0) {
+                setCountdown(null);
+                // Auto-start if enabled and party hasn't started yet
+                if (autoStartEnabled && !hasAutoStarted && canStart && !isStarting) {
+                    setHasAutoStarted(true);
+                    handleStartWithLoading();
+                }
+                return;
+            }
+            
+            setCountdown({
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+                seconds: Math.floor((diff % (1000 * 60)) / 1000)
+            });
+        };
+        
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 1000);
+        return () => clearInterval(interval);
+    }, [item.watchPartyStartTime, autoStartEnabled, hasAutoStarted, canStart, isStarting]);
+
     return (
-        <div className="mb-8 bg-black/50 p-6 rounded-lg border-2 border-pink-500">
-            <h2 className="text-2xl font-bold text-white mb-4">Current Watch Party Control Room</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                        {currentMovie ? (
-                            <video
-                                ref={videoRef}
-                                src={currentMovie.fullMovie}
-                                onPlay={handlePlay}
-                                onPause={handlePause}
-                                onSeeked={handleSeeked}
-                                onTimeUpdate={handleTimeUpdate}
-                                controls
-                                className="w-full h-full"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-500">No content available</div>
-                        )}
-                    </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
-                        <div>
-                            <h3 className="text-xl font-bold">{item.title} {item.type === 'block' && <span className="text-xs bg-pink-600 px-2 py-0.5 rounded ml-2">BLOCK</span>}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.text === 'Upcoming' && canStart ? 'bg-yellow-500' : status.color}`}>
-                                    {status.text === 'Upcoming' && canStart ? 'Ready to Start' : status.text}
-                                </span>
-                                <span className="text-sm text-gray-400">
-                                    {item.watchPartyStartTime && `Scheduled for: ${new Date(item.watchPartyStartTime).toLocaleString()}`}
-                                </span>
-                            </div>
-                            {partyState?.backstageKey && (
-                                <div className="mt-2 p-2 bg-pink-600/20 border border-pink-500/30 rounded inline-flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase text-pink-400">Backstage Key:</span>
-                                    <span className="text-sm font-mono font-bold text-white tracking-widest">{partyState.backstageKey}</span>
-                                    <button 
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(partyState.backstageKey!);
-                                            alert("Key copied to clipboard!");
-                                        }}
-                                        className="text-[10px] text-pink-400 hover:text-white underline"
-                                    >
-                                        Copy
-                                    </button>
-                                </div>
-                            )}
+        <div className="mb-10 relative">
+            {/* Glowing border effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 rounded-3xl blur-sm opacity-50" />
+            
+            <div className="relative bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-3xl border border-white/10 overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-pink-600/20 via-red-600/20 to-orange-600/20 border-b border-white/10 px-8 py-5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+                            <h2 className="text-xl font-black uppercase tracking-wider text-white">Watch Party Control Room</h2>
                         </div>
-                        <div className="flex flex-wrap gap-2 justify-end">
-                            {isLive && (
-                                <button 
-                                    onClick={toggleQA}
-                                    disabled={isTogglingQA}
-                                    className={`font-bold py-3 px-6 rounded-md transition-all flex items-center justify-center gap-2 ${partyState?.isQALive ? 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                    {partyState?.isQALive ? 'Director Video: ON' : 'Director Video: OFF'}
-                                </button>
-                            )}
-                            {canStart && (
-                                <button 
-                                    onClick={handleStartWithLoading} 
-                                    disabled={isStarting}
-                                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex items-center justify-center gap-2"
-                                >
-                                    {isStarting ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            Launching...
-                                        </>
-                                    ) : (
-                                        partyState?.status === 'ended' ? 'Restart Party' : 'Start Party For Everyone'
-                                    )}
-                                </button>
-                            )}
-                            {isLive && (
-                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                                    <button 
-                                        onClick={handleStartWithLoading} 
-                                        disabled={isStarting}
-                                        className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md shadow-[0_0_15px_rgba(220,38,38,0.3)] opacity-50 hover:opacity-100 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        {isStarting ? 'Resetting...' : 'Reset Party'}
-                                    </button>
-                                    <button 
-                                        onClick={onTerminateParty} 
-                                        className="bg-gray-700 hover:bg-black text-white font-bold py-3 px-6 rounded-md border border-white/10 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        Terminate Party
-                                    </button>
-                                </div>
-                            )}
+                        <div className="flex items-center gap-3">
+                            <span className={`px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-full ${
+                                isLive ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
+                                countdown ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                'bg-gray-700 text-gray-400'
+                            }`}>
+                                {isLive ? '● LIVE' : countdown ? '◷ SCHEDULED' : status.text}
+                            </span>
                         </div>
                     </div>
                 </div>
-                <div className="lg:col-span-1 h-[60vh] md:h-auto min-h-[500px]">
-                     <EmbeddedChat 
-                        movieKey={item.id} 
-                        user={user} 
-                        isQALive={partyState?.isQALive} 
-                        qaEmbed={partyState?.qaEmbed} 
-                        isWebcamLive={partyState?.isWebcamLive}
-                        isBackstageVerified={true} 
-                        backstageKey={partyState?.backstageKey}
-                        allMovies={allMovies}
-                    />
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+                    {/* Video Section */}
+                    <div className="lg:col-span-2 p-6">
+                        {/* Countdown Overlay */}
+                        {countdown && !isLive && (
+                            <div className="mb-6 bg-gradient-to-br from-gray-800/80 to-black/80 rounded-2xl border border-white/10 p-8 text-center">
+                                <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-4">Party Starts In</p>
+                                <div className="flex justify-center gap-4 mb-6">
+                                    {countdown.days > 0 && (
+                                        <div className="bg-black/50 rounded-xl px-6 py-4 border border-white/10">
+                                            <div className="text-4xl font-black text-white tabular-nums">{countdown.days}</div>
+                                            <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Days</div>
+                                        </div>
+                                    )}
+                                    <div className="bg-black/50 rounded-xl px-6 py-4 border border-white/10">
+                                        <div className="text-4xl font-black text-white tabular-nums">{String(countdown.hours).padStart(2, '0')}</div>
+                                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Hours</div>
+                                    </div>
+                                    <div className="bg-black/50 rounded-xl px-6 py-4 border border-white/10">
+                                        <div className="text-4xl font-black text-red-500 tabular-nums">{String(countdown.minutes).padStart(2, '0')}</div>
+                                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Min</div>
+                                    </div>
+                                    <div className="bg-black/50 rounded-xl px-6 py-4 border border-white/10">
+                                        <div className="text-4xl font-black text-red-500 tabular-nums animate-pulse">{String(countdown.seconds).padStart(2, '0')}</div>
+                                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Sec</div>
+                                    </div>
+                                </div>
+                                
+                                {/* Auto-start toggle */}
+                                <div className="flex items-center justify-center gap-3 mb-4">
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={autoStartEnabled} 
+                                            onChange={(e) => setAutoStartEnabled(e.target.checked)}
+                                            className="sr-only peer" 
+                                        />
+                                        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                    </label>
+                                    <span className="text-sm text-gray-400">
+                                        {autoStartEnabled ? '✓ Auto-start when countdown ends' : 'Manual start required'}
+                                    </span>
+                                </div>
+
+                                <p className="text-xs text-gray-600">
+                                    Scheduled: {new Date(item.watchPartyStartTime!).toLocaleString()}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Video Player */}
+                        <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                            {currentMovie ? (
+                                <video
+                                    ref={videoRef}
+                                    src={currentMovie.fullMovie}
+                                    onPlay={handlePlay}
+                                    onPause={handlePause}
+                                    onSeeked={handleSeeked}
+                                    onTimeUpdate={handleTimeUpdate}
+                                    controls
+                                    className="w-full h-full"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                    <div className="text-center">
+                                        <div className="text-4xl mb-2">🎬</div>
+                                        <p>No content available</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Film Info & Controls */}
+                        <div className="mt-6 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-2xl border border-white/10 p-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <h3 className="text-2xl font-black text-white">
+                                        {item.title}
+                                        {item.type === 'block' && (
+                                            <span className="ml-3 text-xs bg-gradient-to-r from-pink-600 to-red-600 px-3 py-1 rounded-full uppercase tracking-widest">Block</span>
+                                        )}
+                                    </h3>
+                                    {partyState?.backstageKey && (
+                                        <div className="mt-3 inline-flex items-center gap-3 bg-pink-600/10 border border-pink-500/30 rounded-xl px-4 py-2">
+                                            <span className="text-[10px] font-black uppercase text-pink-400">Director Key</span>
+                                            <span className="font-mono font-bold text-white tracking-widest">{partyState.backstageKey}</span>
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(partyState.backstageKey!);
+                                                }}
+                                                className="text-pink-400 hover:text-white transition-colors"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    {isLive && (
+                                        <button 
+                                            onClick={toggleQA}
+                                            disabled={isTogglingQA}
+                                            className={`font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 ${
+                                                partyState?.isQALive 
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                                                    : 'bg-gray-700 hover:bg-gray-600 border border-white/10'
+                                            }`}
+                                        >
+                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                            {partyState?.isQALive ? 'Q&A Live' : 'Start Q&A'}
+                                        </button>
+                                    )}
+                                    
+                                    {canStart && !countdown && (
+                                        <button 
+                                            onClick={handleStartWithLoading} 
+                                            disabled={isStarting}
+                                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:opacity-50 text-white font-black py-3 px-8 rounded-xl shadow-[0_0_25px_rgba(22,163,74,0.4)] transition-all flex items-center gap-2"
+                                        >
+                                            {isStarting ? (
+                                                <>
+                                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Launching...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-lg">▶</span>
+                                                    {partyState?.status === 'ended' ? 'Restart Party' : 'Start Now'}
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                    
+                                    {isLive && (
+                                        <>
+                                            <button 
+                                                onClick={onTerminateParty} 
+                                                className="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-red-500/30 transition-all"
+                                            >
+                                                End Party
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Section */}
+                    <div className="lg:col-span-1 border-l border-white/10">
+                         <EmbeddedChat 
+                            movieKey={item.id} 
+                            user={user} 
+                            isQALive={partyState?.isQALive} 
+                            qaEmbed={partyState?.qaEmbed} 
+                            isWebcamLive={partyState?.isWebcamLive}
+                            isBackstageVerified={true} 
+                            backstageKey={partyState?.backstageKey}
+                            allMovies={allMovies}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

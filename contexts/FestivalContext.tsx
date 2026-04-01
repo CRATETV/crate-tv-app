@@ -128,6 +128,20 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             })
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
+        // Debug logging
+        const watchPartyMovies = movieArray.filter(m => m.isWatchPartyEnabled);
+        if (watchPartyMovies.length > 0) {
+            console.log('[WATCH PARTY DEBUG] Movies with isWatchPartyEnabled:', watchPartyMovies.map(m => ({
+                key: m.key,
+                title: m.title,
+                watchPartyStartTime: m.watchPartyStartTime,
+                isUpcoming: m.watchPartyStartTime ? new Date(m.watchPartyStartTime).getTime() > now.getTime() : false
+            })));
+        }
+        if (upcomingParties.length > 0) {
+            console.log('[WATCH PARTY DEBUG] Upcoming parties found:', upcomingParties[0]?.title);
+        }
+
         return upcomingParties[0] || null;
     }, [activeParties, allPartyStates, movies, festivalData, now, settings]);
 

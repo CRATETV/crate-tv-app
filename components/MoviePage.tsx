@@ -216,15 +216,72 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </div>
                     )
                 ) : (
-                    <div className="relative w-full h-full flex items-center justify-center group cursor-pointer" onClick={() => setIsDetailsModalOpen(true)}>
-                         <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
-                         <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
-                         <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
-                             <div className="bg-white/10 backdrop-blur-md rounded-full p-8 border-2 border-white/20 scale-90 group-hover:scale-100 transition-transform shadow-2xl">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                    /* POSTER/LOCKED MODE - Show when not in full player mode */
+                    hasAccess ? (
+                        /* User has access - show poster with play button */
+                        <div className="relative w-full h-full flex items-center justify-center group cursor-pointer" onClick={() => setPlayerMode('full')}>
+                             <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
+                             <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
+                             <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
+                                 <div className="bg-white/10 backdrop-blur-md rounded-full p-8 border-2 border-white/20 scale-90 group-hover:scale-100 transition-transform shadow-2xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                                 </div>
                              </div>
-                         </div>
-                    </div>
+                        </div>
+                    ) : (
+                        /* User does NOT have access - show beautiful locked state */
+                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                            {/* Background poster blur */}
+                            <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 scale-110" crossOrigin="anonymous" />
+                            
+                            {/* Gradient overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/60" />
+                            
+                            {/* Content */}
+                            <div className="relative z-10 flex flex-col items-center justify-center text-center p-8 max-w-lg animate-[fadeIn_0.6s_ease-out]">
+                                {/* Lock icon with glow */}
+                                <div className="relative mb-6">
+                                    <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-2xl scale-150" />
+                                    <div className="relative bg-gradient-to-br from-amber-500 to-amber-700 p-6 rounded-2xl shadow-2xl border border-amber-400/30">
+                                        <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                {/* Title */}
+                                <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-2">{movie.title}</h2>
+                                <p className="text-amber-500 font-black uppercase tracking-[0.3em] text-[10px] mb-6">Premium Selection</p>
+                                
+                                {/* Price badge */}
+                                {movie.salePrice && (
+                                    <div className="bg-white/5 border border-white/10 rounded-full px-6 py-2 mb-6">
+                                        <span className="text-gray-400 text-sm">Unlock for </span>
+                                        <span className="text-white font-black text-xl">${movie.salePrice}</span>
+                                    </div>
+                                )}
+                                
+                                {/* Unlock button */}
+                                <button 
+                                    onClick={() => setIsPurchaseModalOpen(true)}
+                                    className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black px-10 py-4 rounded-xl shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all hover:scale-105 active:scale-95 uppercase text-xs tracking-widest flex items-center gap-3"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                    </svg>
+                                    Unlock Now
+                                </button>
+                                
+                                {/* Secondary action */}
+                                <button 
+                                    onClick={() => setIsDetailsModalOpen(true)}
+                                    className="mt-4 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+                                >
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    )
                 )}
             </div>
 
