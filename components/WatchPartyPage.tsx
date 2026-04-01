@@ -275,12 +275,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
 
+        // When party first goes live, ensure video starts from beginning
+        const initializeVideo = () => {
+            if (video.currentTime > 5 && partyState.currentTime < 5) {
+                // Party just started but video is ahead - reset to beginning
+                video.currentTime = 0;
+            }
+        };
+        
+        video.addEventListener('loadedmetadata', initializeVideo);
+
         const syncClock = () => {
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
             try {
                 const serverStart = (partyState.actualStartTime as any).toDate().getTime();
-                const targetPosition = Math.max(0, (now - serverStart) / 1000);
+                const elapsedSinceStart = (now - serverStart) / 1000;
+                
+                // If party just started (< 10 seconds ago), start from beginning
+                // This prevents the "jump ahead" issue for new viewers
+                const targetPosition = elapsedSinceStart < 10 ? 0 : Math.max(0, elapsedSinceStart);
+                
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
                 
                 if (targetPosition >= movieDuration) {
@@ -322,7 +337,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         const interval = setInterval(syncClock, 1000);
         syncClock(); 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            video.removeEventListener('loadedmetadata', initializeVideo);
+        };
     }, [partyState, movie, isEnded, isControllerMode]);
 
     useEffect(() => {
@@ -528,6 +546,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         muted={false} 
                                         playsInline
                                         webkit-playsinline="true"
+                                        preload="auto"
                                         controls={false}
                                     />
                                     {isEnded && (

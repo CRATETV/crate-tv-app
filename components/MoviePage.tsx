@@ -79,6 +79,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
   }, []);
 
+  // Ensure video always starts from beginning when loaded
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const handleLoadedMetadata = () => {
+      video.currentTime = 0;
+    };
+    
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+  }, [movieKey]);
+
   useEffect(() => {
     if (movie) {
         const params = new URLSearchParams(currentSearch);
@@ -109,6 +122,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const playContent = useCallback(async () => {
     if (videoRef.current && movie?.key) {
         try {
+            // Always start from beginning
+            videoRef.current.currentTime = 0;
             markAsWatched(movie.key);
             if (!hasTrackedViewRef.current) {
                 hasTrackedViewRef.current = true;
