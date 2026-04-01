@@ -98,8 +98,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
             setPlayerMode('full');
             setIsEnded(false);
-            if (videoRef.current && videoRef.current.ended) {
+            // Play immediately - video is already preloading
+            if (videoRef.current) {
                 videoRef.current.currentTime = 0;
+                videoRef.current.play().catch(() => setIsPaused(true));
             }
         } else {
             setPlayerMode('poster');
@@ -180,6 +182,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
             <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
+                {/* Video element always rendered (hidden when not in full mode) for instant playback */}
+                {hasAccess && !embedUrl && (
+                    <video 
+                        ref={videoRef} 
+                        src={movie.fullMovie} 
+                        preload="auto"
+                        className={`absolute inset-0 w-full h-full object-contain ${playerMode === 'full' && !isEnded ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}
+                        controls={false} 
+                        playsInline 
+                        autoPlay={playerMode === 'full'}
+                        onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)} 
+                        onPlay={() => !isEnded && playerMode === 'full' && setIsPaused(false)} 
+                        onEnded={() => setIsEnded(true)} 
+                        controlsList="nodownload" 
+                    />
+                )}
+
                 {playerMode === 'full' ? (
                     hasAccess ? (
                         <>
@@ -187,7 +206,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
-                                    <video ref={videoRef} src={movie.fullMovie} preload="auto" className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
+                                    {/* Video rendered above, this div is for overlays */}
                                     <CastButton videoElement={videoRef.current} />
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     {isEnded && (

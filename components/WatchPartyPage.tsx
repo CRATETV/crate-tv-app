@@ -275,16 +275,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
 
-        // When party first goes live, ensure video starts from beginning
-        const initializeVideo = () => {
-            if (video.currentTime > 5 && partyState.currentTime < 5) {
-                // Party just started but video is ahead - reset to beginning
-                video.currentTime = 0;
-            }
-        };
-        
-        video.addEventListener('loadedmetadata', initializeVideo);
-
         const syncClock = () => {
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
@@ -292,9 +282,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const serverStart = (partyState.actualStartTime as any).toDate().getTime();
                 const elapsedSinceStart = (now - serverStart) / 1000;
                 
-                // If party just started (< 10 seconds ago), start from beginning
-                // This prevents the "jump ahead" issue for new viewers
-                const targetPosition = elapsedSinceStart < 10 ? 0 : Math.max(0, elapsedSinceStart);
+                // Calculate target position based on elapsed time since party started
+                const targetPosition = Math.max(0, elapsedSinceStart);
                 
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
                 
@@ -339,7 +328,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         syncClock(); 
         return () => {
             clearInterval(interval);
-            video.removeEventListener('loadedmetadata', initializeVideo);
         };
     }, [partyState, movie, isEnded, isControllerMode]);
 

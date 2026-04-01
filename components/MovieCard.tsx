@@ -100,6 +100,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (previewLimitTimeoutRef.current) clearTimeout(previewLimitTimeoutRef.current);
 
+    // Preload the full movie video on hover for instant playback
+    if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube')) {
+      // Dispatch event for App to preload via hidden video element
+      window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
+    }
+
     hoverTimeoutRef.current = setTimeout(() => {
       setShowPreview(true);
       setIsMuted(true);

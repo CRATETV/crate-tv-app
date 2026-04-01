@@ -54,6 +54,7 @@ const App: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [dismissedBannerKeys, setDismissedBannerKeys] = useState<Set<string>>(new Set());
+    const [preloadVideoUrl, setPreloadVideoUrl] = useState<string | null>(null);
     
     const dismissBanner = useCallback((key: string) => {
         setDismissedBannerKeys(prev => {
@@ -62,6 +63,17 @@ const App: React.FC = () => {
             return next;
         });
     }, []);
+
+    // Listen for video preload requests from MovieCard hover
+    useEffect(() => {
+        const handlePreload = (e: CustomEvent<string>) => {
+            if (e.detail && e.detail !== preloadVideoUrl) {
+                setPreloadVideoUrl(e.detail);
+            }
+        };
+        window.addEventListener('preloadVideo' as any, handlePreload);
+        return () => window.removeEventListener('preloadVideo' as any, handlePreload);
+    }, [preloadVideoUrl]);
     
     useEffect(() => {
         // Track general site visit
@@ -486,6 +498,17 @@ const App: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar onSearchClick={handleSearchClick} />
+
+            {/* Hidden video element for preloading - starts buffering on hover */}
+            {preloadVideoUrl && (
+                <video 
+                    src={preloadVideoUrl} 
+                    preload="auto" 
+                    muted 
+                    className="hidden" 
+                    aria-hidden="true"
+                />
+            )}
 
             {detailsMovie && <MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} />}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
