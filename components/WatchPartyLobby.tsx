@@ -1,0 +1,303 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { Movie, WatchPartyState } from '../types';
+import { getDbInstance } from '../services/firebaseClient';
+import firebase from 'firebase/compat/app';
+import { avatars } from './avatars';
+
+interface WatchPartyLobbyProps {
+    movie: Movie;
+    partyState?: WatchPartyState;
+    onPartyStart: () => void;
+    user: { name?: string; email: string | null; avatar?: string } | null;
+}
+
+interface LobbyViewer {
+    id: string;
+    name: string;
+    avatar: string;
+    joinedAt: Date;
+}
+
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user }) => {
+    const [viewers, setViewers] = useState<LobbyViewer[]>([]);
+    const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+    const [directorMessage, setDirectorMessage] = useState<string | null>(null);
+    const [showFinalCountdown, setShowFinalCountdown] = useState(false);
+    const [ambientPhase, setAmbientPhase] = useState(0);
+
+    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
+
+    // Register viewer presence in lobby
+    useEffect(() => {
+        if (!user) return;
+        const db = getDbInstance();
+        if (!db) return;
+
+        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.email || 'anon');
+        
+        // Set viewer presence
+        viewerRef.set({
+            name: user.name || 'Film Lover',
+            avatar: user.avatar || 'fox',
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Remove on disconnect
+        return () => {
+            viewerRef.delete();
+        };
+    }, [user, movie.key]);
+
+    // Listen to lobby viewers
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+
+        const unsub = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers')
+            .orderBy('joinedAt', 'desc')
+            .limit(50)
+            .onSnapshot(snapshot => {
+                const v: LobbyViewer[] = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    v.push({
+                        id: doc.id,
+                        name: data.name,
+                        avatar: data.avatar,
+                        joinedAt: data.joinedAt?.toDate() || new Date()
+                    });
+                });
+                setViewers(v);
+            });
+
+        return () => unsub();
+    }, [movie.key]);
+
+    // Listen for director welcome message
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+
+        const unsub = db.collection('watch_parties').doc(movie.key).onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data?.directorWelcome) {
+                    setDirectorMessage(data.directorWelcome);
+                }
+            }
+        });
+
+        return () => unsub();
+    }, [movie.key]);
+
+    // Countdown timer
+    useEffect(() => {
+        if (!startTime) return;
+
+        const updateCountdown = () => {
+            const now = new Date().getTime();
+            const target = startTime.getTime();
+            const diff = target - now;
+
+            if (diff <= 0) {
+                setCountdown(null);
+                // Final 10 second countdown already handled, transition to party
+                if (diff < -1000) {
+                    onPartyStart();
+                }
+                return;
+            }
+
+            // Show dramatic final countdown for last 10 seconds
+            if (diff <= 10000 && diff > 0) {
+                setShowFinalCountdown(true);
+            }
+
+            setCountdown({
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+                seconds: Math.floor((diff % (1000 * 60)) / 1000)
+            });
+        };
+
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 1000);
+        return () => clearInterval(interval);
+    }, [startTime, onPartyStart]);
+
+    // Ambient animation phase
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setAmbientPhase(p => (p + 1) % 4);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // If party is live, show transition
+    if (partyState?.status === 'live') {
+        return (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-[fadeIn_0.5s_ease-out]">
+                <div className="text-center space-y-6 animate-pulse">
+                    <div className="text-red-500 text-8xl">▶</div>
+                    <p className="text-2xl font-black uppercase tracking-widest">Starting Now</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Final 10 second countdown
+    if (showFinalCountdown && countdown && countdown.seconds <= 10 && countdown.minutes === 0 && countdown.hours === 0 && countdown.days === 0) {
+        return (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+                {/* Dramatic background pulse */}
+                <div className="absolute inset-0 bg-gradient-radial from-red-900/20 via-black to-black animate-pulse" />
+                
+                <div className="relative text-center space-y-8">
+                    <p className="text-red-500 text-sm font-black uppercase tracking-[0.5em] animate-pulse">Transmission Imminent</p>
+                    <div className="text-[12rem] md:text-[20rem] font-black text-white leading-none tabular-nums animate-[pulse_1s_ease-in-out_infinite]">
+                        {countdown.seconds}
+                    </div>
+                    <p className="text-gray-500 text-xs uppercase tracking-widest">{movie.title}</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black z-40 overflow-hidden">
+            {/* Ambient background with poster */}
+            <div className="absolute inset-0">
+                <img 
+                    src={movie.poster} 
+                    alt="" 
+                    className="absolute inset-0 w-full h-full object-cover opacity-10 blur-3xl scale-110 transition-all duration-[3000ms]"
+                    style={{ transform: `scale(${1.1 + ambientPhase * 0.02})` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-black/70" />
+                
+                {/* Subtle animated grain */}
+                <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+            </div>
+
+            {/* Main content */}
+            <div className="relative z-10 h-full flex flex-col items-center justify-center p-8">
+                
+                {/* Top bar - CRATE branding */}
+                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">CRATE Watch Party</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                        <div className="flex -space-x-2">
+                            {viewers.slice(0, 5).map((v, i) => (
+                                <div 
+                                    key={v.id} 
+                                    className="w-6 h-6 rounded-full bg-gray-800 border-2 border-black p-0.5"
+                                    style={{ zIndex: 5 - i }}
+                                    dangerouslySetInnerHTML={{ __html: avatars[v.avatar] || avatars['fox'] }}
+                                    title={v.name}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-sm font-bold text-white ml-2">{viewers.length}</span>
+                        <span className="text-xs text-gray-500">waiting</span>
+                    </div>
+                </div>
+
+                {/* Center content */}
+                <div className="text-center max-w-2xl mx-auto space-y-12">
+                    {/* Film poster - slowly revealing */}
+                    <div className="relative mx-auto w-48 md:w-64">
+                        <div className="absolute -inset-4 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />
+                        <img 
+                            src={movie.poster} 
+                            alt={movie.title} 
+                            className="relative w-full rounded-xl shadow-2xl border border-white/10"
+                        />
+                    </div>
+
+                    {/* Title */}
+                    <div className="space-y-3">
+                        <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight leading-none">{movie.title}</h1>
+                        <p className="text-red-500 font-black uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>
+                    </div>
+
+                    {/* Countdown */}
+                    {countdown && (
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">Screening Begins In</p>
+                            <div className="flex justify-center gap-3 md:gap-6">
+                                {countdown.days > 0 && (
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl px-4 md:px-8 py-4 md:py-6">
+                                        <div className="text-3xl md:text-5xl font-black text-white tabular-nums">{countdown.days}</div>
+                                        <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-gray-500 mt-1">Days</div>
+                                    </div>
+                                )}
+                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 md:px-8 py-4 md:py-6">
+                                    <div className="text-3xl md:text-5xl font-black text-white tabular-nums">{String(countdown.hours).padStart(2, '0')}</div>
+                                    <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-gray-500 mt-1">Hours</div>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 md:px-8 py-4 md:py-6">
+                                    <div className="text-3xl md:text-5xl font-black text-red-500 tabular-nums">{String(countdown.minutes).padStart(2, '0')}</div>
+                                    <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-gray-500 mt-1">Min</div>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 md:px-8 py-4 md:py-6">
+                                    <div className="text-3xl md:text-5xl font-black text-red-500 tabular-nums animate-pulse">{String(countdown.seconds).padStart(2, '0')}</div>
+                                    <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-gray-500 mt-1">Sec</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Director welcome message */}
+                    {directorMessage && (
+                        <div className="bg-gradient-to-r from-red-900/20 via-red-900/10 to-transparent border-l-2 border-red-500 p-6 rounded-r-xl text-left max-w-md mx-auto animate-[fadeIn_0.5s_ease-out]">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-2">Message from the Director</p>
+                            <p className="text-gray-300 italic">"{directorMessage}"</p>
+                            <p className="text-gray-600 text-xs mt-2">— {movie.director}</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Bottom - Viewers arriving */}
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <div className="max-w-2xl mx-auto">
+                        {/* Recent arrivals ticker */}
+                        {viewers.length > 0 && (
+                            <div className="text-center space-y-4">
+                                <div className="flex items-center justify-center gap-2 text-gray-500 text-xs">
+                                    <span className="w-8 h-px bg-white/10" />
+                                    <span className="uppercase tracking-widest">Audience Gathering</span>
+                                    <span className="w-8 h-px bg-white/10" />
+                                </div>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    {viewers.slice(0, 12).map(v => (
+                                        <div 
+                                            key={v.id}
+                                            className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full pl-1 pr-3 py-1 animate-[fadeIn_0.5s_ease-out]"
+                                        >
+                                            <div 
+                                                className="w-6 h-6 rounded-full bg-gray-800 p-0.5"
+                                                dangerouslySetInnerHTML={{ __html: avatars[v.avatar] || avatars['fox'] }}
+                                            />
+                                            <span className="text-xs text-gray-400">{v.name}</span>
+                                        </div>
+                                    ))}
+                                    {viewers.length > 12 && (
+                                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1">
+                                            <span className="text-xs text-gray-400">+{viewers.length - 12} more</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default WatchPartyLobby;

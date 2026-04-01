@@ -150,7 +150,21 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             const res = await fetch(`/api/get-live-data?t=${Date.now()}&noCache=${forceNoCache}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data.movies) setMovies(data.movies);
+                if (data.movies) {
+                    // DEBUG: Log movies with watch party enabled
+                    const wpMovies = Object.values(data.movies).filter((m: any) => m.isWatchPartyEnabled);
+                    if (wpMovies.length > 0) {
+                        console.log('[FESTIVAL CONTEXT] Movies from API with isWatchPartyEnabled:', wpMovies.map((m: any) => ({
+                            key: m.key,
+                            title: m.title,
+                            isWatchPartyEnabled: m.isWatchPartyEnabled,
+                            watchPartyStartTime: m.watchPartyStartTime
+                        })));
+                    } else {
+                        console.log('[FESTIVAL CONTEXT] No movies from API have isWatchPartyEnabled=true');
+                    }
+                    setMovies(data.movies);
+                }
                 if (data.categories) setCategories(data.categories);
                 if (data.zineStories) setZineStories(data.zineStories);
                 if (data.aboutData) setAboutData(data.aboutData);

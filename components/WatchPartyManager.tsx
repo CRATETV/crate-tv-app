@@ -582,6 +582,30 @@ const WatchPartyControlRoom: React.FC<{
                                         </button>
                                     )}
                                     
+                                    {/* Director welcome message button */}
+                                    {countdown && (
+                                        <button 
+                                            onClick={async () => {
+                                                const msg = window.prompt("Enter a welcome message for viewers in the lobby:", partyState?.directorWelcome || "");
+                                                if (msg !== null) {
+                                                    const db = getDbInstance();
+                                                    if (db) {
+                                                        await db.collection('watch_parties').doc(item.id).set(
+                                                            { directorWelcome: msg }, 
+                                                            { merge: true }
+                                                        );
+                                                    }
+                                                }
+                                            }}
+                                            className="bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-amber-500/30 transition-all flex items-center gap-2"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                            </svg>
+                                            {partyState?.directorWelcome ? 'Edit Welcome' : 'Add Welcome'}
+                                        </button>
+                                    )}
+                                    
                                     {isLive && (
                                         <>
                                             <button 
@@ -860,6 +884,14 @@ const WatchPartyManager: React.FC<{
                 JSON.stringify(allMovies[key]) !== JSON.stringify(localMovies[key])
             ).map(key => localMovies[key]);
             
+            // DEBUG: Log what's being saved
+            console.log('[WATCH PARTY SAVE] Changed movies:', changedMovies.map(m => ({
+                key: m.key,
+                title: m.title,
+                isWatchPartyEnabled: m.isWatchPartyEnabled,
+                watchPartyStartTime: m.watchPartyStartTime
+            })));
+            
             // Save modified festival data
             const festChanged = JSON.stringify(festivalData) !== JSON.stringify(localFestivalData);
             
@@ -872,6 +904,7 @@ const WatchPartyManager: React.FC<{
             if (crateChanged && localCrateFestConfig) promises.push(onSaveCrateFest(localCrateFestConfig));
 
             await Promise.all(promises);
+            console.log('[WATCH PARTY SAVE] Save completed successfully');
             setSaveStatus('success');
         } catch (error) {
             console.error("Failed to save watch party settings:", error);

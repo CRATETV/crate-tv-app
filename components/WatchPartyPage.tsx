@@ -8,6 +8,8 @@ import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
+import WatchPartyLobby from './WatchPartyLobby';
+import WatchPartyCredits from './WatchPartyCredits';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -206,7 +208,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
@@ -216,8 +218,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
+    const [showLobby, setShowLobby] = useState(true);
+    const [showCredits, setShowCredits] = useState(false);
+    const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
+
+    const isLiked = likedMoviesArray?.includes(movieKey) || false;
+    const handleToggleLike = () => toggleLikeMovie(movieKey);
 
     const movie = useMemo(() => {
         if (allMovies[movieKey]) return allMovies[movieKey];
@@ -321,15 +329,53 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const db = getDbInstance();
         if (!db) return;
         const partyRef = db.collection('watch_parties').doc(movieKey);
-        const unsubscribe = partyRef.onSnapshot(doc => { if (doc.exists) setPartyState(doc.data() as WatchPartyState); });
+        const unsubscribe = partyRef.onSnapshot(doc => { 
+            if (doc.exists) {
+                const state = doc.data() as WatchPartyState;
+                setPartyState(state);
+                // Hide lobby when party goes live
+                if (state.status === 'live') {
+                    setShowLobby(false);
+                }
+            }
+        });
         const reactionsRef = partyRef.collection('live_reactions').where('timestamp', '>=', new Date(Date.now() - 5000))
             .onSnapshot(snapshot => {
                 snapshot.docChanges().forEach(change => {
                     if (change.type === 'added') setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
                 });
             });
-        return () => { unsubscribe(); reactionsRef(); };
+        
+        // Track viewer count from lobby
+        const viewerCountRef = partyRef.collection('lobby_viewers').onSnapshot(snapshot => {
+            setViewerCount(snapshot.size);
+        });
+
+        return () => { unsubscribe(); reactionsRef(); viewerCountRef(); };
     }, [movieKey]);
+
+    // Show credits when video ends
+    useEffect(() => {
+        if (isEnded && !showCredits) {
+            setShowCredits(true);
+        }
+    }, [isEnded, showCredits]);
+
+    // Determine if we should show lobby
+    const shouldShowLobby = useMemo(() => {
+        // Don't show lobby if party is live
+        if (partyState?.status === 'live') return false;
+        // Don't show lobby if user manually dismissed it
+        if (!showLobby) return false;
+        // Don't show if party already ended
+        if (partyState?.status === 'ended') return false;
+        // Show lobby if there's a scheduled start time in the future
+        if (movie?.watchPartyStartTime) {
+            const startTime = new Date(movie.watchPartyStartTime);
+            return startTime > new Date();
+        }
+        return false;
+    }, [partyState, showLobby, movie]);
 
     const hasAccess = useMemo(() => {
         if (isControllerMode || isBackstageVerified) return true;
@@ -363,6 +409,41 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     ))}
                 </div>
             </div>
+        );
+    }
+
+    // Show pre-show lobby if party hasn't started yet
+    if (shouldShowLobby && hasAccess) {
+        return (
+            <WatchPartyLobby 
+                movie={movie}
+                partyState={partyState}
+                onPartyStart={() => setShowLobby(false)}
+                user={user}
+            />
+        );
+    }
+
+    // Show credits/applause screen when film ends
+    if (showCredits) {
+        return (
+            <WatchPartyCredits
+                movie={movie}
+                partyState={partyState}
+                viewerCount={viewerCount}
+                onClose={() => window.location.href = '/'}
+                onRewatch={() => {
+                    setShowCredits(false);
+                    setIsEnded(false);
+                    if (videoRef.current) {
+                        videoRef.current.currentTime = 0;
+                        videoRef.current.play();
+                    }
+                }}
+                user={user}
+                isLiked={isLiked}
+                onToggleLike={handleToggleLike}
+            />
         );
     }
 
