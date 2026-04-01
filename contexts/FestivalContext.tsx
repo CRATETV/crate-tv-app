@@ -185,6 +185,30 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
+                // REAL-TIME MOVIES LISTENER - for watch party settings
+                db.collection('data').doc('movies').onSnapshot(doc => {
+                    if (doc.exists) {
+                        const firebaseMovies = doc.data() as Record<string, Movie>;
+                        // Merge watch party fields from Firebase into movies state
+                        setMovies(prev => {
+                            const merged = { ...prev };
+                            Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
+                                if (merged[key]) {
+                                    // Update watch party fields from Firebase (real-time)
+                                    merged[key] = {
+                                        ...merged[key],
+                                        isWatchPartyEnabled: fbMovie.isWatchPartyEnabled,
+                                        watchPartyStartTime: fbMovie.watchPartyStartTime,
+                                        isWatchPartyPaid: fbMovie.isWatchPartyPaid,
+                                        watchPartyPrice: fbMovie.watchPartyPrice
+                                    };
+                                }
+                            });
+                            return merged;
+                        });
+                    }
+                });
+
                 // REAL-TIME VIEW COUNT LISTENER
                 db.collection('view_counts').onSnapshot(snapshot => {
                     const counts: Record<string, number> = {};

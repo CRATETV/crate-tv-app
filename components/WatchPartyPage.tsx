@@ -275,7 +275,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
 
+        // If party has been terminated, stop playback immediately
+        if (partyState.status === 'ended') {
+            video.pause();
+            return;
+        }
+
         const syncClock = () => {
+            // Double-check party is still live
+            if (partyState.status === 'ended' || partyState.status !== 'live') {
+                video.pause();
+                return;
+            }
+
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
             try {
@@ -375,10 +387,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!showLobby) return false;
         // Don't show if party already ended
         if (partyState?.status === 'ended') return false;
-        // Show lobby if there's a scheduled start time in the future
-        if (movie?.watchPartyStartTime) {
-            const startTime = new Date(movie.watchPartyStartTime);
-            return startTime > new Date();
+        
+        // Show lobby if watch party is enabled for this movie
+        if (movie?.isWatchPartyEnabled) {
+            // If there's a scheduled start time in the future, show lobby
+            if (movie.watchPartyStartTime) {
+                const startTime = new Date(movie.watchPartyStartTime);
+                if (startTime > new Date()) return true;
+            }
+            // Also show lobby if party exists but status is 'waiting' or undefined
+            if (!partyState?.status || partyState.status === 'waiting') {
+                return true;
+            }
         }
         return false;
     }, [partyState, showLobby, movie]);
@@ -427,6 +447,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 onPartyStart={() => setShowLobby(false)}
                 user={user}
             />
+        );
+    }
+
+    // Show terminated screen when admin ends the party
+    if (partyState?.status === 'ended') {
+        return (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+                <div className="text-center space-y-8 p-8 max-w-lg animate-[fadeIn_0.5s_ease-out]">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mb-2">Transmission Terminated</p>
+                        <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight">Session Ended</h1>
+                    </div>
+                    <p className="text-gray-500">This watch party has been ended by the host. Thank you for joining!</p>
+                    <button 
+                        onClick={() => window.location.href = '/'}
+                        className="bg-white text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
+                    >
+                        Return Home
+                    </button>
+                </div>
+            </div>
         );
     }
 
