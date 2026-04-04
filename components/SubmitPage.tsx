@@ -167,68 +167,30 @@ const SubmitPage: React.FC = () => {
                 (progress) => setUploadProgress(prev => ({ ...prev, film: progress }))
             );
 
-            // Save submission to Firestore
-            const db = getDbInstance();
-            if (!db) {
-                throw new Error('Database not initialized');
-            }
-
-            const submissionKey = `sub_${timestamp}_${Math.random().toString(36).substring(2, 8)}`;
-            
-            await db.collection('movie_pipeline').doc(submissionKey).set({
-                key: submissionKey,
-                title: title.trim(),
-                director: director.trim(),
-                email: email.trim().toLowerCase(),
-                synopsis: synopsis.trim() || '',
-                runtime: runtime || '',
-                year: year || new Date().getFullYear().toString(),
-                genre: genre || 'Drama',
-                poster: posterUrl,
-                fullMovie: filmUrl,
-                website: website.trim() || '',
-                instagram: instagram.trim() || '',
-                submitterName: submitterName.trim() || director.trim(),
-                
-                // Pipeline metadata
-                status: 'submitted',
-                source: 'filmmaker-portal',
-                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                
-                // Flags for review
-                isReviewed: false,
-                isApproved: false,
-                reviewNotes: '',
-            });
-
-            // Log to audit
-            await db.collection('audit_log').add({
-                action: 'film_submitted',
-                details: `Film "${title}" submitted by ${director} (${email})`,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                metadata: { submissionKey, title, director, email }
-            });
-
-            // Send notification email to admin (fire and forget)
-            fetch('/api/notify-film-submission', {
+            // Save submission to pipeline via server-side API (bypasses client permission issues)
+            const pipelineResponse = await fetch('/api/submit-film-to-pipeline', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title,
-                    director,
-                    email,
-                    synopsis,
-                    runtime,
-                    year,
-                    genre,
+                    title: title.trim(),
+                    director: director.trim(),
+                    email: email.trim().toLowerCase(),
+                    synopsis: synopsis.trim() || '',
+                    runtime: runtime || '',
+                    year: year || new Date().getFullYear().toString(),
+                    genre: genre || 'Drama',
                     posterUrl,
                     filmUrl,
-                    instagram,
-                    website,
-                    submissionKey
+                    website: website.trim() || '',
+                    instagram: instagram.trim() || '',
+                    submitterName: submitterName.trim() || director.trim(),
                 })
-            }).catch(err => console.warn('Notification email failed:', err));
+            });
+
+            if (!pipelineResponse.ok) {
+                const errorData = await pipelineResponse.json();
+                throw new Error(errorData.error || 'Failed to save submission');
+            }
 
             setStep('success');
 
@@ -325,9 +287,34 @@ const SubmitPage: React.FC = () => {
                     <>
                         <div className="text-center mb-12">
                             <h1 className="text-4xl font-black mb-4">Submit Your Film</h1>
-                            <p className="text-gray-400 max-w-lg mx-auto">
+                            <p className="text-gray-400 max-w-lg mx-auto mb-6">
                                 Share your work with the CRATE community. Upload your film and poster, and we'll review it for inclusion in our catalog.
                             </p>
+                            
+                            {/* FilmFreeway Option */}
+                            <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 border border-amber-500/30 rounded-2xl p-6 max-w-lg mx-auto">
+                                <p className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-2">Prefer FilmFreeway?</p>
+                                <p className="text-gray-400 text-sm mb-4">
+                                    Submit through our official CrateFest festival page for consideration in our curated programming.
+                                </p>
+                                <a 
+                                    href="https://filmfreeway.com/CrateFest" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-black font-bold px-6 py-2 rounded-full text-sm transition-colors"
+                                >
+                                    <span>Submit on FilmFreeway</span>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 max-w-lg mx-auto my-8">
+                                <div className="flex-grow h-px bg-gray-800"></div>
+                                <span className="text-gray-600 text-sm font-bold uppercase tracking-wider">Or upload directly</span>
+                                <div className="flex-grow h-px bg-gray-800"></div>
+                            </div>
                         </div>
 
                         {error && (

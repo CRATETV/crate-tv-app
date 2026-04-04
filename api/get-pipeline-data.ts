@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const pipelineSnapshot = await db.collection('movie_pipeline').orderBy('submissionDate', 'desc').get();
+        const pipelineSnapshot = await db.collection('submissions').get();
         const pipeline = pipelineSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         return new Response(JSON.stringify({ pipeline }), { 
