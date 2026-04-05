@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
         // Send notification email to admin
         const resendApiKey = process.env.RESEND_API_KEY;
-        const adminEmail = process.env.ADMIN_EMAIL || 'salomedenoon@gmail.com';
+        const adminEmails = ['studio@cratetv.net', 'cratetiv@gmail.com'];
 
         if (resendApiKey) {
             try {
@@ -243,12 +243,12 @@ export async function POST(request: Request) {
 
                 await resend.emails.send({
                     from: 'CRATE <notifications@cratetv.net>',
-                    to: adminEmail,
+                    to: adminEmails,
                     subject: `🎬 New Film Submission: "${title}" by ${director}`,
                     html: emailHtml,
                 });
 
-                console.log(`Notification email sent to ${adminEmail} for submission: ${submissionKey}`);
+                console.log(`Notification email sent to ${adminEmails.join(', ')} for submission: ${submissionKey}`);
             } catch (emailError) {
                 console.warn('Failed to send notification email:', emailError);
                 // Don't fail the submission if email fails

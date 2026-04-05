@@ -268,7 +268,7 @@ export interface MoviePipelineEntry {
   submissionDate?: any;
   submittedAt?: any;
   createdAt?: any;
-  status?: 'pending' | 'submitted' | 'approved' | 'rejected';
+  status?: 'pending' | 'submitted' | 'approved' | 'rejected' | 'consideration' | 'catalog';
   source?: string;
   musicRightsConfirmation?: boolean;
   runtime?: string;

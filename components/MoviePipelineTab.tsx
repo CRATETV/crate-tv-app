@@ -42,7 +42,7 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
     };
 
     const handleApprove = async (item: MoviePipelineEntry) => {
-        if (!window.confirm(`Approve "${item.title}"? An approval email will be sent to ${item.email || 'the filmmaker'}.`)) return;
+        if (!window.confirm(`Approve "${item.title}" for PREMIUM? An approval email will be sent to ${item.email || 'the filmmaker'}.`)) return;
         setProcessingId(item.id);
         try {
             const res = await fetch('/api/approve-film-submission', {
@@ -52,7 +52,44 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Approval failed');
-            alert(`✅ "${item.title}" approved!${data.emailSent ? ' Approval email sent to filmmaker.' : ''}`);
+            alert(`✅ "${item.title}" approved for Premium!${data.emailSent ? ' Filmmaker has been notified.' : ''}`);
+            onRefresh();
+        } catch (err) {
+            alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleAddToCatalog = async (item: MoviePipelineEntry) => {
+        if (!window.confirm(`Add "${item.title}" to the general catalog? A notification email will be sent to ${item.email || 'the filmmaker'}.`)) return;
+        setProcessingId(item.id);
+        try {
+            const res = await fetch('/api/add-to-catalog', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submissionId: item.id, password: getAdminPassword() }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed');
+            alert(`📂 "${item.title}" added to catalog!${data.emailSent ? ' Filmmaker has been notified.' : ''}`);
+            onRefresh();
+        } catch (err) {
+            alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleHold = async (item: MoviePipelineEntry) => {
+        setProcessingId(item.id);
+        try {
+            const res = await fetch('/api/update-submission-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submissionId: item.id, status: 'consideration', password: getAdminPassword() }),
+            });
+            if (!res.ok) throw new Error('Failed to update status');
             onRefresh();
         } catch (err) {
             alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -280,32 +317,48 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                                             )}
                                         </div>
 
-                                        <div className="mt-6 flex flex-wrap gap-4">
+                                        {/* Four action buttons */}
+                                        <div className="mt-6 flex flex-wrap gap-3">
                                             {item.status !== 'approved' && (
                                                 <button
                                                     onClick={() => handleApprove(item)}
                                                     disabled={processingId === item.id}
-                                                    className="bg-green-600 hover:bg-green-500 text-white font-black py-2.5 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl transition-all disabled:opacity-50"
+                                                    className="bg-amber-500 hover:bg-amber-400 text-black font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                                                    title="Accept for Premium tier — emails filmmaker + $4.99 ticket"
                                                 >
-                                                    {processingId === item.id ? 'Approving...' : '✓ Approve & Email Filmmaker'}
+                                                    {processingId === item.id ? '...' : '⭐ Approve for Premium'}
                                                 </button>
                                             )}
-                                            {item.status !== 'approved' && (
+                                            {item.status !== 'catalog' && item.status !== 'approved' && (
+                                                <button
+                                                    onClick={() => handleAddToCatalog(item)}
+                                                    disabled={processingId === item.id}
+                                                    className="bg-green-600/90 hover:bg-green-500 text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                                                    title="Add to free catalog — emails filmmaker"
+                                                >
+                                                    {processingId === item.id ? '...' : '📂 Add to Catalog'}
+                                                </button>
+                                            )}
+                                            {item.status !== 'consideration' && item.status !== 'approved' && item.status !== 'catalog' && (
+                                                <button
+                                                    onClick={() => handleHold(item)}
+                                                    disabled={processingId === item.id}
+                                                    className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-blue-500/20 transition-all disabled:opacity-50"
+                                                    title="Hold for later consideration — no email sent"
+                                                >
+                                                    {processingId === item.id ? '...' : '🔖 Hold for Consideration'}
+                                                </button>
+                                            )}
+                                            {item.status !== 'approved' && item.status !== 'catalog' && (
                                                 <button
                                                     onClick={() => handleDelete(item.id)}
                                                     disabled={processingId === item.id}
-                                                    className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all"
+                                                    className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all disabled:opacity-50"
+                                                    title="Reject — removes from pipeline, no email sent"
                                                 >
                                                     ✕ Reject
                                                 </button>
                                             )}
-                                            <button
-                                                onClick={() => handleCreate(item)}
-                                                disabled={processingId === item.id}
-                                                className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all disabled:opacity-50"
-                                            >
-                                                + Add to Catalog
-                                            </button>
                                         </div>
                                     </div>
                                 </div>

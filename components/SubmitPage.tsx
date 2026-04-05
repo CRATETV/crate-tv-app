@@ -291,30 +291,46 @@ const SubmitPage: React.FC = () => {
                                 Share your work with the CRATE community. Upload your film and poster, and we'll review it for inclusion in our catalog.
                             </p>
                             
-                            {/* FilmFreeway Option */}
-                            <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 border border-amber-500/30 rounded-2xl p-6 max-w-lg mx-auto">
-                                <p className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-2">Prefer FilmFreeway?</p>
-                                <p className="text-gray-400 text-sm mb-4">
-                                    Submit through our official CrateFest festival page for consideration in our curated programming.
-                                </p>
-                                <a 
-                                    href="https://filmfreeway.com/CrateFest" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-black font-bold px-6 py-2 rounded-full text-sm transition-colors"
-                                >
-                                    <span>Submit on FilmFreeway</span>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                </a>
+                            {/* Two paths */}
+                            <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                                {/* FilmFreeway path */}
+                                <div className="bg-gradient-to-br from-amber-600/20 to-orange-700/10 border border-amber-500/30 rounded-2xl p-6 text-left">
+                                    <p className="text-amber-400 font-black text-[10px] uppercase tracking-[3px] mb-2">Premium Selection</p>
+                                    <h3 className="text-white font-black text-lg mb-2 leading-tight">Submit via FilmFreeway</h3>
+                                    <p className="text-gray-400 text-sm leading-relaxed mb-3">
+                                        For consideration in our <strong className="text-white">paid Premium tier</strong>. Selected films are featured behind a <strong className="text-amber-400">$4.99 digital ticket</strong> — you keep <strong className="text-amber-400">70% of revenue</strong>, paid quarterly. After your residency, your film graduates to our free global Roku channel.
+                                    </p>
+                                    <p className="text-gray-600 text-xs leading-relaxed mb-4">
+                                        Films not selected for the Premium tier may be offered a spot in our general catalog at no charge — still a yes, just a different stage.
+                                    </p>
+                                    <a
+                                        href="https://filmfreeway.com/CrateFest"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-full text-sm transition-colors"
+                                    >
+                                        Submit on FilmFreeway
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                    </a>
+                                </div>
+
+                                {/* Direct submission path */}
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left">
+                                    <p className="text-gray-500 font-black text-[10px] uppercase tracking-[3px] mb-2">Free Submission</p>
+                                    <h3 className="text-white font-black text-lg mb-2 leading-tight">Upload Directly Below</h3>
+                                    <p className="text-gray-400 text-sm leading-relaxed mb-4">
+                                        Submit your film for consideration in our <strong className="text-white">general catalog</strong>. No fees, no revenue share — just a home for your work in the CRATE community. Our team reviews every submission.
+                                    </p>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-500 text-xs font-bold uppercase tracking-wider">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                                        Scroll down to submit
+                                    </span>
+                                </div>
                             </div>
                             
-                            <div className="flex items-center gap-4 max-w-lg mx-auto my-8">
-                                <div className="flex-grow h-px bg-gray-800"></div>
-                                <span className="text-gray-600 text-sm font-bold uppercase tracking-wider">Or upload directly</span>
-                                <div className="flex-grow h-px bg-gray-800"></div>
-                            </div>
+
                         </div>
 
                         {error && (
