@@ -5,6 +5,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { addPipelineEntryToCatalog } from './_lib/addToCatalog.js';
 
 export async function POST(request: Request) {
     try {
@@ -79,6 +80,16 @@ export async function POST(request: Request) {
             isReviewed: true,
             reviewedAt: FieldValue.serverTimestamp(),
         });
+
+        // Auto-add to movies catalog as a $4.99 premium title + trigger publish
+        let movieKey = '';
+        try {
+            const result = await addPipelineEntryToCatalog(db, data, submissionId, true);
+            movieKey = result.movieKey;
+            console.log(`✅ Movie "${data.title}" added to catalog as "${movieKey}"`);
+        } catch (catalogErr) {
+            console.warn('Failed to auto-add to catalog (non-fatal):', catalogErr);
+        }
 
         // Send approval email via Resend
         const resendApiKey = process.env.RESEND_API_KEY;
@@ -171,7 +182,7 @@ export async function POST(request: Request) {
 
         console.log(`✅ Approval email sent to ${email} for "${title}"`);
 
-        return new Response(JSON.stringify({ success: true, emailSent: true }), {
+        return new Response(JSON.stringify({ success: true, emailSent: true, movieKey }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
         });

@@ -18,7 +18,7 @@ const getRoleFromPassword = (password: string | null) => {
     return 'delegated_node';
 };
 
-const assembleAndSyncMasterData = async (db: Firestore) => {
+export const assembleAndSyncMasterData = async (db: Firestore) => {
     // Parallel fetching for manifest assembly - ADDED editorial_stories
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap, storiesSnap] = await Promise.all([
         db.collection('movies').get(),

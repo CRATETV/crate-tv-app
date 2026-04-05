@@ -5,6 +5,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { addPipelineEntryToCatalog } from './_lib/addToCatalog.js';
 
 export async function POST(request: Request) {
     try {
@@ -73,6 +74,16 @@ export async function POST(request: Request) {
             isReviewed: true,
             reviewedAt: FieldValue.serverTimestamp(),
         });
+
+        // Auto-add to movies catalog as a free title + trigger publish
+        let movieKey = '';
+        try {
+            const result = await addPipelineEntryToCatalog(db, data, submissionId, false);
+            movieKey = result.movieKey;
+            console.log(`✅ Movie "${data.title}" added to free catalog as "${movieKey}"`);
+        } catch (catalogErr) {
+            console.warn('Failed to auto-add to catalog (non-fatal):', catalogErr);
+        }
 
         // Send filmmaker notification
         const resendApiKey = process.env.RESEND_API_KEY;

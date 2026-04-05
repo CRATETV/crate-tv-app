@@ -359,6 +359,16 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                                                     ✕ Reject
                                                 </button>
                                             )}
+                                            {(item.status === 'approved' || item.status === 'catalog') && (
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    disabled={processingId === item.id}
+                                                    className="bg-white/5 hover:bg-red-600/20 text-gray-600 hover:text-red-400 font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-white/5 hover:border-red-500/20 transition-all disabled:opacity-50"
+                                                    title="Remove from pipeline (film stays in catalog)"
+                                                >
+                                                    🗑 Remove from Pipeline
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
