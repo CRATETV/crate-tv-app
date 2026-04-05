@@ -45,7 +45,8 @@ export async function POST(request: Request) {
             });
         }
 
-        const pipelineSnapshot = await db.collection('submissions').get();
+        // Read from movie_pipeline — this is where submit-film-to-pipeline.ts writes
+        const pipelineSnapshot = await db.collection('movie_pipeline').orderBy('submittedAt', 'desc').get();
         const pipeline = pipelineSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         return new Response(JSON.stringify({ pipeline }), { 

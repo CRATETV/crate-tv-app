@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { MoviePipelineEntry } from '../types';
 import { deleteMoviePipelineEntry } from '../services/firebaseService';
 
+// Helper to get admin password from session (same as rest of admin panel)
+const getAdminPassword = () => sessionStorage.getItem('adminPassword') || '';
+
 interface MoviePipelineTabProps {
     pipeline: MoviePipelineEntry[];
     onCreateMovie: (item: MoviePipelineEntry) => void;
@@ -33,6 +36,26 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
             onRefresh();
         } catch (error) {
             alert(`Failed to delete submission: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleApprove = async (item: MoviePipelineEntry) => {
+        if (!window.confirm(`Approve "${item.title}"? An approval email will be sent to ${item.email || 'the filmmaker'}.`)) return;
+        setProcessingId(item.id);
+        try {
+            const res = await fetch('/api/approve-film-submission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submissionId: item.id, password: getAdminPassword() }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Approval failed');
+            alert(`✅ "${item.title}" approved!${data.emailSent ? ' Approval email sent to filmmaker.' : ''}`);
+            onRefresh();
+        } catch (err) {
+            alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setProcessingId(null);
         }
@@ -231,34 +254,57 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                                         </div>
                                         <p className="text-xs text-gray-400 mt-6 line-clamp-2 italic leading-relaxed font-medium">"{item.synopsis}"</p>
                                         
-                                        {/* Preview Links */}
-                                        {(item.fullMovie || item.movieUrl) && (
-                                            <div className="mt-4">
-                                                <a 
-                                                    href={item.fullMovie || item.movieUrl} 
-                                                    target="_blank" 
+                                        {/* Download links */}
+                                        <div className="mt-4 flex flex-wrap gap-3">
+                                            {(item.fullMovie || item.movieUrl) && (
+                                                <a
+                                                    href={item.fullMovie || item.movieUrl}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-[9px] text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-widest"
+                                                    download
+                                                    className="text-[9px] text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-widest border border-cyan-500/20 rounded-lg px-3 py-1.5 hover:bg-cyan-500/10 transition-all"
                                                 >
-                                                    ▶️ Preview Film
+                                                    ▶ Watch / Download Film
                                                 </a>
-                                            </div>
-                                        )}
-                                        
-                                        <div className="mt-8 flex flex-wrap gap-4">
+                                            )}
+                                            {(item.poster || item.posterUrl) && (
+                                                <a
+                                                    href={item.poster || item.posterUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    download
+                                                    className="text-[9px] text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/20 rounded-lg px-3 py-1.5 hover:bg-purple-500/10 transition-all"
+                                                >
+                                                    🖼 Download Poster
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        <div className="mt-6 flex flex-wrap gap-4">
+                                            {item.status !== 'approved' && (
+                                                <button
+                                                    onClick={() => handleApprove(item)}
+                                                    disabled={processingId === item.id}
+                                                    className="bg-green-600 hover:bg-green-500 text-white font-black py-2.5 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl transition-all disabled:opacity-50"
+                                                >
+                                                    {processingId === item.id ? 'Approving...' : '✓ Approve & Email Filmmaker'}
+                                                </button>
+                                            )}
+                                            {item.status !== 'approved' && (
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    disabled={processingId === item.id}
+                                                    className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all"
+                                                >
+                                                    ✕ Reject
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleCreate(item)}
                                                 disabled={processingId === item.id}
-                                                className="bg-white text-black font-black py-2.5 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 transition-all disabled:opacity-50"
+                                                className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all disabled:opacity-50"
                                             >
-                                                {processingId === item.id ? 'Creating...' : '✓ Approve & Add to Catalog'}
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(item.id)}
-                                                disabled={processingId === item.id}
-                                                className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all"
-                                            >
-                                                ✕ Reject
+                                                + Add to Catalog
                                             </button>
                                         </div>
                                     </div>
