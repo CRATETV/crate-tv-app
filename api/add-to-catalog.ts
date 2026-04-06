@@ -117,36 +117,36 @@ export async function POST(request: Request) {
               </div>` : ''}
 
               <div style="padding:32px;">
-                <p style="margin:0 0 8px;color:#E50914;font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;text-align:center;">
+                <p style="margin:0 0 8px;color:#E50914!important;-webkit-text-fill-color:#E50914;font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;text-align:center;">
                   CrateTV — Official Selection
                 </p>
-                <h1 style="margin:0 0 16px;color:#fff;font-size:24px;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:-1px;">
+                <h1 style="margin:0 0 16px;color:#ffffff!important;-webkit-text-fill-color:#ffffff;font-size:24px;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:-1px;">
                   Welcome to CRATE, ${director}.
                 </h1>
 
-                <p style="margin:0 0 16px;color:#9ca3af;font-size:14px;line-height:1.8;text-align:center;">
-                  We've reviewed <strong style="color:#fff;">"${title}"</strong> and we'd love to welcome it into the <strong style="color:#fff;">CRATE general catalog</strong> — available to our full audience on CrateTV.
+                <p style="margin:0 0 16px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:14px;line-height:1.8;text-align:center;">
+                  We've reviewed <strong style="color:#ffffff!important;-webkit-text-fill-color:#ffffff;">"${title}"</strong> and we'd love to welcome it into the <strong style="color:#ffffff!important;-webkit-text-fill-color:#ffffff;">CRATE general catalog</strong> — available to our full audience on CrateTV.
                 </p>
 
-                <p style="margin:0 0 28px;color:#9ca3af;font-size:14px;line-height:1.8;text-align:center;">
+                <p style="margin:0 0 28px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:14px;line-height:1.8;text-align:center;">
                   While your film wasn't selected for our Premium tier this season, being part of the CRATE catalog puts your work in front of our growing global audience. Your film is now part of the community.
                 </p>
 
                 <!-- What this means box -->
-                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:28px;">
-                  <p style="margin:0 0 12px;color:#fff;font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;">What this means for you</p>
+                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:20px;margin-bottom:28px;">
+                  <p style="margin:0 0 12px;color:#ffffff!important;-webkit-text-fill-color:#ffffff;font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;">What this means for you</p>
                   <table role="presentation" style="width:100%;border-collapse:collapse;">
                     <tr>
-                      <td style="padding:6px 0;color:#9ca3af;font-size:13px;">🌍</td>
-                      <td style="padding:6px 0 6px 10px;color:#9ca3af;font-size:13px;line-height:1.6;">Your film is available to CrateTV's full audience, including our Roku channel</td>
+                      <td style="padding:6px 0;color:#d1d5db!important;font-size:13px;">🌍</td>
+                      <td style="padding:6px 0 6px 10px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:13px;line-height:1.6;">Your film is available to CrateTV's full audience, including our Roku channel</td>
                     </tr>
                     <tr>
-                      <td style="padding:6px 0;color:#9ca3af;font-size:13px;">🎬</td>
-                      <td style="padding:6px 0 6px 10px;color:#9ca3af;font-size:13px;line-height:1.6;">Non-exclusive — you keep full ownership and can screen elsewhere</td>
+                      <td style="padding:6px 0;color:#d1d5db!important;font-size:13px;">🎬</td>
+                      <td style="padding:6px 0 6px 10px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:13px;line-height:1.6;">Non-exclusive — you keep full ownership and can screen elsewhere</td>
                     </tr>
                     <tr>
-                      <td style="padding:6px 0;color:#9ca3af;font-size:13px;">📩</td>
-                      <td style="padding:6px 0 6px 10px;color:#9ca3af;font-size:13px;line-height:1.6;">You're always welcome to resubmit future projects for Premium consideration</td>
+                      <td style="padding:6px 0;color:#d1d5db!important;font-size:13px;">📩</td>
+                      <td style="padding:6px 0 6px 10px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:13px;line-height:1.6;">You're always welcome to resubmit future projects for Premium consideration</td>
                     </tr>
                   </table>
                 </div>
