@@ -26,8 +26,10 @@ import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
 import RokuManagementTab from './RokuManagementTab';
 import TicketCodesTab from './TicketCodesTab';
+import MonthlySpotlightTab from './MonthlySpotlightTab';
 
 const ALL_TABS: Record<string, string> = {
+    spotlight: '✨ Monthly Spotlight',
     pulse: '⚡ Daily Pulse',
     mail: '✉️ Studio Mail',
     dispatch: '🛰️ Dispatch',
@@ -72,15 +74,32 @@ const AdminPage: React.FC = () => {
     const [permissions, setPermissions] = useState<Record<string, string[]>>({});
     
     const [activeTab, setActiveTab] = useState('pulse');
+    const [tabSearch, setTabSearch] = useState('');
+    const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
+
+    const filteredTabs = useMemo(() => {
+        const entries = Object.entries(ALL_TABS).filter(([tabId]) => allowedTabs.includes(tabId));
+        if (!tabSearch.trim()) return entries;
+        const q = tabSearch.toLowerCase();
+        return entries.filter(([tabId, label]) =>
+            label.toLowerCase().includes(q) || tabId.toLowerCase().includes(q)
+        );
+    }, [allowedTabs, tabSearch]);
 
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
         const specificTabs = permissions[role];
-        if (specificTabs && specificTabs.length > 0) return specificTabs;
-        return ['pulse'];
+        // Always guarantee pipeline is visible to every authenticated admin
+        const ALWAYS_VISIBLE = ['pulse', 'pipeline', 'mail', 'spotlight'];
+        if (specificTabs && specificTabs.length > 0) {
+            const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])];
+            return merged;
+        }
+        // Default fallback — show core tabs to any logged-in admin
+        return [...new Set([...ALWAYS_VISIBLE, 'movies', 'categories', 'analytics'])];
     }, [role, permissions]);
 
     useEffect(() => {
@@ -142,6 +161,23 @@ const AdminPage: React.FC = () => {
                 const data = await pipelineRes.json();
                 setPipeline(data.pipeline || []);
             }
+
+            // Check if monthly spotlight is set for this month
+            try {
+                const spotRes = await fetch('/api/set-monthly-spotlight');
+                if (spotRes.ok) {
+                    const spotData = await spotRes.json();
+                    const now = new Date();
+                    // Show reminder if no movie set, or if it was sent already this month (needs refreshing for next month)
+                    const alreadySentThisMonth = spotData.sentAt && (() => {
+                        const sent = spotData.sentAt._seconds
+                            ? new Date(spotData.sentAt._seconds * 1000)
+                            : new Date(spotData.sentAt);
+                        return sent.getMonth() === now.getMonth() && sent.getFullYear() === now.getFullYear();
+                    })();
+                    setSpotlightReady(!!(spotData.movieKey && !alreadySentThisMonth));
+                }
+            } catch { /* non-fatal */ }
 
             if (analyticsRes.ok) {
                 const data = await analyticsRes.json();
@@ -302,20 +338,69 @@ const AdminPage: React.FC = () => {
                         </button>
                     </div>
                 </div>
-                
-                <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide">
-                    {Object.entries(ALL_TABS).map(([tabId, label]) => allowedTabs.includes(tabId) && (
-                        <button 
-                            key={tabId} 
-                            onClick={() => setActiveTab(tabId)} 
-                            className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
+
+                {/* Monthly Spotlight reminder */}
+                {!spotlightReady && (
+                    <div className="mb-6 flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                            <span className="text-amber-400 text-lg">✨</span>
+                            <div>
+                                <p className="text-amber-300 text-xs font-black uppercase tracking-widest">Monthly Spotlight Not Set</p>
+                                <p className="text-amber-500/70 text-[11px] mt-0.5">Pick a film for next month's email blast before the first Monday.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { setActiveTab('spotlight'); setTabSearch(''); }}
+                            className="flex-shrink-0 bg-amber-500 hover:bg-amber-400 text-black font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
+                        >
+                            Pick Film →
+                        </button>
+                    </div>
+                )}
+
+                <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide flex-col">
+                    {/* Tab search */}
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="relative flex-shrink-0">
+                            <input
+                                type="text"
+                                placeholder="Search tabs…"
+                                value={tabSearch}
+                                onChange={e => setTabSearch(e.target.value)}
+                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-red-500/40 w-52 pr-8 transition-colors"
+                            />
+                            {tabSearch && (
+                                <button
+                                    onClick={() => setTabSearch('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white text-sm"
+                                >✕</button>
+                            )}
+                        </div>
+                        {tabSearch && (
+                            <p className="text-gray-600 text-[10px] uppercase tracking-widest">
+                                {filteredTabs.length} result{filteredTabs.length !== 1 ? 's' : ''}
+                            </p>
+                        )}
+                    </div>
+                    {/* Tab buttons */}
+                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide">
+                    {filteredTabs.map(([tabId, label]) => (
+                        <button
+                            key={tabId}
+                            onClick={() => { setActiveTab(tabId); setTabSearch(''); }}
+                            className={`flex-shrink-0 px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
                         >
                             {label}
                         </button>
                     ))}
+                    {tabSearch && filteredTabs.length === 0 && (
+                        <p className="text-gray-700 text-[10px] uppercase tracking-widest py-3.5 px-4">No tabs found</p>
+                    )}
+                    </div>
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
+                    {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'dispatch' && <CommunicationsTerminal movies={movies} />}
