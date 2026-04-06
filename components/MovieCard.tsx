@@ -148,7 +148,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     ? movie.genres.slice(0, 3).join(' · ')
     : (movie.genres || '');
 
-  const isMobile = () => window.matchMedia('(hover: none)').matches;
+  const isMobile = () =>
+    window.matchMedia('(hover: none)').matches ||
+    navigator.maxTouchPoints > 0;
 
   return (
     <>
@@ -380,7 +382,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
         {/* Sheet */}
         <div
-          className="relative w-full bg-[#141414] rounded-t-2xl overflow-hidden min-h-[72dvh] max-h-[92dvh] flex flex-col"
+          className="relative w-full bg-[#141414] rounded-t-2xl overflow-hidden h-[100dvh] flex flex-col"
           style={{ animation: 'slideUp 0.32s cubic-bezier(0.32,0.72,0,1) forwards' }}
           onClick={e => e.stopPropagation()}
         >

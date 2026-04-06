@@ -82,11 +82,17 @@ const AdminPage: React.FC = () => {
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
+
+        // These tabs are NEVER visible to non-master admins regardless of
+        // what is stored in Firestore — hard-coded security boundary
+        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'rokuControl'];
+
         const specificTabs = permissions[role];
         // Only the pulse dashboard is always visible — everything else must be explicitly granted
         const ALWAYS_VISIBLE = ['pulse'];
         if (specificTabs && specificTabs.length > 0) {
-            const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])];
+            const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])]
+                .filter(tab => !MASTER_ONLY.includes(tab));
             return merged;
         }
         // No permissions assigned yet — show pulse only
