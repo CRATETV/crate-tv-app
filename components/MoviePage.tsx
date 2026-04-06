@@ -250,113 +250,143 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </div>
                     )
                 ) : (
-                    /* POSTER/LOCKED MODE - Show when not in full player mode */
-                    hasAccess ? (
-                        /* User has access - show poster with play button */
-                        <div className="relative w-full h-full flex items-center justify-center group cursor-pointer" onClick={() => setPlayerMode('full')}>
-                             <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
-                             <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
-                             <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
-                                 <div className="bg-white/10 backdrop-blur-md rounded-full p-8 border-2 border-white/20 scale-90 group-hover:scale-100 transition-transform shadow-2xl">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
-                                 </div>
-                             </div>
-                        </div>
-                    ) : (
-                        /* User does NOT have access - show beautiful locked state */
-                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                            {/* Background poster blur */}
-                            <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 scale-110" crossOrigin="anonymous" />
-                            
-                            {/* Gradient overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/60" />
-                            
-                            {/* Content */}
-                            <div className="relative z-10 flex flex-col items-center justify-center text-center p-8 max-w-lg animate-[fadeIn_0.6s_ease-out]">
-                                {/* Lock icon with glow */}
-                                <div className="relative mb-6">
-                                    <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-2xl scale-150" />
-                                    <div className="relative bg-gradient-to-br from-amber-500 to-amber-700 p-6 rounded-2xl shadow-2xl border border-amber-400/30">
-                                        <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                
-                                {/* Title */}
-                                <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-2">{movie.title}</h2>
-                                <p className="text-amber-500 font-black uppercase tracking-[0.3em] text-[10px] mb-6">Premium Selection</p>
-                                
-                                {/* Price badge */}
-                                {movie.salePrice && (
-                                    <div className="bg-white/5 border border-white/10 rounded-full px-6 py-2 mb-6">
-                                        <span className="text-gray-400 text-sm">Unlock for </span>
-                                        <span className="text-white font-black text-xl">${movie.salePrice}</span>
-                                    </div>
-                                )}
-                                
-                                {/* Unlock button */}
-                                <button 
-                                    onClick={() => setIsPurchaseModalOpen(true)}
-                                    className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black px-10 py-4 rounded-xl shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all hover:scale-105 active:scale-95 uppercase text-xs tracking-widest flex items-center gap-3"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                                    </svg>
-                                    Unlock Now
-                                </button>
-                                
-                                {/* Secondary action */}
-                                <button 
-                                    onClick={() => setIsDetailsModalOpen(true)}
-                                    className="mt-4 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
-                                >
-                                    View Details
-                                </button>
-                            </div>
-                        </div>
-                    )
-                )}
-            </div>
+                    /* POSTER MODE hero — clean image, lock icon for premium, play circle for accessible */
+                    <div
+                        className="relative w-full h-full cursor-pointer"
+                        onClick={() => hasAccess && isMovieReleased(movie) && setPlayerMode('full')}
+                    >
+                        {/* Blurred backdrop */}
+                        <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" />
+                        {/* Poster */}
+                        <img
+                            src={movie.poster}
+                            alt={movie.title}
+                            className={`w-full h-full object-contain relative z-10 ${!hasAccess ? 'opacity-70' : ''}`}
+                            crossOrigin="anonymous"
+                        />
+                        {/* Bottom fade into page */}
+                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-20" />
 
-            {playerMode !== 'full' && (
-                <div className="max-w-6xl mx-auto p-8 md:p-12">
-                    <div className="flex flex-col md:flex-row justify-between items-start gap-12">
-                        <div className={`space-y-8 ${hasAccess ? 'md:w-2/3' : 'w-full'}`}>
-                            <div>
-                                <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">{movie.title}</h1>
-                                <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mt-4">Directed by {movie.director}</p>
-                            </div>
-                            <div className="text-gray-300 text-lg leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
-                            <RokuBanner />
-                        </div>
-                        {/* Only show sidebar if user has access */}
-                        {hasAccess && (
-                            <div className="md:w-1/3 bg-white/5 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-8">
-                                <button 
-                                    onClick={() => isMovieReleased(movie) ? setPlayerMode('full') : setIsDetailsModalOpen(true)}
-                                    className="w-full bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl hover:scale-105 transition-all active:scale-95"
-                                >
-                                    Play Selection
-                                </button>
-                                {movie.cast && movie.cast.length > 0 && (
-                                    <div className="space-y-4">
-                                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-white/5 pb-2">Talent Involved</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {movie.cast.map(actor => (
-                                                <button key={actor.name} onClick={() => setSelectedActor(actor)} className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-white font-bold text-[10px] transition-all uppercase">{actor.name}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="pt-6 border-t border-white/5">
-                                    <button onClick={() => setIsDeepLinkOpen(true)} className="flex items-center gap-2 text-gray-600 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest">
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                                        Deep Link Protocol
-                                    </button>
+                        {/* Lock badge for premium — no buttons here, they live below */}
+                        {!hasAccess && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center">
+                                <div className="bg-gradient-to-br from-amber-500 to-amber-700 p-5 rounded-2xl shadow-2xl border border-amber-400/30">
+                                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
                                 </div>
                             </div>
                         )}
+
+                        {/* Play circle for accessible content */}
+                        {hasAccess && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                <div className="bg-white/20 backdrop-blur-sm rounded-full p-6 border-2 border-white/30 shadow-2xl">
+                                    <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* ── NETFLIX-STYLE CONTENT PANEL ─────────────────────── */}
+            {playerMode !== 'full' && (
+                <div className="px-5 pt-4 pb-16 max-w-3xl mx-auto w-full">
+
+                    {/* Title */}
+                    <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none mb-1">
+                        {movie.title}
+                    </h1>
+
+                    {/* Director */}
+                    <p className="text-red-500 font-black uppercase tracking-[0.3em] text-[10px] mb-4">
+                        Directed by {movie.director}
+                    </p>
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-2 flex-wrap mb-5 text-sm text-gray-400">
+                        {movie.releaseDateTime && (
+                            <span>{new Date(movie.releaseDateTime).getFullYear()}</span>
+                        )}
+                        {!!movie.durationInMinutes && (
+                            <><span className="text-gray-600">·</span><span>{movie.durationInMinutes}m</span></>
+                        )}
+                        {movie.genres && (
+                            <><span className="text-gray-600">·</span>
+                            <span>{Array.isArray(movie.genres) ? movie.genres.slice(0, 2).join(' · ') : movie.genres}</span></>
+                        )}
+                    </div>
+
+                    {/* ── PRIMARY CTA ── */}
+                    {hasAccess ? (
+                        <button
+                            onClick={() => isMovieReleased(movie) ? setPlayerMode('full') : setIsDetailsModalOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm shadow-xl hover:bg-gray-100 active:scale-95 transition-all mb-3"
+                        >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                            </svg>
+                            Play
+                        </button>
+                    ) : (
+                        <>
+                            {movie.salePrice && (
+                                <p className="text-center text-gray-400 text-sm mb-2">
+                                    Unlock for <span className="text-white font-black text-lg">${movie.salePrice}</span>
+                                </p>
+                            )}
+                            <button
+                                onClick={() => setIsPurchaseModalOpen(true)}
+                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(245,158,11,0.3)] active:scale-95 transition-all mb-3"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                Unlock Now
+                            </button>
+                        </>
+                    )}
+
+                    {/* Synopsis */}
+                    <div
+                        className="text-gray-300 text-base leading-relaxed mb-6"
+                        dangerouslySetInnerHTML={{ __html: movie.synopsis }}
+                    />
+
+                    {/* Cast */}
+                    {movie.cast && movie.cast.length > 0 && (
+                        <div className="mb-8">
+                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-3">Cast</p>
+                            <div className="flex flex-wrap gap-2">
+                                {movie.cast.map(actor => (
+                                    <button
+                                        key={actor.name}
+                                        onClick={() => setSelectedActor(actor)}
+                                        className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-white font-bold text-[10px] uppercase transition-all"
+                                    >
+                                        {actor.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <RokuBanner />
+
+                    {/* Deep link — subtle */}
+                    <div className="mt-6 pt-6 border-t border-white/5">
+                        <button
+                            onClick={() => setIsDeepLinkOpen(true)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest"
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                            Deep Link Protocol
+                        </button>
                     </div>
                 </div>
             )}

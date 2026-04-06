@@ -220,6 +220,14 @@ const AdminPage: React.FC = () => {
         }
     };
 
+    // Safe tab navigation — silently ignores attempts to navigate to unpermitted tabs
+    const navigateTo = (tabId: string) => {
+        if (allowedTabs.includes(tabId)) {
+            setActiveTab(tabId);
+            setTabSearch('');
+        }
+    };
+
     const handleLogout = () => {
         sessionStorage.clear();
         window.location.reload();
@@ -339,8 +347,8 @@ const AdminPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Monthly Spotlight reminder */}
-                {!spotlightReady && (
+                {/* Monthly Spotlight reminder — only shown to admins with spotlight access */}
+                {!spotlightReady && allowedTabs.includes('spotlight') && (
                     <div className="mb-6 flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-3.5">
                         <div className="flex items-center gap-3">
                             <span className="text-amber-400 text-lg">✨</span>
@@ -350,7 +358,7 @@ const AdminPage: React.FC = () => {
                             </div>
                         </div>
                         <button
-                            onClick={() => { setActiveTab('spotlight'); setTabSearch(''); }}
+                            onClick={() => navigateTo('spotlight')}
                             className="flex-shrink-0 bg-amber-500 hover:bg-amber-400 text-black font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
                         >
                             Pick Film →
@@ -387,7 +395,7 @@ const AdminPage: React.FC = () => {
                     {filteredTabs.map(([tabId, label]) => (
                         <button
                             key={tabId}
-                            onClick={() => { setActiveTab(tabId); setTabSearch(''); }}
+                            onClick={() => navigateTo(tabId)}
                             className={`flex-shrink-0 px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
                         >
                             {label}
@@ -400,6 +408,8 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
+                    {/* Content-level guard — never renders a tab the current role isn't permitted to see */}
+                    {allowedTabs.includes(activeTab) && (<>
                     {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
@@ -418,7 +428,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
-                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => navigateTo('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'jury' && (
                         <div className="space-y-16">
                             <JuryRoomTab pipeline={pipeline} />
@@ -461,6 +471,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
+                    </>)}
                 </div>
             </div>
             {saveMessage && <SaveStatusToast message={saveMessage} isError={false} onClose={() => setSaveMessage('')} />}
