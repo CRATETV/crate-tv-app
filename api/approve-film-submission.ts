@@ -115,132 +115,58 @@ export async function POST(request: Request) {
             from: 'CrateTV <studio@cratetv.net>',
             to: email,
             subject: `🎬 "${title}" has been approved for CrateTV`,
-            html: `
-<!DOCTYPE html>
+            html: `<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:#000;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-  <table role="presentation" style="width:100%;border-collapse:collapse;background:#000;">
-    <tr>
-      <td style="padding:40px 20px;">
-        <table role="presentation" style="max-width:560px;margin:0 auto;border-collapse:collapse;">
-
-          <tr>
-            <td style="background:linear-gradient(135deg,#1a1a1a 0%,#0d0d0d 100%);border-radius:16px;overflow:hidden;border:1px solid #333;">
-
-              ${data.posterUrl ? `
-              <!-- Poster + Laurel side by side -->
-              <div style="text-align:center;padding:28px 24px 16px;background:linear-gradient(180deg,rgba(229,9,20,0.2) 0%,transparent 100%);">
-                <table role="presentation" style="margin:0 auto;border-collapse:collapse;">
-                  <tr>
-                    <!-- Poster -->
-                    <td style="padding:0 16px 0 0;vertical-align:middle;">
-                      <img src="${data.posterUrl}" alt="${title}"
-                        style="width:130px;height:195px;object-fit:cover;border-radius:10px;
-                               box-shadow:0 20px 40px rgba(0,0,0,0.8);display:block;" />
-                    </td>
-                    <!-- Laurel SVG inline -->
-                    <td style="padding:0 0 0 16px;vertical-align:middle;">
-                      <img src="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=gold"
-                        alt="CrateTV Official Selection Laurel"
-                        width="160" height="160"
-                        style="display:block;" />
-                    </td>
-                  </tr>
-                </table>
-              </div>` : `
-              <!-- Laurel only if no poster -->
-              <div style="text-align:center;padding:28px 24px 16px;">
-                <img src="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=gold"
-                  alt="CrateTV Official Selection Laurel"
-                  width="200" height="200"
-                  style="display:block;margin:0 auto;" />
-              </div>`}
-
-              <div style="padding:32px;">
-                <p style="margin:0 0 8px;color:#E50914!important;-webkit-text-fill-color:#E50914;font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;text-align:center;">
-                  CrateTV — Film Selection
-                </p>
-                <h1 style="margin:0 0 8px;color:#ffffff!important;-webkit-text-fill-color:#ffffff;font-size:26px;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:-1px;">
-                  Congratulations, ${director}.
-                </h1>
-                <p style="margin:0 0 24px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:14px;line-height:1.8;text-align:center;">
-                  We're thrilled to let you know that your film
-                  <strong style="color:#ffffff!important;-webkit-text-fill-color:#ffffff;">"${title}"</strong>
-                  has been approved and will be included in the CrateTV catalog.
-                </p>
-                <p style="margin:0 0 32px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:14px;line-height:1.8;text-align:center;">
-                  Your film is now part of the CRATE community. Welcome to the catalog.
-                </p>
-                <!-- Laurel download box -->
-                <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:20px;margin-bottom:28px;text-align:center;">
-                  <p style="margin:0 0 6px;color:#FFD700!important;-webkit-text-fill-color:#FFD700;font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;">
-                    Your Official Selection Laurel
-                  </p>
-                  <p style="margin:0 0 16px;color:#d1d5db!important;-webkit-text-fill-color:#d1d5db;font-size:12px;line-height:1.6;">
-                    Download your laurel and use it on your posters, trailers, and social media. It's transparent so it layers on anything.
-                  </p>
-                  <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=gold"
-                     download="CrateTV-Official-Selection-${new Date().getFullYear()}.svg"
-                     style="display:inline-block;background:#FFD700;color:#000;text-decoration:none;
-                            padding:12px 28px;border-radius:8px;font-weight:800;font-size:12px;
-                            letter-spacing:1px;text-transform:uppercase;">
-                    ↓ Download Laurel (SVG)
-                  </a>
-                  <p style="margin:12px 0 0;color:#6b7280!important;font-size:10px;">
-                    Also available in white and silver — visit your filmmaker dashboard
-                  </p>
-                </div>
-
-                <div style="text-align:center;margin-bottom:16px;">
-                  <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=white"
-                     download="CrateTV-Official-Selection-White.svg"
-                     style="display:inline-block;margin:0 6px;background:transparent;color:#ffffff!important;
-                            -webkit-text-fill-color:#ffffff;text-decoration:none;padding:8px 16px;
-                            border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;
-                            text-transform:uppercase;border:1px solid rgba(255,255,255,0.2);">
-                    White
-                  </a>
-                  <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=silver"
-                     download="CrateTV-Official-Selection-Silver.svg"
-                     style="display:inline-block;margin:0 6px;background:transparent;color:#C0C0C0!important;
-                            -webkit-text-fill-color:#C0C0C0;text-decoration:none;padding:8px 16px;
-                            border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;
-                            text-transform:uppercase;border:1px solid rgba(192,192,192,0.2);">
-                    Silver
-                  </a>
-                </div>
-
-                <div style="text-align:center;">
-                  <a href="https://cratetv.net"
-                     style="display:inline-block;background:#E50914;color:#fff;text-decoration:none;
-                            padding:14px 36px;border-radius:8px;font-weight:800;font-size:12px;
-                            letter-spacing:2px;text-transform:uppercase;">
-                    VISIT CRATETV →
-                  </a>
-                </div>
-                <p style="margin:32px 0 0;color:#374151;font-size:11px;text-align:center;">
-                  Questions? Reply to this email or reach us at
-                  <a href="mailto:studio@cratetv.net" style="color:#6b7280;">studio@cratetv.net</a>
-                </p>
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding-top:24px;text-align:center;">
-              <p style="margin:0;font-size:10px;color:#374151;">
-                © ${new Date().getFullYear()} CRATE TV · All rights reserved.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f0f0f0" style="background:#f0f0f0;">
+<tr><td style="padding:28px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
+  <tr>
+    <td bgcolor="#E50914" style="background:#E50914;padding:13px 28px;border-radius:10px 10px 0 0;">
+      <p style="margin:0;color:#ffffff;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-weight:800;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">CRATETV</p>
+    </td>
+  </tr>
+  <tr>
+    <td bgcolor="#f8f8f8" style="background:#f8f8f8;padding:28px 24px;text-align:center;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+        ${data.posterUrl ? `<td style="padding:0 20px 0 0;vertical-align:middle;"><img src="${data.posterUrl}" alt="${title}" width="120" style="width:120px;height:180px;object-fit:cover;border-radius:8px;display:block;border:1px solid #e0e0e0;" /></td>` : ''}
+        <td style="vertical-align:middle;"><img src="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=gold" alt="CrateTV Official Selection Laurel" width="160" height="160" style="display:block;" /></td>
+      </tr></table>
+    </td>
+  </tr>
+  <tr>
+    <td bgcolor="#ffffff" style="background:#ffffff;padding:36px 32px 28px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+      <p style="margin:0 0 10px;color:#E50914;font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">CrateTV &mdash; Film Selection</p>
+      <h1 style="margin:0 0 16px;color:#111111;font-size:24px;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:-0.5px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Congratulations, ${director}.</h1>
+      <p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.8;text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">We're thrilled to let you know that your film <strong style="color:#111111;">"${title}"</strong> has been approved and will be included in the CrateTV catalog.</p>
+      <p style="margin:0 0 28px;color:#374151;font-size:15px;line-height:1.8;text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Your film is now part of the CRATE community. Welcome to the catalog.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
+        <td bgcolor="#fffbeb" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:20px;text-align:center;">
+          <p style="margin:0 0 6px;color:#92400e;font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Your Official Selection Laurel</p>
+          <p style="margin:0 0 16px;color:#78350f;font-size:13px;line-height:1.6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Download and use on your posters, trailers, and social media. Transparent &mdash; layers on anything.</p>
+          <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=gold" style="display:inline-block;background:#d97706;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Download Laurel (SVG)</a>
+          <p style="margin:12px 0 0;color:#92400e;font-size:11px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Also: <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=white" style="color:#92400e;font-weight:700;">White</a> &middot; <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=silver" style="color:#92400e;font-weight:700;">Silver</a></p>
+        </td>
+      </tr></table>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+        <td bgcolor="#E50914" style="background:#E50914;border-radius:8px;">
+          <a href="https://cratetv.net" style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">VISIT CRATETV</a>
+        </td>
+      </tr></table>
+      <p style="margin:28px 0 0;color:#9ca3af;font-size:11px;text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Questions? <a href="mailto:studio@cratetv.net" style="color:#6b7280;text-decoration:none;">studio@cratetv.net</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td bgcolor="#ffffff" style="background:#ffffff;padding:0 32px 20px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0;border-radius:0 0 10px 10px;">
+      <p style="margin:0;color:#d1d5db;font-size:10px;text-align:center;border-top:1px solid #f3f4f6;padding-top:16px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">&copy; ${new Date().getFullYear()} CRATE TV &middot; All rights reserved.</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
 </body>
-</html>
-            `,
+</html>`,
         });
 
         console.log(`✅ Approval email sent to ${email} for "${title}"`);
