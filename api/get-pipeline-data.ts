@@ -20,6 +20,21 @@ export async function POST(request: Request) {
             }
         }
 
+        // Also check Firestore collaborator keys (dynamic admin accounts)
+        if (!isAuthenticated && password) {
+            const initErr = getInitializationError();
+            if (!initErr) {
+                const db = getAdminDb();
+                if (db) {
+                    const collabSnap = await db.collection('collaborator_access')
+                        .where('accessKey', '==', password.trim())
+                        .limit(1)
+                        .get();
+                    if (!collabSnap.empty) isAuthenticated = true;
+                }
+            }
+        }
+
         // Allow access if no passwords are configured (Initial Setup Mode)
         const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) isAuthenticated = true;

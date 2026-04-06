@@ -10,27 +10,27 @@
     </interface>
 
     <children>
-        <!-- V4 Snug Focus Ring: 4px border logic (Poster 240x360 + 8px = 248x368) -->
+        <!-- V4 Snug Focus Ring: 4px border logic (Poster 270x405 + 8px = 278x413) -->
         <Rectangle 
             id="focusRing"
             color="0xEF4444FF"
-            width="248"
-            height="368"
+            width="278"
+            height="413"
             translation="[-4, -4]"
             visible="false"
         />
         
         <Poster 
             id="tilePoster"
-            width="240"
-            height="360"
+            width="270"
+            height="405"
             loadDisplayMode="scaleToFill"
         />
 
         <Label
             id="titleLabel"
-            width="240"
-            translation="[0, 370]"
+            width="270"
+            translation="[0, 415]"
             font="font:ExtraSmallBoldSystemFont"
             color="0x888888FF"
             visible="false"

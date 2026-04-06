@@ -46,15 +46,28 @@
         <!-- CONTENT ROWS -->
         <RowList 
             id="rowList" 
-            translation="[0, 750]" 
+            translation="[0, 635]" 
             itemComponentName="MoviePosterItem" 
-            itemSize="[1920, 400]" 
-            rowHeights="[400]"
-            rowItemSize="[ [240, 360] ]"
+            itemSize="[1920, 445]" 
+            rowHeights="[445]"
+            rowItemSize="[ [270, 405] ]"
             rowItemSpacing="[ [30, 0] ]"
             rowLabelOffset="[ [100, 20] ]"
             focusXOffset="[ 100 ]"
             rowFocusAnimationStyle="floatingFocus"
         />
+
+        <!-- HERO TRAILER: plays on focus after 1s delay, muted by default -->
+        <Video
+            id="heroTrailer"
+            width="1920"
+            height="800"
+            visible="false"
+            mute="true"
+            loop="true"
+        />
+
+        <!-- Timer fires trailer after focus dwell -->
+        <Timer id="trailerTimer" repeat="false" duration="1" />
     </children>
 </component>

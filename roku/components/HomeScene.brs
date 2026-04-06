@@ -3,9 +3,14 @@ sub init()
     m.heroImage = m.top.findNode("heroImage")
     m.heroTitle = m.top.findNode("heroTitle")
     m.heroSynopsis = m.top.findNode("heroSynopsis")
-    
+    m.heroTrailer = m.top.findNode("heroTrailer")
+    m.trailerTimer = m.top.findNode("trailerTimer")
+    m.currentItem = invalid
+
     m.rowList.observeField("rowItemFocused", "onItemFocused")
     m.rowList.observeField("rowItemSelected", "onItemSelected")
+    m.trailerTimer.observeField("fire", "onTrailerTimerFire")
+    m.heroTrailer.observeField("state", "onTrailerStateChange")
 end sub
 
 sub onContentChange()
@@ -22,7 +27,43 @@ sub onItemFocused()
     focusedIndex = m.rowList.rowItemFocused
     row = m.rowList.content.getChild(focusedIndex[0])
     item = row.getChild(focusedIndex[1])
+    m.currentItem = item
+
+    ' Stop any playing trailer and reset hero to poster
+    m.trailerTimer.control = "stop"
+    m.heroTrailer.control = "stop"
+    m.heroTrailer.visible = false
+    m.heroImage.visible = true
+
     UpdateHero(item)
+
+    ' Start 1s dwell timer before playing trailer
+    if item.trailerUrl <> invalid and item.trailerUrl <> ""
+        m.trailerTimer.control = "start"
+    end if
+end sub
+
+sub onTrailerTimerFire()
+    if m.currentItem = invalid then return
+    trailerUrl = m.currentItem.trailerUrl
+    if trailerUrl = invalid or trailerUrl = "" then return
+
+    content = CreateObject("roSGNode", "ContentNode")
+    content.url = trailerUrl
+    content.streamFormat = "mp4"
+    m.heroTrailer.content = content
+    m.heroTrailer.visible = true
+    m.heroTrailer.control = "play"
+    m.heroImage.visible = false
+end sub
+
+sub onTrailerStateChange()
+    state = m.heroTrailer.state
+    if state = "finished" or state = "error"
+        m.heroTrailer.visible = false
+        m.heroTrailer.control = "stop"
+        m.heroImage.visible = true
+    end if
 end sub
 
 sub UpdateHero(item)
@@ -37,6 +78,11 @@ sub onItemSelected()
     selectedIndex = m.rowList.rowItemSelected
     row = m.rowList.content.getChild(selectedIndex[0])
     item = row.getChild(selectedIndex[1])
-    
+
+    ' Stop trailer before navigating
+    m.trailerTimer.control = "stop"
+    m.heroTrailer.control = "stop"
+    m.heroTrailer.visible = false
+
     m.top.command = { action: "play", content: item }
 end sub

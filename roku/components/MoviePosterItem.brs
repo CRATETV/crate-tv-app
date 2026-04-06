@@ -11,7 +11,7 @@ sub init()
     
     ' Set initial scale
     m.posterContainer.scale = [1.0, 1.0]
-    m.posterContainer.scaleRotateCenter = [120, 180] ' Center of 240x360
+    m.posterContainer.scaleRotateCenter = [135, 202] ' Center of 270x405
     
     m.top.observeField("width", "OnSizeChange")
     m.top.observeField("height", "OnSizeChange")

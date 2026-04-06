@@ -133,7 +133,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   </div>
               );
             } else {
-              const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw] transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100 snap-start';
+              const containerClasses = 'flex-shrink-0 w-[32vw] sm:w-[28vw] md:w-[20vw] lg:w-[18vw] transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100 snap-start';
               return (
                 <div key={movie.key} className={containerClasses}>
                   <MovieCard

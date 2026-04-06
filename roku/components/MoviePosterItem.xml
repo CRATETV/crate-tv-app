@@ -2,7 +2,7 @@
 <!--
     CRATE TV - Movie Poster Item (V4 Studio)
     
-    CRATE STANDARD: Poster [240, 360] / Focus Ring [248, 368] @ [-4, -4]
+    CRATE STANDARD: Poster [270, 405] / Focus Ring [278, 413] @ [-4, -4]
     CLEAN UI: No "Press OK" labels. No title text on poster.
     FOCUS: Red rounded focus ring PNG + 1.1x scale transform.
     ROUNDED: corner_mask overlay creates rounded poster corners.
@@ -15,8 +15,8 @@
         <field id="focusPercent" type="float" value="0.0" onChange="OnFocusChange" />
         <field id="rowFocusPercent" type="float" value="0.0" />
         <field id="itemHasFocus" type="boolean" value="false" />
-        <field id="width" type="float" value="240" />
-        <field id="height" type="float" value="360" />
+        <field id="width" type="float" value="270" />
+        <field id="height" type="float" value="405" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/components/MoviePosterItem.brs" />
@@ -24,28 +24,28 @@
     <children>
         <Group id="posterContainer">
             <!-- Shadow -->
-            <Rectangle id="shadow" width="244" height="364" color="#000000" opacity="0.4" translation="[4, 6]" />
+            <Rectangle id="shadow" width="274" height="409" color="#000000" opacity="0.4" translation="[4, 6]" />
 
             <!-- Background -->
-            <Rectangle id="posterBg" width="240" height="360" color="#1A1A1A" />
+            <Rectangle id="posterBg" width="270" height="405" color="#1A1A1A" />
 
             <!-- Shimmer loading state -->
-            <Rectangle id="shimmerBase" width="240" height="360" color="#252525" />
-            <Rectangle id="shimmerBar"  width="240" height="360" color="#333333" opacity="0.0" />
+            <Rectangle id="shimmerBase" width="270" height="405" color="#252525" />
+            <Rectangle id="shimmerBar"  width="270" height="405" color="#333333" opacity="0.0" />
 
             <!-- Poster image -->
-            <Poster id="posterImage" width="240" height="360"
-                    loadWidth="240" loadHeight="360" loadDisplayMode="limitSize"
+            <Poster id="posterImage" width="270" height="405"
+                    loadWidth="270" loadHeight="405" loadDisplayMode="limitSize"
                     loadingBitmapOpacity="0.0"
                     failedBitmapUri="pkg:/images/poster_placeholder.png" />
 
             <!-- Lock overlay for paid content -->
             <Group id="lockOverlay" visible="false">
                 <!-- Dark semi-transparent overlay -->
-                <Rectangle id="lockOverlayRect" width="240" height="360" color="#000000" opacity="0.5" />
+                <Rectangle id="lockOverlayRect" width="270" height="405" color="#000000" opacity="0.5" />
                 
                 <!-- Lock badge in top-right corner -->
-                <Group id="lockBadge" translation="[180, 10]">
+                <Group id="lockBadge" translation="[210, 10]">
                     <!-- Badge background -->
                     <Rectangle width="50" height="50" color="#000000" opacity="0.8" />
                     <!-- Lock icon using rectangles (padlock shape) -->
@@ -63,33 +63,33 @@
                 </Group>
                 
                 <!-- "PREMIUM" label at bottom -->
-                <Group id="premiumLabel" translation="[0, 310]">
-                    <Rectangle width="240" height="50" color="#000000" opacity="0.85" />
+                <Group id="premiumLabel" translation="[0, 355]">
+                    <Rectangle width="270" height="50" color="#000000" opacity="0.85" />
                     <Label text="PREMIUM" font="font:SmallBoldSystemFont" color="#EF4444" 
-                           width="240" height="50" horizAlign="center" vertAlign="center" />
+                           width="270" height="50" horizAlign="center" vertAlign="center" />
                 </Group>
             </Group>
 
             <!-- Watch progress bar -->
-            <Group id="progressGroup" visible="false" translation="[0, 352]">
-                <Rectangle id="progressBg" width="240" height="8" color="#333333" />
+            <Group id="progressGroup" visible="false" translation="[0, 397]">
+                <Rectangle id="progressBg" width="270" height="8" color="#333333" />
                 <Rectangle id="progressFill" width="0" height="8" color="#EF4444" />
             </Group>
 
             <!-- Rounded corner mask -- cuts poster into rounded rect shape -->
-            <Poster id="cornerMask" width="240" height="360"
+            <Poster id="cornerMask" width="270" height="405"
                     uri="pkg:/images/corner_mask_240x360.png" />
 
             <!-- Rank badge (Top Ten only) -- bottom-left corner -->
             <Group id="rankBadge" visible="false">
-                <Rectangle id="rankBadgeBg" width="56" height="56" color="#EF4444" opacity="0.92" translation="[0, 304]" />
+                <Rectangle id="rankBadgeBg" width="56" height="56" color="#EF4444" opacity="0.92" translation="[0, 349]" />
                 <Label id="rankBadgeLabel" text="" font="font:BoldSystemFont" color="#FFFFFF"
                        width="56" height="56" horizAlign="center" vertAlign="center"
-                       translation="[0, 304]" />
+                       translation="[0, 349]" />
             </Group>
 
             <!-- Red rounded focus ring (PNG) -- visible only when focused -->
-            <Poster id="focusBorder" width="248" height="368"
+            <Poster id="focusBorder" width="278" height="413"
                     uri="pkg:/images/focus_ring_red_248x368.png"
                     translation="[-4, -4]"
                     visible="false" />

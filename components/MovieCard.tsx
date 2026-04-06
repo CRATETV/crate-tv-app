@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
 
@@ -25,9 +26,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   const [isImageLoaded, setIsImageLoaded]     = useState(false);
   const [showExpanded, setShowExpanded]       = useState(false);
   const [isMuted, setIsMuted]                 = useState(true);
+  const [showMobileSheet, setShowMobileSheet] = useState(false);
+  const [sheetMuted, setSheetMuted]           = useState(true);
   const hoverTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef        = useRef<HTMLVideoElement>(null);
+  const sheetVideoRef   = useRef<HTMLVideoElement>(null);
   const cardRef         = useRef<HTMLDivElement>(null);
 
   const now = new Date();
@@ -68,6 +72,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
   const handleMouseEnter = () => {
     if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null; }
+    // No hover expansion on touch/mobile devices
+    if (window.matchMedia('(hover: none)').matches) return;
     if (isActuallyComingSoon && !movie.trailer) return;
 
     if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
@@ -117,16 +123,29 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     if (previewStopRef.current)  clearTimeout(previewStopRef.current);
   }, []);
 
+  // Lock body scroll when mobile sheet is open
+  useEffect(() => {
+    if (showMobileSheet) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showMobileSheet]);
+
   const genres = Array.isArray(movie.genres)
     ? movie.genres.slice(0, 3).join(' · ')
     : (movie.genres || '');
 
+  const isMobile = () => window.matchMedia('(hover: none)').matches;
+
   return (
+    <>
     <div
       ref={cardRef}
       className="group relative cursor-pointer aspect-[3/4] rounded-lg bg-gray-900 border border-white/5 transition-all duration-300 hover:z-40"
       style={{ isolation: 'isolate' }}
-      onClick={() => onSelectMovie(movie)}
+      onClick={() => isMobile() ? setShowMobileSheet(true) : onSelectMovie(movie)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -180,7 +199,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       {/* ── NETFLIX-STYLE EXPANDED CARD ─────────────────────────── */}
       {showExpanded && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 z-50 w-[320px] rounded-xl overflow-hidden bg-[#141414] shadow-[0_30px_80px_rgba(0,0,0,0.95)] border border-white/10"
+          className="absolute left-1/2 -translate-x-1/2 z-50 w-[320px] md:w-[380px] rounded-xl overflow-hidden bg-[#141414] shadow-[0_30px_80px_rgba(0,0,0,0.95)] border border-white/10"
           style={{
             top: '-8px',
             animation: 'expandCard 0.22s cubic-bezier(0.33,1,0.68,1) forwards',
@@ -246,7 +265,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               {movie.releaseDateTime && (
                 <span className="text-gray-400 text-[10px]">{new Date(movie.releaseDateTime).getFullYear()}</span>
               )}
-              {movie.durationInMinutes && (
+              {!!movie.durationInMinutes && (
                 <>
                   <span className="text-gray-600 text-[9px]">·</span>
                   <span className="text-gray-400 text-[10px]">{movie.durationInMinutes}m</span>
@@ -323,7 +342,167 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           from { opacity: 0; transform: translateX(-50%) scale(0.94); }
           to   { opacity: 1; transform: translateX(-50%) scale(1); }
         }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
       `}</style>
     </div>
+
+    {/* ── MOBILE BOTTOM SHEET ─────────────────────────────────── */}
+    {showMobileSheet && createPortal(
+      <div
+        className="fixed inset-0 z-[999] flex items-end"
+        onClick={() => setShowMobileSheet(false)}
+      >
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+        {/* Sheet */}
+        <div
+          className="relative w-full bg-[#141414] rounded-t-2xl overflow-hidden max-h-[92dvh] flex flex-col"
+          style={{ animation: 'slideUp 0.32s cubic-bezier(0.32,0.72,0,1) forwards' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full bg-white/25" />
+          </div>
+
+          {/* Scrollable content */}
+          <div className="overflow-y-auto overscroll-contain">
+            {/* Video / poster hero */}
+            <div className="relative w-full aspect-video bg-black">
+              {videoSrc ? (
+                <video
+                  ref={sheetVideoRef}
+                  src={videoSrc}
+                  autoPlay
+                  muted={sheetMuted}
+                  playsInline
+                  onLoadedMetadata={e => {
+                    const v = e.currentTarget;
+                    if (v.duration > 0) v.currentTime = Math.min(v.duration * 0.3, v.duration - 65);
+                  }}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                  alt={movie.title}
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                />
+              )}
+
+              {/* Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent" />
+
+              {/* Close button */}
+              <button
+                onClick={() => setShowMobileSheet(false)}
+                className="absolute top-3 right-3 p-2 bg-black/60 rounded-full border border-white/20 text-white z-10"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Mute toggle */}
+              {videoSrc && (
+                <button
+                  onClick={e => { e.stopPropagation(); setSheetMuted(m => !m); }}
+                  className="absolute bottom-3 right-3 p-2 bg-black/60 rounded-full border border-white/20 text-white z-10"
+                >
+                  {sheetMuted ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="px-5 pt-4 pb-6">
+
+              {/* Title + badges */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h2 className="text-white font-black text-lg uppercase tracking-tight leading-tight flex-1">{movie.title}</h2>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0 pt-0.5">
+                  {isNew     && <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded tracking-widest">NEW</span>}
+                  {isWatched && <span className="text-[8px] font-black bg-white/20 text-white px-2 py-0.5 rounded tracking-tighter">WATCHED</span>}
+                </div>
+              </div>
+
+              {/* Meta */}
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                {movie.releaseDateTime && (
+                  <span className="text-gray-400 text-xs">{new Date(movie.releaseDateTime).getFullYear()}</span>
+                )}
+                {!!movie.durationInMinutes && (
+                  <>
+                    <span className="text-gray-600 text-[10px]">·</span>
+                    <span className="text-gray-400 text-xs">{movie.durationInMinutes}m</span>
+                  </>
+                )}
+                {genres && (
+                  <>
+                    <span className="text-gray-600 text-[10px]">·</span>
+                    <span className="text-[#E50914] text-xs font-medium">{genres}</span>
+                  </>
+                )}
+                {(movie.isForSale || movie.isWatchPartyPaid) && (
+                  <span className="bg-amber-700/80 text-[8px] font-black text-white px-2 py-0.5 rounded tracking-widest ml-1">$4.99</span>
+                )}
+              </div>
+
+              {/* Synopsis */}
+              {movie.synopsis && (
+                <p className="text-gray-400 text-sm leading-relaxed mb-5">
+                  {cleanSynopsis(movie.synopsis)}
+                </p>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-3">
+                {/* Play — full width primary */}
+                <button
+                  onClick={() => { setShowMobileSheet(false); onSelectMovie(movie); }}
+                  className="flex items-center justify-center gap-2 bg-white active:bg-gray-200 text-black font-black text-sm uppercase tracking-widest px-6 py-3 rounded-xl transition-colors flex-1"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  Play
+                </button>
+
+                {/* Watchlist */}
+                <button
+                  onClick={e => { e.stopPropagation(); onToggleWatchlist?.(movie.key); }}
+                  className="p-3 rounded-full border border-white/20 bg-white/5 active:bg-white/15 transition-all"
+                >
+                  {isOnWatchlist ? (
+                    <svg className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  )}
+                </button>
+
+                {/* Like */}
+                <button
+                  onClick={e => { e.stopPropagation(); setIsAnimatingLike(true); setTimeout(() => setIsAnimatingLike(false), 500); onToggleLike?.(movie.key); }}
+                  className={`p-3 rounded-full border border-white/20 bg-white/5 active:bg-red-600/30 transition-all ${isAnimatingLike ? 'animate-heartbeat' : ''}`}
+                >
+                  <svg className={`w-5 h-5 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 };
