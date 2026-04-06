@@ -79,6 +79,18 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
+    const allowedTabs = useMemo(() => {
+        const isMaster = role === 'super_admin' || role === 'master';
+        if (isMaster) return Object.keys(ALL_TABS);
+        const specificTabs = permissions[role];
+        const ALWAYS_VISIBLE = ['pulse', 'pipeline', 'mail', 'spotlight'];
+        if (specificTabs && specificTabs.length > 0) {
+            const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])];
+            return merged;
+        }
+        return [...new Set([...ALWAYS_VISIBLE, 'movies', 'categories', 'analytics'])];
+    }, [role, permissions]);
+
     const filteredTabs = useMemo(() => {
         const entries = Object.entries(ALL_TABS).filter(([tabId]) => allowedTabs.includes(tabId));
         if (!tabSearch.trim()) return entries;
@@ -87,20 +99,6 @@ const AdminPage: React.FC = () => {
             label.toLowerCase().includes(q) || tabId.toLowerCase().includes(q)
         );
     }, [allowedTabs, tabSearch]);
-
-    const allowedTabs = useMemo(() => {
-        const isMaster = role === 'super_admin' || role === 'master';
-        if (isMaster) return Object.keys(ALL_TABS);
-        const specificTabs = permissions[role];
-        // Always guarantee pipeline is visible to every authenticated admin
-        const ALWAYS_VISIBLE = ['pulse', 'pipeline', 'mail', 'spotlight'];
-        if (specificTabs && specificTabs.length > 0) {
-            const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])];
-            return merged;
-        }
-        // Default fallback — show core tabs to any logged-in admin
-        return [...new Set([...ALWAYS_VISIBLE, 'movies', 'categories', 'analytics'])];
-    }, [role, permissions]);
 
     useEffect(() => {
         if (isAuthenticated && !allowedTabs.includes(activeTab)) {
