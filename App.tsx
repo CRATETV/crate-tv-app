@@ -453,7 +453,6 @@ const App: React.FC = () => {
                                 <CrateVaultRow 
                                     movies={vaultMovies} 
                                     onSelectMovie={handlePlayMovie} 
-                                    onShowDetails={handleSelectMovie}
                                     likedMovies={likedMovies} 
                                     onToggleLike={toggleLikeMovie} 
                                     watchlist={watchlist} 
