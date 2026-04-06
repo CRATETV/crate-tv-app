@@ -83,12 +83,14 @@ const AdminPage: React.FC = () => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
         const specificTabs = permissions[role];
-        const ALWAYS_VISIBLE = ['pulse', 'pipeline', 'mail', 'spotlight'];
+        // Only the pulse dashboard is always visible — everything else must be explicitly granted
+        const ALWAYS_VISIBLE = ['pulse'];
         if (specificTabs && specificTabs.length > 0) {
             const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])];
             return merged;
         }
-        return [...new Set([...ALWAYS_VISIBLE, 'movies', 'categories', 'analytics'])];
+        // No permissions assigned yet — show pulse only
+        return ALWAYS_VISIBLE;
     }, [role, permissions]);
 
     const filteredTabs = useMemo(() => {

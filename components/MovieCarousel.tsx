@@ -8,6 +8,7 @@ interface MovieCarouselProps {
   title: React.ReactNode;
   movies: Movie[];
   onSelectMovie: (movie: Movie) => void;
+  onShowDetails?: (movie: Movie) => void;
   showRankings?: boolean;
   watchedMovies: Set<string>;
   watchlist: Set<string>;
@@ -20,7 +21,7 @@ interface MovieCarouselProps {
   categoryKey?: string;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false, categoryKey }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, onShowDetails, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false, categoryKey }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { settings } = useFestival();
 
@@ -139,6 +140,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   <MovieCard
                     movie={movie}
                     onSelectMovie={onSelectMovie}
+                    onShowDetails={onShowDetails}
                     isWatched={watchedMovies.has(movie.key)}
                     isOnWatchlist={watchlist.has(movie.key)}
                     isLiked={likedMovies.has(movie.key)}

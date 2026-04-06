@@ -379,7 +379,7 @@ const App: React.FC = () => {
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
                     <div className="-mt-6 md:-mt-10 lg:-mt-14 space-y-12 md:y-16 relative z-20">
                         {searchQuery ? (
-                            <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
+                            <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
                             {continueWatchingMovies.length > 0 && (
@@ -394,6 +394,7 @@ const App: React.FC = () => {
                                     } 
                                     movies={continueWatchingMovies} 
                                     onSelectMovie={handlePlayMovie} 
+                                    onShowDetails={handleSelectMovie}
                                     watchedMovies={watchedMovies} 
                                     watchlist={watchlist} 
                                     likedMovies={likedMovies} 
@@ -412,6 +413,7 @@ const App: React.FC = () => {
                                     } 
                                     movies={topTenMovies} 
                                     onSelectMovie={handlePlayMovie} 
+                                    onShowDetails={handleSelectMovie}
                                     watchedMovies={watchedMovies} 
                                     watchlist={watchlist} 
                                     likedMovies={likedMovies} 
@@ -436,6 +438,7 @@ const App: React.FC = () => {
                                     } 
                                     movies={premierMovies} 
                                     onSelectMovie={handlePlayMovie} 
+                                    onShowDetails={handleSelectMovie}
                                     watchedMovies={watchedMovies} 
                                     watchlist={watchlist} 
                                     likedMovies={likedMovies} 
@@ -450,6 +453,7 @@ const App: React.FC = () => {
                                 <CrateVaultRow 
                                     movies={vaultMovies} 
                                     onSelectMovie={handlePlayMovie} 
+                                    onShowDetails={handleSelectMovie}
                                     likedMovies={likedMovies} 
                                     onToggleLike={toggleLikeMovie} 
                                     watchlist={watchlist} 
@@ -459,7 +463,7 @@ const App: React.FC = () => {
                             )}
 
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
-                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
+                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
@@ -479,6 +483,7 @@ const App: React.FC = () => {
                                         title={typedCategory.title} 
                                         movies={categoryMovies} 
                                         onSelectMovie={handlePlayMovie} 
+                                    onShowDetails={handleSelectMovie}
                                         watchedMovies={watchedMovies} 
                                         watchlist={watchlist} 
                                         likedMovies={likedMovies} 

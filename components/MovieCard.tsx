@@ -6,6 +6,7 @@ import LaurelPreview from './LaurelPreview';
 interface MovieCardProps {
   movie: Movie;
   onSelectMovie: (movie: Movie) => void;
+  onShowDetails?: (movie: Movie) => void;
   isWatched?: boolean;
   isOnWatchlist?: boolean;
   isLiked?: boolean;
@@ -17,7 +18,7 @@ interface MovieCardProps {
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({
-  movie, onSelectMovie, isWatched, isOnWatchlist, isLiked,
+  movie, onSelectMovie, onShowDetails, isWatched, isOnWatchlist, isLiked,
   onToggleLike, onToggleWatchlist, onSupportMovie, theme,
 }) => {
   if (!movie) return null;
@@ -28,6 +29,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   const [isMuted, setIsMuted]                 = useState(true);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [sheetMuted, setSheetMuted]           = useState(true);
+  const [expandAnchor, setExpandAnchor]       = useState<'left'|'center'|'right'>('center');
   const hoverTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef        = useRef<HTMLVideoElement>(null);
@@ -75,6 +77,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     // No hover expansion on touch/mobile devices
     if (window.matchMedia('(hover: none)').matches) return;
     if (isActuallyComingSoon && !movie.trailer) return;
+
+    // Detect viewport edge so expanded card never clips
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      if (rect.left < vw * 0.22) setExpandAnchor('left');
+      else if (rect.right > vw * 0.78) setExpandAnchor('right');
+      else setExpandAnchor('center');
+    }
 
     if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
       window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
@@ -199,10 +210,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       {/* ── NETFLIX-STYLE EXPANDED CARD ─────────────────────────── */}
       {showExpanded && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 z-50 w-[320px] md:w-[380px] rounded-xl overflow-hidden bg-[#141414] shadow-[0_30px_80px_rgba(0,0,0,0.95)] border border-white/10"
+          className="absolute z-50 w-[320px] md:w-[380px] rounded-xl overflow-hidden bg-[#141414] shadow-[0_30px_80px_rgba(0,0,0,0.95)] border border-white/10"
           style={{
             top: '-8px',
-            animation: 'expandCard 0.22s cubic-bezier(0.33,1,0.68,1) forwards',
+            ...(expandAnchor === 'left'
+              ? { left: 0 }
+              : expandAnchor === 'right'
+              ? { right: 0 }
+              : { left: '50%', transform: 'translateX(-50%)' }),
+            animation: `${expandAnchor === 'center' ? 'expandCard' : 'expandCardEdge'} 0.22s cubic-bezier(0.33,1,0.68,1) forwards`,
           }}
           onClick={e => e.stopPropagation()}
           onMouseEnter={handleExpandedEnter}
@@ -325,7 +341,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
               {/* More info */}
               <button
-                onClick={e => { e.stopPropagation(); onSelectMovie(movie); }}
+                onClick={e => { e.stopPropagation(); (onShowDetails ?? onSelectMovie)(movie); }}
                 className="p-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 transition-all ml-auto"
                 title="More info"
               >
@@ -336,11 +352,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         </div>
       )}
 
-      {/* CSS animation keyframe injected once */}
+      {/* CSS animation keyframes */}
       <style>{`
         @keyframes expandCard {
           from { opacity: 0; transform: translateX(-50%) scale(0.94); }
           to   { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+        @keyframes expandCardEdge {
+          from { opacity: 0; transform: scale(0.94); }
+          to   { opacity: 1; transform: scale(1); }
         }
         @keyframes slideUp {
           from { transform: translateY(100%); }
@@ -360,7 +380,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
         {/* Sheet */}
         <div
-          className="relative w-full bg-[#141414] rounded-t-2xl overflow-hidden max-h-[92dvh] flex flex-col"
+          className="relative w-full bg-[#141414] rounded-t-2xl overflow-hidden min-h-[72dvh] max-h-[92dvh] flex flex-col"
           style={{ animation: 'slideUp 0.32s cubic-bezier(0.32,0.72,0,1) forwards' }}
           onClick={e => e.stopPropagation()}
         >
