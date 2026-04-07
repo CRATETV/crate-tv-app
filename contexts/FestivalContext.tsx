@@ -172,6 +172,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (data.categories) setCategories(data.categories);
                 if (data.zineStories) setZineStories(data.zineStories);
                 if (data.aboutData) setAboutData(data.aboutData);
+                // ── CRITICAL: set festivalConfig from API so it doesn't rely
+                //    solely on the client-side onSnapshot which can fail silently
+                if (data.festivalConfig) setFestivalConfig(data.festivalConfig);
+                if (data.festivalData && Array.isArray(data.festivalData)) setFestivalData(data.festivalData);
                 setDataSource('live');
             }
         } catch (err) {

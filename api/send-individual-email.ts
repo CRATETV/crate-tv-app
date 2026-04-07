@@ -78,50 +78,58 @@ export async function POST(request: Request) {
             text: plainText,
             html: `
                 <!DOCTYPE html>
-                <html>
+                <html lang="en">
                 <head>
                     <meta charset="utf-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta name="color-scheme" content="light dark">
+                    <meta name="supported-color-schemes" content="light dark">
                     <title>${subject}</title>
                 </head>
-                <body style="margin: 0; padding: 0; background-color: #050505; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ffffff; -webkit-font-smoothing: antialiased;">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#050505" style="background-color: #050505;">
+                <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f4f4" style="background-color: #f4f4f4;">
                         <tr>
-                            <td align="center" style="padding: 60px 20px;" bgcolor="#050505">
-                                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#050505" style="max-width: 600px; background-color: #050505;">
-                                    <!-- Brand Header -->
+                            <td align="center" style="padding: 40px 20px;">
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#ffffff" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+
+                                    <!-- Dark Header Bar with Logo -->
                                     <tr>
-                                        <td align="center" style="padding-bottom: 60px;">
-                                            <a href="https://cratetv.net" target="_blank" style="display: inline-block; background-color: #000000; padding: 20px 32px; border-radius: 16px;">
-                                                <img src="${LOGO_URL}" alt="Crate TV" width="140" style="display: block; border: 0;">
+                                        <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 32px 40px;">
+                                            <a href="https://cratetv.net" target="_blank">
+                                                <img src="${LOGO_URL}" alt="Crate TV" width="130" style="display: block; border: 0;">
                                             </a>
                                         </td>
                                     </tr>
 
-                                    <!-- Core Payload -->
+                                    <!-- Red accent line -->
                                     <tr>
-                                        <td style="padding: 0 10px;">
-                                            <div style="font-size: 16px; line-height: 1.8; color: #d1d5db;">
+                                        <td bgcolor="#ef4444" style="background-color: #ef4444; height: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                                    </tr>
+
+                                    <!-- Core Content -->
+                                    <tr>
+                                        <td style="padding: 40px 40px 32px; background-color: #ffffff;" bgcolor="#ffffff">
+                                            <div style="font-size: 16px; line-height: 1.8; color: #1a1a1a;">
                                                 ${htmlBody}
                                             </div>
 
                                             ${posterUrl ? `
-                                            <!-- Curatorial Context Block -->
-                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 50px; background-color: #0a0a0a; border: 1px solid #1f2937; border-radius: 24px; overflow: hidden;">
+                                            <!-- Film Block -->
+                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5;">
                                                 <tr>
-                                                    <td align="center">
-                                                        <img src="${posterUrl}" alt="${movieTitle}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; object-fit: cover;">
+                                                    <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a;">
+                                                        <img src="${posterUrl}" alt="${movieTitle}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block;">
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="padding: 40px; text-align: center;">
-                                                        <p style="font-size: 10px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 4px; margin: 0 0 16px 0;">Official Selection Recommendation</p>
-                                                        <h3 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; line-height: 1;">${movieTitle}</h3>
-                                                        <p style="color: #6b7280; font-size: 15px; margin: 20px 0 32px 0; font-style: italic; line-height: 1.6;">
+                                                    <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 32px 40px;">
+                                                        <p style="font-size: 10px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 4px; margin: 0 0 12px 0;">Official Selection</p>
+                                                        <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; line-height: 1.1;">${movieTitle}</h3>
+                                                        <p style="color: #999999; font-size: 14px; margin: 0 0 28px 0; font-style: italic; line-height: 1.6;">
                                                             ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 180) + '...' : ''}
                                                         </p>
-                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #ef4444; color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
-                                                            Stream Now
+                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #ef4444; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 10px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+                                                            ▶ Stream Now
                                                         </a>
                                                     </td>
                                                 </tr>
@@ -129,20 +137,21 @@ export async function POST(request: Request) {
                                             ` : ''}
 
                                             ${signature ? `
-                                            <div style="padding-top: 50px; color: #4b5563; font-size: 14px; font-style: italic; white-space: pre-wrap; line-height: 1.6;">
+                                            <div style="margin-top: 40px; padding-top: 32px; border-top: 1px solid #e5e5e5; color: #555555; font-size: 14px; font-style: italic; white-space: pre-wrap; line-height: 1.7;">
                                                 ${signature}
                                             </div>
                                             ` : ''}
                                         </td>
                                     </tr>
 
-                                    <!-- Technical Footer -->
+                                    <!-- Footer -->
                                     <tr>
-                                        <td align="center" style="padding: 80px 10px 40px; border-top: 1px solid #333333;">
-                                            <p style="font-size: 10px; color: #888888; text-transform: uppercase; letter-spacing: 4px; font-weight: 900; margin: 0 0 12px 0;">Global Independent Infrastructure</p>
-                                            <p style="font-size: 9px; color: #666666; margin: 0; font-weight: 700;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA // NYC.</p>
+                                        <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 28px 40px;">
+                                            <p style="font-size: 10px; color: #666666; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; margin: 0 0 8px 0;">Global Independent Infrastructure</p>
+                                            <p style="font-size: 9px; color: #444444; margin: 0;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA // NYC.</p>
                                         </td>
                                     </tr>
+
                                 </table>
                             </td>
                         </tr>
