@@ -268,9 +268,26 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                             <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Block Identity</label>
                             <input value={block.title} onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)} className="bg-transparent text-white font-black text-2xl uppercase tracking-tight outline-none w-full italic" placeholder="Block Title" />
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Start Time</label>
-                            <input value={block.time} onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)} className="bg-transparent text-gray-400 text-sm font-black uppercase tracking-widest outline-none border-b border-white/5" placeholder="7:00 PM" />
+                        <div className="flex items-center gap-6">
+                            <div className="space-y-1">
+                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Start Time</label>
+                                <input value={block.time} onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)} className="bg-transparent text-gray-400 text-sm font-black uppercase tracking-widest outline-none border-b border-white/5" placeholder="7:00 PM" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Admission Price ($)</label>
+                                <div className="flex items-center gap-1 border-b border-white/10">
+                                    <span className="text-gray-500 font-black text-sm">$</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={block.price ?? 0}
+                                        onChange={e => handleBlockChange(dayIndex, blockIndex, 'price', parseFloat(e.target.value) || 0)}
+                                        className="bg-transparent text-white font-black text-sm w-20 outline-none"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
                         </div>
                    </div>
                    <div className="flex items-center gap-6 flex-shrink-0">

@@ -567,10 +567,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 placeholder="Enter Backstage Key" 
                                                 value={backstageInput}
                                                 onChange={(e) => setBackstageInput(e.target.value)}
-                                                className={`bg-white/5 border ${backstageError ? 'border-red-500' : 'border-white/10'} rounded-2xl px-6 py-4 text-center font-mono text-xl tracking-[0.5em] uppercase outline-none focus:border-white/30 transition-all`}
+                                                className={`bg-white/10 border-2 ${backstageError ? 'border-red-500' : 'border-white/30'} rounded-2xl px-6 py-4 text-center font-mono text-xl tracking-[0.5em] uppercase outline-none focus:border-white transition-all text-white placeholder:text-white/40`}
                                             />
-                                            <button type="submit" className="text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
-                                                {backstageError ? 'Invalid Protocol Key' : 'Authorize Backstage Access'}
+                                            <button type="submit" className="text-[10px] font-black text-white/70 hover:text-white uppercase tracking-widest transition-colors bg-white/10 rounded-xl py-3 px-6 border border-white/20">
+                                                {backstageError ? '⚠ Invalid Protocol Key' : 'Authorize Backstage Access'}
                                             </button>
                                         </form>
                                     </div>
