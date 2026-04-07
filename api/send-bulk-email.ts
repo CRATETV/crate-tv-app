@@ -72,7 +72,9 @@ export async function POST(request: Request) {
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px;">
                                         <tr>
                                             <td align="center" style="padding-bottom: 50px;">
-                                                <img src="${LOGO_URL}" alt="Crate TV" width="130" style="display: block; border: 0; filter: invert(1);">
+                                                <a href="https://cratetv.net" target="_blank" style="display: inline-block; background-color: #000000; padding: 20px 32px; border-radius: 16px;">
+                                                    <img src="${LOGO_URL}" alt="Crate TV" width="130" style="display: block; border: 0;">
+                                                </a>
                                             </td>
                                         </tr>
                                         <tr>
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td align="center" style="padding-top: 60px; border-top: 1px solid #111; color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">
+                                            <td align="center" style="padding-top: 60px; border-top: 1px solid #111; color: #cccccc; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">
                                                 Official Dispatch // Crate TV Infrastructure
                                             </td>
                                         </tr>

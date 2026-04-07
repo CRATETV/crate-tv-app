@@ -78,7 +78,7 @@ export async function POST(request: Request) {
                                 
                                 <!-- Synopsis -->
                                 ${synopsis ? `
-                                <p style="margin: 0 0 24px 0; font-size: 14px; color: #999; text-align: center; line-height: 1.6; font-style: italic;">
+                                <p style="margin: 0 0 24px 0; font-size: 14px; color: #888888; text-align: center; line-height: 1.6; font-style: italic;">
                                     "${synopsis.substring(0, 200)}${synopsis.length > 200 ? '...' : ''}"
                                 </p>
                                 ` : ''}

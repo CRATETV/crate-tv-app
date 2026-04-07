@@ -58,7 +58,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, []);
 
     const isFestivalLive = useMemo(() => {
-        if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
+        // Portal Access toggle is the primary gate — if OFF, never live
+        if (!festivalConfig?.isFestivalLive) return false;
+        // If toggle is ON but no dates are set, go live immediately
+        if (!festivalConfig?.startDate || !festivalConfig?.endDate) return true;
+        // If toggle is ON and dates are set, check the date range
         const nowTime = now.getTime();
         const start = new Date(festivalConfig.startDate).getTime();
         const end = new Date(festivalConfig.endDate).getTime();

@@ -92,7 +92,7 @@ export async function POST(request: Request) {
                                     <!-- Brand Header -->
                                     <tr>
                                         <td align="center" style="padding-bottom: 60px;">
-                                            <a href="https://cratetv.net" target="_blank">
+                                            <a href="https://cratetv.net" target="_blank" style="display: inline-block; background-color: #000000; padding: 20px 32px; border-radius: 16px;">
                                                 <img src="${LOGO_URL}" alt="Crate TV" width="140" style="display: block; border: 0;">
                                             </a>
                                         </td>
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
                                                         <p style="color: #6b7280; font-size: 15px; margin: 20px 0 32px 0; font-style: italic; line-height: 1.6;">
                                                             ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 180) + '...' : ''}
                                                         </p>
-                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #ffffff; color: #000000; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #050505; color: #000000; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
                                                             Stream Master File
                                                         </a>
                                                     </td>
@@ -138,9 +138,9 @@ export async function POST(request: Request) {
 
                                     <!-- Technical Footer -->
                                     <tr>
-                                        <td align="center" style="padding: 80px 10px 40px; border-top: 1px solid #111827;">
-                                            <p style="font-size: 10px; color: #374151; text-transform: uppercase; letter-spacing: 4px; font-weight: 900; margin: 0 0 12px 0;">Global Independent Infrastructure</p>
-                                            <p style="font-size: 9px; color: #1f2937; margin: 0; font-weight: 700;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA // NYC.</p>
+                                        <td align="center" style="padding: 80px 10px 40px; border-top: 1px solid #333333;">
+                                            <p style="font-size: 10px; color: #888888; text-transform: uppercase; letter-spacing: 4px; font-weight: 900; margin: 0 0 12px 0;">Global Independent Infrastructure</p>
+                                            <p style="font-size: 9px; color: #666666; margin: 0; font-weight: 700;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA // NYC.</p>
                                         </td>
                                     </tr>
                                 </table>

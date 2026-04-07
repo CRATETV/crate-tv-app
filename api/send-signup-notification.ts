@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         to: [technicalEmail],
         subject: `🎉 New Sign-Up: ${email}`,
         html: `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #111;">
+            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff;">
                 <h1 style="color: #ef4444; text-transform: uppercase;">Infrastructure Alert</h1>
                 <p>A new node has been initialized in the global user cluster.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />

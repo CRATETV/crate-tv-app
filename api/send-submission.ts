@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         });
 
         const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 30px; border-radius: 20px;">
+            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 30px; border-radius: 20px;">
                 <h1 style="color: #ef4444; text-transform: uppercase; font-size: 18px; letter-spacing: 2px;">Catalog Submission</h1>
                 <p>A new film has been routed to the **Grand Jury Hub** for adjudication.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />

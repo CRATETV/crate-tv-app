@@ -31,18 +31,18 @@ export async function POST(request: Request) {
         }
 
         const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
                 <h2 style="color: #ef4444; text-transform: uppercase; letter-spacing: 2px;">Professional Inquiry</h2>
                 <p>A new talent inquiry has been submitted through the Crate TV Actors Directory.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p><strong>Target Talent:</strong> ${actorName}</p>
                 <p><strong>From:</strong> ${senderName} (${senderEmail})</p>
                 <p><strong>Message:</strong></p>
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; font-style: italic;">
+                <div style="background-color: #0a0a0a; padding: 15px; border-radius: 8px; font-style: italic;">
                     ${message.replace(/\n/g, '<br/>')}
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p style="font-size: 11px; color: #999;">This inquiry was routed through the Crate TV secure proxy and logged in the Admin Terminal.</p>
+                <p style="font-size: 11px; color: #888888;">This inquiry was routed through the Crate TV secure proxy and logged in the Admin Terminal.</p>
             </div>
         `;
 

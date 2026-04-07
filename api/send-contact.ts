@@ -24,14 +24,14 @@ export async function POST(request: Request) {
         const studioEmail = settingsDoc.data()?.businessEmail || FALLBACK_ADMIN;
 
         const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
                 <h1 style="color: #ef4444; text-transform: uppercase; font-size: 20px;">Incoming Contact Form</h1>
                 <p><strong>From:</strong> ${name}</p>
                 <p><strong>Reply-to:</strong> ${email}</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p><strong>Message:</strong></p>
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; font-style: italic;">${message}</div>
-                <p style="font-size: 10px; color: #999; margin-top: 20px;">Transmission routed via Crate TV Studio Infrastructure.</p>
+                <div style="background-color: #0a0a0a; padding: 15px; border-radius: 8px; font-style: italic;">${message}</div>
+                <p style="font-size: 10px; color: #888888; margin-top: 20px;">Transmission routed via Crate TV Studio Infrastructure.</p>
             </div>
         `;
 
