@@ -13,6 +13,8 @@ interface WatchableItem {
     type: 'movie' | 'block';
     isWatchPartyEnabled?: boolean;
     watchPartyStartTime?: string;
+    isWatchPartyPaid?: boolean;
+    watchPartyPrice?: number;
     fullMovie?: string; // Only for movies
     movieKeys?: string[]; // Only for blocks
 }
@@ -711,6 +713,27 @@ const MovieRow: React.FC<{
                 />
             </td>
             <td className="p-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={item.isWatchPartyPaid || false} onChange={e => onChange({ isWatchPartyPaid: e.target.checked })} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+            </td>
+            <td className="p-3">
+                <div className="flex items-center gap-1">
+                    <span className="text-gray-500 text-sm font-black">$</span>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.watchPartyPrice ?? 0}
+                        onChange={e => onChange({ watchPartyPrice: parseFloat(e.target.value) || 0 })}
+                        disabled={!item.isWatchPartyPaid}
+                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white w-20 outline-none focus:border-amber-500 disabled:opacity-30"
+                        placeholder="0.00"
+                    />
+                </div>
+            </td>
+            <td className="p-3">
                 <button 
                     onClick={onSelect}
                     className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-pink-600 text-white shadow-[0_0_15px_rgba(219,39,119,0.4)]' : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'}`}
@@ -776,6 +799,8 @@ const WatchPartyManager: React.FC<{
                 type: 'movie',
                 isWatchPartyEnabled: m.isWatchPartyEnabled,
                 watchPartyStartTime: m.watchPartyStartTime,
+                isWatchPartyPaid: m.isWatchPartyPaid,
+                watchPartyPrice: m.watchPartyPrice,
                 fullMovie: m.fullMovie
             });
         });
@@ -789,6 +814,8 @@ const WatchPartyManager: React.FC<{
                     type: 'block',
                     isWatchPartyEnabled: block.isWatchPartyEnabled,
                     watchPartyStartTime: block.watchPartyStartTime,
+                    isWatchPartyPaid: (block.price || 0) > 0,
+                    watchPartyPrice: block.price,
                     movieKeys: block.movieKeys
                 });
             });
@@ -803,6 +830,8 @@ const WatchPartyManager: React.FC<{
                     type: 'block',
                     isWatchPartyEnabled: block.isWatchPartyEnabled,
                     watchPartyStartTime: block.watchPartyStartTime,
+                    isWatchPartyPaid: (block.price || 0) > 0,
+                    watchPartyPrice: block.price,
                     movieKeys: block.movieKeys
                 });
             });
@@ -1032,6 +1061,8 @@ const WatchPartyManager: React.FC<{
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
                                 <th className="p-3">Start Time</th>
+                                <th className="p-3">Paid</th>
+                                <th className="p-3">Price ($)</th>
                                 <th className="p-3">Action</th>
                             </tr>
                         </thead>
