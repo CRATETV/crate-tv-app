@@ -101,9 +101,8 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
 
     const handleJoinParty = (party: typeof liveWatchParties[0]) => {
         if (party.hasAccess) {
-            // User has access - navigate to watch party
-            const firstMovieKey = party.block.movieKeys[0];
-            window.history.pushState({}, '', `/watchparty/${firstMovieKey}`);
+            // Navigate to the BLOCK ID so WatchPartyPage resolves festival block pricing correctly
+            window.history.pushState({}, '', `/watchparty/${party.block.id}`);
             window.dispatchEvent(new Event('pushstate'));
             onClose();
         } else {

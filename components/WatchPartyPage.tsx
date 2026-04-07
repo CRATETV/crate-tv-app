@@ -208,7 +208,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
@@ -407,10 +407,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (isControllerMode || isBackstageVerified) return true;
         if (!movie) return false;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
+        if (hasFestivalAllAccess) return true;
+        if (unlockedFestivalBlockIds.has(movieKey)) return true;
+
+        // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's
+        const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movieKey));
+        if (parentBlock) {
+            if (unlockedFestivalBlockIds.has(parentBlock.id)) return true;
+            if (!parentBlock.price || parentBlock.price === 0) return true;
+            return false; // Paid block, not unlocked
+        }
+
         if (!movie.isWatchPartyPaid) return true;
         const exp = rentals[movieKey];
-        return exp && new Date(exp) > new Date();
-    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified]);
+        return !!(exp && new Date(exp) > new Date());
+    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
