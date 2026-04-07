@@ -453,7 +453,7 @@ const AdminPage: React.FC = () => {
                                 allMovies={movies}
                                 onDataChange={(d) => setFestivalData(d)}
                                 onConfigChange={(c) => setFestivalConfig(c)}
-                                onSave={() => handleSaveData('festival', { config: festivalConfig, data: festivalData })}
+                                onSave={(latestConfig) => handleSaveData('festival', { config: latestConfig, data: festivalData })}
                                 isSaving={isSaving}
                             />
                         </div>

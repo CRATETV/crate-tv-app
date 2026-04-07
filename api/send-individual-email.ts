@@ -85,10 +85,10 @@ export async function POST(request: Request) {
                     <title>${subject}</title>
                 </head>
                 <body style="margin: 0; padding: 0; background-color: #050505; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ffffff; -webkit-font-smoothing: antialiased;">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #050505;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#050505" style="background-color: #050505;">
                         <tr>
-                            <td align="center" style="padding: 60px 20px;">
-                                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px;">
+                            <td align="center" style="padding: 60px 20px;" bgcolor="#050505">
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#050505" style="max-width: 600px; background-color: #050505;">
                                     <!-- Brand Header -->
                                     <tr>
                                         <td align="center" style="padding-bottom: 60px;">
@@ -120,8 +120,8 @@ export async function POST(request: Request) {
                                                         <p style="color: #6b7280; font-size: 15px; margin: 20px 0 32px 0; font-style: italic; line-height: 1.6;">
                                                             ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 180) + '...' : ''}
                                                         </p>
-                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #050505; color: #000000; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
-                                                            Stream Master File
+                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #ef4444; color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+                                                            Stream Now
                                                         </a>
                                                     </td>
                                                 </tr>

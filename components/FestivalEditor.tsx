@@ -80,7 +80,7 @@ interface FestivalEditorProps {
     allMovies: Record<string, Movie>;
     onDataChange: (data: FestivalDay[]) => void;
     onConfigChange: (config: FestivalConfig) => void;
-    onSave: () => void;
+    onSave: (config: FestivalConfig) => void;
     isSaving: boolean;
 }
 
@@ -101,7 +101,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const [isDirty, setIsDirty] = useState(false);
 
   const handleSaveManifest = () => {
-      onSave();
+      onSave(config);
       setIsDirty(false);
   };
 
