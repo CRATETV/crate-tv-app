@@ -114,22 +114,39 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   };
 
   const previewStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewStartTimeRef = useRef<number | null>(null);
 
   const handleMetadataLoaded = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
     if (v.duration > 0) {
-      // Start at 30% into the film — drops into the action
-      // Don't start closer than 60s from end so we always get a full 60s preview
-      v.currentTime = Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
+      const startAt = movie.trailerStart != null
+        ? Math.min(movie.trailerStart, Math.max(0, v.duration - 60))
+        : Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
+      v.currentTime = startAt;
     }
   };
 
   const handleTrailerPlay = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    // Start the 60 second stop timer when playback actually begins
+    const video = e.currentTarget;
+    previewStartTimeRef.current = video.currentTime;
     if (previewStopRef.current) clearTimeout(previewStopRef.current);
+    // Primary stop — setTimeout at 60s
     previewStopRef.current = setTimeout(() => {
-      e.currentTarget.pause();
+      video.pause();
     }, 60000);
+  };
+
+  const handleTrailerTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    // Safety net — if video has played 60s from start point, force pause
+    const video = e.currentTarget;
+    if (previewStartTimeRef.current !== null) {
+      if (video.currentTime - previewStartTimeRef.current >= 60) {
+        video.pause();
+        if (previewStopRef.current) clearTimeout(previewStopRef.current);
+        previewStopRef.current = null;
+        previewStartTimeRef.current = null;
+      }
+    }
   };
 
   useEffect(() => () => {
@@ -241,6 +258,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 playsInline
                 onLoadedMetadata={handleMetadataLoaded}
                 onPlay={handleTrailerPlay}
+                onTimeUpdate={handleTrailerTimeUpdate}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -408,9 +426,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                   playsInline
                   onLoadedMetadata={e => {
                     const v = e.currentTarget;
-                    if (v.duration > 0) v.currentTime = Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
+                    if (v.duration > 0) {
+                      const startAt = movie.trailerStart != null
+                        ? Math.min(movie.trailerStart, Math.max(0, v.duration - 60))
+                        : Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
+                      v.currentTime = startAt;
+                    }
                   }}
                   onPlay={handleTrailerPlay}
+                  onTimeUpdate={handleTrailerTimeUpdate}
                   className="w-full h-full object-cover"
                 />
               ) : (

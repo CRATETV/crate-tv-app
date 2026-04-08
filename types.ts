@@ -149,6 +149,7 @@ export interface Movie {
   director: string;
   producers?: string;
   trailer: string;
+  trailerStart?: number; // seconds into the trailer to start preview
   fullMovie: string;
   rokuStreamUrl?: string;
   poster: string;

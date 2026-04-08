@@ -22,6 +22,7 @@ const emptyMovie: Movie = {
     director: '',
     producers: '',
     trailer: '',
+    trailerStart: undefined,
     fullMovie: '',
     rokuStreamUrl: '',
     poster: '',
@@ -453,6 +454,109 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <label className="form-label">Teaser/Teaser (URL)</label>
                                             <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="form-input bg-black/40 text-[10px] font-mono" />
                                             <S3Uploader label="Ingest Teaser" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="form-label">Preview Start Point</label>
+                                            <p className="text-[10px] text-gray-600">Drag the slider to find the perfect moment. The preview will start here and play for 60 seconds.</p>
+                                            {formData.trailer ? (
+                                                <div className="space-y-3">
+                                                    <div className="relative">
+                                                        <video
+                                                            id="trailer-scrubber"
+                                                            src={formData.trailer}
+                                                            muted
+                                                            playsInline
+                                                            className="w-full rounded-xl bg-black aspect-video object-cover"
+                                                            onLoadedMetadata={e => {
+                                                                const v = e.currentTarget;
+                                                                const slider = document.getElementById('trailer-start-slider') as HTMLInputElement;
+                                                                if (slider) slider.max = String(Math.floor(v.duration));
+                                                                const start = formData.trailerStart ?? Math.floor(v.duration * 0.3);
+                                                                v.currentTime = start;
+                                                                if (slider) slider.value = String(start);
+                                                            }}
+                                                            onEnded={() => {
+                                                                // If video ends naturally before 60s timer — show warning
+                                                                const badge = document.getElementById('preview-badge');
+                                                                if (badge && badge.dataset.testing === 'true') {
+                                                                    badge.textContent = '⚠ Ended early — trailer too short from this point';
+                                                                    badge.className = 'absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500 text-black';
+                                                                    badge.dataset.testing = 'false';
+                                                                }
+                                                            }}
+                                                        />
+                                                        <div
+                                                            id="preview-badge"
+                                                            data-testing="false"
+                                                            className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-black/60 text-gray-400 hidden"
+                                                        />
+                                                    </div>
+                                                    <input
+                                                        id="trailer-start-slider"
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        step="1"
+                                                        value={formData.trailerStart ?? 0}
+                                                        onChange={e => {
+                                                            const val = parseInt(e.target.value);
+                                                            setFormData({...formData, trailerStart: val});
+                                                            const v = document.getElementById('trailer-scrubber') as HTMLVideoElement;
+                                                            if (v) { v.pause(); v.currentTime = val; }
+                                                            // Reset badge
+                                                            const badge = document.getElementById('preview-badge');
+                                                            if (badge) { badge.className = 'absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-black/60 text-gray-400 hidden'; badge.dataset.testing = 'false'; }
+                                                        }}
+                                                        className="w-full accent-red-600 cursor-pointer"
+                                                    />
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] text-gray-500 font-mono">
+                                                            Start: {formData.trailerStart != null ? `${Math.floor((formData.trailerStart ?? 0) / 60)}:${String((formData.trailerStart ?? 0) % 60).padStart(2,'0')}` : 'Auto (30%)'}
+                                                        </span>
+                                                        <div className="flex items-center gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const v = document.getElementById('trailer-scrubber') as HTMLVideoElement;
+                                                                    const badge = document.getElementById('preview-badge');
+                                                                    if (!v || !badge) return;
+
+                                                                    // Reset badge
+                                                                    badge.textContent = '▶ Playing 60s preview...';
+                                                                    badge.className = 'absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-red-600 text-white';
+                                                                    badge.dataset.testing = 'true';
+
+                                                                    const startAt = formData.trailerStart ?? Math.floor(v.duration * 0.3);
+                                                                    v.currentTime = startAt;
+                                                                    v.play();
+
+                                                                    // Stop after exactly 60s
+                                                                    setTimeout(() => {
+                                                                        if (badge.dataset.testing === 'true') {
+                                                                            v.pause();
+                                                                            badge.textContent = '✓ Stopped at 60s — looks good!';
+                                                                            badge.className = 'absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-green-600 text-white';
+                                                                            badge.dataset.testing = 'false';
+                                                                        }
+                                                                    }, 60000);
+                                                                }}
+                                                                className="text-[10px] font-black text-red-500 hover:text-white uppercase tracking-widest transition-colors border border-red-600/30 hover:border-red-500 px-3 py-1.5 rounded-lg bg-red-600/10 hover:bg-red-600/20"
+                                                            >
+                                                                ▶ Test 60s Preview
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setFormData({...formData, trailerStart: undefined})}
+                                                                className="text-[10px] text-gray-600 hover:text-red-500 uppercase tracking-widest transition-colors"
+                                                            >
+                                                                Reset to Auto
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-gray-700 italic">Upload a trailer above to set the preview start point.</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
