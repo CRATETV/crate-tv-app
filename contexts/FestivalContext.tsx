@@ -190,7 +190,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         fetchData();
         
         const init = async () => {
-            await initializeFirebaseAuth();
+            const auth = await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
                 // REAL-TIME MOVIES LISTENER - for watch party settings
@@ -198,11 +198,12 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     if (doc.exists) {
                         const firebaseMovies = doc.data() as Record<string, Movie>;
                         // Merge watch party fields from Firebase into movies state
+                        // Use functional update to always work with latest state
                         setMovies(prev => {
                             const merged = { ...prev };
                             Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
                                 if (merged[key]) {
-                                    // Update watch party fields from Firebase (real-time)
+                                    // Movie exists — update watch party fields
                                     merged[key] = {
                                         ...merged[key],
                                         isWatchPartyEnabled: fbMovie.isWatchPartyEnabled,
@@ -210,6 +211,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                                         isWatchPartyPaid: fbMovie.isWatchPartyPaid,
                                         watchPartyPrice: fbMovie.watchPartyPrice
                                     };
+                                } else {
+                                    // Movie not in API yet — store full Firebase record so
+                                    // watch party fields are available immediately
+                                    merged[key] = fbMovie;
                                 }
                             });
                             return merged;
@@ -265,7 +270,31 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     });
                     setActiveParties(liveStates);
                     setAllPartyStates(allStates);
+                }, (error) => {
+                    // Silently ignore permission errors — user may not be logged in yet
+                    console.warn('[WATCH PARTY] Snapshot permission error — waiting for auth:', error.code);
                 });
+
+                // Re-subscribe to watch_parties once user logs in
+                if (auth) {
+                    auth.onAuthStateChanged(user => {
+                        if (user) {
+                            db.collection('watch_parties').onSnapshot(snapshot => {
+                                const liveStates: Record<string, WatchPartyState> = {};
+                                const allStates: Record<string, WatchPartyState> = {};
+                                snapshot.forEach(doc => {
+                                    const data = doc.data() as WatchPartyState;
+                                    allStates[doc.id] = data;
+                                    if (data.status === 'live') {
+                                        liveStates[doc.id] = data;
+                                    }
+                                });
+                                setActiveParties(liveStates);
+                                setAllPartyStates(allStates);
+                            });
+                        }
+                    });
+                }
             }
         };
         init();

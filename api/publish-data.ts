@@ -20,20 +20,37 @@ const getRoleFromPassword = (password: string | null) => {
 
 export const assembleAndSyncMasterData = async (db: Firestore) => {
     // Parallel fetching for manifest assembly - ADDED editorial_stories
-    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap, storiesSnap] = await Promise.all([
+    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap, storiesSnap, dataMoviesSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
         db.collection('content').doc('about').get(),
         db.collection('festival').doc('config').get(),
         db.collection('festival').doc('schedule').collection('days').get(),
         db.collection('content').doc('settings').get(),
-        db.collection('editorial_stories').orderBy('publishedAt', 'desc').get()
+        db.collection('editorial_stories').orderBy('publishedAt', 'desc').get(),
+        db.collection('data').doc('movies').get()
     ]);
 
     const moviesData: Record<string, Movie> = {};
     moviesSnap.forEach(doc => {
         moviesData[doc.id] = { key: doc.id, ...doc.data() } as Movie;
     });
+
+    // Merge watch party fields from data/movies into movies
+    if (dataMoviesSnap.exists) {
+        const dataMovies = dataMoviesSnap.data() as Record<string, Movie>;
+        Object.entries(dataMovies).forEach(([key, m]) => {
+            if (moviesData[key]) {
+                moviesData[key] = {
+                    ...moviesData[key],
+                    isWatchPartyEnabled: m.isWatchPartyEnabled,
+                    watchPartyStartTime: m.watchPartyStartTime,
+                    isWatchPartyPaid: m.isWatchPartyPaid,
+                    watchPartyPrice: m.watchPartyPrice,
+                };
+            }
+        });
+    }
 
     const categoriesData: Record<string, any> = {};
     categoriesSnap.forEach(doc => categoriesData[doc.id] = doc.data());
@@ -118,6 +135,8 @@ export async function POST(request: Request) {
         else if (type === 'movies') {
             for (const [id, docData] of Object.entries(data)) {
                 batch.set(db.collection('movies').doc(id), docData as object, { merge: true });
+                // Also update the real-time data/movies document so client listeners get watch party fields immediately
+                batch.set(db.collection('data').doc('movies'), { [id]: docData }, { merge: true });
             }
         }
         else if (type === 'festival') {
