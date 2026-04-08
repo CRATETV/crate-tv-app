@@ -554,12 +554,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </div>
 
                         {!hasAccess ? (
-                             <div className="text-center p-8 space-y-10 animate-[fadeIn_0.8s_ease-out] max-w-xl mx-auto">
+                             <div className="text-center px-6 py-12 space-y-10 animate-[fadeIn_0.8s_ease-out] max-w-lg mx-auto w-full">
                                 <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission Required.</h2>
                                 <div className="space-y-6">
-                                    <button onClick={() => setShowPaywall(true)} className="w-full bg-white text-black px-16 py-6 rounded-full font-black uppercase tracking-tighter text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
+                                    <button onClick={() => setShowPaywall(true)} className="w-full bg-red-600 hover:bg-red-700 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-2xl hover:scale-105 active:scale-95 transition-all border border-red-500/50">
+                                        Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}
+                                    </button>
                                     
-                                    <div className="pt-12 border-t border-white/10">
+                                    <div className="pt-10 border-t border-white/10">
                                         <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-6">Director & Staff Verification</p>
                                         <form onSubmit={handleBackstageSubmit} className="flex flex-col gap-4">
                                             <input 
@@ -567,9 +569,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 placeholder="Enter Backstage Key" 
                                                 value={backstageInput}
                                                 onChange={(e) => setBackstageInput(e.target.value)}
-                                                className={`bg-white/10 border-2 ${backstageError ? 'border-red-500' : 'border-white/30'} rounded-2xl px-6 py-4 text-center font-mono text-xl tracking-[0.5em] uppercase outline-none focus:border-white transition-all text-white placeholder:text-white/40`}
+                                                className={`bg-white/10 border-2 ${backstageError ? 'border-red-500' : 'border-white/30'} rounded-2xl px-6 py-4 text-center font-mono text-lg tracking-[0.4em] uppercase outline-none focus:border-white/60 transition-all text-white placeholder:text-white/30 w-full`}
                                             />
-                                            <button type="submit" className="text-[10px] font-black text-white/70 hover:text-white uppercase tracking-widest transition-colors bg-white/10 rounded-xl py-3 px-6 border border-white/20">
+                                            <button type="submit" className="text-[10px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-colors bg-white/5 hover:bg-white/10 rounded-xl py-3 px-6 border border-white/10 hover:border-white/20 w-full">
                                                 {backstageError ? '⚠ Invalid Protocol Key' : 'Authorize Backstage Access'}
                                             </button>
                                         </form>
