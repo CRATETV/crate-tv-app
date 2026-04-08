@@ -119,13 +119,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     const v = e.currentTarget;
     if (v.duration > 0) {
       // Start at 30% into the film — drops into the action
-      v.currentTime = Math.min(v.duration * 0.3, v.duration - 65);
-      // Stop after 60 seconds
-      if (previewStopRef.current) clearTimeout(previewStopRef.current);
-      previewStopRef.current = setTimeout(() => {
-        v.pause();
-      }, 60000);
+      // Don't start closer than 60s from end so we always get a full 60s preview
+      v.currentTime = Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
     }
+  };
+
+  const handleTrailerPlay = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    // Start the 60 second stop timer when playback actually begins
+    if (previewStopRef.current) clearTimeout(previewStopRef.current);
+    previewStopRef.current = setTimeout(() => {
+      e.currentTarget.pause();
+    }, 60000);
   };
 
   useEffect(() => () => {
@@ -234,9 +238,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={videoSrc}
                 autoPlay
                 muted={isMuted}
-                loop
                 playsInline
                 onLoadedMetadata={handleMetadataLoaded}
+                onPlay={handleTrailerPlay}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -404,8 +408,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                   playsInline
                   onLoadedMetadata={e => {
                     const v = e.currentTarget;
-                    if (v.duration > 0) v.currentTime = Math.min(v.duration * 0.3, v.duration - 65);
+                    if (v.duration > 0) v.currentTime = Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
                   }}
+                  onPlay={handleTrailerPlay}
                   className="w-full h-full object-cover"
                 />
               ) : (
