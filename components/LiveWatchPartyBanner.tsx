@@ -26,15 +26,15 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
     
-    // STRICT RULES:
-    // 1. If party is explicitly LIVE in Firebase → show banner
-    // 2. If start time is in the FUTURE → show countdown banner
-    // 3. Otherwise → DO NOT SHOW
     const isUpcoming = startTime && now < startTime;
+    // Keep showing banner for up to 2 hours after scheduled start
+    // in case auto-start is delayed or Firestore is slow
+    const isStartingSoon = startTime && now >= startTime && 
+        now.getTime() - startTime.getTime() < 2 * 60 * 60 * 1000;
     const timeUntilStart = startTime ? startTime.getTime() - now.getTime() : 0;
     
-    // If not live AND not upcoming → hide immediately
-    if (!isExplicitlyLive && !isUpcoming) return null;
+    // Hide only if: not live AND not upcoming AND more than 2hrs past start time
+    if (!isExplicitlyLive && !isUpcoming && !isStartingSoon) return null;
     
     // Auto-start when countdown reaches zero
     const attemptAutoStart = useCallback(async () => {
@@ -130,6 +130,11 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                         </span>
                         <Countdown targetDate={movie.watchPartyStartTime!} className="text-[9px] md:text-[11px] font-mono font-black text-white" prefix="" />
                     </div>
+                ) : isStartingSoon ? (
+                    <div className="bg-amber-500/20 px-3 md:px-4 py-1 rounded-full border border-amber-400/30 flex items-center gap-2 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span className="text-[9px] md:text-[10px] font-black text-amber-200 uppercase tracking-widest">Starting Any Moment</span>
+                    </div>
                 ) : isLive && (
                     <div className="bg-white/10 px-3 md:px-4 py-1 rounded-full border border-white/20 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
@@ -145,8 +150,12 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                 >
                     {isLive ? 'Join Party' : 'Enter Lobby'}
                 </button>
-                <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-lg leading-none ml-1" aria-label="Dismiss banner">
-                    &times;
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onClose(); }} 
+                    className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/30 flex items-center justify-center text-white transition-colors ml-1 flex-shrink-0" 
+                    aria-label="Dismiss banner"
+                >
+                    <span className="text-base leading-none">&times;</span>
                 </button>
             </div>
         </div>

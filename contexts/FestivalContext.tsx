@@ -118,17 +118,20 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             .filter(m => {
                 const start = new Date(m.watchPartyStartTime!);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-                
-                // CRITICAL: If start time has passed, DO NOT show it
-                // The party should only show as "upcoming" if it's in the FUTURE
-                if (start.getTime() <= now.getTime()) return false;
+                const twoHoursInMs = 2 * 60 * 60 * 1000;
                 
                 // Don't show if party was explicitly ended
                 const partyState = allPartyStates[m.key];
                 if (partyState?.status === 'ended') return false;
                 
-                // Show if it's starting in the next 7 days
-                return start.getTime() < (now.getTime() + sevenDaysInMs);
+                // Show if in future within 7 days
+                if (start.getTime() > now.getTime() && start.getTime() < (now.getTime() + sevenDaysInMs)) return true;
+                
+                // Also show for up to 2 hours after scheduled start
+                // in case auto-start is delayed
+                if (start.getTime() <= now.getTime() && now.getTime() - start.getTime() < twoHoursInMs) return true;
+                
+                return false;
             })
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
