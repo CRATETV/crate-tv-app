@@ -154,6 +154,15 @@ export async function POST(request: Request) {
           <a href="https://cratetv.net" style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">VISIT CRATETV</a>
         </td>
       </tr></table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+        <tr>
+          <td bgcolor="#f0f9ff" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:20px;text-align:center;">
+            <p style="margin:0 0 6px;color:#0369a1;font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Your Filmmaker Dashboard</p>
+            <p style="margin:0 0 16px;color:#0c4a6e;font-size:13px;line-height:1.6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Track your views, audience reactions, watchlist adds, and earnings in real time. Your Studio Center is live.</p>
+            <a href="https://cratetv.net/creator-dashboard" style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">View Your Dashboard</a>
+          </td>
+        </tr>
+      </table>
       <p style="margin:28px 0 0;color:#9ca3af;font-size:11px;text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Questions? <a href="mailto:studio@cratetv.net" style="color:#6b7280;text-decoration:none;">studio@cratetv.net</a></p>
     </td>
   </tr>

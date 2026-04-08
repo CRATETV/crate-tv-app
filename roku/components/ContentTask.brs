@@ -51,6 +51,7 @@ function CreateContentTree(data)
                     isUnlocked: itemData.isUnlocked,
                     isFree: itemData.isFree,
                     trailerUrl: itemData.trailerUrl,
+                    trailerStart: itemData.trailerStart,
                     rank: itemData.rank,
                     playStart: itemData.playStart,
                     length: itemData.length

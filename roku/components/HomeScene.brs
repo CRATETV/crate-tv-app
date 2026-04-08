@@ -5,11 +5,13 @@ sub init()
     m.heroSynopsis = m.top.findNode("heroSynopsis")
     m.heroTrailer = m.top.findNode("heroTrailer")
     m.trailerTimer = m.top.findNode("trailerTimer")
+    m.trailerStopTimer = m.top.findNode("trailerStopTimer")
     m.currentItem = invalid
 
     m.rowList.observeField("rowItemFocused", "onItemFocused")
     m.rowList.observeField("rowItemSelected", "onItemSelected")
     m.trailerTimer.observeField("fire", "onTrailerTimerFire")
+    m.trailerStopTimer.observeField("fire", "onTrailerStopTimerFire")
     m.heroTrailer.observeField("state", "onTrailerStateChange")
 end sub
 
@@ -31,6 +33,7 @@ sub onItemFocused()
 
     ' Stop any playing trailer and reset hero to poster
     m.trailerTimer.control = "stop"
+    m.trailerStopTimer.control = "stop"
     m.heroTrailer.control = "stop"
     m.heroTrailer.visible = false
     m.heroImage.visible = true
@@ -51,15 +54,33 @@ sub onTrailerTimerFire()
     content = CreateObject("roSGNode", "ContentNode")
     content.url = trailerUrl
     content.streamFormat = "mp4"
+
+    ' Jump to trailerStart if set, otherwise start at 0
+    trailerStart = m.currentItem.trailerStart
+    if trailerStart <> invalid and trailerStart > 0
+        content.bookmarkPosition = trailerStart
+    end if
+
     m.heroTrailer.content = content
     m.heroTrailer.visible = true
     m.heroTrailer.control = "play"
     m.heroImage.visible = false
+
+    ' Start 30 second stop timer
+    m.trailerStopTimer.control = "start"
+end sub
+
+sub onTrailerStopTimerFire()
+    ' Hard stop at 30 seconds — fade back to poster
+    m.heroTrailer.control = "stop"
+    m.heroTrailer.visible = false
+    m.heroImage.visible = true
 end sub
 
 sub onTrailerStateChange()
     state = m.heroTrailer.state
     if state = "finished" or state = "error"
+        m.trailerStopTimer.control = "stop"
         m.heroTrailer.visible = false
         m.heroTrailer.control = "stop"
         m.heroImage.visible = true
@@ -81,6 +102,7 @@ sub onItemSelected()
 
     ' Stop trailer before navigating
     m.trailerTimer.control = "stop"
+    m.trailerStopTimer.control = "stop"
     m.heroTrailer.control = "stop"
     m.heroTrailer.visible = false
 

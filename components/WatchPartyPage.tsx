@@ -449,15 +449,28 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         );
     }
 
-    // Show pre-show lobby if party hasn't started yet
-    if (shouldShowLobby && hasAccess) {
+    // Show pre-show lobby if party hasn't started yet — ALL users see the lobby
+    // Unpaid users see a buy ticket prompt inside the lobby
+    if (shouldShowLobby) {
         return (
-            <WatchPartyLobby 
-                movie={movie}
-                partyState={partyState}
-                onPartyStart={() => setShowLobby(false)}
-                user={user}
-            />
+            <>
+                <WatchPartyLobby 
+                    movie={movie}
+                    partyState={partyState}
+                    onPartyStart={() => setShowLobby(false)}
+                    user={user}
+                    hasAccess={hasAccess}
+                    onBuyTicket={() => setShowPaywall(true)}
+                />
+                {showPaywall && (
+                    <SquarePaymentModal 
+                        movie={movie} 
+                        paymentType="watchPartyTicket" 
+                        onClose={() => setShowPaywall(false)} 
+                        onPaymentSuccess={() => { unlockWatchParty(movieKey); setShowPaywall(false); }} 
+                    />
+                )}
+            </>
         );
     }
 

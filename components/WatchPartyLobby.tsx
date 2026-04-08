@@ -9,6 +9,8 @@ interface WatchPartyLobbyProps {
     partyState?: WatchPartyState;
     onPartyStart: () => void;
     user: { name?: string; email: string | null; avatar?: string } | null;
+    hasAccess?: boolean;
+    onBuyTicket?: () => void;
 }
 
 interface LobbyViewer {
@@ -18,7 +20,7 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket }) => {
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
@@ -134,8 +136,34 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         return () => clearInterval(interval);
     }, []);
 
-    // If party is live, show transition
+    // If party is live — paid users transition in, unpaid see paywall
     if (partyState?.status === 'live') {
+        if (!hasAccess) {
+            // Don't call onPartyStart — keep them on this screen showing paywall
+            return (
+                <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-8">
+                    <div className="text-center space-y-6 max-w-sm w-full animate-[fadeIn_0.5s_ease-out]">
+                        <div className="w-16 h-16 mx-auto rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center">
+                            <span className="text-red-500 text-2xl">🎬</span>
+                        </div>
+                        <div>
+                            <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-2">Transmission Active</p>
+                            <h2 className="text-3xl font-black uppercase tracking-tighter">{movie.title}</h2>
+                            <p className="text-gray-500 text-sm mt-2">The watch party has started. Unlock admission to join.</p>
+                        </div>
+                        {onBuyTicket && (
+                            <button
+                                onClick={onBuyTicket}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95"
+                            >
+                                Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '10.00'}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        // Paid users — show starting transition then enter
         return (
             <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-[fadeIn_0.5s_ease-out]">
                 <div className="text-center space-y-6 animate-pulse">
@@ -257,6 +285,33 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-2">Message from the Director</p>
                             <p className="text-gray-300 italic">"{directorMessage}"</p>
                             <p className="text-gray-600 text-xs mt-2">— {movie.director}</p>
+                        </div>
+                    )}
+
+                    {/* Ticket purchase prompt for unpaid users */}
+                    {!hasAccess && onBuyTicket && (
+                        <div className="animate-[fadeIn_0.8s_ease-out] space-y-3 max-w-sm mx-auto">
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center space-y-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Admission Required</p>
+                                <p className="text-gray-400 text-sm">Secure your seat before the party starts.</p>
+                                <button
+                                    onClick={onBuyTicket}
+                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                                >
+                                    Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '10.00'}
+                                </button>
+                                <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Confirmed access badge */}
+                    {hasAccess && (
+                        <div className="text-center animate-[fadeIn_0.5s_ease-out]">
+                            <span className="inline-flex items-center gap-2 bg-green-900/20 border border-green-500/30 text-green-400 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                Admission Confirmed
+                            </span>
                         </div>
                     )}
                 </div>

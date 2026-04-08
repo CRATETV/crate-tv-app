@@ -62,6 +62,8 @@ export async function GET(request: Request) {
                     title: movie.title,
                     description: (movie.synopsis || '').replace(/<[^>]+>/gi, ' ').trim(),
                     streamUrl: movie.rokuStreamUrl || movie.fullMovie,
+                    trailerUrl: movie.fullMovie, // used for hero trailer autoplay on focus
+                    trailerStart: movie.trailerStart ?? null,
                     HDPosterUrl: movie.poster,
                     genres: movieGenreMap.get(movie.key) || ['Independent'],
                     director: movie.director,

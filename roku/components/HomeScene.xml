@@ -69,5 +69,7 @@
 
         <!-- Timer fires trailer after focus dwell -->
         <Timer id="trailerTimer" repeat="false" duration="1" />
+        <!-- Timer stops trailer after 30 seconds -->
+        <Timer id="trailerStopTimer" repeat="false" duration="30" />
     </children>
 </component>

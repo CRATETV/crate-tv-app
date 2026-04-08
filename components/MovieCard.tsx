@@ -30,6 +30,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [sheetMuted, setSheetMuted]           = useState(true);
   const [expandAnchor, setExpandAnchor]       = useState<'left'|'center'|'right'>('center');
+  const [previewEnded, setPreviewEnded]       = useState(false);
   const hoverTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef        = useRef<HTMLVideoElement>(null);
@@ -98,6 +99,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     leaveTimerRef.current = setTimeout(() => {
       setShowExpanded(false);
       setIsMuted(true);
+      setPreviewEnded(false);
       if (previewStopRef.current) { clearTimeout(previewStopRef.current); previewStopRef.current = null; }
     }, 200);
   };
@@ -110,6 +112,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     leaveTimerRef.current = setTimeout(() => {
       setShowExpanded(false);
       setIsMuted(true);
+      setPreviewEnded(false);
     }, 150);
   };
 
@@ -120,28 +123,29 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     const v = e.currentTarget;
     if (v.duration > 0) {
       const startAt = movie.trailerStart != null
-        ? Math.min(movie.trailerStart, Math.max(0, v.duration - 60))
-        : Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
+        ? Math.min(movie.trailerStart, Math.max(0, v.duration - 30))
+        : Math.min(v.duration * 0.3, Math.max(0, v.duration - 30));
       v.currentTime = startAt;
     }
   };
 
   const handleTrailerPlay = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
+    setPreviewEnded(false);
     previewStartTimeRef.current = video.currentTime;
     if (previewStopRef.current) clearTimeout(previewStopRef.current);
-    // Primary stop — setTimeout at 60s
     previewStopRef.current = setTimeout(() => {
       video.pause();
-    }, 60000);
+      setPreviewEnded(true);
+    }, 30000);
   };
 
   const handleTrailerTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    // Safety net — if video has played 60s from start point, force pause
     const video = e.currentTarget;
     if (previewStartTimeRef.current !== null) {
-      if (video.currentTime - previewStartTimeRef.current >= 60) {
+      if (video.currentTime - previewStartTimeRef.current >= 30) {
         video.pause();
+        setPreviewEnded(true);
         if (previewStopRef.current) clearTimeout(previewStopRef.current);
         previewStopRef.current = null;
         previewStartTimeRef.current = null;
@@ -266,6 +270,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
+                crossOrigin="anonymous"
+              />
+            )}
+            {/* Poster fade-in overlay when preview ends */}
+            {previewEnded && videoSrc && (
+              <img
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                alt={movie.title}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
                 crossOrigin="anonymous"
               />
             )}
@@ -428,8 +441,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                     const v = e.currentTarget;
                     if (v.duration > 0) {
                       const startAt = movie.trailerStart != null
-                        ? Math.min(movie.trailerStart, Math.max(0, v.duration - 60))
-                        : Math.min(v.duration * 0.3, Math.max(0, v.duration - 60));
+                        ? Math.min(movie.trailerStart, Math.max(0, v.duration - 30))
+                        : Math.min(v.duration * 0.3, Math.max(0, v.duration - 30));
                       v.currentTime = startAt;
                     }
                   }}

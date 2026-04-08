@@ -457,13 +457,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         </div>
                                         <div className="space-y-3">
                                             <label className="form-label">Preview Start Point</label>
-                                            <p className="text-[10px] text-gray-600">Drag the slider to find the perfect moment. The preview will start here and play for 60 seconds.</p>
-                                            {formData.trailer ? (
+                                            <p className="text-[10px] text-gray-600">Drag the slider to pick the best 30 second preview clip from the film. Viewers see this when they hover on the movie card.</p>
+                                            {formData.fullMovie && !formData.fullMovie.includes('vimeo') && !formData.fullMovie.includes('youtube') ? (
                                                 <div className="space-y-3">
                                                     <div className="relative">
                                                         <video
                                                             id="trailer-scrubber"
-                                                            src={formData.trailer}
+                                                            src={formData.fullMovie}
                                                             muted
                                                             playsInline
                                                             className="w-full rounded-xl bg-black aspect-video object-cover"
@@ -522,7 +522,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                                     if (!v || !badge) return;
 
                                                                     // Reset badge
-                                                                    badge.textContent = '▶ Playing 60s preview...';
+                                                                    badge.textContent = '▶ Playing 30s preview...';
                                                                     badge.className = 'absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-red-600 text-white';
                                                                     badge.dataset.testing = 'true';
 
@@ -530,19 +530,19 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                                     v.currentTime = startAt;
                                                                     v.play();
 
-                                                                    // Stop after exactly 60s
+                                                                    // Stop after exactly 30s
                                                                     setTimeout(() => {
                                                                         if (badge.dataset.testing === 'true') {
                                                                             v.pause();
-                                                                            badge.textContent = '✓ Stopped at 60s — looks good!';
+                                                                            badge.textContent = '✓ Stopped at 30s — looks good!';
                                                                             badge.className = 'absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-green-600 text-white';
                                                                             badge.dataset.testing = 'false';
                                                                         }
-                                                                    }, 60000);
+                                                                    }, 30000);
                                                                 }}
                                                                 className="text-[10px] font-black text-red-500 hover:text-white uppercase tracking-widest transition-colors border border-red-600/30 hover:border-red-500 px-3 py-1.5 rounded-lg bg-red-600/10 hover:bg-red-600/20"
                                                             >
-                                                                ▶ Test 60s Preview
+                                                                ▶ Test 30s Preview
                                                             </button>
                                                             <button
                                                                 type="button"
@@ -555,7 +555,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-700 italic">Upload a trailer above to set the preview start point.</p>
+                                                <p className="text-[10px] text-gray-700 italic">Upload the film file above to set the preview start point. Vimeo and YouTube links are not supported for scrubbing.</p>
                                             )}
                                         </div>
                                     </div>
