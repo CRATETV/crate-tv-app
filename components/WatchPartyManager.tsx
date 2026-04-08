@@ -318,6 +318,11 @@ const WatchPartyControlRoom: React.FC<{
     const [isTogglingQA, setIsTogglingQA] = useState(false);
 
     const handleStartWithLoading = async () => {
+        // If party has already ended, warn before restarting — this wipes all messages and resets time
+        if (partyState?.status === 'ended') {
+            const confirmed = window.confirm("Restarting will reset the watch party from the beginning and clear all chat messages. Are you sure?");
+            if (!confirmed) return;
+        }
         setIsStarting(true);
         try {
             await onStartParty();

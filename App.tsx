@@ -206,7 +206,7 @@ const App: React.FC = () => {
 
     const premierMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && (m.isForSale || m.isWatchPartyPaid))
+            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && m.isForSale)
             .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies]);
 
