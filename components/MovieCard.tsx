@@ -34,6 +34,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   const hoverTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef        = useRef<HTMLVideoElement>(null);
+  const preloadRef      = useRef<HTMLVideoElement>(null);
   const sheetVideoRef   = useRef<HTMLVideoElement>(null);
   const cardRef         = useRef<HTMLDivElement>(null);
 
@@ -91,7 +92,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
       window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
 
-    hoverTimerRef.current = setTimeout(() => setShowExpanded(true), 700);
+    // Start preloading video immediately — don't wait for card to open
+    if (preloadRef.current && movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube')) {
+      preloadRef.current.src = movie.fullMovie;
+      preloadRef.current.load();
+    }
+
+    hoverTimerRef.current = setTimeout(() => setShowExpanded(true), 200);
   };
 
   const handleMouseLeave = () => {
@@ -137,9 +144,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     previewStopRef.current = setTimeout(() => {
       video.pause();
       setPreviewEnded(true);
-      // Collapse card after 1 second — poster fades in then card snaps back
+      // Collapse card/sheet after 1 second — poster fades in then snaps back
       setTimeout(() => {
         setShowExpanded(false);
+        setShowMobileSheet(false);
         setPreviewEnded(false);
         setIsMuted(true);
       }, 1000);
@@ -155,9 +163,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         if (previewStopRef.current) clearTimeout(previewStopRef.current);
         previewStopRef.current = null;
         previewStartTimeRef.current = null;
-        // Collapse card after 1 second
+        // Collapse card/sheet after 1 second
         setTimeout(() => {
           setShowExpanded(false);
+          setShowMobileSheet(false);
           setPreviewEnded(false);
           setIsMuted(true);
         }, 1000);
@@ -191,6 +200,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
   return (
     <>
+    {/* Hidden preload video — loads src immediately on hover so expanded card plays instantly */}
+    {videoSrc && !videoSrc.includes('vimeo') && !videoSrc.includes('youtube') && (
+      <video
+        ref={preloadRef}
+        src={videoSrc}
+        preload="auto"
+        muted
+        playsInline
+        className="hidden"
+      />
+    )}
     <div
       ref={cardRef}
       className="group relative cursor-pointer aspect-[3/4] rounded-lg bg-gray-900 border border-white/5 transition-all duration-300 hover:z-40"

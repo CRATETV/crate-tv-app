@@ -218,17 +218,16 @@ const App: React.FC = () => {
         const twoHoursInMs = 2 * 60 * 60 * 1000;
         const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
 
-        const isEligible = (startTimeStr: string, key: string) => {
+        const isEligible = (startTimeStr: string, key: string, isPaid?: boolean) => {
             const start = new Date(startTimeStr);
             const diff = start.getTime() - now.getTime();
             // Never show if explicitly ended
             if (allPartyStates[key]?.status === 'ended') return false;
-            // Never show if currently live (lobby handles this)
-            if (activeParties[key]?.status === 'live') return false;
+            // If live AND paid — still show so users can buy a ticket to join
+            if (activeParties[key]?.status === 'live') return isPaid ? true : false;
             // Show if upcoming within 7 days
             if (diff > 0 && diff < sevenDaysInMs) return true;
             // Show for up to 30 minutes after scheduled start
-            // (in case auto-start is delayed) — but not longer
             if (diff <= 0 && diff > -30 * 60 * 1000) return true;
             return false;
         };
@@ -236,7 +235,7 @@ const App: React.FC = () => {
         // Check regular movies first
         const movieResult = (Object.values(movies) as Movie[])
             .filter(m => !!m && m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
-            .filter(m => isEligible(m.watchPartyStartTime!, m.key))
+            .filter(m => isEligible(m.watchPartyStartTime!, m.key, m.isWatchPartyPaid))
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime())[0] || null;
 
         // Check festival blocks (regular festival + Crate Fest)
@@ -247,7 +246,7 @@ const App: React.FC = () => {
 
         const blockResult = allBlocks
             .filter(b => b.isWatchPartyEnabled && b.watchPartyStartTime)
-            .filter(b => isEligible(b.watchPartyStartTime!, b.id))
+            .filter(b => isEligible(b.watchPartyStartTime!, b.id, (b.price || 0) > 0))
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime())[0] || null;
 
         // Return whichever starts sooner
@@ -287,7 +286,8 @@ const App: React.FC = () => {
     // Show watch party notification once per session after user logs in
     useEffect(() => {
         if (user && upcomingWatchPartyMovie && !watchPartyModalShown && !isLoading) {
-            const sessionKey = `wp_notified_${upcomingWatchPartyMovie.key}`;
+            const isLiveNow = activeParties[upcomingWatchPartyMovie.key]?.status === 'live';
+            const sessionKey = `wp_notified_${upcomingWatchPartyMovie.key}_${isLiveNow ? 'live' : 'upcoming'}`;
             if (!sessionStorage.getItem(sessionKey)) {
                 setTimeout(() => setShowWatchPartyModal(true), 1500);
                 setWatchPartyModalShown(true);
