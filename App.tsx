@@ -19,6 +19,7 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+import WatchPartyNotificationModal from './components/WatchPartyNotificationModal';
 import CrateFestBanner from './components/CrateFestBanner';
 import CrateVaultRow from './components/CrateVaultRow';
 import CrateIntelligence from './components/CrateIntelligence';
@@ -46,7 +47,7 @@ const MaintenanceScreen: React.FC = () => (
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -55,6 +56,8 @@ const App: React.FC = () => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [dismissedBannerKeys, setDismissedBannerKeys] = useState<Set<string>>(new Set());
     const [preloadVideoUrl, setPreloadVideoUrl] = useState<string | null>(null);
+    const [showWatchPartyModal, setShowWatchPartyModal] = useState(false);
+    const [watchPartyModalShown, setWatchPartyModalShown] = useState(false);
     
     const dismissBanner = useCallback((key: string) => {
         setDismissedBannerKeys(prev => {
@@ -210,6 +213,82 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies]);
 
+    const upcomingWatchPartyMovie = useMemo(() => {
+        const now = new Date();
+        const twoHoursInMs = 2 * 60 * 60 * 1000;
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+
+        const isEligible = (startTimeStr: string, key: string) => {
+            const start = new Date(startTimeStr);
+            const diff = start.getTime() - now.getTime();
+            if (allPartyStates[key]?.status === 'ended') return false;
+            if (activeParties[key]?.status === 'live') return false;
+            return diff > -twoHoursInMs && diff < sevenDaysInMs;
+        };
+
+        // Check regular movies first
+        const movieResult = (Object.values(movies) as Movie[])
+            .filter(m => !!m && m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
+            .filter(m => isEligible(m.watchPartyStartTime!, m.key))
+            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime())[0] || null;
+
+        // Check festival blocks (regular festival + Crate Fest)
+        const allBlocks = [
+            ...festivalData.flatMap(d => d.blocks),
+            ...(settings.crateFestConfig?.movieBlocks || [])
+        ];
+
+        const blockResult = allBlocks
+            .filter(b => b.isWatchPartyEnabled && b.watchPartyStartTime)
+            .filter(b => isEligible(b.watchPartyStartTime!, b.id))
+            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime())[0] || null;
+
+        // Return whichever starts sooner
+        if (!movieResult && !blockResult) return null;
+        if (!movieResult) return {
+            key: blockResult!.id,
+            title: blockResult!.title,
+            director: 'Festival Event',
+            watchPartyStartTime: blockResult!.watchPartyStartTime,
+            isWatchPartyEnabled: true,
+            isWatchPartyPaid: (blockResult!.price || 0) > 0,
+            watchPartyPrice: blockResult!.price,
+            poster: movies[blockResult!.movieKeys?.[0]]?.poster || '',
+            isUnlisted: false,
+        } as Movie;
+        if (!blockResult) return movieResult;
+
+        // Both exist — return whichever starts sooner
+        const movieTime = new Date(movieResult.watchPartyStartTime!).getTime();
+        const blockTime = new Date(blockResult.watchPartyStartTime!).getTime();
+        if (blockTime < movieTime) {
+            return {
+                key: blockResult.id,
+                title: blockResult.title,
+                director: 'Festival Event',
+                watchPartyStartTime: blockResult.watchPartyStartTime,
+                isWatchPartyEnabled: true,
+                isWatchPartyPaid: (blockResult.price || 0) > 0,
+                watchPartyPrice: blockResult.price,
+                poster: movies[blockResult.movieKeys?.[0]]?.poster || '',
+                isUnlisted: false,
+            } as Movie;
+        }
+        return movieResult;
+    }, [movies, allPartyStates, activeParties, festivalData, settings]);
+
+    // Show watch party notification once per session after user logs in
+    useEffect(() => {
+        if (user && upcomingWatchPartyMovie && !watchPartyModalShown && !isLoading) {
+            const sessionKey = `wp_notified_${upcomingWatchPartyMovie.key}`;
+            if (!sessionStorage.getItem(sessionKey)) {
+                setTimeout(() => setShowWatchPartyModal(true), 1500);
+                setWatchPartyModalShown(true);
+                sessionStorage.setItem(sessionKey, 'true');
+            }
+        }
+    }, [user, upcomingWatchPartyMovie, watchPartyModalShown, isLoading]);
+
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
@@ -323,6 +402,21 @@ const App: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
             <SEO title="Home" description="Stream the best independent cinema." />
             <SmartInstallPrompt />
+
+            {/* Watch Party Notification Modal — shows once per session on login */}
+            {showWatchPartyModal && upcomingWatchPartyMovie && (
+                <WatchPartyNotificationModal
+                    movie={upcomingWatchPartyMovie}
+                    onGetTicket={() => {
+                        setShowWatchPartyModal(false);
+                        window.history.pushState({}, '', `/watchparty/${upcomingWatchPartyMovie.key}`);
+                        window.dispatchEvent(new Event('pushstate'));
+                    }}
+                    onDismiss={() => setShowWatchPartyModal(false)}
+                />
+            )}
+
+            {/* Watch Party Ticket Notification — announcement card */}
             
             {activeBannerType === 'WATCH_PARTY' && (
                 <LiveWatchPartyBanner 
@@ -382,7 +476,7 @@ const App: React.FC = () => {
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
-                            {continueWatchingMovies.length > 0 && (
+                        {continueWatchingMovies.length > 0 && (
                                 <MovieCarousel 
                                     title={
                                         <div className="flex items-center gap-3 mb-4 px-2 border-l-4 border-red-600 pl-4">
