@@ -137,6 +137,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     previewStopRef.current = setTimeout(() => {
       video.pause();
       setPreviewEnded(true);
+      // Collapse card after 1 second — poster fades in then card snaps back
+      setTimeout(() => {
+        setShowExpanded(false);
+        setPreviewEnded(false);
+        setIsMuted(true);
+      }, 1000);
     }, 30000);
   };
 
@@ -149,6 +155,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         if (previewStopRef.current) clearTimeout(previewStopRef.current);
         previewStopRef.current = null;
         previewStartTimeRef.current = null;
+        // Collapse card after 1 second
+        setTimeout(() => {
+          setShowExpanded(false);
+          setPreviewEnded(false);
+          setIsMuted(true);
+        }, 1000);
       }
     }
   };

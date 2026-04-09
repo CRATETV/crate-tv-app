@@ -40,8 +40,20 @@ export async function POST(request: Request) {
       actualStartTime: null,
       currentTime: 0,
       lastUpdated: FieldValue.serverTimestamp(),
-      backstageKey: null // Clear the key when party ends
+      backstageKey: null
     });
+
+    // Also clear watchPartyStartTime from the movie so the notification never reappears
+    await db.collection('movies').doc(movieKey).update({
+      watchPartyStartTime: null,
+      isWatchPartyEnabled: false
+    }).catch(() => {}); // Silently ignore if movie doc doesn't exist
+
+    // Also clear from data/movies real-time document
+    await db.collection('data').doc('movies').update({
+      [`${movieKey}.watchPartyStartTime`]: null,
+      [`${movieKey}.isWatchPartyEnabled`]: false
+    }).catch(() => {});
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
 

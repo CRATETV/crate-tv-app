@@ -221,9 +221,16 @@ const App: React.FC = () => {
         const isEligible = (startTimeStr: string, key: string) => {
             const start = new Date(startTimeStr);
             const diff = start.getTime() - now.getTime();
+            // Never show if explicitly ended
             if (allPartyStates[key]?.status === 'ended') return false;
+            // Never show if currently live (lobby handles this)
             if (activeParties[key]?.status === 'live') return false;
-            return diff > -twoHoursInMs && diff < sevenDaysInMs;
+            // Show if upcoming within 7 days
+            if (diff > 0 && diff < sevenDaysInMs) return true;
+            // Show for up to 30 minutes after scheduled start
+            // (in case auto-start is delayed) — but not longer
+            if (diff <= 0 && diff > -30 * 60 * 1000) return true;
+            return false;
         };
 
         // Check regular movies first
