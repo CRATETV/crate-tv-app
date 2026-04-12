@@ -244,9 +244,9 @@ const TeaserMode: React.FC<{
     description?: string;
     tagline?: string;
 }> = ({ date, name, description, tagline }) => (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center px-4 text-center relative overflow-hidden">
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center px-4 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none" />
-        <div className="relative z-10 max-w-2xl mx-auto space-y-8">
+        <div className="relative z-10 max-w-2xl mx-auto space-y-8 pt-32 pb-16">
 
             <div>
                 <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-3">{name || 'Playhouse West Film Festival'}</h1>
