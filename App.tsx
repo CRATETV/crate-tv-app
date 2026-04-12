@@ -409,11 +409,12 @@ const App: React.FC = () => {
     if (settings.maintenanceMode) return <MaintenanceScreen />;
 
     const mainPaddingTop = useMemo(() => {
+        // Banner sits below the header (64px), so total offset = header + banner
+        const headerHeight = 64;
         const bannerHeight = activeBannerType !== 'NONE' ? 48 : 0;
         const isHomePage = window.location.pathname === '/';
-        // If we are on the home page, we want the hero to go under the header (overlay)
-        // If we are on other pages, we need to clear the header (approx 80px).
-        if (!isHomePage) return `${bannerHeight + 80}px`;
+        if (!isHomePage) return `${headerHeight + bannerHeight}px`;
+        // Home page hero goes under header — only shift for banner
         return `${bannerHeight}px`;
     }, [activeBannerType]);
 

@@ -101,11 +101,13 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
         }
     };
 
-    const topOffset = sessionStorage.getItem('crateTvStaging') === 'true' ? '32px' : '0px';
+    // Position banner below the fixed header (header is ~64px tall on desktop)
+    const stagingOffset = sessionStorage.getItem('crateTvStaging') === 'true' ? 32 : 0;
+    const topOffset = `${64 + stagingOffset}px`;
 
     return (
         <div 
-            className={`fixed top-0 left-0 right-0 z-50 p-2 md:p-3 flex items-center justify-between gap-2 md:gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown:0.4s_ease-out] transition-all ${movie.isWatchPartyPaid && !alreadyHasAccess ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
+            className={`fixed left-0 right-0 z-[110] p-2 md:p-3 flex items-center justify-between gap-2 md:gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown:0.4s_ease-out] transition-all ${movie.isWatchPartyPaid && !alreadyHasAccess ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
             style={{ top: topOffset }}
         >
             <div className="flex items-center gap-2 md:gap-4 ml-1 md:ml-8">
