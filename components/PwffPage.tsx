@@ -247,10 +247,7 @@ const TeaserMode: React.FC<{
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center px-4 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-            <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-500/20 rounded-full px-4 py-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400">Coming Soon</span>
-            </div>
+
             <div>
                 <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-3">{name || 'Playhouse West Film Festival'}</h1>
                 <div className="w-16 h-1 bg-red-600 mx-auto rounded-full" />
