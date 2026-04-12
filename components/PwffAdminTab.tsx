@@ -8,18 +8,20 @@ interface PwffAdminTabProps {
     pwffName: string;
     pwffDescription: string;
     pwffTagline: string;
+    pwffYear: string;
     onToggleVisible: (val: boolean) => void;
     onChangeDate: (val: string) => void;
     onChangeName: (val: string) => void;
     onChangeDescription: (val: string) => void;
     onChangeTagline: (val: string) => void;
+    onChangeYear: (val: string) => void;
     onSave: () => void;
     isSaving: boolean;
 }
 
 const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
-    pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline,
-    onToggleVisible, onChangeDate, onChangeName, onChangeDescription, onChangeTagline,
+    pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline, pwffYear,
+    onToggleVisible, onChangeDate, onChangeName, onChangeDescription, onChangeTagline, onChangeYear,
     onSave, isSaving
 }) => {
     const [emails, setEmails] = useState<(PwffInterestEntry & { id: string })[]>([]);
@@ -116,6 +118,23 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                     <p className="text-[10px] text-gray-600">Short line under the festival name. Changes every year.</p>
                 </div>
 
+                {/* URL Year */}
+                <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Festival Year (URL)</label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-600 text-sm font-mono">cratetv.net/pwff</span>
+                        <input
+                            type="text"
+                            value={pwffYear}
+                            onChange={e => onChangeYear(e.target.value)}
+                            placeholder="2026"
+                            maxLength={4}
+                            className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-pink-500"
+                        />
+                    </div>
+                    <p className="text-[10px] text-gray-600">The full URL will be <span className="text-pink-400 font-mono">cratetv.net/pwff{pwffYear || '2026'}</span> — update each year</p>
+                </div>
+
                 {/* Description */}
                 <div className="space-y-1">
                     <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Description / Festival Theme</label>
@@ -134,7 +153,8 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                     <div className="bg-black/40 rounded-lg p-4 border border-white/5">
                         <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mb-3">Live Preview</p>
                         <div className="text-center space-y-2">
-                            {pwffName && <p className="font-black text-white text-lg uppercase tracking-tight">{pwffName}</p>}
+                            <p className="text-[10px] text-pink-400 font-mono mb-2">cratetv.net/pwff{pwffYear || '2026'}</p>
+                        {pwffName && <p className="font-black text-white text-lg uppercase tracking-tight">{pwffName}</p>}
                             {pwffTagline && <p className="text-xs text-gray-500">{pwffTagline}</p>}
                             {pwffDate && <p className="text-sm font-bold text-gray-400">{pwffDate}</p>}
                             {pwffDescription && <p className="text-xs text-gray-500 leading-relaxed mt-2 max-w-sm mx-auto">{pwffDescription}</p>}

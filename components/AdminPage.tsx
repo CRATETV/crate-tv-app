@@ -76,6 +76,7 @@ const AdminPage: React.FC = () => {
     const [pwffName, setPwffName] = useState('');
     const [pwffDescription, setPwffDescription] = useState('');
     const [pwffTagline, setPwffTagline] = useState('');
+    const [pwffYear, setPwffYear] = useState('2026');
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [permissions, setPermissions] = useState<Record<string, string[]>>({});
@@ -173,6 +174,7 @@ const AdminPage: React.FC = () => {
                 if (data.settings?.pwffFestivalName) setPwffName(data.settings.pwffFestivalName);
                 if (data.settings?.pwffTeaserDescription) setPwffDescription(data.settings.pwffTeaserDescription);
                 if (data.settings?.pwffTeaserTagline) setPwffTagline(data.settings.pwffTeaserTagline);
+                if (data.settings?.pwffUrlYear) setPwffYear(data.settings.pwffUrlYear);
             }
 
             if (pipelineRes.ok) {
@@ -483,17 +485,20 @@ const AdminPage: React.FC = () => {
                             pwffName={pwffName}
                             pwffDescription={pwffDescription}
                             pwffTagline={pwffTagline}
+                            pwffYear={pwffYear}
                             onToggleVisible={(val) => { setPwffVisible(val); }}
                             onChangeDate={(val) => { setPwffDate(val); }}
                             onChangeName={(val) => { setPwffName(val); }}
                             onChangeDescription={(val) => { setPwffDescription(val); }}
                             onChangeTagline={(val) => { setPwffTagline(val); }}
+                            onChangeYear={(val) => { setPwffYear(val); }}
                             onSave={() => handleSaveData('settings', {
                                 pwffProgramVisible: pwffVisible,
                                 pwffFestivalDate: pwffDate,
                                 pwffFestivalName: pwffName,
                                 pwffTeaserDescription: pwffDescription,
                                 pwffTeaserTagline: pwffTagline,
+                                pwffUrlYear: pwffYear,
                             })}
                             isSaving={isSaving}
                         />

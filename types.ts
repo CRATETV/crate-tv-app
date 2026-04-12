@@ -413,7 +413,8 @@ export interface SiteSettings {
   pwffFestivalDate?: string;      // e.g. "August 2026" shown on teaser
   pwffFestivalName?: string;      // e.g. "Playhouse West Film Festival"
   pwffTeaserDescription?: string; // tagline/description shown on teaser — changes each year
-  pwffTeaserTagline?: string;     // short one-liner under the title e.g. "Presented by Crate TV" 
+  pwffTeaserTagline?: string;     // short one-liner under the title e.g. "Presented by Crate TV"
+  pwffUrlYear?: string;           // e.g. "2026" — makes the URL cratetv.net/pwff2026
 }
 
 export interface PwffInterestEntry {

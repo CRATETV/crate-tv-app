@@ -122,6 +122,10 @@ const AppRouter: React.FC = () => {
     return <ActorProfilePage slug={actorProfileMatch[1]} />;
   }
 
+  // Match /pwff2026, /pwff2027 etc — any year
+  const pwffYearMatch = route.match(/^\/pwff(\d{4})$/);
+  if (pwffYearMatch) return <PwffPage />;
+
   const zineMatch = route.match(/^\/zine\/([a-zA-Z0-9_-]+)/);
   if (zineMatch && zineMatch[1]) {
       return <ZinePage storyId={zineMatch[1]} />;
