@@ -288,12 +288,34 @@ const WatchPartyControlRoom: React.FC<{
     const currentMovie = useMemo(() => {
         if (item.type === 'movie') return allMovies[item.id];
         if (item.type === 'block' && item.movieKeys && item.movieKeys.length > 0) {
-            // For blocks, we show the first movie in the control room for simplicity, 
-            // but the actual party will cycle through them based on time.
-            return allMovies[item.movieKeys[0]];
+            // For blocks, show the currently active film based on activeMovieIndex
+            const idx = Math.min(partyState?.activeMovieIndex ?? 0, item.movieKeys.length - 1);
+            return allMovies[item.movieKeys[idx]] || allMovies[item.movieKeys[0]];
         }
         return null;
-    }, [item, allMovies]);
+    }, [item, allMovies, partyState?.activeMovieIndex]);
+
+    // ── MANUAL ADVANCE: admin can skip to next film in block ─────────────
+    const handleAdvanceFilm = async () => {
+        if (!item.movieKeys || item.type !== 'block') return;
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const nextIdx = currentIdx + 1;
+        if (nextIdx >= item.movieKeys.length) {
+            alert("This is the last film in the block.");
+            return;
+        }
+        if (!window.confirm(`Skip to Film ${nextIdx + 1}: "${allMovies[item.movieKeys[nextIdx]]?.title || 'Unknown'}"?`)) return;
+        const db = (await import('../services/firebaseClient')).getDbInstance();
+        if (!db) return;
+        const firebase = (await import('firebase/compat/app')).default;
+        await db.collection('watch_parties').doc(item.id).update({
+            activeMovieIndex: nextIdx,
+            intermissionUntil: Date.now() + 30000, // 30s intermission when manually advancing
+            filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+            isPlaying: true,
+            currentTime: 0,
+        });
+    };
     
     useEffect(() => {
         const video = videoRef.current;
@@ -615,6 +637,18 @@ const WatchPartyControlRoom: React.FC<{
                                     
                                     {isLive && (
                                         <>
+                                            {item.type === 'block' && item.movieKeys && item.movieKeys.length > 1 && (
+                                                <button
+                                                    onClick={handleAdvanceFilm}
+                                                    disabled={(partyState?.activeMovieIndex ?? 0) >= item.movieKeys.length - 1}
+                                                    className="bg-purple-600/20 hover:bg-purple-600 text-purple-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-purple-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                                    </svg>
+                                                    Next Film ({(partyState?.activeMovieIndex ?? 0) + 1}/{item.movieKeys.length})
+                                                </button>
+                                            )}
                                             <button 
                                                 onClick={onTerminateParty} 
                                                 className="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-red-500/30 transition-all"

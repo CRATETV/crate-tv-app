@@ -7,9 +7,10 @@ import Countdown from './Countdown';
 interface LiveWatchPartyBannerProps {
   movie: Movie;
   onClose: () => void;
+  onEnterLobby?: () => void;
 }
 
-const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose }) => {
+const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose, onEnterLobby }) => {
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
     const { festivalData, activeParties, refreshData } = useFestival();
     const [now, setNow] = useState(new Date());
@@ -92,9 +93,12 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
-        // Allow navigation to lobby even before live (for countdown/waiting experience)
-        window.history.pushState({}, '', `/watchparty/${movie.key}`);
-        window.dispatchEvent(new Event('pushstate'));
+        if (onEnterLobby) {
+            onEnterLobby();
+        } else {
+            window.history.pushState({}, '', `/watchparty/${movie.key}`);
+            window.dispatchEvent(new Event('pushstate'));
+        }
     };
 
     const topOffset = sessionStorage.getItem('crateTvStaging') === 'true' ? '32px' : '0px';

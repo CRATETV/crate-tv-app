@@ -111,29 +111,38 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             }
         }
 
-        // 2. Fallback to FUTURE scheduled parties only
-        // Key fix: Do NOT show any party whose start time has passed unless it's explicitly live (handled above)
+        // 2. Fallback: any enabled watch party that is not ended
+        // Show banner if isWatchPartyEnabled=true, regardless of whether a start time is set
         const upcomingParties = movieArray
-            .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
+            .filter(m => m.isWatchPartyEnabled && !m.isUnlisted)
             .filter(m => {
-                const start = new Date(m.watchPartyStartTime!);
-                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-                const twoHoursInMs = 2 * 60 * 60 * 1000;
-                
                 // Don't show if party was explicitly ended
                 const partyState = allPartyStates[m.key];
                 if (partyState?.status === 'ended') return false;
-                
+                // Don't show if already live (handled above)
+                if (activeParties[m.key]?.status === 'live') return false;
+
+                // If no start time set — show banner (party is open/waiting)
+                if (!m.watchPartyStartTime) return true;
+
+                const start = new Date(m.watchPartyStartTime);
+                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                const twoHoursInMs = 2 * 60 * 60 * 1000;
+
                 // Show if in future within 7 days
                 if (start.getTime() > now.getTime() && start.getTime() < (now.getTime() + sevenDaysInMs)) return true;
-                
+
                 // Also show for up to 2 hours after scheduled start
-                // in case auto-start is delayed
                 if (start.getTime() <= now.getTime() && now.getTime() - start.getTime() < twoHoursInMs) return true;
-                
+
                 return false;
             })
-            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+            .sort((a, b) => {
+                // No start time goes last
+                if (!a.watchPartyStartTime) return 1;
+                if (!b.watchPartyStartTime) return -1;
+                return new Date(a.watchPartyStartTime).getTime() - new Date(b.watchPartyStartTime).getTime();
+            });
 
         // Debug logging
         const watchPartyMovies = movieArray.filter(m => m.isWatchPartyEnabled);
@@ -200,23 +209,18 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 db.collection('data').doc('movies').onSnapshot(doc => {
                     if (doc.exists) {
                         const firebaseMovies = doc.data() as Record<string, Movie>;
-                        // Merge watch party fields from Firebase into movies state
-                        // Use functional update to always work with latest state
                         setMovies(prev => {
                             const merged = { ...prev };
                             Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
                                 if (merged[key]) {
-                                    // Movie exists — update watch party fields
                                     merged[key] = {
                                         ...merged[key],
-                                        isWatchPartyEnabled: fbMovie.isWatchPartyEnabled,
-                                        watchPartyStartTime: fbMovie.watchPartyStartTime,
-                                        isWatchPartyPaid: fbMovie.isWatchPartyPaid,
-                                        watchPartyPrice: fbMovie.watchPartyPrice
+                                        isWatchPartyEnabled: fbMovie.isWatchPartyEnabled ?? merged[key].isWatchPartyEnabled,
+                                        watchPartyStartTime: fbMovie.watchPartyStartTime ?? merged[key].watchPartyStartTime,
+                                        isWatchPartyPaid: fbMovie.isWatchPartyPaid ?? merged[key].isWatchPartyPaid,
+                                        watchPartyPrice: fbMovie.watchPartyPrice ?? merged[key].watchPartyPrice,
                                     };
                                 } else {
-                                    // Movie not in API yet — store full Firebase record so
-                                    // watch party fields are available immediately
                                     merged[key] = fbMovie;
                                 }
                             });

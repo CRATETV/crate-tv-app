@@ -364,7 +364,71 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Verified Cast Manifest</h4>
+                                <h4 className="text-[10px] font-black uppercase text-purple-400 tracking-[0.4em]">02. Festival / PWFF Profile</h4>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-purple-500/10 space-y-5">
+                                    <p className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">These fields appear on the PWFF festival page at cratetv.net/pwff</p>
+                                    <div className="space-y-2">
+                                        <label className="form-label">Director's Note</label>
+                                        <textarea
+                                            name="festivalDirectorNote"
+                                            value={formData.festivalDirectorNote || ''}
+                                            onChange={handleChange}
+                                            rows={4}
+                                            placeholder="Why did you make this film? What do you want audiences to feel?"
+                                            className="form-input bg-black/40"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="form-label">Filmmaker Bio</label>
+                                        <textarea
+                                            name="festivalFilmmakerBio"
+                                            value={formData.festivalFilmmakerBio || ''}
+                                            onChange={handleChange}
+                                            rows={3}
+                                            placeholder="Short bio about the filmmaker..."
+                                            className="form-input bg-black/40"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="form-label">Filmmaker Photo URL</label>
+                                        <input
+                                            type="text"
+                                            name="festivalFilmmakerPhoto"
+                                            value={formData.festivalFilmmakerPhoto || ''}
+                                            onChange={handleChange}
+                                            placeholder="https://... (headshot)"
+                                            className="form-input bg-black/40 text-xs font-mono"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="form-label">Pull Quote (for hype section)</label>
+                                            <input
+                                                type="text"
+                                                name="festivalQuote"
+                                                value={formData.festivalQuote || ''}
+                                                onChange={handleChange}
+                                                placeholder="A memorable line from the director..."
+                                                className="form-input bg-black/40"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="form-label">Festival Awards / Laurels</label>
+                                            <input
+                                                type="text"
+                                                name="festivalAwards"
+                                                value={formData.festivalAwards || ''}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Best Short — SXSW 2024"
+                                                className="form-input bg-black/40"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Verified Cast Manifest</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
                                     <div className="flex gap-2">
                                         <input 

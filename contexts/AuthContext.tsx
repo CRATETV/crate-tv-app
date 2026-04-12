@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode, useCa
 import { 
     initializeFirebaseAuth, 
     getAuthInstance,
+    getDbInstance,
     getUserProfile,
     createUserProfile,
     updateUserProfile,
@@ -113,10 +114,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => unsubscribe();
     }, []);
     
+    const generateSessionToken = () => {
+        const token = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${Math.random().toString(36).substring(2, 15)}`;
+        return token;
+    };
+
+    const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+    const writeSessionToken = async (uid: string) => {
+        const db = getDbInstance();
+        if (!db) return;
+        const token = generateSessionToken();
+        const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+        localStorage.setItem('crate_session_token', token);
+        localStorage.setItem('crate_session_expires', expiresAt);
+        await db.collection('users').doc(uid).update({
+            activeSessionToken: token,
+            sessionExpiresAt: expiresAt,
+            lastLoginAt: new Date().toISOString()
+        });
+    };
+
     const signIn = async (email: string, password: string) => {
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
-        await auth.signInWithEmailAndPassword(email, password);
+        const result = await auth.signInWithEmailAndPassword(email, password);
+        if (result.user) {
+            await writeSessionToken(result.user.uid);
+        }
     };
 
     const signInWithMagicLink = async (email: string) => {
@@ -148,12 +173,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const result = await auth.createUserWithEmailAndPassword(email, password);
         if (result.user) {
             await createUserProfile(result.user.uid, email, name);
+            await writeSessionToken(result.user.uid);
         }
     };
     
     const logout = async () => {
         const auth = getAuthInstance();
-        if (auth) await auth.signOut();
+        if (auth) {
+            // Clear session token from Firestore on intentional logout
+            if (user) {
+                const db = getDbInstance();
+                if (db) {
+                    await db.collection('users').doc(user.uid).update({ activeSessionToken: null }).catch(() => {});
+                }
+            }
+            localStorage.removeItem('crate_session_token');
+            await auth.signOut();
+        }
     };
     
     const sendPasswordReset = async (email: string) => {

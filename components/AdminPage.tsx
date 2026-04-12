@@ -22,6 +22,7 @@ import DiscoveryEngine from './DiscoveryEngine';
 import JuryRoomTab from './JuryRoomTab';
 import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
+import PwffAdminTab from './PwffAdminTab';
 import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
 import RokuManagementTab from './RokuManagementTab';
@@ -51,7 +52,8 @@ const ALL_TABS: Record<string, string> = {
     rokuControl: '📺 Roku Control',
     audit: '📜 Audit Log',
     permissions: '🔑 Permissions',
-    security: '🛡️ Security'
+    security: '🛡️ Security',
+    pwff: '🎬 PWFF Festival'
 };
 
 const AdminPage: React.FC = () => {
@@ -69,6 +71,11 @@ const AdminPage: React.FC = () => {
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig | null>(null);
+    const [pwffVisible, setPwffVisible] = useState(false);
+    const [pwffDate, setPwffDate] = useState('');
+    const [pwffName, setPwffName] = useState('');
+    const [pwffDescription, setPwffDescription] = useState('');
+    const [pwffTagline, setPwffTagline] = useState('');
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [permissions, setPermissions] = useState<Record<string, string[]>>({});
@@ -161,6 +168,11 @@ const AdminPage: React.FC = () => {
                 setFestivalData(data.festivalData || []);
                 setFestivalConfig(data.festivalConfig || null);
                 if (data.settings?.crateFestConfig) setCrateFestConfig(data.settings.crateFestConfig);
+                if (data.settings?.pwffProgramVisible !== undefined) setPwffVisible(!!data.settings.pwffProgramVisible);
+                if (data.settings?.pwffFestivalDate) setPwffDate(data.settings.pwffFestivalDate);
+                if (data.settings?.pwffFestivalName) setPwffName(data.settings.pwffFestivalName);
+                if (data.settings?.pwffTeaserDescription) setPwffDescription(data.settings.pwffTeaserDescription);
+                if (data.settings?.pwffTeaserTagline) setPwffTagline(data.settings.pwffTeaserTagline);
             }
 
             if (pipelineRes.ok) {
@@ -464,6 +476,28 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
+                    {activeTab === 'pwff' && (
+                        <PwffAdminTab
+                            pwffVisible={pwffVisible}
+                            pwffDate={pwffDate}
+                            pwffName={pwffName}
+                            pwffDescription={pwffDescription}
+                            pwffTagline={pwffTagline}
+                            onToggleVisible={(val) => { setPwffVisible(val); }}
+                            onChangeDate={(val) => { setPwffDate(val); }}
+                            onChangeName={(val) => { setPwffName(val); }}
+                            onChangeDescription={(val) => { setPwffDescription(val); }}
+                            onChangeTagline={(val) => { setPwffTagline(val); }}
+                            onSave={() => handleSaveData('settings', {
+                                pwffProgramVisible: pwffVisible,
+                                pwffFestivalDate: pwffDate,
+                                pwffFestivalName: pwffName,
+                                pwffTeaserDescription: pwffDescription,
+                                pwffTeaserTagline: pwffTagline,
+                            })}
+                            isSaving={isSaving}
+                        />
+                    )}
                     {activeTab === 'vouchers' && (
                         <PromoCodeManager 
                             isAdmin={true} 

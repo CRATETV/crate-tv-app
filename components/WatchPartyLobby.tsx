@@ -11,6 +11,7 @@ interface WatchPartyLobbyProps {
     user: { name?: string; email: string | null; avatar?: string } | null;
     hasAccess?: boolean;
     onBuyTicket?: () => void;
+    onClose?: () => void;
 }
 
 interface LobbyViewer {
@@ -20,7 +21,7 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose }) => {
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
@@ -217,6 +218,11 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">CRATE Watch Party</span>
                     </div>
+                    {onClose && (
+                        <button onClick={onClose} className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors" aria-label="Close lobby">
+                            &times;
+                        </button>
+                    )}
                     <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
                         <div className="flex -space-x-2">
                             {viewers.slice(0, 5).map((v, i) => (

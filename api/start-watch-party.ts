@@ -62,10 +62,13 @@ export async function POST(request: Request) {
       status: 'live',
       lastStartedAt: new Date().toISOString(),
       actualStartTime: FieldValue.serverTimestamp(),
+      filmStartTime: FieldValue.serverTimestamp(), // tracks when the CURRENT film started
       isPlaying: true,
       currentTime: 0,
       isQALive: false,
       lastUpdated: FieldValue.serverTimestamp(),
+      activeMovieIndex: 0,             // always start at film 0
+      intermissionUntil: null,         // no intermission at start
       backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
     }, { merge: true });
 

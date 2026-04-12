@@ -10,6 +10,9 @@ import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
 import WatchPartyLobby from './WatchPartyLobby';
 import WatchPartyCredits from './WatchPartyCredits';
+import IntermissionScreen from './IntermissionScreen';
+import SessionKickedScreen from './SessionKickedScreen';
+import { useSessionGuard } from '../hooks/useSessionGuard';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -224,6 +227,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
+    // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
+    const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
+    const isInIntermission = !!(partyState?.intermissionUntil && Date.now() < partyState.intermissionUntil);
+
     const isLiked = likedMoviesArray?.includes(movieKey) || false;
     const handleToggleLike = () => toggleLikeMovie(movieKey);
 
@@ -233,10 +240,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         // Check if it's a festival block
         const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
         if (block) {
-            // Synthesize a movie object for the block
-            // If the block has movies, we might want to play the first one as a fallback
-            const firstMovie = block.movieKeys.length > 0 ? allMovies[block.movieKeys[0]] : null;
-            
+            // Use activeMovieIndex from partyState to determine which film in the block is playing
+            const idx = partyState?.activeMovieIndex ?? 0;
+            const safeIdx = Math.min(idx, block.movieKeys.length - 1);
+            const activeFilm = allMovies[block.movieKeys[safeIdx]] || null;
+
             return {
                 key: block.id,
                 title: block.title,
@@ -244,14 +252,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 isWatchPartyEnabled: true,
                 isWatchPartyPaid: (block.price || 0) > 0,
                 watchPartyPrice: block.price,
-                director: 'Festival Event',
-                fullMovie: firstMovie?.fullMovie || '',
-                isLiveStream: firstMovie?.isLiveStream || false,
-                liveStreamEmbed: firstMovie?.liveStreamEmbed || ''
-            } as Movie;
+                director: activeFilm?.director || 'Festival Event',
+                fullMovie: activeFilm?.fullMovie || '',
+                isLiveStream: activeFilm?.isLiveStream || false,
+                liveStreamEmbed: activeFilm?.liveStreamEmbed || '',
+                poster: activeFilm?.poster || '',
+                durationInMinutes: activeFilm?.durationInMinutes,
+                // Pass block metadata for UI
+                _blockMovieKeys: block.movieKeys,
+                _blockTitle: block.title,
+                _activeFilmTitle: activeFilm?.title || block.title,
+                _activeFilmDirector: activeFilm?.director || 'Festival Event',
+            } as Movie & { _blockMovieKeys?: string[]; _blockTitle?: string; _activeFilmTitle?: string; _activeFilmDirector?: string };
         }
         return null;
-    }, [movieKey, allMovies, festivalData]);
+    }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -291,10 +306,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
             try {
-                const serverStart = (partyState.actualStartTime as any).toDate().getTime();
+                // For blocks, use filmStartTime (when current film started) for accurate sync
+                // For single movies, fall back to actualStartTime
+                const startRef = partyState.filmStartTime || partyState.actualStartTime;
+                const serverStart = (startRef as any).toDate().getTime();
                 const elapsedSinceStart = (now - serverStart) / 1000;
                 
-                // Calculate target position based on elapsed time since party started
+                // Calculate target position based on elapsed time since THIS FILM started
                 const targetPosition = Math.max(0, elapsedSinceStart);
                 
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
@@ -372,34 +390,78 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return () => { unsubscribe(); reactionsRef(); viewerCountRef(); };
     }, [movieKey]);
 
-    // Show credits when video ends
+    // ── SESSION GUARD — prevents password sharing ───────────────────────────
+    // Active whenever the user has paid access (live OR on-demand VOD)
+
+    // ── BLOCK AUTO-ADVANCE: when a film ends in a block, advance to next film ───
+    useEffect(() => {
+        if (!isEnded) return;
+        const m = movie as any;
+        const blockKeys: string[] | undefined = m?._blockMovieKeys;
+        if (!blockKeys || blockKeys.length === 0) {
+            // Single movie — show credits as before
+            if (!showCredits) setShowCredits(true);
+            return;
+        }
+
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const isLastFilm = currentIdx >= blockKeys.length - 1;
+
+        if (isLastFilm) {
+            // All films done — show credits
+            if (!showCredits) setShowCredits(true);
+            return;
+        }
+
+        // There's a next film — write intermission + advance to Firestore
+        // Only the FIRST viewer to detect end triggers the advance (guard with a ref)
+        const db = getDbInstance();
+        if (!db) return;
+
+        const partyRef = db.collection('watch_parties').doc(movieKey);
+        const intermissionEnd = Date.now() + 60000; // 60 second intermission
+
+        partyRef.update({
+            activeMovieIndex: currentIdx + 1,
+            intermissionUntil: intermissionEnd,
+            filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+            isPlaying: true,
+            currentTime: 0,
+        }).catch(() => {}); // If another client beat us here, ignore
+
+        // Reset local ended state
+        setIsEnded(false);
+    }, [isEnded]);
+
+    // ── INTERMISSION COUNTDOWN: tick down locally from partyState ───────
+    useEffect(() => {
+        if (!partyState?.intermissionUntil) return;
+        const tick = () => {
+            const remaining = Math.max(0, Math.ceil((partyState.intermissionUntil! - Date.now()) / 1000));
+            setIntermissionSeconds(remaining);
+        };
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [partyState?.intermissionUntil]);
+
+    // Show credits when video ends (single movie only)
     useEffect(() => {
         if (isEnded && !showCredits) {
-            setShowCredits(true);
+            const m = movie as any;
+            if (!m?._blockMovieKeys) setShowCredits(true);
         }
-    }, [isEnded, showCredits]);
+    }, [isEnded, showCredits, movie]);
 
     // Determine if we should show lobby
     const shouldShowLobby = useMemo(() => {
-        // Don't show lobby if party is live
+        // Never show if party is live or ended
         if (partyState?.status === 'live') return false;
-        // Don't show lobby if user manually dismissed it
-        if (!showLobby) return false;
-        // Don't show if party already ended
         if (partyState?.status === 'ended') return false;
-        
-        // Show lobby if watch party is enabled for this movie
-        if (movie?.isWatchPartyEnabled) {
-            // If there's a scheduled start time in the future, show lobby
-            if (movie.watchPartyStartTime) {
-                const startTime = new Date(movie.watchPartyStartTime);
-                if (startTime > new Date()) return true;
-            }
-            // Also show lobby if party exists but status is 'waiting' or undefined
-            if (!partyState?.status || partyState.status === 'waiting') {
-                return true;
-            }
-        }
+        // Never show if user dismissed it
+        if (!showLobby) return false;
+        // Show lobby any time watch party is enabled and party hasn't started
+        if (movie?.isWatchPartyEnabled) return true;
         return false;
     }, [partyState, showLobby, movie]);
 
@@ -422,6 +484,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const exp = rentals[movieKey];
         return !!(exp && new Date(exp) > new Date());
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
+
+    // ── SESSION GUARD — prevents password sharing ───────────────────────────
+    const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
+    const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
+
+    // ── SESSION GUARD — prevents password sharing ───────────────────────────
+    // Active whenever the user has paid access (live OR on-demand VOD)
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -448,6 +517,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             </div>
         );
     }
+
+    // ── SESSION KICKED SCREEN ─────────────────────────────────────────────────
+    if (sessionKicked) return <SessionKickedScreen reason={kickReason} />;
 
     // Show pre-show lobby if party hasn't started yet — ALL users see the lobby
     // Unpaid users see a buy ticket prompt inside the lobby
@@ -501,6 +573,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }
 
     // Show credits/applause screen when film ends
+    // ── INTERMISSION SCREEN ─────────────────────────────────────────────
+    if (isInIntermission && partyState?.status === 'live') {
+        const m = movie as any;
+        const blockKeys: string[] = m?._blockMovieKeys || [];
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const nextIdx = Math.min(currentIdx, blockKeys.length - 1);
+        const nextFilm = allMovies[blockKeys[nextIdx]] || movie!;
+        const prevFilm = allMovies[blockKeys[Math.max(0, nextIdx - 1)]] || movie!;
+
+        return (
+            <IntermissionScreen
+                currentFilm={prevFilm}
+                nextFilm={nextFilm}
+                currentIndex={nextIdx}
+                totalFilms={blockKeys.length}
+                secondsRemaining={intermissionSeconds}
+            />
+        );
+    }
+
     if (showCredits) {
         return (
             <WatchPartyCredits
@@ -533,7 +625,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </button>
                         <div className="text-center flex flex-col items-center">
                             <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Transmission Active</span>
-                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>
+                            {(() => {
+                                const m = movie as any;
+                                const blockKeys: string[] | undefined = m?._blockMovieKeys;
+                                if (blockKeys && blockKeys.length > 1) {
+                                    const idx = (partyState?.activeMovieIndex ?? 0);
+                                    return (
+                                        <>
+                                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{m._activeFilmTitle || movie.title}</h2>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {blockKeys.map((_: string, i: number) => (
+                                                    <div key={i} className={`h-0.5 w-4 rounded-full transition-all ${i === idx ? 'bg-red-500 w-6' : i < idx ? 'bg-red-500/40' : 'bg-white/20'}`} />
+                                                ))}
+                                                <span className="text-[8px] text-gray-500 ml-1">Film {idx + 1}/{blockKeys.length}</span>
+                                            </div>
+                                        </>
+                                    );
+                                }
+                                return <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>;
+                            })()}
                             {isBackstageVerified && (
                                 <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>
                             )}

@@ -186,6 +186,12 @@ export interface Movie {
   zineUrl?: string;
   genres?: string[];
   subtitleUrl?: string;
+  // ── FESTIVAL / PWFF FIELDS ────────────────────────────────────────────────
+  festivalDirectorNote?: string;   // note from the director about the film
+  festivalFilmmakerBio?: string;   // short filmmaker bio
+  festivalFilmmakerPhoto?: string; // headshot URL
+  festivalQuote?: string;          // pull quote for the hype section
+  festivalAwards?: string;         // e.g. "Best Short — SXSW 2024"
 }
 
 export interface Actor {
@@ -295,6 +301,8 @@ export interface WatchPartyState {
   isWebcamLive?: boolean;
   activeBlockId?: string;
   activeMovieIndex?: number;
+  intermissionUntil?: number;       // unix ms — if set, show intermission screen until this time
+  filmStartTime?: any;              // Firestore timestamp — when the current film in the block started
   actualStartTime?: any; 
   type: 'movie' | 'block';
   activePoll?: Poll;
@@ -401,6 +409,18 @@ export interface SiteSettings {
   pitchDeckCustomMessage?: string;
   crateFestConfig?: CrateFestConfig;
   playbackSpeed?: number;
+  pwffProgramVisible?: boolean;   // controls whether /pwff shows full programme or teaser
+  pwffFestivalDate?: string;      // e.g. "August 2026" shown on teaser
+  pwffFestivalName?: string;      // e.g. "Playhouse West Film Festival"
+  pwffTeaserDescription?: string; // tagline/description shown on teaser — changes each year
+  pwffTeaserTagline?: string;     // short one-liner under the title e.g. "Presented by Crate TV" 
+}
+
+export interface PwffInterestEntry {
+  email: string;
+  name?: string;
+  submittedAt: any;
+  source: 'teaser' | 'programme';
 }
 
 export interface ActorSubmission {

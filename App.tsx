@@ -19,6 +19,8 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+import WatchPartyLobby from './components/WatchPartyLobby';
+import SquarePaymentModal from './components/SquarePaymentModal';
 import WatchPartyNotificationModal from './components/WatchPartyNotificationModal';
 import CrateFestBanner from './components/CrateFestBanner';
 import CrateVaultRow from './components/CrateVaultRow';
@@ -46,7 +48,7 @@ const MaintenanceScreen: React.FC = () => (
 );
 
 const App: React.FC = () => {
-    const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { user, hasCrateFestPass, unlockedWatchPartyKeys, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
@@ -58,6 +60,8 @@ const App: React.FC = () => {
     const [preloadVideoUrl, setPreloadVideoUrl] = useState<string | null>(null);
     const [showWatchPartyModal, setShowWatchPartyModal] = useState(false);
     const [watchPartyModalShown, setWatchPartyModalShown] = useState(false);
+    const [showLobbyOverlay, setShowLobbyOverlay] = useState(false);
+    const [lobbyPaywallOpen, setLobbyPaywallOpen] = useState(false);
     
     const dismissBanner = useCallback((key: string) => {
         setDismissedBannerKeys(prev => {
@@ -232,11 +236,19 @@ const App: React.FC = () => {
             return false;
         };
 
-        // Check regular movies first
+        // Check regular movies first — show even if no start time set
         const movieResult = (Object.values(movies) as Movie[])
-            .filter(m => !!m && m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
-            .filter(m => isEligible(m.watchPartyStartTime!, m.key, m.isWatchPartyPaid))
-            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime())[0] || null;
+            .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted)
+            .filter(m => {
+                if (allPartyStates[m.key]?.status === 'ended') return false;
+                if (!m.watchPartyStartTime) return true; // no start time = always show
+                return isEligible(m.watchPartyStartTime, m.key, m.isWatchPartyPaid);
+            })
+            .sort((a, b) => {
+                if (!a.watchPartyStartTime) return 1;
+                if (!b.watchPartyStartTime) return -1;
+                return new Date(a.watchPartyStartTime).getTime() - new Date(b.watchPartyStartTime).getTime();
+            })[0] || null;
 
         // Check festival blocks (regular festival + Crate Fest)
         const allBlocks = [
@@ -416,18 +428,49 @@ const App: React.FC = () => {
                     movie={upcomingWatchPartyMovie}
                     onGetTicket={() => {
                         setShowWatchPartyModal(false);
-                        window.history.pushState({}, '', `/watchparty/${upcomingWatchPartyMovie.key}`);
-                        window.dispatchEvent(new Event('pushstate'));
+                        setShowLobbyOverlay(true);
                     }}
                     onDismiss={() => setShowWatchPartyModal(false)}
                 />
+            )}
+
+            {/* Watch Party Lobby Overlay — opens on banner or notification CTA click */}
+            {showLobbyOverlay && livePartyMovie && (
+                <div className="fixed inset-0 z-[200] overflow-y-auto">
+                    <WatchPartyLobby
+                        movie={livePartyMovie}
+                        partyState={activeParties[livePartyMovie.key]}
+                        onPartyStart={() => {
+                            setShowLobbyOverlay(false);
+                            window.history.pushState({}, '', `/watchparty/${livePartyMovie.key}`);
+                            window.dispatchEvent(new Event('pushstate'));
+                        }}
+                        user={user}
+                        hasAccess={
+                            !livePartyMovie.isWatchPartyPaid ||
+                            unlockedWatchPartyKeys.has(livePartyMovie.key) ||
+                            hasCrateFestPass
+                        }
+                        onBuyTicket={() => setLobbyPaywallOpen(true)}
+                        onClose={() => setShowLobbyOverlay(false)}
+                    />
+                    {lobbyPaywallOpen && (
+                        <SquarePaymentModal
+                            movie={livePartyMovie}
+                            onClose={() => setLobbyPaywallOpen(false)}
+                            onPaymentSuccess={() => setLobbyPaywallOpen(false)}
+                            paymentType="watchPartyTicket"
+                        />
+                    )}
+                </div>
             )}
 
             {/* Watch Party Ticket Notification — announcement card */}
             
             {activeBannerType === 'WATCH_PARTY' && (
                 <LiveWatchPartyBanner 
-                    movie={livePartyMovie!} 
+                    movie={livePartyMovie!}
+                    onEnterLobby={() => setShowLobbyOverlay(true)}
                     onClose={() => {
                         const isLive = activeParties[livePartyMovie!.key]?.status === 'live';
                         dismissBanner(isLive ? `live-${livePartyMovie!.key}` : `upcoming-${livePartyMovie!.key}`);
