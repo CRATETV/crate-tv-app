@@ -241,7 +241,7 @@ const App: React.FC = () => {
             .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted)
             .filter(m => {
                 if (allPartyStates[m.key]?.status === 'ended') return false;
-                if (!m.watchPartyStartTime) return true; // no start time = always show
+                if (!m.watchPartyStartTime) return false; // no start time = don't show banner
                 return isEligible(m.watchPartyStartTime, m.key, m.isWatchPartyPaid);
             })
             .sort((a, b) => {

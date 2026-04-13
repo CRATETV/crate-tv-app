@@ -103,6 +103,24 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const handleSaveManifest = () => {
       onSave(config);
       setIsDirty(false);
+      // ── INSTANT BANNER: push all enabled blocks to Firestore in real-time
+      const pw = sessionStorage.getItem('adminPassword');
+      data.flatMap(d => d.blocks).forEach(block => {
+          fetch('/api/schedule-watch-party', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  password: pw,
+                  movieKey: block.id,
+                  movieTitle: block.title,
+                  watchPartyStartTime: block.watchPartyStartTime || null,
+                  isWatchPartyEnabled: !!block.isWatchPartyEnabled,
+                  isWatchPartyPaid: (block.price || 0) > 0,
+                  watchPartyPrice: block.price || 0,
+                  poster: '',
+              })
+          }).catch(() => {});
+      });
   };
 
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: any) => {

@@ -210,6 +210,26 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setIsSaving(true);
         try {
             await onSave({ [formData.key]: formData });
+
+            // ── INSTANT BANNER: write watch party schedule directly to Firestore
+            // This fires the countdown banner immediately without waiting for S3
+            if (formData.isWatchPartyEnabled !== undefined) {
+                fetch('/api/schedule-watch-party', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        password: sessionStorage.getItem('adminPassword'),
+                        movieKey: formData.key,
+                        movieTitle: formData.title,
+                        watchPartyStartTime: formData.watchPartyStartTime || null,
+                        isWatchPartyEnabled: formData.isWatchPartyEnabled,
+                        isWatchPartyPaid: formData.isWatchPartyPaid,
+                        watchPartyPrice: formData.watchPartyPrice,
+                        poster: formData.poster,
+                    })
+                }).catch(() => {});
+            }
+
             setSelectedMovieKey('');
         } catch (err) {
             alert("Save failed.");

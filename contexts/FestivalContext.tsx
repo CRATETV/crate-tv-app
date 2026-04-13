@@ -47,6 +47,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+    const [scheduledParties, setScheduledParties] = useState<Record<string, any>>({});
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [allPartyStates, setAllPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
@@ -70,6 +71,47 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [festivalConfig, now]);
 
     const livePartyMovie = useMemo(() => {
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        const twoHoursInMs = 2 * 60 * 60 * 1000;
+
+        // ── PRIORITY 0: Check dedicated real-time schedule (instant, no S3 delay) ──
+        // This fires the moment admin saves a watch party time
+        const scheduleEntries = Object.values(scheduledParties)
+            .filter((s: any) => {
+                if (!s.isWatchPartyEnabled) return false;
+                if (allPartyStates[s.movieKey]?.status === 'ended') return false;
+                if (activeParties[s.movieKey]?.status === 'live') return false;
+                if (!s.watchPartyStartTime) return false;
+                const start = new Date(s.watchPartyStartTime).getTime();
+                if (start > now.getTime() && start < now.getTime() + sevenDaysInMs) return true;
+                if (start <= now.getTime() && now.getTime() - start < twoHoursInMs) return true;
+                return false;
+            })
+            .sort((a: any, b: any) => new Date(a.watchPartyStartTime).getTime() - new Date(b.watchPartyStartTime).getTime());
+
+        if (scheduleEntries.length > 0) {
+            const s = scheduleEntries[0] as any;
+            // Merge with full movie data if available
+            const fullMovie = movies[s.movieKey];
+            return {
+                ...(fullMovie || {}),
+                key: s.movieKey,
+                title: s.movieTitle || fullMovie?.title || 'Upcoming Event',
+                watchPartyStartTime: s.watchPartyStartTime,
+                isWatchPartyEnabled: true,
+                isWatchPartyPaid: s.isWatchPartyPaid || false,
+                watchPartyPrice: s.watchPartyPrice || 0,
+                poster: s.poster || fullMovie?.poster || '',
+                director: fullMovie?.director || 'Festival Event',
+                synopsis: fullMovie?.synopsis || '',
+                cast: fullMovie?.cast || [],
+                trailer: fullMovie?.trailer || '',
+                fullMovie: fullMovie?.fullMovie || '',
+                tvPoster: fullMovie?.tvPoster || '',
+                likes: fullMovie?.likes || 0,
+            } as Movie;
+        }
+
         const movieArray = Object.values(movies) as Movie[];
         
         // 1. Check for explicitly LIVE parties first (highest priority)
@@ -122,8 +164,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 // Don't show if already live (handled above)
                 if (activeParties[m.key]?.status === 'live') return false;
 
-                // If no start time set — show banner (party is open/waiting)
-                if (!m.watchPartyStartTime) return true;
+                // If no start time set — don't show banner (nothing to count down to)
+                if (!m.watchPartyStartTime) return false;
 
                 const start = new Date(m.watchPartyStartTime);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
@@ -209,7 +251,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
 
         return null;
-    }, [activeParties, allPartyStates, movies, festivalData, now, settings]);
+    }, [activeParties, allPartyStates, movies, festivalData, now, settings, scheduledParties]);
 
     const fetchData = async (forceNoCache = false) => {
         try {
@@ -315,6 +357,13 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     setPipeline(entries);
                 });
 
+                // REAL-TIME WATCH PARTY SCHEDULE — instant banner on admin save
+                db.collection('watch_party_schedule').onSnapshot(snapshot => {
+                    const scheduled: Record<string, any> = {};
+                    snapshot.forEach(doc => { scheduled[doc.id] = doc.data(); });
+                    setScheduledParties(scheduled);
+                }, () => {});
+
                 db.collection('watch_parties').onSnapshot(snapshot => {
                     const liveStates: Record<string, WatchPartyState> = {};
                     const allStates: Record<string, WatchPartyState> = {};
@@ -336,7 +385,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (auth) {
                     auth.onAuthStateChanged(user => {
                         if (user) {
-                            db.collection('watch_parties').onSnapshot(snapshot => {
+                            // REAL-TIME WATCH PARTY SCHEDULE — instant banner on admin save
+                db.collection('watch_party_schedule').onSnapshot(snapshot => {
+                    const scheduled: Record<string, any> = {};
+                    snapshot.forEach(doc => { scheduled[doc.id] = doc.data(); });
+                    setScheduledParties(scheduled);
+                }, () => {});
+
+                db.collection('watch_parties').onSnapshot(snapshot => {
                                 const liveStates: Record<string, WatchPartyState> = {};
                                 const allStates: Record<string, WatchPartyState> = {};
                                 snapshot.forEach(doc => {
