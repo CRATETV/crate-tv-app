@@ -77,13 +77,13 @@ export async function POST(request: Request) {
         ? `You have been granted access to <strong>${blockTitle}</strong> at ${name} ${year} streaming live on Crate TV.`
         : `You have been granted a full virtual pass to <strong>${name} ${year}</strong> streaming live on Crate TV.`
     }</p>
-    <p style="margin:0 0 28px;color:#374151;font-size:15px;line-height:1.8;text-align:center;">Create your free account using <strong>${email}</strong> and your festival access will be waiting for you automatically.</p>
+    <p style="margin:0 0 28px;color:#374151;font-size:15px;line-height:1.8;text-align:center;">Simply log in or create a free account at cratetv.net using <strong>${email}</strong> and your festival access will be waiting for you automatically.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
       <tr><td bgcolor="#E50914" style="background:#E50914;border-radius:8px;">
-        <a href="https://cratetv.net" style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;">CREATE YOUR FREE ACCOUNT</a>
+        <a href="https://cratetv.net" style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;">ACCESS THE FESTIVAL</a>
       </td></tr>
     </table>
-    <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;line-height:1.6;">Sign up at cratetv.net using this email address.<br>Your festival pass will activate automatically when you log in.</p>
+    <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;line-height:1.6;">Already have a Crate account? Just log in.<br>New to Crate? Sign up free — your festival access activates automatically.</p>
   </td></tr>
   <tr><td bgcolor="#f8f8f8" style="background:#f8f8f8;padding:16px 32px;border-radius:0 0 10px 10px;border:1px solid #e0e0e0;border-top:none;">
     <p style="margin:0;color:#9CA3AF;font-size:11px;text-align:center;">This invitation was sent to ${email} &mdash; ${name} &times; Crate TV</p>
