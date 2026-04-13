@@ -83,6 +83,7 @@ const AdminPage: React.FC = () => {
     
     const [activeTab, setActiveTab] = useState('pulse');
     const [tabSearch, setTabSearch] = useState('');
+    const [showMoreTools, setShowMoreTools] = useState(false);
     const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
@@ -386,32 +387,62 @@ const AdminPage: React.FC = () => {
                     </div>
                 )}
 
-                <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide flex-col">
-                    {/* Tab search */}
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="relative flex-shrink-0">
-                            <input
-                                type="text"
-                                placeholder="Search tabs…"
-                                value={tabSearch}
-                                onChange={e => setTabSearch(e.target.value)}
-                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-red-500/40 w-52 pr-8 transition-colors"
-                            />
-                            {tabSearch && (
+                <div className="flex pb-4 mb-10 gap-2 scrollbar-hide flex-col">
+
+                    {/* ── DAILY USE ── */}
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1">Daily</p>
+                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
+                    {[['pulse','⚡ Dashboard'],['movies','🎞️ Catalog'],['watchParty','🍿 Watch Party'],['pwff','🎬 PWFF Festival'],['intel','🧠 Users']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                        <button
+                            key={tabId}
+                            onClick={() => navigateTo(tabId as string)}
+                            className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
+                        >
+                            {label as string}
+                        </button>
+                    ))}
+                    </div>
+
+                    {/* ── FESTIVAL ── */}
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1 mt-4">Festival</p>
+                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
+                    {[['festHub','🎪 Festival Hub'],['pipeline','📥 Submissions'],['analytics','📊 Stats'],['mail','✉️ Send Email']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                        <button
+                            key={tabId}
+                            onClick={() => navigateTo(tabId as string)}
+                            className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
+                        >
+                            {label as string}
+                        </button>
+                    ))}
+                    </div>
+
+                    {/* ── MORE TOOLS ── */}
+                    <div className="mt-4">
+                        <button
+                            onClick={() => setShowMoreTools(!showMoreTools)}
+                            className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 hover:text-gray-400 transition-colors mb-2"
+                        >
+                            <span>{showMoreTools ? '▾' : '▸'}</span>
+                            <span>More Tools</span>
+                        </button>
+                        {showMoreTools && (
+                            <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
+                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['audit','📜 Audit Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                                 <button
-                                    onClick={() => setTabSearch('')}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white text-sm"
-                                >✕</button>
-                            )}
-                        </div>
-                        {tabSearch && (
-                            <p className="text-gray-600 text-[10px] uppercase tracking-widest">
-                                {filteredTabs.length} result{filteredTabs.length !== 1 ? 's' : ''}
-                            </p>
+                                    key={tabId}
+                                    onClick={() => navigateTo(tabId as string)}
+                                    className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                                >
+                                    {label as string}
+                                </button>
+                            ))}
+                            </div>
                         )}
                     </div>
-                    {/* Tab buttons */}
-                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide">
+
+                    {/* Hidden original tab renderer — kept for tab search fallback */}
+                    <div className="hidden">
                     {filteredTabs.map(([tabId, label]) => (
                         <button
                             key={tabId}
@@ -486,6 +517,7 @@ const AdminPage: React.FC = () => {
                             pwffDescription={pwffDescription}
                             pwffTagline={pwffTagline}
                             pwffYear={pwffYear}
+                            pwffBlocks={festivalData.flatMap(d => d.blocks)}
                             onToggleVisible={(val) => { setPwffVisible(val); }}
                             onChangeDate={(val) => { setPwffDate(val); }}
                             onChangeName={(val) => { setPwffName(val); }}

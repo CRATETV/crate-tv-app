@@ -9,6 +9,22 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: "movieKey is required." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Identify the user from the auth token
+    let userEmail: string | null = null;
+    let uid: string | null = null;
+    try {
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.split('Bearer ')[1];
+            const adminAuth = getAdminAuth();
+            if (adminAuth) {
+                const decoded = await adminAuth.verifyIdToken(token);
+                uid = decoded.uid;
+                userEmail = decoded.email || null;
+            }
+        }
+    } catch {}
+
     const initError = getInitializationError();
     if (initError) throw new Error(`Database connection failed: ${initError}`);
     
@@ -48,6 +64,24 @@ export async function POST(request: Request) {
     });
     
     await batch.commit();
+
+    // If this viewer is on the pwff_invites list, log that they watched
+    if (userEmail && uid) {
+        try {
+            const inviteRef = db.collection('pwff_invites').doc(userEmail.toLowerCase().trim());
+            const invite = await inviteRef.get();
+            if (invite.exists) {
+                const watched = invite.data()?.watchedMovies || [];
+                if (!watched.includes(movieKey)) {
+                    await inviteRef.update({
+                        watchedMovies: [...watched, movieKey],
+                        lastWatchedAt: new Date().toISOString(),
+                        status: 'watched',
+                    });
+                }
+            }
+        } catch {}
+    }
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {

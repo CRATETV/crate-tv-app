@@ -4,6 +4,7 @@ import { PwffInterestEntry } from '../types';
 
 interface PwffAdminTabProps {
     pwffVisible: boolean;
+    pwffBlocks?: any[];
     pwffDate: string;
     pwffName: string;
     pwffDescription: string;
@@ -20,7 +21,7 @@ interface PwffAdminTabProps {
 }
 
 const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
-    pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline, pwffYear,
+    pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline, pwffYear, pwffBlocks = [],
     onToggleVisible, onChangeDate, onChangeName, onChangeDescription, onChangeTagline, onChangeYear,
     onSave, isSaving
 }) => {
@@ -29,10 +30,20 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
     const [loadingEmails, setLoadingEmails] = useState(true);
     const [copySuccess, setCopySuccess] = useState(false);
     const [search, setSearch] = useState('');
+    const [inviteText, setInviteText] = useState('');
+    const [inviteLoading, setInviteLoading] = useState(false);
+    const [inviteResult, setInviteResult] = useState<{sent:number;alreadyInvited:number;errors:number} | null>(null);
+    const [invites, setInvites] = useState<any[]>([]);
+    const [loadingInvites, setLoadingInvites] = useState(true);
 
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
+        db.collection('pwff_invites').orderBy('invitedAt', 'desc').get().then(snap => {
+            setInvites(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoadingInvites(false);
+        }).catch(() => setLoadingInvites(false));
+
         db.collection('pwff_interest').orderBy('submittedAt', 'desc').get().then(snap => {
             setEmails(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PwffInterestEntry & { id: string })));
             setLoadingEmails(false);
@@ -52,6 +63,58 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
         });
+    };
+
+    const BlockInviteSection: React.FC<{block: any}> = ({ block }) => {
+        const [blockEmails, setBlockEmails] = useState('');
+        return (
+            <div className="space-y-2 border border-white/5 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-amber-400">{block.title} — ${block.price || 10}</label>
+                    <span className="text-[9px] text-gray-600">Block access only</span>
+                </div>
+                <textarea
+                    value={blockEmails}
+                    onChange={e => setBlockEmails(e.target.value)}
+                    placeholder="email1@gmail.com — one per line or comma separated"
+                    rows={3}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 resize-none font-mono"
+                />
+                <button
+                    onClick={() => sendInvites('block', block.id, block.title, blockEmails)}
+                    disabled={inviteLoading || !blockEmails.trim()}
+                    className="bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-lg text-xs transition-all"
+                >
+                    {inviteLoading ? 'Sending...' : `Send Block Invites for "${block.title}"`}
+                </button>
+            </div>
+        );
+    };
+
+    const sendInvites = async (accessType: 'full' | 'block' = 'full', blockId?: string, blockTitle?: string, overrideText?: string) => {
+        const text = overrideText ?? inviteText;
+        const emails = text.split(/[,\n\r]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'));
+        if (!emails.length) return;
+        setInviteLoading(true);
+        setInviteResult(null);
+        try {
+            const res = await fetch('/api/pwff-invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password: sessionStorage.getItem('adminPassword'),
+                    emails,
+                    festivalName: 'Playhouse West Film Festival',
+                    festivalYear: '2026',
+                    accessType,
+                    blockId: blockId || null,
+                    blockTitle: blockTitle || null,
+                })
+            });
+            const data = await res.json();
+            if (data.success) setInviteResult(data.results);
+        } catch {}
+        setInviteLoading(false);
     };
 
     return (
@@ -201,6 +264,99 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* ── VIRTUAL PASS INVITES ──────────────────────────────────── */}
+            <div className="bg-gray-900 rounded-xl p-6 space-y-6 border border-white/5">
+                <div>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-1">Send Virtual Pass Invites</h3>
+                    <p className="text-xs text-gray-500 leading-relaxed">Paste email addresses from Tony below. Full pass holders get access to everything. Block ticket holders only get access to their specific block.</p>
+                </div>
+
+                {/* Full Festival Pass */}
+                <div className="space-y-2 border border-white/5 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold uppercase tracking-widest text-green-400">Full Festival Pass — $50</label>
+                        <span className="text-[9px] text-gray-600">Gets access to all blocks</span>
+                    </div>
+                    <textarea
+                        value={inviteText}
+                        onChange={e => setInviteText(e.target.value)}
+                        placeholder="email1@gmail.com, email2@gmail.com — one per line or comma separated"
+                        rows={4}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500 resize-none font-mono"
+                    />
+                    <button
+                        onClick={() => sendInvites('full')}
+                        disabled={inviteLoading || !inviteText.trim()}
+                        className="bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-lg text-xs transition-all"
+                    >
+                        {inviteLoading ? 'Sending...' : 'Send Full Pass Invites'}
+                    </button>
+                </div>
+
+                {/* Block Tickets */}
+                {[...new Set((pwffBlocks || []).map((b: any) => b.id))].length > 0 ? (
+                    (pwffBlocks || []).map((block: any) => (
+                        <BlockInviteSection key={block.id} block={block} />
+                    ))
+                ) : (
+                    <div className="border border-dashed border-white/10 rounded-lg p-4 text-center">
+                        <p className="text-xs text-gray-600">No festival blocks found. Add blocks in Festival Hub first, then come back to invite block ticket holders.</p>
+                    </div>
+                )}
+
+                {inviteResult && (
+                    <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-4 space-y-1">
+                        <p className="text-sm font-bold text-green-400">Done!</p>
+                        <p className="text-xs text-gray-400">Sent: <span className="text-white font-bold">{inviteResult.sent}</span></p>
+                        <p className="text-xs text-gray-400">Already invited: <span className="text-white font-bold">{inviteResult.alreadyInvited}</span></p>
+                        {inviteResult.errors > 0 && <p className="text-xs text-red-400">Failed: {inviteResult.errors}</p>}
+                    </div>
+                )}
+            </div>
+
+            {/* ── INVITE TRACKING ───────────────────────────────────────────── */}
+            <div className="bg-gray-900 rounded-xl border border-white/5 overflow-hidden">
+                <div className="p-4 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Virtual Pass Tracking ({invites.length} invited)</h3>
+                    <div className="flex gap-4 text-xs flex-wrap">
+                        <span className="text-gray-500">Signed up: <span className="text-white font-bold">{invites.filter(i => i.accessGranted).length}</span></span>
+                        <span className="text-gray-500">Watched: <span className="text-blue-400 font-bold">{invites.filter(i => i.status === 'watched').length}</span></span>
+                        <span className="text-gray-500">Pending: <span className="text-amber-400 font-bold">{invites.filter(i => !i.accessGranted).length}</span></span>
+                    </div>
+                </div>
+                {loadingInvites ? (
+                    <div className="p-8 text-center text-gray-600 text-sm">Loading...</div>
+                ) : invites.length === 0 ? (
+                    <div className="p-8 text-center text-gray-600 text-sm">No invites sent yet.</div>
+                ) : (
+                    <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
+                        {invites.map(invite => (
+                            <div key={invite.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                                <p className="text-sm text-white font-mono">{invite.email}</p>
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                    {invite.status === 'watched' ? (
+                                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">
+                                            Watched ({invite.watchedMovies?.length || 0} films)
+                                        </span>
+                                    ) : invite.accessGranted ? (
+                                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-green-900/30 text-green-400">
+                                            Signed Up
+                                        </span>
+                                    ) : (
+                                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-900/30 text-amber-400">
+                                            Pending
+                                        </span>
+                                    )}
+                                    {invite.invitedAt && (
+                                        <p className="text-[9px] text-gray-600">{new Date(invite.invitedAt).toLocaleDateString()}</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* ── EMAIL LIST ────────────────────────────────────────────── */}
             <div className="bg-gray-900 rounded-xl border border-white/5 overflow-hidden">

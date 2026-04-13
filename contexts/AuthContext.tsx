@@ -141,6 +141,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const result = await auth.signInWithEmailAndPassword(email, password);
         if (result.user) {
             await writeSessionToken(result.user.uid);
+
+            // Auto-grant festival access if this email is on the invite list
+            const db = getDbInstance();
+            if (db) {
+                const invite = await db.collection('pwff_invites').doc(email.toLowerCase().trim()).get().catch(() => null);
+                if (invite?.exists && !invite.data()?.accessGranted) {
+                    const inviteData = invite.data();
+                    if (inviteData?.accessType === 'block' && inviteData?.blockId) {
+                        const expiry = new Date();
+                        expiry.setFullYear(expiry.getFullYear() + 1);
+                        await updateUserProfile(result.user.uid, {
+                            unlockedBlocks: { [inviteData.blockId]: expiry.toISOString() }
+                        });
+                    } else {
+                        await updateUserProfile(result.user.uid, { hasFestivalAllAccess: true });
+                    }
+                    await db.collection('pwff_invites').doc(email.toLowerCase().trim()).update({
+                        accessGranted: true,
+                        accessGrantedAt: new Date().toISOString(),
+                        uid: result.user.uid,
+                        status: 'signed_in',
+                    }).catch(() => {});
+                }
+            }
         }
     };
 
@@ -174,6 +198,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (result.user) {
             await createUserProfile(result.user.uid, email, name);
             await writeSessionToken(result.user.uid);
+
+            // Auto-grant festival access if this email is on the invite list
+            const db = getDbInstance();
+            if (db) {
+                const invite = await db.collection('pwff_invites').doc(email.toLowerCase().trim()).get().catch(() => null);
+                if (invite?.exists && !invite.data()?.accessGranted) {
+                    const inviteData = invite.data();
+                    if (inviteData?.accessType === 'block' && inviteData?.blockId) {
+                        const expiry = new Date();
+                        expiry.setFullYear(expiry.getFullYear() + 1);
+                        await updateUserProfile(result.user.uid, {
+                            unlockedBlocks: { [inviteData.blockId]: expiry.toISOString() }
+                        });
+                    } else {
+                        await updateUserProfile(result.user.uid, { hasFestivalAllAccess: true });
+                    }
+                    await db.collection('pwff_invites').doc(email.toLowerCase().trim()).update({
+                        accessGranted: true,
+                        accessGrantedAt: new Date().toISOString(),
+                        uid: result.user.uid,
+                        status: 'signed_up',
+                    }).catch(() => {});
+                }
+            }
         }
     };
     
