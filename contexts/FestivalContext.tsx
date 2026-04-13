@@ -186,19 +186,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 return new Date(a.watchPartyStartTime).getTime() - new Date(b.watchPartyStartTime).getTime();
             });
 
-        // Debug logging
-        const watchPartyMovies = movieArray.filter(m => m.isWatchPartyEnabled);
-        if (watchPartyMovies.length > 0) {
-            console.log('[WATCH PARTY DEBUG] Movies with isWatchPartyEnabled:', watchPartyMovies.map(m => ({
-                key: m.key,
-                title: m.title,
-                watchPartyStartTime: m.watchPartyStartTime,
-                isUpcoming: m.watchPartyStartTime ? new Date(m.watchPartyStartTime).getTime() > now.getTime() : false
-            })));
-        }
-        if (upcomingParties.length > 0) {
-            console.log('[WATCH PARTY DEBUG] Upcoming parties found:', upcomingParties[0]?.title);
-        }
+
 
         if (upcomingParties[0]) return upcomingParties[0];
 
@@ -259,18 +247,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (res.ok) {
                 const data = await res.json();
                 if (data.movies) {
-                    // DEBUG: Log movies with watch party enabled
-                    const wpMovies = Object.values(data.movies).filter((m: any) => m.isWatchPartyEnabled);
-                    if (wpMovies.length > 0) {
-                        console.log('[FESTIVAL CONTEXT] Movies from API with isWatchPartyEnabled:', wpMovies.map((m: any) => ({
-                            key: m.key,
-                            title: m.title,
-                            isWatchPartyEnabled: m.isWatchPartyEnabled,
-                            watchPartyStartTime: m.watchPartyStartTime
-                        })));
-                    } else {
-                        console.log('[FESTIVAL CONTEXT] No movies from API have isWatchPartyEnabled=true');
-                    }
                     setMovies(data.movies);
                 }
                 if (data.categories) setCategories(data.categories);
