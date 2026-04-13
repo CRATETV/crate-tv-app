@@ -409,12 +409,13 @@ const App: React.FC = () => {
     if (settings.maintenanceMode) return <MaintenanceScreen />;
 
     const mainPaddingTop = useMemo(() => {
-        // Banner sits below the header (64px), so total offset = header + banner
-        const headerHeight = 64;
+        // Banner is at top:0 (above header). Header sits below banner via marginTop.
+        // Total visual offset = bannerHeight (48) + headerHeight (64) for non-home pages.
+        // Home page hero goes under the header so only banner height matters.
         const bannerHeight = activeBannerType !== 'NONE' ? 48 : 0;
+        const headerHeight = 64;
         const isHomePage = window.location.pathname === '/';
-        if (!isHomePage) return `${headerHeight + bannerHeight}px`;
-        // Home page hero goes under header — only shift for banner
+        if (!isHomePage) return `${bannerHeight + headerHeight}px`;
         return `${bannerHeight}px`;
     }, [activeBannerType]);
 

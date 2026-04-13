@@ -103,7 +103,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     // Position banner below the fixed header (header is ~64px tall on desktop)
     const stagingOffset = sessionStorage.getItem('crateTvStaging') === 'true' ? 32 : 0;
-    const topOffset = `${64 + stagingOffset}px`;
+    const topOffset = `${stagingOffset}px`;
 
     return (
         <div 

@@ -268,9 +268,9 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                             <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Block Identity</label>
                             <input value={block.title} onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)} className="bg-transparent text-white font-black text-2xl uppercase tracking-tight outline-none w-full italic" placeholder="Block Title" />
                         </div>
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-wrap items-center gap-6">
                             <div className="space-y-1">
-                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Start Time</label>
+                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Display Time</label>
                                 <input value={block.time} onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)} className="bg-transparent text-gray-400 text-sm font-black uppercase tracking-widest outline-none border-b border-white/5" placeholder="7:00 PM" />
                             </div>
                             <div className="space-y-1">
@@ -286,6 +286,32 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                         className="bg-transparent text-white font-black text-sm w-20 outline-none"
                                         placeholder="0.00"
                                     />
+                                </div>
+                            </div>
+                        </div>
+                        {/* ── WATCH PARTY SETTINGS ── */}
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                            <label className="text-[8px] text-red-500 font-black tracking-widest uppercase">Watch Party Settings</label>
+                            <div className="flex flex-wrap items-center gap-6">
+                                <div className="flex items-center gap-3">
+                                    <label className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Enable Watch Party</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleBlockChange(dayIndex, blockIndex, 'isWatchPartyEnabled', !block.isWatchPartyEnabled)}
+                                        className={`relative w-10 h-5 rounded-full transition-colors ${block.isWatchPartyEnabled ? 'bg-red-600' : 'bg-gray-700'}`}
+                                    >
+                                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${block.isWatchPartyEnabled ? 'left-5' : 'left-0.5'}`} />
+                                    </button>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Scheduled Start Date &amp; Time</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={formatISOForInput(block.watchPartyStartTime)}
+                                        onChange={e => handleBlockChange(dayIndex, blockIndex, 'watchPartyStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                                        className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-red-500"
+                                    />
+                                    <p className="text-[8px] text-gray-700">Set this → banner countdown appears on the site automatically</p>
                                 </div>
                             </div>
                         </div>

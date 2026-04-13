@@ -158,7 +158,57 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             console.log('[WATCH PARTY DEBUG] Upcoming parties found:', upcomingParties[0]?.title);
         }
 
-        return upcomingParties[0] || null;
+        if (upcomingParties[0]) return upcomingParties[0];
+
+        // 3. Check festival BLOCKS for upcoming watch parties
+        // (blocks are NOT in movieArray — they live in festivalData)
+        const allBlocks = festivalData.flatMap(d => d.blocks);
+        const upcomingBlocks = allBlocks
+            .filter(block => {
+                if (!block.isWatchPartyEnabled) return false;
+                // Skip if already live
+                if (activeParties[block.id]?.status === 'live') return false;
+                // Skip if ended
+                if (allPartyStates[block.id]?.status === 'ended') return false;
+                // Must have a start time set
+                if (!block.watchPartyStartTime) return false;
+
+                const start = new Date(block.watchPartyStartTime);
+                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                const twoHoursInMs = 2 * 60 * 60 * 1000;
+
+                // Show if starting within 7 days
+                if (start.getTime() > now.getTime() && start.getTime() < (now.getTime() + sevenDaysInMs)) return true;
+                // Show for up to 2 hours after scheduled start
+                if (start.getTime() <= now.getTime() && now.getTime() - start.getTime() < twoHoursInMs) return true;
+
+                return false;
+            })
+            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+
+        if (upcomingBlocks.length > 0) {
+            const block = upcomingBlocks[0];
+            console.log('[WATCH PARTY DEBUG] Upcoming festival block found:', block.title, block.watchPartyStartTime);
+            const firstFilm = movies[block.movieKeys?.[0]];
+            return {
+                key: block.id,
+                title: block.title,
+                watchPartyStartTime: block.watchPartyStartTime,
+                isWatchPartyEnabled: true,
+                isWatchPartyPaid: (block.price || 0) > 0,
+                watchPartyPrice: block.price,
+                poster: firstFilm?.poster || '',
+                director: firstFilm?.director || 'Festival Event',
+                synopsis: '',
+                cast: [],
+                trailer: '',
+                fullMovie: '',
+                tvPoster: '',
+                likes: 0,
+            } as Movie;
+        }
+
+        return null;
     }, [activeParties, allPartyStates, movies, festivalData, now, settings]);
 
     const fetchData = async (forceNoCache = false) => {

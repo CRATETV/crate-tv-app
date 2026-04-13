@@ -655,7 +655,55 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">05. Live Broadcast Relay</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">05. Watch Party</h4>
+                                <div className="bg-red-900/5 border border-red-500/20 p-8 rounded-3xl space-y-6">
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-black text-white uppercase tracking-widest">Enable Watch Party</p>
+                                            <p className="text-[9px] text-gray-500 uppercase">Turns on the banner countdown and lobby for this film</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="isWatchPartyEnabled" checked={formData.isWatchPartyEnabled} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                        </label>
+                                    </div>
+                                    {formData.isWatchPartyEnabled && (
+                                        <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                                            <div className="space-y-2">
+                                                <label className="form-label">Scheduled Start Date &amp; Time</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    name="watchPartyStartTime"
+                                                    value={formData.watchPartyStartTime ? new Date(formData.watchPartyStartTime).toISOString().slice(0,16) : ''}
+                                                    onChange={handleChange}
+                                                    className="form-input bg-black/40 border-red-500/30"
+                                                />
+                                                <p className="text-[9px] text-gray-600 uppercase font-bold">Set this → banner countdown appears on the site immediately. Leave blank for open lobby.</p>
+                                            </div>
+                                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-black text-white uppercase tracking-widest">Paid Watch Party</p>
+                                                    <p className="text-[9px] text-gray-500 uppercase">Requires ticket purchase to enter lobby</p>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" name="isWatchPartyPaid" checked={formData.isWatchPartyPaid} onChange={handleChange} className="sr-only peer" />
+                                                    <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                                </label>
+                                            </div>
+                                            {formData.isWatchPartyPaid && (
+                                                <div className="relative">
+                                                    <label className="form-label">Ticket Price</label>
+                                                    <span className="absolute left-4 bottom-4 text-gray-500 font-bold">$</span>
+                                                    <input type="number" name="watchPartyPrice" value={formData.watchPartyPrice} onChange={handleChange} className="form-input !pl-8 bg-black/40" step="0.01" min="0" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">06. Live Broadcast Relay</h4>
                                 <div className="bg-indigo-900/5 border border-indigo-500/20 p-8 rounded-3xl space-y-6">
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                         <div className="space-y-1">

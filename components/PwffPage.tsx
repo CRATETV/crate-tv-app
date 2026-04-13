@@ -472,14 +472,41 @@ const ProgrammeMode: React.FC = () => {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const PwffPage: React.FC = () => {
-    const { settings, isLoading, livePartyMovie, activeParties } = useFestival();
+    const { settings, isLoading, livePartyMovie, activeParties, festivalData, movies } = useFestival();
     const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user } = useAuth();
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
+    const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
 
     useEffect(() => { trackPageView(); }, []);
 
     const showBanner = !!livePartyMovie && !bannerDismissed;
+
+    // Find the block associated with the live party movie
+    const liveBlock = useMemo(() => {
+        if (!livePartyMovie) return null;
+        return festivalData.flatMap(d => d.blocks).find(b => b.id === livePartyMovie.key || b.movieKeys.includes(livePartyMovie.key)) || null;
+    }, [livePartyMovie, festivalData]);
+
+    const hasAccessToLive = useMemo(() => {
+        if (!livePartyMovie) return false;
+        if (hasFestivalAllAccess) return true;
+        if (unlockedWatchPartyKeys.has(livePartyMovie.key)) return true;
+        if (liveBlock && unlockedFestivalBlockIds.has(liveBlock.id)) return true;
+        return false;
+    }, [livePartyMovie, hasFestivalAllAccess, unlockedWatchPartyKeys, unlockedFestivalBlockIds, liveBlock]);
+
+    // Banner click: if they have access → open lobby; if not → open ticket flow
+    const handleBannerClick = () => {
+        if (!livePartyMovie) return;
+        if (hasAccessToLive) {
+            setShowLobbyFor(livePartyMovie.key);
+        } else if (liveBlock) {
+            setTicketFlowBlock(liveBlock);
+        } else {
+            setShowLobbyFor(livePartyMovie.key);
+        }
+    };
 
     const lobbyMovie = useMemo(() => {
         if (!showLobbyFor || !livePartyMovie) return null;
@@ -497,7 +524,7 @@ const PwffPage: React.FC = () => {
             {showBanner && (
                 <LiveWatchPartyBanner
                     movie={livePartyMovie!}
-                    onEnterLobby={() => setShowLobbyFor(livePartyMovie!.key)}
+                    onEnterLobby={handleBannerClick}
                     onClose={() => setBannerDismissed(true)}
                 />
             )}
@@ -508,6 +535,14 @@ const PwffPage: React.FC = () => {
                 description={settings?.pwffTeaserDescription}
                 tagline={settings?.pwffTeaserTagline}
             />
+            {ticketFlowBlock && (() => {
+                const first = movies[ticketFlowBlock.movieKeys?.[0]];
+                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
+                return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
+                    onClose={() => setTicketFlowBlock(null)}
+                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
+                />;
+            })()}
             {lobbyMovie && showLobbyFor && (
                 <div className="fixed inset-0 z-[200] overflow-y-auto">
                     <WatchPartyLobby
@@ -516,6 +551,7 @@ const PwffPage: React.FC = () => {
                         onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        onBuyTicket={() => { if (liveBlock) setTicketFlowBlock(liveBlock); }}
                         onClose={() => setShowLobbyFor(null)}
                     />
                 </div>
@@ -529,12 +565,20 @@ const PwffPage: React.FC = () => {
             {showBanner && (
                 <LiveWatchPartyBanner
                     movie={livePartyMovie!}
-                    onEnterLobby={() => setShowLobbyFor(livePartyMovie!.key)}
+                    onEnterLobby={handleBannerClick}
                     onClose={() => setBannerDismissed(true)}
                 />
             )}
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} topOffset={showBanner ? '3rem' : '0px'} />
             <ProgrammeMode />
+            {ticketFlowBlock && (() => {
+                const first = movies[ticketFlowBlock.movieKeys?.[0]];
+                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
+                return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
+                    onClose={() => setTicketFlowBlock(null)}
+                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
+                />;
+            })()}
             {lobbyMovie && showLobbyFor && (
                 <div className="fixed inset-0 z-[200] overflow-y-auto">
                     <WatchPartyLobby
@@ -543,6 +587,7 @@ const PwffPage: React.FC = () => {
                         onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        onBuyTicket={() => { if (liveBlock) setTicketFlowBlock(liveBlock); }}
                         onClose={() => setShowLobbyFor(null)}
                     />
                 </div>
