@@ -147,7 +147,7 @@ const WatchPartyNotificationModal: React.FC<Props> = ({ movie, onGetTicket, onDi
                             className="w-full bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-3.5 rounded-xl transition-all"
                         >
                             {movie.isWatchPartyPaid
-                                ? `Get Ticket — $${movie.watchPartyPrice?.toFixed(2) ?? '10.00'}`
+                                ? `Get Ticket — $${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}`
                                 : 'Enter Lobby'
                             }
                         </button>

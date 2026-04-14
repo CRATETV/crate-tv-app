@@ -1,1 +1,2 @@
-²æ
+sub init()
+end sub

@@ -157,7 +157,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                 onClick={onBuyTicket}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '10.00'}
+                                Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}
                             </button>
                         )}
                     </div>
@@ -304,7 +304,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                     onClick={onBuyTicket}
                                     className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                 >
-                                    Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '10.00'}
+                                    Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}
                                 </button>
                                 <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
                             </div>

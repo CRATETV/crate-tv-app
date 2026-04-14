@@ -136,6 +136,7 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
             <SquarePaymentModal
                 paymentType="block"
                 block={block}
+                priceOverride={block.price && block.price > 0 ? block.price : undefined}
                 onClose={onClose}
                 onPaymentSuccess={handlePaymentSuccess}
             />
