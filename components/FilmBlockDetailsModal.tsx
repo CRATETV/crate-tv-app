@@ -37,7 +37,6 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({ block, al
     
     const handlePaymentSuccess = () => {
         // Handle post-payment logic
-        console.log("Payment successful!");
     };
 
     const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);

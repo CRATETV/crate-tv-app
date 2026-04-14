@@ -1,4 +1,5 @@
 
+import { toast } from './Toast';
 import React, { useState, useEffect } from 'react';
 
 const SmartInstallPrompt: React.FC = () => {
@@ -37,7 +38,7 @@ const SmartInstallPrompt: React.FC = () => {
 
     const handleInstall = async () => {
         if (!deferredPrompt) {
-            alert("To install Crate TV, tap the 'Share' icon in your browser menu and select 'Add to Home Screen'.");
+            toast.info("Tap the Share icon in your browser, then 'Add to Home Screen'.");
             handleDismiss();
             return;
         }

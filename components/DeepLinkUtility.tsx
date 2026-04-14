@@ -1,4 +1,5 @@
 
+import { toast } from './Toast';
 import React from 'react';
 
 interface DeepLinkUtilityProps {
@@ -19,7 +20,7 @@ const DeepLinkUtility: React.FC<DeepLinkUtilityProps> = ({ movieKey, onClose }) 
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
-        alert('Protocol copied to clipboard.');
+        toast.success('Link copied to clipboard.');
     };
 
     return (

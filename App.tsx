@@ -69,6 +69,29 @@ const App: React.FC = () => {
             next.add(key);
             return next;
         });
+        // Auto-restore banner after 30 minutes so users can rejoin
+        setTimeout(() => {
+            setDismissedBannerKeys(prev => {
+                const next = new Set(prev);
+                next.delete(key);
+                return next;
+            });
+        }, 30 * 60 * 1000);
+    }, []);
+
+    // Re-show upcoming banner when user navigates to a new page
+    // (but keep live banners dismissed so they don't re-appear mid-party)
+    useEffect(() => {
+        const onNavigate = () => {
+            setDismissedBannerKeys(prev => {
+                const next = new Set(prev);
+                // Only remove upcoming-* keys, keep live-* dismissed
+                next.forEach(k => { if (k.startsWith('upcoming-')) next.delete(k); });
+                return next;
+            });
+        };
+        window.addEventListener('pushstate', onNavigate);
+        return () => window.removeEventListener('pushstate', onNavigate);
     }, []);
 
     // Listen for video preload requests from MovieCard hover
@@ -220,7 +243,7 @@ const App: React.FC = () => {
     const upcomingWatchPartyMovie = useMemo(() => {
         const now = new Date();
         const twoHoursInMs = 2 * 60 * 60 * 1000;
-        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days — covers festival planning window
 
         const isEligible = (startTimeStr: string, key: string, isPaid?: boolean) => {
             const start = new Date(startTimeStr);
@@ -301,7 +324,8 @@ const App: React.FC = () => {
             const isLiveNow = activeParties[upcomingWatchPartyMovie.key]?.status === 'live';
             const sessionKey = `wp_notified_${upcomingWatchPartyMovie.key}_${isLiveNow ? 'live' : 'upcoming'}`;
             if (!sessionStorage.getItem(sessionKey)) {
-                setTimeout(() => setShowWatchPartyModal(true), 1500);
+                // Modal suppressed — banner handles notification
+                // setTimeout(() => setShowWatchPartyModal(true), 1500);
                 setWatchPartyModalShown(true);
                 sessionStorage.setItem(sessionKey, 'true');
             }
@@ -405,19 +429,16 @@ const App: React.FC = () => {
         }
     }, [heroMovies.length]);
 
-    if (isLoading) return <LoadingSpinner />;
-    if (settings.maintenanceMode) return <MaintenanceScreen />;
-
     const mainPaddingTop = useMemo(() => {
-        // Banner is at top:0 (above header). Header sits below banner via marginTop.
-        // Total visual offset = bannerHeight (48) + headerHeight (64) for non-home pages.
-        // Home page hero goes under the header so only banner height matters.
         const bannerHeight = activeBannerType !== 'NONE' ? 48 : 0;
         const headerHeight = 64;
         const isHomePage = window.location.pathname === '/';
         if (!isHomePage) return `${bannerHeight + headerHeight}px`;
         return `${bannerHeight}px`;
     }, [activeBannerType]);
+
+    if (isLoading) return <LoadingSpinner />;
+    if (settings.maintenanceMode) return <MaintenanceScreen />;
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">

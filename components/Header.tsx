@@ -83,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({
         : activeNotificationMovie ? `/movie/${activeNotificationMovie.key}?play=true` : '/';
 
     return (
-        <header className={headerClasses} style={{ marginTop: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
+        <header className={headerClasses} style={{ top: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
             <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-4">

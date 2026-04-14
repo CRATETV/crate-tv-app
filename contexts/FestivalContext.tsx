@@ -54,7 +54,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 1000); // Update every second for smooth transitions
+        // Tick every 30s normally; Countdown component handles per-second display
+        const timer = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(timer);
     }, []);
 
@@ -71,7 +72,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [festivalConfig, now]);
 
     const livePartyMovie = useMemo(() => {
-        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days
         const twoHoursInMs = 2 * 60 * 60 * 1000;
 
         // ── PRIORITY 0: Check dedicated real-time schedule (instant, no S3 delay) ──
@@ -168,7 +169,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (!m.watchPartyStartTime) return false;
 
                 const start = new Date(m.watchPartyStartTime);
-                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days
                 const twoHoursInMs = 2 * 60 * 60 * 1000;
 
                 // Show if in future within 7 days
@@ -204,7 +205,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (!block.watchPartyStartTime) return false;
 
                 const start = new Date(block.watchPartyStartTime);
-                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days
                 const twoHoursInMs = 2 * 60 * 60 * 1000;
 
                 // Show if starting within 7 days
@@ -218,7 +219,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (upcomingBlocks.length > 0) {
             const block = upcomingBlocks[0];
-            console.log('[WATCH PARTY DEBUG] Upcoming festival block found:', block.title, block.watchPartyStartTime);
             const firstFilm = movies[block.movieKeys?.[0]];
             return {
                 key: block.id,
@@ -268,125 +268,103 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     useEffect(() => {
         fetchData();
-        
+
+        const unsubs: (() => void)[] = [];
+
         const init = async () => {
             const auth = await initializeFirebaseAuth();
             const db = getDbInstance();
-            if (db) {
-                // REAL-TIME MOVIES LISTENER - for watch party settings
-                db.collection('data').doc('movies').onSnapshot(doc => {
-                    if (doc.exists) {
-                        const firebaseMovies = doc.data() as Record<string, Movie>;
-                        setMovies(prev => {
-                            const merged = { ...prev };
-                            Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
-                                if (merged[key]) {
-                                    merged[key] = {
-                                        ...merged[key],
-                                        isWatchPartyEnabled: fbMovie.isWatchPartyEnabled ?? merged[key].isWatchPartyEnabled,
-                                        watchPartyStartTime: fbMovie.watchPartyStartTime ?? merged[key].watchPartyStartTime,
-                                        isWatchPartyPaid: fbMovie.isWatchPartyPaid ?? merged[key].isWatchPartyPaid,
-                                        watchPartyPrice: fbMovie.watchPartyPrice ?? merged[key].watchPartyPrice,
-                                    };
-                                } else {
-                                    merged[key] = fbMovie;
-                                }
-                            });
-                            return merged;
-                        });
-                    }
-                });
+            if (!db) return;
 
-                // REAL-TIME VIEW COUNT LISTENER
-                db.collection('view_counts').onSnapshot(snapshot => {
-                    const counts: Record<string, number> = {};
-                    snapshot.forEach(doc => {
-                        counts[doc.id] = doc.data().count || 0;
-                    });
-                    setViewCounts(counts);
-                });
-
-                db.collection('content').doc('settings').onSnapshot(doc => {
-                    if (doc.exists) setSettings(doc.data() as SiteSettings);
-                });
-
-                db.collection('festival').doc('config').onSnapshot(doc => {
-                    if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
-                });
-
-                db.collection('festival').doc('schedule').collection('days').onSnapshot(snap => {
-                    if (!snap.empty) {
-                        const days: FestivalDay[] = [];
-                        snap.forEach(doc => {
-                            const data = doc.data() as FestivalDay;
-                            days.push(data);
-                        });
-                        setFestivalData(days.filter(d => d && d.day).sort((a, b) => a.day - b.day));
-                    }
-                });
-
-                db.collection('movie_pipeline').onSnapshot(snapshot => {
-                    const entries: MoviePipelineEntry[] = [];
-                    snapshot.forEach(doc => {
-                        entries.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry);
-                    });
-                    setPipeline(entries);
-                });
-
-                // REAL-TIME WATCH PARTY SCHEDULE — instant banner on admin save
-                db.collection('watch_party_schedule').onSnapshot(snapshot => {
-                    const scheduled: Record<string, any> = {};
-                    snapshot.forEach(doc => { scheduled[doc.id] = doc.data(); });
-                    setScheduledParties(scheduled);
-                }, () => {});
-
-                db.collection('watch_parties').onSnapshot(snapshot => {
-                    const liveStates: Record<string, WatchPartyState> = {};
-                    const allStates: Record<string, WatchPartyState> = {};
-                    snapshot.forEach(doc => {
-                        const data = doc.data() as WatchPartyState;
-                        allStates[doc.id] = data;
-                        if (data.status === 'live') {
-                            liveStates[doc.id] = data;
+            // Movies — watch party fields
+            unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
+                if (!doc.exists) return;
+                const firebaseMovies = doc.data() as Record<string, Movie>;
+                setMovies(prev => {
+                    const merged = { ...prev };
+                    Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
+                        if (merged[key]) {
+                            merged[key] = {
+                                ...merged[key],
+                                isWatchPartyEnabled: fbMovie.isWatchPartyEnabled ?? merged[key].isWatchPartyEnabled,
+                                watchPartyStartTime: fbMovie.watchPartyStartTime ?? merged[key].watchPartyStartTime,
+                                isWatchPartyPaid: fbMovie.isWatchPartyPaid ?? merged[key].isWatchPartyPaid,
+                                watchPartyPrice: fbMovie.watchPartyPrice ?? merged[key].watchPartyPrice,
+                            };
+                        } else {
+                            merged[key] = fbMovie;
                         }
                     });
-                    setActiveParties(liveStates);
-                    setAllPartyStates(allStates);
-                }, (error) => {
-                    // Silently ignore permission errors — user may not be logged in yet
-                    console.warn('[WATCH PARTY] Snapshot permission error — waiting for auth:', error.code);
+                    return merged;
                 });
+            }));
 
-                // Re-subscribe to watch_parties once user logs in
-                if (auth) {
-                    auth.onAuthStateChanged(user => {
-                        if (user) {
-                            // REAL-TIME WATCH PARTY SCHEDULE — instant banner on admin save
-                db.collection('watch_party_schedule').onSnapshot(snapshot => {
-                    const scheduled: Record<string, any> = {};
-                    snapshot.forEach(doc => { scheduled[doc.id] = doc.data(); });
-                    setScheduledParties(scheduled);
-                }, () => {});
+            // View counts
+            unsubs.push(db.collection('view_counts').onSnapshot(snapshot => {
+                const counts: Record<string, number> = {};
+                snapshot.forEach(doc => { counts[doc.id] = doc.data().count || 0; });
+                setViewCounts(counts);
+            }, () => {}));
 
-                db.collection('watch_parties').onSnapshot(snapshot => {
-                                const liveStates: Record<string, WatchPartyState> = {};
-                                const allStates: Record<string, WatchPartyState> = {};
-                                snapshot.forEach(doc => {
-                                    const data = doc.data() as WatchPartyState;
-                                    allStates[doc.id] = data;
-                                    if (data.status === 'live') {
-                                        liveStates[doc.id] = data;
-                                    }
-                                });
-                                setActiveParties(liveStates);
-                                setAllPartyStates(allStates);
-                            });
-                        }
-                    });
+            // Site settings
+            unsubs.push(db.collection('content').doc('settings').onSnapshot(doc => {
+                if (doc.exists) setSettings(doc.data() as SiteSettings);
+            }, () => {}));
+
+            // Festival config
+            unsubs.push(db.collection('festival').doc('config').onSnapshot(doc => {
+                if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
+            }, () => {}));
+
+            // Festival schedule days
+            unsubs.push(db.collection('festival').doc('schedule').collection('days').onSnapshot(snap => {
+                if (!snap.empty) {
+                    const days: FestivalDay[] = [];
+                    snap.forEach(doc => days.push(doc.data() as FestivalDay));
+                    setFestivalData(days.filter(d => d?.day).sort((a, b) => a.day - b.day));
                 }
+            }, () => {}));
+
+            // Movie pipeline
+            unsubs.push(db.collection('movie_pipeline').onSnapshot(snapshot => {
+                const entries: MoviePipelineEntry[] = [];
+                snapshot.forEach(doc => entries.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry));
+                setPipeline(entries);
+            }, () => {}));
+
+            // Watch party schedule — instant banner
+            unsubs.push(db.collection('watch_party_schedule').onSnapshot(snapshot => {
+                const scheduled: Record<string, any> = {};
+                snapshot.forEach(doc => { scheduled[doc.id] = doc.data(); });
+                setScheduledParties(scheduled);
+            }, () => {}));
+
+            // Watch parties — live status
+            const subscribeWatchParties = () => db.collection('watch_parties').onSnapshot(snapshot => {
+                const liveStates: Record<string, WatchPartyState> = {};
+                const allStates: Record<string, WatchPartyState> = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data() as WatchPartyState;
+                    allStates[doc.id] = data;
+                    if (data.status === 'live') liveStates[doc.id] = data;
+                });
+                setActiveParties(liveStates);
+                setAllPartyStates(allStates);
+            }, () => {});
+
+            unsubs.push(subscribeWatchParties());
+
+            // Re-subscribe on auth change to pick up permission upgrades
+            if (auth) {
+                auth.onAuthStateChanged(user => {
+                    if (user) unsubs.push(subscribeWatchParties());
+                });
             }
         };
+
         init();
+
+        return () => { unsubs.forEach(fn => fn()); };
     }, []);
 
     const value: FestivalContextType = {

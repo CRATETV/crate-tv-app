@@ -1,4 +1,5 @@
 
+import { toast } from './Toast';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -504,7 +505,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             <div className="fixed inset-0 bg-black flex flex-col z-[500]">
                 <div className="p-4 bg-red-600 flex justify-between items-center">
                     <h1 className="font-black uppercase tracking-widest text-xs">Crate Remote</h1>
-                    <button onClick={() => window.location.href = '/'} className="text-[10px] font-bold">EXIT</button>
+                    <button onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-bold">EXIT</button>
                 </div>
                 <div className="flex-grow flex flex-col overflow-hidden">
                     <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
@@ -562,7 +563,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                     <p className="text-gray-500">This watch party has been ended by the host. Thank you for joining!</p>
                     <button 
-                        onClick={() => window.location.href = '/'}
+                        onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
                         className="bg-white text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
                     >
                         Return Home
@@ -599,7 +600,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 movie={movie}
                 partyState={partyState}
                 viewerCount={viewerCount}
-                onClose={() => window.location.href = '/'}
+                onClose={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
                 onRewatch={() => {
                     setShowCredits(false);
                     setIsEnded(false);
@@ -657,7 +658,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             setIsBackstageVerified(true);
                                             unlockWatchParty(movieKey);
                                         } else if (key) {
-                                            alert("Invalid Protocol Key.");
+                                            toast.error("Invalid access key.");
                                         }
                                     }}
                                     className="text-gray-600 hover:text-white transition-colors"
@@ -732,7 +733,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-10">
                                                     <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
                                                     <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
-                                                    <button onClick={() => window.location.href='/public-square'} className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 hover:text-white transition-colors">The Public Square</button>
+                                                    <button onClick={() => { window.history.pushState({}, '', '/public-square'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 hover:text-white transition-colors">The Public Square</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -769,7 +770,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     setIsBackstageVerified(true);
                                     unlockWatchParty(movieKey);
                                 } else {
-                                    alert("Invalid Protocol Key.");
+                                    toast.error("Invalid access key.");
                                 }
                             }}
                         />
@@ -788,7 +789,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 setIsBackstageVerified(true);
                                 unlockWatchParty(movieKey);
                             } else {
-                                alert("Invalid Protocol Key.");
+                                toast.error("Invalid access key.");
                             }
                         }}
                     />

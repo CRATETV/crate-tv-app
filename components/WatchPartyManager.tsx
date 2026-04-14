@@ -952,13 +952,7 @@ const WatchPartyManager: React.FC<{
                 JSON.stringify(allMovies[key]) !== JSON.stringify(localMovies[key])
             ).map(key => localMovies[key]);
             
-            // DEBUG: Log what's being saved
-            console.log('[WATCH PARTY SAVE] Changed movies:', changedMovies.map(m => ({
-                key: m.key,
-                title: m.title,
-                isWatchPartyEnabled: m.isWatchPartyEnabled,
-                watchPartyStartTime: m.watchPartyStartTime
-            })));
+
             
             // Save modified festival data
             const festChanged = JSON.stringify(festivalData) !== JSON.stringify(localFestivalData);
@@ -972,7 +966,6 @@ const WatchPartyManager: React.FC<{
             if (crateChanged && localCrateFestConfig) promises.push(onSaveCrateFest(localCrateFestConfig));
 
             await Promise.all(promises);
-            console.log('[WATCH PARTY SAVE] Save completed successfully');
             setSaveStatus('success');
         } catch (error) {
             console.error("Failed to save watch party settings:", error);

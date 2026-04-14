@@ -53,6 +53,8 @@ import JuryRoomPage from './components/JuryRoomPage';
 import InstitutionalGatewayPage from './components/InstitutionalGatewayPage';
 import LibraryPage from './components/LibraryPage';
 import ClaimPage from './components/ClaimPage';
+import NotFoundPage from './components/NotFoundPage';
+import ToastContainer from './components/Toast';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -226,7 +228,7 @@ const AppRouter: React.FC = () => {
     case '/developer-guide':
       return <DeveloperGuidePage />;
     default:
-      return user ? <App /> : <LandingPage />;
+      return <NotFoundPage />;
   }
 };
 
@@ -235,6 +237,7 @@ const MainApp: React.FC = () => (
     <FestivalProvider>
       <GlobalErrorBoundary>
         <AppRouter />
+        <ToastContainer />
       </GlobalErrorBoundary>
     </FestivalProvider>
   </AuthProvider>

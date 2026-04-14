@@ -1,3 +1,4 @@
+import { toast } from './Toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { Actor } from '../types';
 import { findImdbUrl } from '../services/geminiService';
@@ -63,13 +64,13 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
             await navigator.share(shareData);
         } else {
             await navigator.clipboard.writeText(profileUrl);
-            alert("Profile link copied to clipboard!");
+            toast.success("Profile link copied!");
         }
     } catch (error) {
         console.error("Share failed", error);
         // Fallback to simple link copy
         navigator.clipboard.writeText(profileUrl);
-        alert("Profile link copied!");
+        toast.success("Profile link copied!");
     } finally {
         setIsSharing(false);
     }

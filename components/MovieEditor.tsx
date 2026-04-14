@@ -1,4 +1,5 @@
 
+import { toast } from './Toast';
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
@@ -232,7 +233,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
             setSelectedMovieKey('');
         } catch (err) {
-            alert("Save failed.");
+            toast.error("Save failed. Please try again.");
         } finally {
             setIsSaving(false);
         }
@@ -243,9 +244,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setIsSpotlighting(true);
         try {
             await onSetNowStreaming(formData.key);
-            alert(`"${formData.title}" is now the Global Spotlight Selection.`);
+            toast.success(`"${formData.title}" is now the Spotlight.`);
         } catch (err) {
-            alert("Spotlight update failed.");
+            toast.error("Spotlight update failed.");
         } finally {
             setIsSpotlighting(false);
         }
@@ -261,7 +262,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
             setFormData(null);
         } catch (err) {
-            alert("Delete sequence failed.");
+            toast.error("Delete failed. Please try again.");
         } finally {
             setIsDeleting(false);
         }
@@ -295,7 +296,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-6">
                                                 <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 shadow-2xl">
-                                                    <img src={movie.poster || 'https://via.placeholder.com/100x150'} className="w-full h-full object-cover" alt="" />
+                                                    <img src={movie.poster || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div>
                                                     <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
@@ -649,6 +650,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Access & Monetization</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
+                                    {/* Listed / Unlisted */}
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black uppercase text-gray-300">Film Visibility</p>
+                                            <p className="text-[9px] text-gray-600 uppercase">{formData.isUnlisted ? 'Unlisted — hidden from catalog' : 'Listed — visible in catalog'}</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="isUnlisted" checked={!!formData.isUnlisted} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-11 h-6 bg-green-600 rounded-full peer peer-checked:bg-gray-700 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                        </label>
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">

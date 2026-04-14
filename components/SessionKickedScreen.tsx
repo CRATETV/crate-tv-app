@@ -32,13 +32,13 @@ const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason }) => 
 
                 <div className="space-y-3">
                     <button
-                        onClick={() => { window.location.href = '/login'; }}
+                        onClick={() => { window.history.pushState({}, '', '/login'); window.dispatchEvent(new Event('pushstate')); }}
                         className="w-full bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-sm py-3.5 rounded-xl transition-all"
                     >
                         Sign In
                     </button>
                     <button
-                        onClick={() => { window.location.href = '/'; }}
+                        onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
                         className="w-full bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-bold py-3 rounded-xl transition-all"
                     >
                         Back to Home

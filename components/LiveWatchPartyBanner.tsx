@@ -54,11 +54,9 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
             const data = await response.json();
             
             if (response.ok && data.success) {
-                console.log('[AUTO-START] Watch party started successfully');
                 // Refresh data to pick up the new live state
                 if (refreshData) refreshData();
             } else {
-                console.log('[AUTO-START] Could not auto-start:', data.error || 'Unknown error');
             }
         } catch (error) {
             console.error('[AUTO-START] Error:', error);

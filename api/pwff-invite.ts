@@ -11,11 +11,17 @@
 
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 export async function POST(request: Request) {
     try {
         const { password, emails, festivalName, festivalYear, accessType, blockId, blockTitle } = await request.json();
         // accessType: 'full' = full festival pass, 'block' = specific block only
+
+        const ip = getIP(request);
+        if (!rateLimit(ip, 5, 60 * 60 * 1000)) {
+            return new Response(JSON.stringify({ error: 'Too many requests. Try again later.' }), { status: 429 });
+        }
 
         if (!password || (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });

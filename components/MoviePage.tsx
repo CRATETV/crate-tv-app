@@ -57,6 +57,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTrackedViewRef = useRef(false);
+  const [videoError, setVideoError] = useState(false);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
 
@@ -207,10 +208,29 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         playsInline 
                         autoPlay={playerMode === 'full'}
                         onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)} 
-                        onPlay={() => !isEnded && playerMode === 'full' && setIsPaused(false)} 
+                        onPlay={() => { setVideoError(false); !isEnded && playerMode === 'full' && setIsPaused(false); }} 
                         onEnded={() => setIsEnded(true)} 
+                        onError={() => setVideoError(true)}
                         controlsList="nodownload" 
                     />
+                )}
+
+                {/* Video error state */}
+                {videoError && playerMode === 'full' && (
+                    <div className="absolute inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 gap-4">
+                        <div className="w-14 h-14 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <p className="text-white font-black uppercase tracking-widest text-sm">Playback Error</p>
+                        <p className="text-gray-500 text-xs text-center max-w-xs">Unable to load this film. Please check your connection and try again.</p>
+                        <button
+                            onClick={() => { setVideoError(false); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
+                            className="bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full transition-all"
+                        >
+                            Try Again
+                        </button>
+                        <button onClick={handleGoHome} className="text-gray-600 hover:text-white text-xs uppercase tracking-widest transition-colors">Go Home</button>
+                    </div>
                 )}
 
                 {playerMode === 'full' ? (
@@ -256,7 +276,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
-                             <img src={movie.poster} alt="" className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
+                             <img src={movie.poster} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
                              <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
                              <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${movie.salePrice}</button>
@@ -270,7 +290,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         onClick={() => hasAccess && isMovieReleased(movie) && setPlayerMode('full')}
                     >
                         {/* Blurred backdrop */}
-                        <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" />
+                        <img src={movie.poster} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" />
                         {/* Poster */}
                         <img
                             src={movie.poster}

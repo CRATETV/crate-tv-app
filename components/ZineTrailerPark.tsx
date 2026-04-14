@@ -64,7 +64,7 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
                         </button>
                     )}
                     <button 
-                        onClick={() => window.location.href = `/movie/${movie.key}?play=true`}
+                        onClick={() => { window.history.pushState({}, '', `/movie/${movie.key}?play=true`); window.dispatchEvent(new Event('pushstate')); }}
                         className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
                     >
                         Watch Full Film ⚡

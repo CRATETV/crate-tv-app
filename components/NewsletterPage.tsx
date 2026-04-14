@@ -29,7 +29,7 @@ const StoryCard: React.FC<{ story: EditorialStory }> = ({ story }) => {
         >
             <div className="aspect-video relative overflow-hidden">
                 <img 
-                    src={story.heroImage || 'https://via.placeholder.com/800x450'} 
+                    src={story.heroImage || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'} 
                     alt={story.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />

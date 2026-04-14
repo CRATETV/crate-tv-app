@@ -41,9 +41,8 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-                'Pragma': 'no-cache',
-                'Expires': '0'
+                // 60s browser cache, 30s stale-while-revalidate — fast loads without stale data
+                'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
             },
         });
     } catch (error) {
