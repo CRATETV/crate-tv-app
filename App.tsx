@@ -157,6 +157,9 @@ const App: React.FC = () => {
     }, [movies, categories.vault]);
 
     const activeBannerType = useMemo(() => {
+        // ── KILL SWITCH: admin can suppress all banners instantly ──
+        if (settings.suppressAllBanners) return 'NONE';
+
         const config = settings.crateFestConfig;
         const isCrateFestWindow = config?.isActive && config?.startDate && config?.endDate && 
                                 (new Date() >= new Date(config.startDate) && new Date() <= new Date(config.endDate));
@@ -509,23 +512,25 @@ const App: React.FC = () => {
             )}
             {activeBannerType === 'GENERAL_FESTIVAL' && (
                 <div 
-                    onClick={() => { window.history.pushState({}, '', '/festival'); window.dispatchEvent(new Event('pushstate')); }}
-                    className="fixed top-0 left-0 right-0 z-50 text-white p-3 flex items-center justify-center gap-6 shadow-lg h-12 cursor-pointer"
-                    style={{ background: "linear-gradient(to right, #4f46e5, #9333ea)" }}
+                    onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '2026'}`); window.dispatchEvent(new Event('pushstate')); }}
+                    className="fixed top-0 left-0 right-0 z-[110] text-white flex items-center justify-between px-4 md:px-8 shadow-lg h-12 cursor-pointer"
+                    style={{ background: "linear-gradient(to right, #E50914, #b91c1c)" }}
                 >
-                    <div className="flex items-center gap-2">
-                        <span className="relative flex h-3 w-3">
+                    <div className="flex items-center gap-3">
+                        <span className="relative flex h-2.5 w-2.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                         </span>
-                        <span className="font-black uppercase text-[10px] tracking-widest">Festival Active</span>
+                        <span className="font-black uppercase text-[9px] md:text-[10px] tracking-widest whitespace-nowrap">
+                            {settings?.pwffFestivalName || 'Playhouse West Film Festival'} — Now Streaming
+                        </span>
                     </div>
-
-                    <button className="bg-white text-indigo-600 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md">
-                        Enter Portal
-                    </button>
-
-                    <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-xl leading-none">&times;</button>
+                    <div className="flex items-center gap-3">
+                        <button className="bg-white text-red-600 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md whitespace-nowrap">
+                            Watch Now →
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-xl leading-none ml-1">&times;</button>
+                    </div>
                 </div>
             )}
 

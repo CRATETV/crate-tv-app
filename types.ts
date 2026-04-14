@@ -415,6 +415,7 @@ export interface SiteSettings {
   pwffTeaserDescription?: string; // tagline/description shown on teaser — changes each year
   pwffTeaserTagline?: string;     // short one-liner under the title e.g. "Presented by Crate TV"
   pwffUrlYear?: string;           // e.g. "2026" — makes the URL cratetv.net/pwff2026
+  suppressAllBanners?: boolean;   // kill switch — turns off every banner instantly
 }
 
 export interface PwffInterestEntry {
