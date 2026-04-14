@@ -221,7 +221,9 @@ export interface FilmBlock {
   title: string;
   time: string;
   movieKeys: string[];
-  price?: number; 
+  price?: number;
+  screeningStartTime?: string;  // When this block goes live for virtual viewers
+  screeningEndTime?: string;    // When virtual access closes
   watchPartyStartTime?: string;
   isWatchPartyEnabled?: boolean;
 }
@@ -416,6 +418,7 @@ export interface SiteSettings {
   pwffTeaserTagline?: string;     // short one-liner under the title e.g. "Presented by Crate TV"
   pwffUrlYear?: string;           // e.g. "2026" — makes the URL cratetv.net/pwff2026
   suppressAllBanners?: boolean;   // kill switch — turns off every banner instantly
+  pwffFullPassPrice?: number;      // price for the all-access festival pass
 }
 
 export interface PwffInterestEntry {

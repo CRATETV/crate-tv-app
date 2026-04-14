@@ -125,10 +125,13 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         const liveKey = liveKeys.find(key => {
             const m = movies[key];
-            return m ? !m.isUnlisted : true;
+            // Only trigger banner if the movie actually exists in the catalog
+            // Stale watch_parties documents for deleted/missing movies should be ignored
+            if (!m) return false;
+            return !m.isUnlisted;
         });
 
-        if (liveKey) {
+        if (liveKey && movies[liveKey]) {
             if (movies[liveKey]) return movies[liveKey];
             
             // Fallback: Check if it's a festival block

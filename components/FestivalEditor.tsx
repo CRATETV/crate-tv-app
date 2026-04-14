@@ -103,30 +103,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const handleSaveManifest = () => {
       onSave(config);
       setIsDirty(false);
-      // ── INSTANT BANNER: only schedule blocks that have a future start time
-      const pw = sessionStorage.getItem('adminPassword');
-      const now = Date.now();
-      data.flatMap(d => d.blocks).forEach(block => {
-          const hasFutureTime = block.watchPartyStartTime &&
-              new Date(block.watchPartyStartTime).getTime() > now;
-          // Only create schedule entry if enabled AND has a real future time
-          // Otherwise clear it so no black banner appears
-          const shouldSchedule = block.isWatchPartyEnabled && hasFutureTime;
-          fetch('/api/schedule-watch-party', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  password: pw,
-                  movieKey: block.id,
-                  movieTitle: block.title,
-                  watchPartyStartTime: shouldSchedule ? block.watchPartyStartTime : null,
-                  isWatchPartyEnabled: shouldSchedule,
-                  isWatchPartyPaid: (block.price || 0) > 0,
-                  watchPartyPrice: block.price || 0,
-                  poster: '',
-              })
-          }).catch(() => {});
-      });
+
   };
 
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: any) => {
@@ -313,30 +290,26 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                 </div>
                             </div>
                         </div>
-                        {/* ── WATCH PARTY SETTINGS ── */}
+
+                        {/* ── VIRTUAL SCREENING WINDOW ── */}
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                            <label className="text-[8px] text-red-500 font-black tracking-widest uppercase">Watch Party Settings</label>
-                            <div className="flex flex-wrap items-center gap-6">
-                                <div className="flex items-center gap-3">
-                                    <label className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Enable Watch Party</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleBlockChange(dayIndex, blockIndex, 'isWatchPartyEnabled', !block.isWatchPartyEnabled)}
-                                        className={`relative w-10 h-5 rounded-full transition-colors ${block.isWatchPartyEnabled ? 'bg-red-600' : 'bg-gray-700'}`}
-                                    >
-                                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${block.isWatchPartyEnabled ? 'left-5' : 'left-0.5'}`} />
-                                    </button>
-                                </div>
+                            <label className="text-[8px] text-amber-500 font-black tracking-widest uppercase">Virtual Screening Window</label>
+                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 2 weeks automatically.</p>
+                            <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-1">
-                                    <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Scheduled Start Date &amp; Time</label>
+                                    <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
                                     <input
                                         type="datetime-local"
-                                        value={formatISOForInput(block.watchPartyStartTime)}
-                                        onChange={e => handleBlockChange(dayIndex, blockIndex, 'watchPartyStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                                        className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-red-500"
+                                        value={block.screeningStartTime ? block.screeningStartTime.slice(0,16) : ''}
+                                        onChange={e => handleBlockChange(dayIndex, blockIndex, 'screeningStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                                        className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-amber-500"
                                     />
-                                    <p className="text-[8px] text-gray-700">Set this → banner countdown appears on the site automatically</p>
                                 </div>
+                                {block.screeningStartTime && (
+                                    <p className="text-[8px] text-gray-600 pb-2">
+                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                )}
                             </div>
                         </div>
                    </div>

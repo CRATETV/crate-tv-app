@@ -190,9 +190,12 @@ const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWa
 // ─── BLOCK CARD ───────────────────────────────────────────────────────────────
 const BlockCard: React.FC<{
     block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean;
+    isBeforeScreening?: boolean; screeningStartTime?: string;
     dayLabel: string; onBuyTicket: () => void; onEnterLobby: () => void; onWatch: (key: string) => void;
-}> = ({ block, films, isUnlocked, isLive, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
+}> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
+    const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
+    const screenEnd = screenStart ? new Date(screenStart.getTime() + 14 * 24 * 60 * 60 * 1000) : null;
     return (
         <div className={`rounded-2xl border overflow-hidden ${isLive ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.12)]' : 'border-white/8'}`}>
             <div className="bg-white/[0.02] border-b border-white/5 p-5 md:p-7">
@@ -211,15 +214,20 @@ const BlockCard: React.FC<{
                         </div>
                         <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight">{block.title}</h2>
                         <p className="text-xs text-gray-600 mt-1">{films.length} film{films.length !== 1 ? 's' : ''}</p>
-                        {block.watchPartyStartTime && !isLive && (
-                            <p className="text-[10px] text-gray-600 mt-1">
-                                Screens {new Date(block.watchPartyStartTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {new Date(block.watchPartyStartTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        {screenStart && (
+                            <p className="text-[10px] text-gray-500 mt-1.5">
+                                {isBeforeScreening
+                                    ? <>Streams live {screenStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {screenStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} · Available to rewatch until {screenEnd?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                                    : <>Available to watch until {screenEnd?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                                }
                             </p>
                         )}
                     </div>
                     <div className="flex-shrink-0">
                         {isLive
                             ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Join Live</button>
+                            : isBeforeScreening && isUnlocked
+                                ? <div className="inline-flex items-center gap-1.5 bg-amber-900/20 border border-amber-500/20 text-amber-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Ticket Confirmed</div>
                             : isUnlocked
                                 ? <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>
                                 : block.price && block.price > 0
@@ -358,7 +366,19 @@ const ProgrammeMode: React.FC = () => {
 
                 {/* Pass CTA */}
                 {!hasFestivalAllAccess
-                    ? <div className="space-y-2"><button onClick={() => { /* handled per block */ }} className="bg-white text-black font-black uppercase tracking-widest text-sm px-8 py-3.5 rounded-2xl hover:bg-gray-100 transition-all">All-Access Pass · $50</button><p className="text-[10px] text-gray-600">Or buy individual block tickets below</p></div>
+                    ? <div className="space-y-2">
+                        <button
+                            onClick={() => {
+                                // Create a synthetic "full festival" block for the ticket flow
+                                const fullPassBlock = { id: 'full-festival-pass', title: settings?.pwffFestivalName || 'PWFF Full Festival Pass', time: '', movieKeys: allBlocks.flatMap(b => b.movieKeys), price: 50 };
+                                setTicketFlowBlock(fullPassBlock as any);
+                            }}
+                            className="bg-white text-black font-black uppercase tracking-widest text-sm px-8 py-3.5 rounded-2xl hover:bg-gray-100 active:scale-95 transition-all shadow-lg"
+                        >
+                            All-Access Pass · ${settings?.pwffFullPassPrice || 50}
+                        </button>
+                        <p className="text-[10px] text-gray-600">Or buy individual block tickets below</p>
+                      </div>
                     : <div className="inline-flex items-center gap-2 bg-green-900/20 border border-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />All-Access Pass Active</div>}
             </div>
 
@@ -397,8 +417,14 @@ const ProgrammeMode: React.FC = () => {
                             const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
                             const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                             const isLive = activeParties[block.id]?.status === 'live';
+                            // Screening window: available from screeningStartTime to screeningStartTime + 14 days
+                            const now = Date.now();
+                            const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime).getTime() : null;
+                            const screenEnd = screenStart ? screenStart + 14 * 24 * 60 * 60 * 1000 : null;
+                            const isInScreeningWindow = screenStart ? (now >= screenStart && (!screenEnd || now <= screenEnd)) : true;
+                            const isBeforeScreening = screenStart ? now < screenStart : false;
                             return (
-                                <BlockCard key={block.id} block={block} films={films} isUnlocked={isUnlocked} isLive={isLive}
+                                <BlockCard key={block.id} block={block} films={films} isUnlocked={isUnlocked && isInScreeningWindow} isLive={isLive} isBeforeScreening={isBeforeScreening} screeningStartTime={block.screeningStartTime}
                                     dayLabel={`Day ${currentDay.day}`}
                                     onBuyTicket={() => setTicketFlowBlock(block)}
                                     onEnterLobby={() => setShowLobbyFor(block.id)}

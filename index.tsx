@@ -115,6 +115,10 @@ const AppRouter: React.FC = () => {
     return <WatchPartyPage movieKey={watchPartyMatch[1]} />;
   }
 
+  // Match /pwff2026, /pwff2027 etc — public page, no auth needed
+  const pwffYearMatch = route.match(/^\/pwff(\d{4})$/);
+  if (pwffYearMatch) return <PwffPage />;
+
   // Prevent flashing LandingPage while Firebase restores session
   if (!authInitialized) {
     return <LoadingSpinner />;
@@ -124,10 +128,6 @@ const AppRouter: React.FC = () => {
   if (actorProfileMatch && actorProfileMatch[1]) {
     return <ActorProfilePage slug={actorProfileMatch[1]} />;
   }
-
-  // Match /pwff2026, /pwff2027 etc — any year
-  const pwffYearMatch = route.match(/^\/pwff(\d{4})$/);
-  if (pwffYearMatch) return <PwffPage />;
 
   const zineMatch = route.match(/^\/zine\/([a-zA-Z0-9_-]+)/);
   if (zineMatch && zineMatch[1]) {
