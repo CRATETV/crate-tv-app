@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import './src/index.css';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FestivalProvider } from './contexts/FestivalContext';
@@ -12,8 +13,8 @@ inject();
 
 // Import all page components
 import App from './App';
-import AdminPage from './components/AdminPage';
-import LandingPage from './components/LandingPage';
+const AdminPage = lazy(() => import('./components/AdminPage'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
 import PublicSquarePage from './components/PublicSquarePage';
 import CratemasPage from './components/CratemasPage';
 import SubmitPage from './components/SubmitPage';
@@ -236,7 +237,9 @@ const MainApp: React.FC = () => (
   <AuthProvider>
     <FestivalProvider>
       <GlobalErrorBoundary>
-        <AppRouter />
+        <Suspense fallback={<div className="min-h-screen bg-[#050505]" />}>
+          <AppRouter />
+        </Suspense>
         <ToastContainer />
       </GlobalErrorBoundary>
     </FestivalProvider>

@@ -23,19 +23,7 @@
     <meta name="twitter:description" content="Stream award-winning independent shorts, join live watch parties, and support filmmakers directly." />
     <meta name="twitter:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/crate-og-image.jpg" />
     <meta name="keywords" content="Crate TV, Crate, Crate Philadelphia, Crate TV Philly, Independent Film Distribution, Indie Shorts, Film Festival, Cinema Afterlife, Watch Party" />
-    <!-- Open Graph / Social Sharing -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://cratetv.net/" />
-    <meta property="og:title" content="Crate TV | Independent Cinema" />
-    <meta property="og:description" content="Stream award-winning independent films, join live watch parties, and support filmmakers directly." />
-    <meta property="og:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Crate TV | Independent Cinema" />
-    <meta name="twitter:description" content="Stream award-winning independent films, join live watch parties, and support filmmakers directly." />
-    <meta name="twitter:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/og-image.png" />
+
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -52,21 +40,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // Tailwind config — suppresses CDN warning and enables JIT-like behavior
-      tailwind.config = {
-        theme: { extend: {} },
-        safelist: [
-          'from-red-600','via-amber-600','to-indigo-900',
-          'from-red-600','via-pink-600','to-indigo-900',
-          'bg-gradient-to-r','animate-ping','animate-pulse','animate-spin',
-          'bg-green-500/30','border-green-400/50','text-green-200',
-          'bg-amber-500/20','border-amber-400/30','text-amber-200',
-          'bg-white/10','border-white/20',
-        ]
-      }
-    </script>
+    <!-- Tailwind CSS is now processed by Vite build — no CDN needed -->
     <style>
       :root {
         --sat: env(safe-area-inset-top);

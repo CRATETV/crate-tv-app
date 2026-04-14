@@ -82,7 +82,12 @@ const FestivalPage: React.FC = () => {
         return <LoadingSpinner />;
     }
 
-    if (!festivalConfig || (!isFestivalLive && !isStaging)) {
+    // S3 data loaded but Firestore config still arriving — wait a moment before showing inactive
+    if (!festivalConfig) {
+        return <LoadingSpinner />;
+    }
+
+    if (!isFestivalLive && !isStaging) {
         return (
              <div className="flex flex-col min-h-screen text-white">
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />

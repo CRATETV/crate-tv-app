@@ -306,24 +306,30 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 setViewCounts(counts);
             }, () => {}));
 
-            // Site settings
+            // Site settings — public read, no auth needed
             unsubs.push(db.collection('content').doc('settings').onSnapshot(doc => {
                 if (doc.exists) setSettings(doc.data() as SiteSettings);
-            }, () => {}));
+            }, (err) => {
+                console.warn('[FestivalContext] settings read blocked:', err.code, '— check Firebase rules');
+            }));
 
-            // Festival config
+            // Festival config — public read, no auth needed
             unsubs.push(db.collection('festival').doc('config').onSnapshot(doc => {
                 if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
-            }, () => {}));
+            }, (err) => {
+                console.warn('[FestivalContext] festival/config read blocked:', err.code, '— check Firebase rules');
+            }));
 
-            // Festival schedule days
+            // Festival schedule days — public read
             unsubs.push(db.collection('festival').doc('schedule').collection('days').onSnapshot(snap => {
                 if (!snap.empty) {
                     const days: FestivalDay[] = [];
                     snap.forEach(doc => days.push(doc.data() as FestivalDay));
                     setFestivalData(days.filter(d => d?.day).sort((a, b) => a.day - b.day));
                 }
-            }, () => {}));
+            }, (err) => {
+                console.warn('[FestivalContext] festival/schedule read blocked:', err.code, '— check Firebase rules');
+            }));
 
             // Movie pipeline
             unsubs.push(db.collection('movie_pipeline').onSnapshot(snapshot => {
