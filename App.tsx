@@ -510,7 +510,8 @@ const App: React.FC = () => {
             {activeBannerType === 'GENERAL_FESTIVAL' && (
                 <div 
                     onClick={() => { window.history.pushState({}, '', '/festival'); window.dispatchEvent(new Event('pushstate')); }}
-                    className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-6 shadow-lg h-12 cursor-pointer"
+                    className="fixed top-0 left-0 right-0 z-50 text-white p-3 flex items-center justify-center gap-6 shadow-lg h-12 cursor-pointer"
+                    style={{ background: "linear-gradient(to right, #4f46e5, #9333ea)" }}
                 >
                     <div className="flex items-center gap-2">
                         <span className="relative flex h-3 w-3">

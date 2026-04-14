@@ -62,8 +62,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const isFestivalLive = useMemo(() => {
         // Portal Access toggle is the primary gate — if OFF, never live
         if (!festivalConfig?.isFestivalLive) return false;
-        // If toggle is ON but no dates are set, go live immediately
-        if (!festivalConfig?.startDate || !festivalConfig?.endDate) return true;
+        // If toggle is ON but no dates are set, do NOT go live — dates required
+        if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
         // If toggle is ON and dates are set, check the date range
         const nowTime = now.getTime();
         const start = new Date(festivalConfig.startDate).getTime();
@@ -72,7 +72,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [festivalConfig, now]);
 
     const livePartyMovie = useMemo(() => {
-        const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
         const twoHoursInMs = 2 * 60 * 60 * 1000;
 
         // ── PRIORITY 0: Check dedicated real-time schedule (instant, no S3 delay) ──
@@ -169,7 +169,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (!m.watchPartyStartTime) return false;
 
                 const start = new Date(m.watchPartyStartTime);
-                const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days
+                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
                 const twoHoursInMs = 2 * 60 * 60 * 1000;
 
                 // Show if in future within 7 days
@@ -205,7 +205,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (!block.watchPartyStartTime) return false;
 
                 const start = new Date(block.watchPartyStartTime);
-                const sevenDaysInMs = 60 * 24 * 60 * 60 * 1000; // 60 days
+                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
                 const twoHoursInMs = 2 * 60 * 60 * 1000;
 
                 // Show if starting within 7 days

@@ -212,9 +212,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         try {
             await onSave({ [formData.key]: formData });
 
-            // ── INSTANT BANNER: write watch party schedule directly to Firestore
-            // This fires the countdown banner immediately without waiting for S3
-            if (formData.isWatchPartyEnabled !== undefined) {
+            // ── INSTANT BANNER: always sync watch party schedule to Firestore
+            // Clears the doc when disabled, sets it when enabled
+            {
                 fetch('/api/schedule-watch-party', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
