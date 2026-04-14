@@ -212,9 +212,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         try {
             await onSave({ [formData.key]: formData });
 
-            // ── INSTANT BANNER: always sync watch party schedule to Firestore
-            // Clears the doc when disabled, sets it when enabled
+            // ── INSTANT BANNER: only schedule if enabled AND has a real future start time
             {
+                const hasFutureTime = formData.watchPartyStartTime &&
+                    new Date(formData.watchPartyStartTime).getTime() > Date.now();
+                const shouldSchedule = formData.isWatchPartyEnabled && hasFutureTime;
                 fetch('/api/schedule-watch-party', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -222,8 +224,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         password: sessionStorage.getItem('adminPassword'),
                         movieKey: formData.key,
                         movieTitle: formData.title,
-                        watchPartyStartTime: formData.watchPartyStartTime || null,
-                        isWatchPartyEnabled: formData.isWatchPartyEnabled,
+                        watchPartyStartTime: shouldSchedule ? formData.watchPartyStartTime : null,
+                        isWatchPartyEnabled: shouldSchedule,
                         isWatchPartyPaid: formData.isWatchPartyPaid,
                         watchPartyPrice: formData.watchPartyPrice,
                         poster: formData.poster,
@@ -381,6 +383,99 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                         </label>
                                     </div>
+
+                                    {/* ── EPISODE MANAGER ── */}
+                                    {formData.isSeries && (
+                                        <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-red-400">Episodes ({formData.episodes?.length || 0})</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newEp = { id: `ep_${Date.now()}`, title: `Episode ${(formData.episodes?.length || 0) + 1}`, synopsis: '', url: '', duration: 0 };
+                                                        setFormData({ ...formData, episodes: [...(formData.episodes || []), newEp] });
+                                                    }}
+                                                    className="bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 font-black text-[9px] uppercase tracking-widest px-4 py-2 rounded-lg transition-all"
+                                                >
+                                                    + Add Episode
+                                                </button>
+                                            </div>
+                                            {(formData.episodes || []).length === 0 && (
+                                                <p className="text-[10px] text-gray-600 italic text-center py-4 border border-dashed border-white/5 rounded-xl">No episodes yet — click Add Episode to get started.</p>
+                                            )}
+                                            {(formData.episodes || []).map((ep, idx) => (
+                                                <div key={ep.id} className="bg-black/40 border border-white/5 rounded-2xl p-5 space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Episode {idx + 1}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, episodes: formData.episodes?.filter((_, i) => i !== idx) })}
+                                                            className="text-gray-700 hover:text-red-500 transition-colors text-xs font-bold uppercase tracking-widest"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="form-label">Episode Title</label>
+                                                        <input
+                                                            type="text"
+                                                            value={ep.title}
+                                                            onChange={e => {
+                                                                const updated = [...(formData.episodes || [])];
+                                                                updated[idx] = { ...updated[idx], title: e.target.value };
+                                                                setFormData({ ...formData, episodes: updated });
+                                                            }}
+                                                            placeholder="e.g. Episode 1 — The Beginning"
+                                                            className="form-input bg-black/40"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="form-label">Video URL (S3 / Vimeo / YouTube)</label>
+                                                        <input
+                                                            type="text"
+                                                            value={ep.url}
+                                                            onChange={e => {
+                                                                const updated = [...(formData.episodes || [])];
+                                                                updated[idx] = { ...updated[idx], url: e.target.value };
+                                                                setFormData({ ...formData, episodes: updated });
+                                                            }}
+                                                            placeholder="https://..."
+                                                            className="form-input bg-black/40 text-xs font-mono"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="form-label">Episode Synopsis (optional)</label>
+                                                        <textarea
+                                                            value={ep.synopsis}
+                                                            onChange={e => {
+                                                                const updated = [...(formData.episodes || [])];
+                                                                updated[idx] = { ...updated[idx], synopsis: e.target.value };
+                                                                setFormData({ ...formData, episodes: updated });
+                                                            }}
+                                                            rows={2}
+                                                            placeholder="Brief description of this episode..."
+                                                            className="form-input bg-black/40"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="form-label">Duration (minutes)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={ep.duration || ''}
+                                                            onChange={e => {
+                                                                const updated = [...(formData.episodes || [])];
+                                                                updated[idx] = { ...updated[idx], duration: parseInt(e.target.value) || 0 };
+                                                                setFormData({ ...formData, episodes: updated });
+                                                            }}
+                                                            placeholder="0"
+                                                            className="form-input bg-black/40 w-32"
+                                                            min="0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </section>
 

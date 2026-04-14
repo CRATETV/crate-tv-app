@@ -226,7 +226,7 @@ const LandingPage: React.FC = () => {
                                     <div className="space-y-6">
                                         <p>We are always looking for bold new voices. You can submit your work directly through our creator portal.</p>
                                         <button 
-                                            onClick={() => { window.location.href='/submit'; }}
+                                            onClick={() => { window.history.pushState({}, '', '/submit'); window.dispatchEvent(new Event('pushstate')); }}
                                             className="bg-white text-black font-black px-8 py-3 rounded-xl uppercase text-xs tracking-widest hover:bg-gray-200 transition-all shadow-xl active:scale-95"
                                         >
                                             Submit Your Work

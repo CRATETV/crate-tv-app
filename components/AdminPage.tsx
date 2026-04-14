@@ -392,6 +392,35 @@ const AdminPage: React.FC = () => {
 
                 <div className="flex pb-4 mb-10 gap-2 scrollbar-hide flex-col">
 
+                    {/* ── TAB SEARCH ── */}
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="relative flex-shrink-0">
+                            <input
+                                type="text"
+                                placeholder="Search tabs…"
+                                value={tabSearch}
+                                onChange={e => setTabSearch(e.target.value)}
+                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-red-500/40 w-52 pr-8 transition-colors"
+                            />
+                            {tabSearch && (
+                                <button onClick={() => setTabSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white text-sm">✕</button>
+                            )}
+                        </div>
+                        {tabSearch && filteredTabs.length > 0 && (
+                            <div className="flex gap-2 flex-wrap">
+                                {filteredTabs.map(([tabId, label]) => (
+                                    <button key={tabId} onClick={() => { navigateTo(tabId); setTabSearch(''); }}
+                                        className={`flex-shrink-0 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {tabSearch && filteredTabs.length === 0 && (
+                            <p className="text-gray-700 text-[10px] uppercase tracking-widest">No tabs found</p>
+                        )}
+                    </div>
+
                     {/* ── DAILY USE ── */}
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1">Daily</p>
                     <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">

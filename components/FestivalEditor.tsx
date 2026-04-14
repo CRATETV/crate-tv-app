@@ -103,9 +103,15 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const handleSaveManifest = () => {
       onSave(config);
       setIsDirty(false);
-      // ── INSTANT BANNER: push all enabled blocks to Firestore in real-time
+      // ── INSTANT BANNER: only schedule blocks that have a future start time
       const pw = sessionStorage.getItem('adminPassword');
+      const now = Date.now();
       data.flatMap(d => d.blocks).forEach(block => {
+          const hasFutureTime = block.watchPartyStartTime &&
+              new Date(block.watchPartyStartTime).getTime() > now;
+          // Only create schedule entry if enabled AND has a real future time
+          // Otherwise clear it so no black banner appears
+          const shouldSchedule = block.isWatchPartyEnabled && hasFutureTime;
           fetch('/api/schedule-watch-party', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -113,8 +119,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                   password: pw,
                   movieKey: block.id,
                   movieTitle: block.title,
-                  watchPartyStartTime: block.watchPartyStartTime || null,
-                  isWatchPartyEnabled: !!block.isWatchPartyEnabled,
+                  watchPartyStartTime: shouldSchedule ? block.watchPartyStartTime : null,
+                  isWatchPartyEnabled: shouldSchedule,
                   isWatchPartyPaid: (block.price || 0) > 0,
                   watchPartyPrice: block.price || 0,
                   poster: '',

@@ -26,6 +26,9 @@ const SubmitPage: React.FC = () => {
     const [instagram, setInstagram] = useState('');
     const [submitterName, setSubmitterName] = useState('');
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [contentType, setContentType] = useState<'short' | 'feature' | 'series'>('short');
+    const [episodeCount, setEpisodeCount] = useState('');
+    const [episodeLinks, setEpisodeLinks] = useState('');
     
     // File uploads
     const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -176,6 +179,10 @@ const SubmitPage: React.FC = () => {
                     director: director.trim(),
                     email: email.trim().toLowerCase(),
                     synopsis: synopsis.trim() || '',
+                    contentType: contentType,
+                    isSeries: contentType === 'series',
+                    episodeCount: contentType === 'series' ? episodeCount : '',
+                    episodeLinks: contentType === 'series' ? episodeLinks : '',
                     runtime: runtime || '',
                     year: year || new Date().getFullYear().toString(),
                     genre: genre || 'Drama',
@@ -355,6 +362,9 @@ const SubmitPage: React.FC = () => {
                                             className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-red-500 focus:outline-none transition-colors"
                                             required
                                         />
+                                        {contentType === 'series' && (
+                                            <p className="text-xs text-gray-600 mt-1.5">For series, title each submission as <span className="text-gray-500 font-mono">My Show — Ep. 1</span>, <span className="text-gray-500 font-mono">My Show — Ep. 2</span> etc.</p>
+                                        )}
                                     </div>
                                     
                                     <div>
@@ -381,6 +391,49 @@ const SubmitPage: React.FC = () => {
                                         />
                                     </div>
                                     
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-bold text-gray-400 mb-2">Content Type</label>
+                                        <div className="flex gap-3">
+                                            {(['short', 'feature', 'series'] as const).map(type => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => setContentType(type)}
+                                                    className={`flex-1 py-3 rounded-lg border font-bold text-sm uppercase tracking-widest transition-all ${contentType === type ? 'bg-red-600 border-red-500 text-white' : 'bg-black border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                                >
+                                                    {type === 'short' ? 'Short Film' : type === 'feature' ? 'Feature Film' : 'Series / Episodic'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {contentType === 'series' && (
+                                        <>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-400 mb-2">Number of Episodes</label>
+                                            <input
+                                                type="number"
+                                                value={episodeCount}
+                                                onChange={e => setEpisodeCount(e.target.value)}
+                                                placeholder="e.g. 6"
+                                                min="1"
+                                                className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-red-500 focus:outline-none transition-colors"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-bold text-gray-400 mb-2">Episode Links</label>
+                                            <textarea
+                                                value={episodeLinks}
+                                                onChange={e => setEpisodeLinks(e.target.value)}
+                                                placeholder="Episode 1: https://...&#10;Episode 2: https://...&#10;Episode 3: https://..."
+                                                rows={4}
+                                                className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-red-500 focus:outline-none transition-colors resize-none font-mono text-sm"
+                                            />
+                                            <p className="text-xs text-gray-600 mt-1">Paste each episode link on a new line. Use your S3, Vimeo, or Google Drive links.</p>
+                                        </div>
+                                        </>
+                                    )}
+
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-2">Runtime</label>
                                         <input 
