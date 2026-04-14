@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="ContentTask" extends="Task">
-
     <interface>
-        <!-- The URL to fetch -->
-        <field id="url" type="string" />
-        <!-- The parsed content result -->
-        <field id="content" type="node" />
-        <!-- The announcement banner text -->
+        <field id="url"         type="string" />
+        <field id="content"     type="node" />
+        <field id="heroItems"   type="node" />
         <field id="announcement" type="string" />
     </interface>
-    
     <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
-
 </component>

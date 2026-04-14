@@ -41,7 +41,8 @@ end sub
 sub ShowHome()
     m.viewport.removeChildren(m.viewport.getChildren(-1, 0))
     m.homeScene = m.viewport.createChild("HomeScene")
-    m.homeScene.content = m.contentTask.content
+    m.homeScene.content   = m.contentTask.content
+    m.homeScene.heroItems = m.contentTask.heroItems
     m.homeScene.observeField("command", "onCommand")
     m.homeScene.setFocus(true)
 end sub

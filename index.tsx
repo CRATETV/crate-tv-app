@@ -116,7 +116,8 @@ const AppRouter: React.FC = () => {
   }
 
   // Match /pwff2026, /pwff2027 etc — public page, no auth needed
-  const pwffYearMatch = route.match(/^\/pwff(\d{4})$/);
+  // Match /pwff2026 or /PWFF2026 — case insensitive
+  const pwffYearMatch = route.toLowerCase().match(/^\/pwff(\d{4})$/);
   if (pwffYearMatch) return <PwffPage />;
 
   // Prevent flashing LandingPage while Firebase restores session

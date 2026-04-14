@@ -319,12 +319,12 @@ const ProgrammeMode: React.FC = () => {
     }, [allBlocks]);
 
     const FAQ = [
-        { q: "Do I need to download anything?", a: "No. Everything streams right in your browser. You can also watch on Roku TV if you have the Crate TV channel installed." },
-        { q: "How does a watch party work?", a: "When the party starts, every ticket holder watches the film at exactly the same time — perfectly synced. There's a live chat so you can react together in real time." },
-        { q: "Can I watch on my phone?", a: "Yes. The watch party works on any device with a browser — phone, tablet, laptop, or smart TV." },
-        { q: "What happens after the festival?", a: "The films stay on Crate TV. Your account gives you access to the full Crate library, so you can keep watching whenever you want." },
-        { q: "I already have a Crate account. Do I still need a ticket?", a: "For free blocks, no. For paid blocks, yes — you'll need to buy a ticket. Your existing account handles payment automatically." },
-        { q: "What if I miss the screening?", a: "Films in paid blocks become available on-demand to ticket holders after the watch party ends." },
+        { q: "Do I need to download anything?", a: "No. Everything streams right in your browser — phone, tablet, laptop, or smart TV. You can also watch on your Roku TV if you have the Crate TV channel installed." },
+        { q: "When can I watch the films?", a: "Each block goes live at the same time it screens physically in Philadelphia. Once it's live, you can watch and rewatch for two weeks after the festival ends." },
+        { q: "What's the difference between a block ticket and an all-access pass?", a: "A block ticket gives you access to one specific screening block. An all-access pass gets you into every block across the entire festival — it's the best value if you want to watch everything." },
+        { q: "I already have a Crate account. Do I still need a ticket?", a: "Yes — festival blocks are ticketed separately. Your existing Crate account handles payment, so checkout is quick." },
+        { q: "What happens after the festival ends?", a: "Your ticket gives you on-demand access to all the films in your block for two weeks after the festival. After that, selected films may remain in the Crate library." },
+        { q: "Is Crate TV free?", a: "Yes — creating a Crate account is completely free. Festival block tickets are sold separately for the PWFF programme." },
     ];
 
     return (

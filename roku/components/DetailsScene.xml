@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="DetailsScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
@@ -7,37 +6,157 @@
         <field id="command" type="assocarray" alwaysNotify="true" />
     </interface>
     <children>
+        <!-- Full background -->
         <Rectangle width="1920" height="1080" color="#050505" />
-        
-        <Group id="contentHub" translation="[150, 150]">
-            <Poster id="itemPoster" width="450" height="675" />
-            
-            <Group id="info" translation="[550, 0]">
-                <Label id="titleLabel" width="1000" font="font:LargeBoldSystemFont" color="#FFFFFF" />
-                <Label id="genresLabel" width="1000" translation="[0, 60]" font="font:SmallestBoldSystemFont" color="#EF4444" />
-                <Label id="synopsisLabel" width="1000" translation="[0, 120]" wrap="true" maxLines="10" font="font:SmallSystemFont" color="#AAAAAA" />
-                
-                <Rectangle id="playBtn" width="350" height="90" translation="[0, 500]" color="#FFFFFF" visible="false">
-                    <Label text="PLAY FILM" width="350" height="90" horizAlign="center" vertAlign="center" color="#000000" font="font:SmallBoldSystemFont" />
-                </Rectangle>
-                
-                <!-- PAYWALL SECTOR -->
-                <Group id="paywallGroup" translation="[0, 500]" visible="false">
-                    <Label text="VERIFIED PURCHASE REQUIRED" color="#EF4444" font="font:SmallBoldSystemFont" />
-                    <Label id="lockMessage" text="Unlock this film on cratetv.net" translation="[0, 40]" font="font:MediumBoldSystemFont" color="#FFFFFF" />
-                    
-                    <Rectangle width="220" height="220" translation="[0, 100]" color="#FFFFFF" radius="10">
-                        <Poster id="qrCode" width="200" height="200" translation="[10, 10]" />
-                    </Rectangle>
-                    
-                    <Label text="Scan to unlock or create an account" translation="[250, 140]" font="font:SmallSystemFont" color="#AAAAAA" />
-                    <Label text="100% of revenue goes to the creator." translation="[250, 180]" font="font:SmallestBoldSystemFont" color="#444444" />
-                </Group>
 
-                <Rectangle id="trailerBtn" width="350" height="90" translation="[0, 800]" color="#333333" visible="false">
-                    <Label text="PLAY TRAILER" width="350" height="90" horizAlign="center" vertAlign="center" color="#FFFFFF" font="font:SmallBoldSystemFont" />
-                </Rectangle>
-            </Group>
+        <!-- Hero background — wide blurred poster fills screen -->
+        <Poster id="heroBg"
+            width="1920" height="1080"
+            loadDisplayMode="scaleToFill"
+            opacity="0.15"
+        />
+        <!-- Overlay to darken it -->
+        <Rectangle width="1920" height="1080" color="#050505BB" />
+
+        <!-- Left: Portrait poster -->
+        <Group translation="[120, 120]">
+            <Poster id="itemPoster"
+                width="400" height="600"
+                loadDisplayMode="scaleToFill"
+            />
+
+            <!-- Laurel overlay on poster -->
+            <Poster id="laurelImage"
+                width="320" height="320"
+                translation="[40, 140]"
+                visible="false"
+            />
         </Group>
+
+        <!-- Right: Film info -->
+        <Group id="info" translation="[580, 100]">
+
+            <!-- Genre badges -->
+            <Label id="genresLabel"
+                width="1100"
+                font="font:SmallestBoldSystemFont"
+                color="#EF4444"
+            />
+
+            <!-- Title -->
+            <Label id="titleLabel"
+                translation="[0, 40]"
+                width="1100"
+                wrap="true"
+                maxLines="2"
+                color="#FFFFFF"
+            >
+                <font role="sans" size="72" weight="bold" />
+            </Label>
+
+            <!-- Meta row: year · runtime · director -->
+            <Label id="metaLabel"
+                translation="[0, 180]"
+                width="1100"
+                font="font:SmallSystemFont"
+                color="#666666"
+            />
+
+            <!-- Synopsis -->
+            <Label id="synopsisLabel"
+                translation="[0, 240]"
+                width="1000"
+                wrap="true"
+                maxLines="6"
+                font="font:MediumSystemFont"
+                color="#AAAAAA"
+            />
+
+            <!-- Cast line -->
+            <Label id="castLabel"
+                translation="[0, 520]"
+                width="1000"
+                wrap="true"
+                maxLines="2"
+                font="font:SmallSystemFont"
+                color="#555555"
+            />
+
+            <!-- Award line -->
+            <Label id="awardLabel"
+                translation="[0, 580]"
+                width="800"
+                font="font:SmallestBoldSystemFont"
+                color="#EF4444"
+                visible="false"
+            />
+
+            <!-- ── BUTTONS ── -->
+            <!-- PLAY button -->
+            <Rectangle id="playBtn"
+                translation="[0, 660]"
+                width="280" height="80"
+                color="#FFFFFF"
+                visible="false"
+            >
+                <Label text="▶  PLAY FILM"
+                    width="280" height="80"
+                    horizAlign="center" vertAlign="center"
+                    color="#000000"
+                    font="font:SmallBoldSystemFont"
+                />
+            </Rectangle>
+
+            <!-- TRAILER button -->
+            <Rectangle id="trailerBtn"
+                translation="[300, 660]"
+                width="280" height="80"
+                color="#1A1A1A"
+                visible="false"
+            >
+                <Label text="▷  PLAY TRAILER"
+                    width="280" height="80"
+                    horizAlign="center" vertAlign="center"
+                    color="#FFFFFF"
+                    font="font:SmallBoldSystemFont"
+                />
+            </Rectangle>
+
+            <!-- PAYWALL GROUP -->
+            <Group id="paywallGroup" translation="[0, 640]" visible="false">
+                <Label text="PREMIERE ACCESS"
+                    color="#EF4444"
+                    font="font:SmallBoldSystemFont"
+                />
+                <Label id="lockMessage"
+                    text="Unlock this film at cratetv.net"
+                    translation="[0, 44]"
+                    font="font:MediumSystemFont"
+                    color="#FFFFFF"
+                />
+                <!-- QR code box -->
+                <Rectangle width="220" height="220" translation="[0, 100]" color="#FFFFFF">
+                    <Poster id="qrCode" width="200" height="200" translation="[10, 10]" />
+                </Rectangle>
+                <Label text="Scan with your phone to unlock"
+                    translation="[240, 130]"
+                    font="font:SmallSystemFont"
+                    color="#AAAAAA"
+                />
+                <Label text="70% of every ticket goes to the filmmaker."
+                    translation="[240, 170]"
+                    font="font:SmallestBoldSystemFont"
+                    color="#444444"
+                />
+            </Group>
+
+        </Group>
+
+        <!-- Back hint -->
+        <Label text="← BACK"
+            translation="[120, 40]"
+            font="font:SmallestBoldSystemFont"
+            color="#333333"
+        />
     </children>
 </component>

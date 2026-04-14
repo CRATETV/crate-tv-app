@@ -541,7 +541,7 @@ const App: React.FC = () => {
                 onSearch={onSearch} 
                 onMobileSearchClick={handleSearchClick} 
                 topOffset={activeBannerType !== 'NONE' ? '3rem' : '0px'} 
-                hideLiveSpotlight={activeBannerType === 'WATCH_PARTY'}
+                hideLiveSpotlight={activeBannerType !== 'NONE'}
             />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: mainPaddingTop }}>
