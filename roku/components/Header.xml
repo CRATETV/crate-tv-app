@@ -1,48 +1,86 @@
-
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Header Navigation (V4 Studio)
+    
+    HOME | NOW STREAMING | PUBLIC SQUARE | SEARCH | ACCOUNT
+    SmallSystemFont, auto-width, 250px spacing between items.
+-->
 <component name="Header" extends="Group">
     <interface>
-        <field id="itemSelected" type="integer" alwaysNotify="true" />
+        <field id="selectedIndex"    type="integer" value="0"     alwaysNotify="true" />
+        <field id="focusedIndex"     type="integer" value="0" />
+        <field id="isActive"         type="boolean" value="false"  onChange="OnActiveChange" />
+        <field id="watchPartyIsLive" type="boolean" value="false"  onChange="OnWatchPartyLiveChange" />
     </interface>
-    
-    <script type="text/brightscript">
-        sub init()
-            m.menu = m.top.findNode("menu")
-            m.menu.observeField("itemSelected", "onSelect")
-        end sub
-        sub onSelect()
-            m.top.itemSelected = m.menu.itemSelected
-        end sub
-    </script>
-    
-    <children>
-        <!-- V4 Smooth Loading: Elements hidden until parent authorizes visibility -->
-        <LabelList 
-            id="menu" 
-            translation="[80, 0]" 
-            itemSize="[600, 60]" 
-            orientation="horizontal" 
-            textSelectedColor="0xFFFFFFFF"
-            textColor="0x666666FF"
-            visible="false"
-        >
-            <content>
-                <ContentNode>
-                    <ContentNode title="HOME" />
-                    <ContentNode title="THE PUBLIC SQUARE" />
-                    <ContentNode title="SEARCH" />
-                    <ContentNode title="MY ACCOUNT" />
-                </ContentNode>
-            </content>
-        </LabelList>
 
-        <Label 
-            id="brandingLabel"
-            text="CRATE TV" 
-            translation="[1700, 0]" 
-            color="0xEF4444FF" 
-            font="font:LargeBoldSystemFont" 
-            visible="false"
-        />
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="Header.brs" />
+
+    <children>
+        <!--
+            All children start hidden. MainScene.brs reveals them in OnHomeFeedReady()
+            only after the feed data has returned -- eliminating the launch flash.
+        -->
+        <Rectangle id="navBg" width="1920" height="60" color="#050505" opacity="0.97" visible="false" />
+        <Rectangle id="navBottomLine" width="1920" height="1" color="#1A1A1A" translation="[0, 59]" visible="false" />
+
+        <Poster id="headerLogo" width="120" height="40" uri="pkg:/images/crate_logo_small.png" translation="[48, 10]" visible="false" />
+
+        <!-- HOME(0) | NOW STREAMING(1) | PUBLIC SQUARE(2) | SEARCH(3) | ACCOUNT(4) -->
+        <Group id="navItemsGroup" translation="[240, 0]" visible="false">
+            <Group id="navItem0" translation="[0, 0]">
+                <Label id="navLabel0" text="HOME" font="font:SmallSystemFont" color="#EBEBEB" height="56" vertAlign="center" />
+                <Rectangle id="navUnderline0" width="70" height="3" color="#EF4444" translation="[0, 56]" visible="true" />
+            </Group>
+            <Group id="navItem1" translation="[150, 0]">
+                <Label id="navLabel1" text="NOW STREAMING" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
+                <Rectangle id="navUnderline1" width="180" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
+            </Group>
+            <Group id="navItem2" translation="[460, 0]">
+                <Label id="navLabel2" text="PUBLIC SQUARE" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
+                <Rectangle id="navUnderline2" width="175" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
+            </Group>
+            <Group id="navItem3" translation="[750, 0]">
+                <Label id="navLabel3" text="SEARCH" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
+                <Rectangle id="navUnderline3" width="90" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
+            </Group>
+            <Group id="navItem4" translation="[960, 0]">
+                <Label id="navLabel4" text="ACCOUNT" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
+                <Rectangle id="navUnderline4" width="110" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
+            </Group>
+        </Group>
+
+        <!--
+            LIVE WATCH PARTY ALERT -- visible only when a party is active.
+            Sits on the right side of the nav bar. User can navigate to it
+            with the remote and press OK to join the party.
+            Hidden by default, shown/hidden by MainScene polling.
+        -->
+        <Group id="livePartyAlert" translation="[1480, 0]" visible="false">
+            <!-- Red pill background -->
+            <Rectangle id="alertBg" width="310" height="40"
+                color="#EF4444" translation="[0, 8]" />
+            <!-- Pulsing dot -->
+            <Rectangle width="10" height="10" color="#EBEBEB"
+                translation="[14, 23]" />
+            <!-- Alert text -->
+            <Label id="alertLabel"
+                text="LIVE WATCH PARTY"
+                font="font:SmallBoldSystemFont"
+                color="#EBEBEB"
+                width="270" height="40"
+                vertAlign="center"
+                translation="[30, 8]" />
+            <!-- Focus ring -- shown when user navigates to this item (Crate Red) -->
+            <Poster id="alertFocusRing"
+                width="318" height="48"
+                uri="pkg:/images/focus_ring_red_248x368.png"
+               
+                translation="[-4, 4]"
+                visible="false" />
+        </Group>
+
+        <Label id="clockLabel" font="font:SmallSystemFont" color="#666666" translation="[1750, 20]" />
     </children>
 </component>

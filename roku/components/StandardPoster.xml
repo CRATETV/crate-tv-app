@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Standard Poster (Public Square RowList)
+    200x300 to avoid overlap with scale animation.
+    Rounded corners + red focus ring via PNG overlay.
+-->
+<component name="StandardPoster" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentChange" />
+        <field id="focusPercent" type="float" value="0.0" onChange="OnFocusChange" />
+        <field id="rowFocusPercent" type="float" value="0.0" />
+        <field id="itemHasFocus" type="boolean" value="false" />
+        <field id="width" type="float" value="200" />
+        <field id="height" type="float" value="300" />
+    </interface>
+
+    <script type="text/brightscript" uri="MoviePosterItem.brs" />
+
+    <children>
+        <Group id="posterContainer">
+            <Rectangle id="shadow" width="204" height="304" color="#000000" opacity="0.4" translation="[4, 6]" />
+            <Rectangle id="posterBg" width="200" height="300" color="#1A1A1A" />
+            <Poster id="posterImage" width="200" height="300"
+                    loadWidth="200" loadHeight="300" loadDisplayMode="limitSize"
+                    loadingBitmapOpacity="0.0"
+                    failedBitmapUri="pkg:/images/poster_placeholder.png" />
+            <Group id="lockOverlay" visible="false">
+                <Rectangle id="lockOverlayRect" width="200" height="300" color="#000000" opacity="0.6" />
+                <Label id="lockOverlayLabel" text="&#x1F512;" font="font:LargeBoldSystemFont"
+                       color="#EF4444" width="200" height="300"
+                       horizAlign="center" vertAlign="center" />
+            </Group>
+            <Group id="progressGroup" visible="false" translation="[0, 292]">
+                <Rectangle id="progressBg" width="200" height="8" color="#333333" />
+                <Rectangle id="progressFill" width="0" height="8" color="#EF4444" />
+            </Group>
+            <!-- Rounded corner mask -->
+            <Poster id="cornerMask" width="200" height="300"
+                    uri="pkg:/images/corner_mask_200x300.png"
+                    />
+            <!-- Red rounded focus ring -->
+            <Poster id="focusBorder" width="208" height="308"
+                    uri="pkg:/images/focus_ring_red_208x308.png"
+                   
+                    translation="[-4, -4]"
+                    visible="false" />
+        </Group>
+    </children>
+</component>

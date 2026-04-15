@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- 
+    CRATE TV - Busy Spinner Component
+    Animated loading indicator
+-->
+<component name="BusySpinner" extends="Group">
+    <interface>
+        <field id="poster" type="uri" value="pkg:/images/spinner.png" onChange="OnPosterChange" />
+        <field id="clockwise" type="boolean" value="true" />
+    </interface>
+
+    <script type="text/brightscript" uri="BusySpinner.brs" />
+
+    <children>
+        <Poster
+            id="spinnerPoster"
+            width="80"
+            height="80"
+            translation="[-40, -40]"
+        />
+    </children>
+</component>

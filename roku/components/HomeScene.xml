@@ -1,143 +1,126 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Home Scene (V4 Studio)
+    
+    - Hero spotlight: 1740x675 cinematic poster + info panel
+    - REMOVED: "Press OK to Play" overlay (user found it cluttered)
+    - RowList: LargeBoldSystemFont row headers, dynamic from API titles
+    - Focus: 6px red border + 1.1x scale on posters
+-->
 <component name="HomeScene" extends="Group">
     <interface>
-        <field id="content"   type="node" onChange="onContentChange" />
-        <field id="heroItems" type="node" onChange="onHeroItemsChange" />
-        <field id="command"   type="assocarray" alwaysNotify="true" />
+        <field id="selectedContent" type="node" alwaysNotify="true" />
+        <field id="playContent" type="node" alwaysNotify="true" />
+        <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
+        <field id="deepLinkContentId" type="string" value="" />
+        <field id="focusedContent" type="node" />
+        <field id="feedDataReady" type="node" alwaysNotify="true" />
     </interface>
-    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="HomeScene.brs" />
+
     <children>
+        <!-- HERO CYCLING TIMER -->
+        <Timer id="heroTimer" duration="8" repeat="true" />
 
-        <!-- ── HERO SECTION ───────────────────────────────────────── -->
-        <Group id="hero">
-            <!-- Wide hero image — uses heroImage field (1920x800), falls back to hdPosterUrl -->
-            <Poster
-                id="heroImage"
-                width="1920"
-                height="800"
-                loadDisplayMode="scaleToFill"
-            />
+        <!-- BACKGROUND -->
+        <Rectangle id="bgRect" width="1920" height="1080" color="#050505" />
+        <Poster id="dynamicBackdrop" width="1920" height="1080" loadWidth="1920" loadHeight="1080" loadDisplayMode="scaleToFill" loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.3" />
 
-            <!-- Cinematic gradient overlays — matches web app -->
-            <!-- Left vignette — darkens text area -->
-            <Rectangle
-                width="1100" height="800"
-                color="0x050505FF"
-                gradientDirection="left-to-right"
-                endColor="0x00000000"
-            />
-            <!-- Bottom blend — rows emerge from hero -->
-            <Rectangle
-                width="1920" height="500"
-                translation="[0, 300]"
-                color="0x050505FF"
-                gradientDirection="bottom-to-top"
-                endColor="0x00000000"
-            />
+        <!-- ============================================================ -->
+        <!-- HERO SPOTLIGHT (1740 x 675) -->
+        <!-- ============================================================ -->
+        <Group id="heroSpotlight" translation="[90, 10]" visible="false">
+            <Rectangle id="heroCardBg" width="1740" height="675" color="#0A0A0A" opacity="0.85" />
 
-            <!-- Hero content — left-aligned like the web app -->
-            <Group id="heroContent" translation="[100, 120]">
+            <!-- Poster (left) -->
+            <Rectangle id="heroPosterBg" width="430" height="645" color="#1A1A1A" translation="[15, 15]" />
+            <Poster id="heroPosterImage" width="430" height="645" loadWidth="430" loadHeight="645" loadDisplayMode="scaleToFill" loadingBitmapOpacity="0.0" failedBitmapUri="pkg:/images/poster_placeholder.png" translation="[15, 15]" />
+            <!-- Rounded corner mask for hero poster -->
+            <Poster id="heroPosterCornerMask" width="430" height="645" uri="pkg:/images/corner_mask_430x645.png" translation="[15, 15]" />
 
-                <!-- Red badge — SPOTLIGHT or LIVE or NEW -->
-                <Rectangle id="heroBadgeBg" width="220" height="36" color="0xEF4444FF">
-                    <Label id="heroBadge"
-                        text="SPOTLIGHT SELECTION"
-                        width="220" height="36"
-                        horizAlign="center" vertAlign="center"
-                        font="font:SmallestBoldSystemFont"
-                        color="0xFFFFFFFF"
-                    />
-                </Rectangle>
+            <!-- Accent divider -->
+            <Rectangle id="accentLine" width="4" height="615" color="#EF4444" translation="[470, 30]" />
 
-                <!-- Film title — large, bold, italic like web -->
-                <Label id="heroTitle"
-                    translation="[0, 50]"
-                    width="900"
-                    wrap="true"
-                    maxLines="2"
-                    color="0xFFFFFFFF"
-                >
-                    <font role="sans" size="90" weight="bold" />
-                </Label>
+            <!-- Info (right) -->
+            <Group id="heroInfo" translation="[500, 25]">
+                <Label id="heroTitle" text="" font="font:LargeBoldSystemFont" color="#EBEBEB" width="1200" maxLines="2" wrap="true" translation="[0, 0]" />
+                <Label id="heroMeta" text="" font="font:SmallSystemFont" color="#A0A0A0" width="1200" translation="[0, 85]" />
+                <Label id="heroGenre" text="" font="font:SmallSystemFont" color="#EF4444" width="1200" translation="[0, 115]" />
+                <Label id="heroDesc" text="" font="font:SmallSystemFont" color="#CCCCCC" width="1200" maxLines="5" wrap="true" translation="[0, 155]" />
 
-                <!-- Director line -->
-                <Label id="heroDirector"
-                    translation="[0, 230]"
-                    width="700"
-                    font="font:SmallSystemFont"
-                    color="0x888888FF"
-                />
+                <!-- CAST (y=400) -->
+                <Group id="heroCastSection" translation="[0, 400]" visible="false">
+                    <Label id="heroCastHeader" text="CAST" font="font:SmallBoldSystemFont" color="#999999" />
+                    <Label id="heroCastLabel" font="font:SmallSystemFont" color="#A0A0A0" width="1200" maxLines="1" translation="[0, 28]" />
+                </Group>
 
-                <!-- Synopsis — matches web line clamp -->
-                <Label id="heroSynopsis"
-                    translation="[0, 280]"
-                    width="800"
-                    wrap="true"
-                    maxLines="3"
-                    font="font:MediumSystemFont"
-                    color="0xCCCCCCFF"
-                />
+                <!-- DIRECTOR (y=470 -- 70px clear of cast) -->
+                <Group id="heroDirectorSection" translation="[0, 470]" visible="false">
+                    <Label id="heroDirectorHeader" text="DIRECTOR" font="font:SmallBoldSystemFont" color="#999999" />
+                    <Label id="heroDirectorLabel" font="font:SmallSystemFont" color="#A0A0A0" width="1200" maxLines="1" translation="[0, 28]" />
+                </Group>
 
-                <!-- Action buttons -->
-                <Rectangle id="playBtn"
-                    translation="[0, 480]"
-                    width="220" height="72"
-                    color="0xFFFFFFFF"
-                >
-                    <Label text="▶  PLAY"
-                        width="220" height="72"
-                        horizAlign="center" vertAlign="center"
-                        color="0x000000FF"
-                        font="font:SmallBoldSystemFont"
-                    />
-                </Rectangle>
-
-                <Rectangle id="infoBtn"
-                    translation="[240, 480]"
-                    width="220" height="72"
-                    color="0x33333388"
-                >
-                    <Label text="ⓘ  DETAILS"
-                        width="220" height="72"
-                        horizAlign="center" vertAlign="center"
-                        color="0xFFFFFFFF"
-                        font="font:SmallBoldSystemFont"
-                    />
-                </Rectangle>
+                <!-- NO "Press OK to Play" -- REMOVED per user request -->
+                <!-- NO Watch Party badge -- REMOVED per user request -->
             </Group>
-
-            <!-- Hero dot pagination -->
-            <Group id="heroDots" translation="[100, 750]" />
         </Group>
 
-        <!-- ── CONTENT ROWS ────────────────────────────────────────── -->
+        <!-- ============================================================ -->
+        <!-- ROW LIST -- LargeBoldSystemFont for massive row headers -->
+        <!-- Crate Standard: 240x360 with custom focus ring only -->
+        <!-- ============================================================ -->
         <RowList
             id="rowList"
-            translation="[0, 635]"
-            itemComponentName="MoviePosterItem"
-            itemSize="[1920, 445]"
-            rowHeights="[445]"
-            rowItemSize="[ [270, 405] ]"
-            rowItemSpacing="[ [30, 0] ]"
-            rowLabelOffset="[ [100, 20] ]"
-            focusXOffset="[ 100 ]"
+            translation="[0, 710]"
+            itemSize="[1920, 490]"
+            itemSpacing="[0, 40]"
+            showRowLabel="[true]"
+            showRowCounter="[false]"
+            rowLabelOffset="[[90, 20]]"
+            rowLabelColor="#EBEBEB"
+            rowLabelFont="font:LargeBoldSystemFont"
+            focusXOffset="[90]"
+            drawFocusFeedback="false"
+            vertFocusAnimationStyle="floatingFocus"
             rowFocusAnimationStyle="floatingFocus"
+            visible="false"
         />
 
-        <!-- ── HERO TRAILER ────────────────────────────────────────── -->
-        <!-- Plays after 1s dwell, muted, 30s max — identical to web -->
-        <Video
-            id="heroTrailer"
-            width="1920"
-            height="800"
+        <!-- LOADING STATE -->
+        <Group id="loadingGroup" visible="true">
+            <Rectangle width="1920" height="1080" color="#050505" />
+            <Group translation="[760, 520]">
+                <Rectangle id="loadingBar" width="400" height="4" color="#333333" />
+                <Rectangle id="loadingProgress" width="100" height="4" color="#EF4444" />
+                <Label id="loadingText" text="Loading your experience..." font="font:SmallSystemFont" color="#A0A0A0" width="400" horizAlign="center" translation="[0, 24]" />
+            </Group>
+        </Group>
+
+        <!-- ERROR STATE -->
+        <Group id="errorGroup" visible="false">
+            <Rectangle width="1920" height="1080" color="#050505" />
+            <Group translation="[560, 380]">
+                <Label id="errorIcon" text="⚠" font="font:LargeBoldSystemFont" color="#EF4444" width="800" horizAlign="center" />
+                <Label id="errorTitle" text="Something went wrong" font="font:LargeBoldSystemFont" color="#EBEBEB" width="800" horizAlign="center" translation="[0, 80]" />
+                <Label id="errorMessage" text="Unable to load content." font="font:MediumSystemFont" color="#A0A0A0" width="800" horizAlign="center" wrap="true" translation="[0, 150]" />
+                <Rectangle id="retryBtn" width="200" height="50" color="#EF4444" translation="[300, 250]">
+                    <Label text="TRY AGAIN" font="font:SmallBoldSystemFont" color="#EBEBEB" width="200" height="50" horizAlign="center" vertAlign="center" />
+                </Rectangle>
+            </Group>
+        </Group>
+        <!-- TRAILER VIDEO — must be LAST child so it renders on top of everything -->
+        <Video id="heroTrailer"
+            width="1920" height="1080"
+            translation="[0, 0]"
             visible="false"
             mute="true"
-            loop="true"
+            loop="false"
+            transportBarVisible="false"
         />
-
-        <Timer id="trailerTimer"     repeat="false" duration="1" />
-        <Timer id="trailerStopTimer" repeat="false" duration="30" />
-        <Timer id="heroRotateTimer"  repeat="true"  duration="8" />
-
+        <Timer id="trailerDwellTimer" duration="1.5" repeat="false" />
+        <Timer id="trailerStopTimer"  duration="30"  repeat="false" />
     </children>
 </component>

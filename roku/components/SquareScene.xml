@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - The Public Square Scene
+    Shows ONLY publicAccess / publicDomainIndie content in a grid
+-->
+<component name="SquareScene" extends="Group">
+    <interface>
+        <field id="feedData" type="node" onChange="OnFeedSet" />
+        <field id="playContent" type="node" alwaysNotify="true" />
+        <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="SquareScene.brs" />
+
+    <children>
+        <Rectangle id="bgRect" width="1920" height="1080" color="#050505" />
+
+        <Label
+            id="squareTitle"
+            text="THE PUBLIC SQUARE"
+            font="font:LargeBoldSystemFont"
+            color="#EBEBEB"
+            translation="[90, 20]"
+        />
+        <Label
+            id="squareSubtitle"
+            text=""
+            font="font:SmallSystemFont"
+            color="#EF4444"
+            translation="[90, 70]"
+        />
+
+        <RowList
+            id="squareRowList"
+            translation="[0, 110]"
+            itemSize="[1920, 400]"
+            numRows="2"
+            rowItemSize="[[200, 300]]"
+            rowItemSpacing="[[20, 0]]"
+            itemSpacing="[0, 80]"
+            showRowLabel="[true]"
+            showRowCounter="[false]"
+            rowLabelOffset="[[90, 10]]"
+            rowLabelColor="#FFFFFF"
+            rowLabelFont="font:MediumBoldSystemFont"
+            focusXOffset="[90]"
+            drawFocusFeedback="false"
+            vertFocusAnimationStyle="floatingFocus"
+            rowFocusAnimationStyle="floatingFocus"
+            visible="false"
+        />
+
+        <Label
+            id="emptyLabel"
+            text="No public access content available."
+            font="font:MediumSystemFont"
+            color="#666666"
+            width="1920"
+            horizAlign="center"
+            translation="[0, 500]"
+            visible="false"
+        />
+    </children>
+</component>

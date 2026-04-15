@@ -1,10 +1,31 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Content Task (V4 Studio)
+    Background task for all API operations:
+    - fetchFeed: Fetches and parses VOD feed
+    - getLinkCode: Fetches device link code from API
+    - pollAuth: Polls for device authentication status
+-->
 <component name="ContentTask" extends="Task">
     <interface>
-        <field id="url"         type="string" />
-        <field id="content"     type="node" />
-        <field id="heroItems"   type="node" />
-        <field id="announcement" type="string" />
+        <field id="searchQuery" type="string" value="" />
+        <field id="actorResults" type="string" value="" />
+        <field id="taskType" type="string" value="fetchFeed" />
+        <field id="feedUrl" type="string" value="" />
+        <field id="deviceId" type="string" value="" />
+        <field id="feedData" type="node" />
+        <field id="linkCode" type="string" value="" />
+        <field id="isLinked" type="boolean" value="false" />
+        <field id="authToken" type="string" value="" />
+        <field id="userName" type="string" value="" />
+        <field id="userEmail" type="string" value="" />
+        <field id="avatarUrl" type="string" value="" />
+        <field id="errorMessage" type="string" value="" />
+        <field id="taskStatus" type="string" value="idle" alwaysNotify="true" />
     </interface>
-    <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="ContentTask.brs" />
 </component>

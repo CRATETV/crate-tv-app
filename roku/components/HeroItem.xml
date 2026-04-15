@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- 
+    CRATE TV - Hero Item Component
+    16:9 hero banner for featured content carousel
+-->
+<component name="HeroItem" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentChange" />
+        <field id="focusPercent" type="float" value="0" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="HeroItem.brs" />
+
+    <children>
+        <!-- Hero Container -->
+        <Group id="heroContainer">
+            <!-- Background Image -->
+            <Poster
+                id="heroImage"
+                width="1740"
+                height="580"
+                loadingBitmapOpacity="0"
+                failedBitmapUri="pkg:/images/hero_placeholder.png"
+            />
+
+            <!-- Gradient Overlay (left side for text) -->
+            <Rectangle
+                id="leftGradient"
+                width="900"
+                height="580"
+                translation="[0, 0]"
+            >
+                <Rectangle width="200" height="580" color="#050505" opacity="0.95" translation="[0, 0]" />
+                <Rectangle width="200" height="580" color="#050505" opacity="0.8" translation="[200, 0]" />
+                <Rectangle width="200" height="580" color="#050505" opacity="0.5" translation="[400, 0]" />
+                <Rectangle width="150" height="580" color="#050505" opacity="0.3" translation="[600, 0]" />
+                <Rectangle width="150" height="580" color="#050505" opacity="0.1" translation="[750, 0]" />
+            </Rectangle>
+
+            <!-- Bottom Gradient -->
+            <Rectangle
+                id="bottomGradient"
+                width="1740"
+                height="150"
+                translation="[0, 430]"
+            >
+                <Rectangle width="1740" height="50" color="#050505" opacity="0.0" translation="[0, 0]" />
+                <Rectangle width="1740" height="50" color="#050505" opacity="0.5" translation="[0, 50]" />
+                <Rectangle width="1740" height="50" color="#050505" opacity="0.9" translation="[0, 100]" />
+            </Rectangle>
+
+            <!-- Crate Red Accent Line -->
+            <Rectangle
+                id="accentLine"
+                width="4"
+                height="200"
+                color="#EF4444"
+                translation="[50, 190]"
+            />
+        </Group>
+    </children>
+</component>

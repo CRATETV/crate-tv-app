@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Chat Poll Task
+    Fetches recent chat messages for the live watch party.
+    Polls GET /api/get-watch-party-chat?movieKey=...&limit=20
+    Returns array of { username, message, timestamp } objects.
+    Runs every 5 seconds while a party is live.
+-->
+<component name="ChatTask" extends="Task">
+    <interface>
+        <field id="movieKey"    type="string" value="" />
+        <field id="authToken"   type="string" value="" />
+        <field id="taskStatus"  type="string" value="none" />
+        <field id="messages"    type="string" value="" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="ChatTask.brs" />
+</component>

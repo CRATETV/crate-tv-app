@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Live Chat Overlay
+    Read-only chat panel shown during watch party playback.
+    Sits on the right side of the screen, semi-transparent.
+    Shows the last 6 messages. New messages push old ones up.
+    Roku users watch -- mobile users type.
+-->
+<component name="ChatOverlay" extends="Group">
+    <interface>
+        <field id="movieKey"  type="string"  value=""    onChange="OnMovieKeyChange" />
+        <field id="authToken" type="string"  value="" />
+        <field id="isVisible" type="boolean" value="false" onChange="OnVisibleChange" />
+    </interface>
+
+    <script type="text/brightscript" uri="ChatOverlay.brs" />
+
+    <children>
+        <!--
+            Panel sits in the bottom-right of the screen.
+            Safe area: x=1340, y=680, width=520, height=300
+            Semi-transparent dark background so film is still visible.
+        -->
+        <Group id="panel" translation="[1340, 680]" visible="false">
+
+            <!-- Panel background -- dark, semi-transparent -->
+            <Rectangle id="panelBg"
+                width="540" height="310"
+                color="#0A0A0A" opacity="0.82" />
+
+            <!-- Top accent line -->
+            <Rectangle width="540" height="3" color="#EF4444" />
+
+            <!-- Header -->
+            <Rectangle width="12" height="12" color="#EF4444"
+                translation="[14, 12]" />
+            <Label text="LIVE CHAT"
+                font="font:SmallBoldSystemFont" color="#EBEBEB"
+                translation="[34, 8]" />
+
+            <!-- Divider -->
+            <Rectangle width="540" height="1" color="#2A2A2A"
+                translation="[0, 32]" />
+
+            <!--
+                6 message rows -- each has username (red) + message (white).
+                Row 0 = oldest visible, Row 5 = newest (bottom).
+                Each row is 40px tall. Stack starts at y=38.
+            -->
+            <Group id="msgRow0" translation="[0, 38]">
+                <Label id="msgUser0" text="" font="font:SmallBoldSystemFont"
+                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
+                <Label id="msgText0" text="" font="font:SmallSystemFont"
+                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
+            </Group>
+            <Group id="msgRow1" translation="[0, 88]">
+                <Label id="msgUser1" text="" font="font:SmallBoldSystemFont"
+                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
+                <Label id="msgText1" text="" font="font:SmallSystemFont"
+                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
+            </Group>
+            <Group id="msgRow2" translation="[0, 138]">
+                <Label id="msgUser2" text="" font="font:SmallBoldSystemFont"
+                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
+                <Label id="msgText2" text="" font="font:SmallSystemFont"
+                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
+            </Group>
+            <Group id="msgRow3" translation="[0, 188]">
+                <Label id="msgUser3" text="" font="font:SmallBoldSystemFont"
+                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
+                <Label id="msgText3" text="" font="font:SmallSystemFont"
+                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
+            </Group>
+            <Group id="msgRow4" translation="[0, 238]">
+                <Label id="msgUser4" text="" font="font:SmallBoldSystemFont"
+                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
+                <Label id="msgText4" text="" font="font:SmallSystemFont"
+                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
+            </Group>
+            <Group id="msgRow5" translation="[0, 278]">
+                <Label id="msgUser5" text="" font="font:SmallBoldSystemFont"
+                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
+                <Label id="msgText5" text="" font="font:SmallSystemFont"
+                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
+            </Group>
+
+        </Group>
+    </children>
+</component>

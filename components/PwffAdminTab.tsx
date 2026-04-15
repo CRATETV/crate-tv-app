@@ -58,11 +58,75 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
         (e.name || '').toLowerCase().includes(search.toLowerCase())
     );
 
+    const [notifyLoading, setNotifyLoading] = useState(false);
+    const [notifyResult, setNotifyResult] = useState<{sent:number;errors:number;total:number} | null>(null);
+    const [importText, setImportText] = useState('');
+    const [importLoading, setImportLoading] = useState(false);
+    const [importResult, setImportResult] = useState('');
+
+    const importEmails = async () => {
+        const db = getDbInstance();
+        if (!db) return;
+        const parsed = importText.split(/[,\n\r]+/).map(e => e.trim().toLowerCase()).filter(e => e.includes('@') && e.includes('.'));
+        if (!parsed.length) { setImportResult('No valid emails found'); return; }
+        setImportLoading(true);
+        setImportResult('');
+        let added = 0; let skipped = 0;
+        // Check which already exist
+        const existing = new Set(emails.map(e => e.email.toLowerCase()));
+        for (const email of parsed) {
+            if (existing.has(email)) { skipped++; continue; }
+            try {
+                const ref = await db.collection('pwff_interest').add({ email, source: 'admin-import', submittedAt: new Date() });
+                setEmails(prev => [...prev, { id: ref.id, email, source: 'admin-import', submittedAt: { toDate: () => new Date() } as any }]);
+                existing.add(email);
+                added++;
+            } catch { skipped++; }
+        }
+        setImportResult(`✓ Added ${added} email${added !== 1 ? 's' : ''}${skipped > 0 ? ` · ${skipped} already on list` : ''}`);
+        setImportText('');
+        setImportLoading(false);
+    };
+
     const copyEmails = () => {
         navigator.clipboard.writeText(filtered.map(e => e.email).join('\n')).then(() => {
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
         });
+    };
+
+    const downloadCSV = () => {
+        const rows = [['Email', 'Name', 'Source', 'Date']];
+        filtered.forEach(e => {
+            const date = e.submittedAt?.toDate ? e.submittedAt.toDate().toLocaleDateString() : '';
+            rows.push([e.email, e.name || '', e.source || '', date]);
+        });
+        const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pwff-interest-list-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const notifyLive = async () => {
+        if (!window.confirm(`Send "Festival is Live" email to all ${emails.length} subscribers? This cannot be undone.`)) return;
+        setNotifyLoading(true);
+        setNotifyResult(null);
+        try {
+            const res = await fetch('/api/pwff-notify-live', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ festivalName: 'Playhouse West Film Festival 2026', festivalUrl: 'https://cratetv.net/pwff2026' })
+            });
+            const data = await res.json();
+            setNotifyResult(data);
+        } catch {
+            setNotifyResult({ sent: 0, errors: 1, total: 0 });
+        }
+        setNotifyLoading(false);
     };
 
     const BlockInviteSection: React.FC<{block: any}> = ({ block }) => {
@@ -358,13 +422,42 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                 )}
             </div>
 
+            {/* ── MANUAL EMAIL IMPORT ───────────────────────────────────── */}
+            <div className="bg-gray-900 rounded-xl border border-white/5 overflow-hidden">
+                <div className="p-4 border-b border-white/5">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-1">Add Emails to Interest List</h3>
+                    <p className="text-[11px] text-gray-600">Paste existing Crate users or ticket holders here — one per line or comma separated. They'll be added to the list and included in the "Festival is Live" blast.</p>
+                </div>
+                <div className="p-4 space-y-3">
+                    <textarea
+                        value={importText}
+                        onChange={e => setImportText(e.target.value)}
+                        placeholder={"email1@gmail.com\nemail2@gmail.com\nor email1, email2, email3"}
+                        rows={4}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 resize-none font-mono placeholder-gray-700"
+                    />
+                    <div className="flex items-center justify-between gap-3">
+                        {importResult && (
+                            <p className={`text-xs font-bold ${importResult.includes('✓') ? 'text-green-400' : 'text-amber-400'}`}>{importResult}</p>
+                        )}
+                        <button
+                            onClick={importEmails}
+                            disabled={importLoading || !importText.trim()}
+                            className="ml-auto bg-white text-black font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-all"
+                        >
+                            {importLoading ? 'Adding...' : 'Add to List'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* ── EMAIL LIST ────────────────────────────────────────────── */}
             <div className="bg-gray-900 rounded-xl border border-white/5 overflow-hidden">
                 <div className="p-4 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">
                         Festival Interest List ({filtered.length})
                     </h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <input
                             type="text"
                             value={search}
@@ -372,14 +465,28 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                             placeholder="Search..."
                             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-pink-500 w-40"
                         />
-                        <button
-                            onClick={copyEmails}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
-                        >
+                        <button onClick={copyEmails} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
                             {copySuccess ? '✓ Copied!' : 'Copy All'}
+                        </button>
+                        <button onClick={downloadCSV} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-900/30 hover:bg-blue-900/50 border border-blue-500/20 text-blue-400 transition-all">
+                            ↓ CSV
+                        </button>
+                        <button
+                            onClick={notifyLive}
+                            disabled={notifyLoading || emails.length === 0}
+                            className="text-xs font-bold px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white transition-all"
+                        >
+                            {notifyLoading ? 'Sending...' : `🎬 Notify ${emails.length} — Festival is Live`}
                         </button>
                     </div>
                 </div>
+                {notifyResult && (
+                    <div className={`px-4 py-3 text-xs font-bold border-b border-white/5 ${notifyResult.errors > 0 ? 'text-amber-400 bg-amber-900/10' : 'text-green-400 bg-green-900/10'}`}>
+                        {notifyResult.errors === 0
+                            ? `✓ Sent to ${notifyResult.sent} subscribers successfully`
+                            : `Sent: ${notifyResult.sent} · Errors: ${notifyResult.errors} of ${notifyResult.total}`}
+                    </div>
+                )}
                 {loadingEmails ? (
                     <div className="p-8 text-center text-gray-600 text-sm">Loading...</div>
                 ) : filtered.length === 0 ? (

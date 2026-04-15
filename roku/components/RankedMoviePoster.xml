@@ -1,45 +1,66 @@
-
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Ranked Movie Poster (V4 Studio)
+    Massive 01, 02 outlines behind poster. No title text.
+    Red rounded focus ring + 1.1x scale. Rounded poster corners.
+-->
 <component name="RankedMoviePoster" extends="Group">
-
-    <script type="text/brightscript" uri="pkg:/components/RankedMoviePoster.brs" />
-
     <interface>
-        <field id="itemContent" type="node" onChange="onContentChange" />
-        <field id="focusPercent" type="float" onChange="onFocusChange" />
-        <field id="rowItemIndex" type="integer" />
+        <field id="itemContent" type="node" onChange="OnContentChange" />
+        <field id="focusPercent" type="float" value="0.0" onChange="OnFocusChange" />
+        <field id="rowFocusPercent" type="float" value="0.0" />
+        <field id="itemHasFocus" type="boolean" value="false" />
+        <field id="itemIndex" type="integer" value="0" onChange="OnIndexChange" />
+        <field id="width" type="float" value="260" />
+        <field id="height" type="float" value="380" />
     </interface>
 
-    <children>
-        <Group id="contentGroup">
-            <Label
-                id="rankLabel"
-                horizAlign="left"
-                vertAlign="center"
-                height="360"
-                width="200"
-                color="0x222222FF"
-            >
-                <font role="sans" size="180" weight="bold" />
-            </Label>
-            
-            <Poster
-                id="tilePoster"
-                width="240"
-                height="360"
-                translation="[100, 0]"
-            />
+    <script type="text/brightscript" uri="RankedMoviePoster.brs" />
 
-            <!-- Snug Focus Ring: Centered for 4px border (X: 100-4=96, Y: 0-4=-4) -->
-            <Rectangle 
-                id="focusRing"
-                color="0xEF4444FF"
-                width="248"
-                height="368"
-                translation="[96, -4]"
-                visible="false"
-            />
+    <children>
+        <Group id="itemContainer">
+            <!-- Massive rank number BEHIND poster -->
+            <Group id="rankNumberGroup" translation="[0, 50]">
+                <Label id="rankNumberShadow" text="01" font="font:LargeBoldSystemFont" color="#1A1A1A" width="140" height="300" horizAlign="center" vertAlign="center" translation="[3, 3]" />
+                <Label id="rankNumberStroke" text="01" font="font:LargeBoldSystemFont" color="#333333" width="140" height="300" horizAlign="center" vertAlign="center" />
+            </Group>
+            
+            <!-- Poster container at [100, 0] -->
+            <Group id="posterContainer" translation="[100, 0]">
+                <!-- Shadow (offset for depth) -->
+                <Rectangle id="shadow" width="244" height="364" color="#000000" opacity="0.4" translation="[4, 6]" />
+                
+                <!-- Background -->
+                <Rectangle id="posterBg" width="240" height="360" color="#1A1A1A" />
+
+                <!-- Shimmer loading state -->
+                <Rectangle id="shimmerBase" width="240" height="360" color="#252525" />
+                <Rectangle id="shimmerBar"  width="240" height="360" color="#333333" opacity="0.0" />
+
+                <!-- Poster image -->
+                <Poster id="posterImage" width="240" height="360" 
+                        loadWidth="240" loadHeight="360" loadDisplayMode="scaleToFill"
+                        loadingBitmapOpacity="0.0" 
+                        failedBitmapUri="pkg:/images/poster_placeholder.png" />
+                
+                <!-- Lock overlay -->
+                <Group id="lockOverlay" visible="false">
+                    <Rectangle width="240" height="360" color="#000000" opacity="0.6" />
+                    <Label text="&#x1F512;" font="font:LargeBoldSystemFont" color="#EF4444" width="240" height="360" horizAlign="center" vertAlign="center" />
+                </Group>
+
+                <!-- Rounded corner mask -->
+                <Poster id="cornerMask" width="240" height="360"
+                        uri="pkg:/images/corner_mask_240x360.png"
+                        />
+                
+                <!-- Red rounded focus ring PNG -- hidden until focused -->
+                <Poster id="focusBorder" width="248" height="368"
+                        uri="pkg:/images/focus_ring_red_248x368.png"
+                       
+                        translation="[-4, -4]"
+                        visible="false" />
+            </Group>
         </Group>
     </children>
-
 </component>

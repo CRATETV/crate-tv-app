@@ -19,9 +19,7 @@
             vertAlign="center" 
             horizAlign="center" 
             opacity="0.1"
-        >
-            <font role="sans" size="240" weight="bold" />
-        </Label>
+         font="font:LargeBoldSystemFont" />
 
         <!-- Snug Focus Ring: Translated to align with poster at [100,0] -->
         <Rectangle

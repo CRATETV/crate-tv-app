@@ -425,7 +425,7 @@ export interface PwffInterestEntry {
   email: string;
   name?: string;
   submittedAt: any;
-  source: 'teaser' | 'programme';
+  source: 'teaser' | 'programme' | 'admin-import';
 }
 
 export interface ActorSubmission {

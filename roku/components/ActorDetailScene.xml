@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ActorDetailScene" extends="Scene">
+    <script type="text/brightscript" uri="ActorDetailScene.brs" />
+    <interface>
+        <field id="actorSlug" type="string" alwaysNotify="true" />
+        <field id="videoContent" type="node" alwaysNotify="true" />
+        <field id="exitToSearch" type="boolean" alwaysNotify="true" />
+    </interface>
+    
+    <children>
+        <!-- Background -->
+        <Rectangle id="background" width="1920" height="1080" color="0x0F0F0FFF" />
+        
+        <!-- Header -->
+        <Header id="header" translation="[0,0]" />
+        
+        <!-- Loading Spinner -->
+        <BusySpinner id="loadingSpinner" translation="[850, 450]" visible="false" />
+        
+        <!-- Content Container -->
+        <Group id="contentGroup" translation="[0, 150]" visible="false">
+            
+            <!-- Actor Photo -->
+            <Poster
+                id="actorPhoto"
+                translation="[120, 50]"
+                width="400"
+                height="600"
+                loadDisplayMode="scaleToFit"
+            />
+            
+            <!-- Actor Info -->
+            <Group id="infoGroup" translation="[560, 50]">
+                <!-- Actor Name -->
+                <Label
+                    id="actorName"
+                    translation="[0, 0]"
+                    width="1240"
+                    height="80"
+                    font="font:LargeBoldSystemFont"
+                    color="0xFFFFFFFF"
+                    horizAlign="left"
+                    vertAlign="top"
+                />
+                
+                <!-- Bio -->
+                <Label
+                    id="actorBio"
+                    translation="[0, 100]"
+                    width="1240"
+                    height="400"
+                    font="font:MediumSystemFont"
+                    color="0xCCCCCCFF"
+                    horizAlign="left"
+                    vertAlign="top"
+                    wrap="true"
+                />
+            </Group>
+            
+            <!-- Filmography Section -->
+            <Label
+                id="filmographyLabel"
+                translation="[120, 700]"
+                text="Filmography"
+                font="font:MediumBoldSystemFont"
+                color="0xFFFFFFFF"
+            />
+            
+            <!-- Movies Grid -->
+            <PosterGrid
+                id="moviesGrid"
+                translation="[120, 760]"
+                itemSize="[240, 360]"
+                basePosterSize="[240, 360]"
+                itemSpacing="[20, 20]"
+                numColumns="6"
+                numRows="1"
+                posterDisplayMode="scaleToFit"
+            >
+            </PosterGrid>
+        </Group>
+        
+        <!-- Error Message -->
+        <Label
+            id="errorLabel"
+            translation="[0, 400]"
+            width="1920"
+            height="100"
+            font="font:LargeBoldSystemFont"
+            color="0xFF0000FF"
+            horizAlign="center"
+            vertAlign="center"
+            visible="false"
+        />
+    </children>
+</component>

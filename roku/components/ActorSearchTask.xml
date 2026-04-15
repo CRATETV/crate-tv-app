@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Actor Search Task
+    Background Task node for fetching actor photo + bio from the actor API.
+    SearchScene creates one of these, sets actorQuery, observes taskStatus.
+    Network I/O runs on the Task thread -- never the render thread.
+-->
+<component name="ActorSearchTask" extends="Task">
+    <interface>
+        <field id="actorQuery"  type="string"  value=""     />
+        <field id="actorName"   type="string"  value=""     alwaysNotify="true" />
+        <field id="actorPhoto"  type="string"  value=""     alwaysNotify="true" />
+        <field id="actorBio"    type="string"  value=""     alwaysNotify="true" />
+        <field id="actorSlug"   type="string"  value=""     alwaysNotify="true" />
+        <field id="taskStatus"  type="string"  value="idle" alwaysNotify="true" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="ActorSearchTask.brs" />
+</component>

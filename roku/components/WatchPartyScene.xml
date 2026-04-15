@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Watch Party Scene
+    Three states driven by watch_parties/{movieKey} Firestore document:
+
+    LOADING  -- spinner while fetching party status
+    WAITING  -- party exists but hasn't started yet, shows countdown
+    PAID     -- party is paid and user hasn't unlocked it, shows QR to webapp
+    LIVE     -- party is live, launches video player synced to actualStartTime
+    QA       -- Q&A / Director Stage is active, shows indicator overlay
+    ENDED    -- party has ended, prompt to watch from beginning
+-->
+<component name="WatchPartyScene" extends="Group">
+    <interface>
+        <field id="film"          type="node"    onChange="OnFilmSet" />
+        <field id="authToken"     type="string"  value="" />
+        <field id="playContent"   type="node"    alwaysNotify="true" />
+        <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="WatchPartyScene.brs" />
+
+    <children>
+        <Rectangle id="bg" width="1920" height="1020" color="#050505" />
+
+        <!-- Dimmed backdrop poster -->
+        <Poster id="backdropPoster"
+            width="1920" height="1020"
+            loadDisplayMode="scaleToFill"
+            opacity="0.15" />
+
+        <!-- Red top accent bar -->
+        <Rectangle width="1920" height="4" color="#EF4444" />
+
+        <!-- Film title + "WATCH PARTY" eyebrow -- always visible -->
+        <Label id="eyebrow"
+            text="WATCH PARTY"
+            font="font:SmallBoldSystemFont"
+            color="#EF4444"
+            width="1920" horizAlign="center"
+            translation="[0, 80]" />
+        <Label id="filmTitle"
+            text=""
+            font="font:LargeBoldSystemFont"
+            color="#EBEBEB"
+            width="1920" horizAlign="center"
+            maxLines="1"
+            translation="[0, 118]" />
+
+        <!-- ================================================================ -->
+        <!-- LOADING STATE                                                     -->
+        <!-- ================================================================ -->
+        <Group id="loadingState" visible="true">
+            <Label text="Checking watch party status..."
+                font="font:SmallSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 480]" />
+        </Group>
+
+        <!-- ================================================================ -->
+        <!-- WAITING STATE -- countdown to start                               -->
+        <!-- ================================================================ -->
+        <Group id="waitingState" visible="false">
+            <Label text="THE PARTY STARTS IN"
+                font="font:SmallBoldSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 380]" />
+            <Label id="countdownLabel"
+                text="--:--:--"
+                font="font:LargeBoldSystemFont" color="#EBEBEB"
+                width="1920" horizAlign="center"
+                translation="[0, 430]" />
+            <Label text="Stay here -- playback will begin automatically"
+                font="font:SmallSystemFont" color="#666666"
+                width="1920" horizAlign="center"
+                translation="[0, 530]" />
+
+            <!-- Live dot animation (just a static red dot for now) -->
+            <Rectangle width="12" height="12" color="#EF4444"
+                translation="[946, 600]" />
+            <Label id="waitingParticipants"
+                text=""
+                font="font:SmallSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 620]" />
+        </Group>
+
+        <!-- ================================================================ -->
+        <!-- PAID / NOT UNLOCKED STATE -- QR to webapp                         -->
+        <!-- ================================================================ -->
+        <Group id="paidState" visible="false">
+            <Label text="THIS IS A PREMIUM WATCH PARTY"
+                font="font:SmallBoldSystemFont" color="#EF4444"
+                width="1920" horizAlign="center"
+                translation="[0, 320]" />
+            <Label text="Purchase access at cratetv.net to join"
+                font="font:SmallSystemFont" color="#CCCCCC"
+                width="1920" horizAlign="center"
+                translation="[0, 362]" />
+
+            <!-- QR code panel -->
+            <Rectangle width="220" height="220" color="#EBEBEB"
+                translation="[850, 410]" />
+            <Poster id="paidQrPoster"
+                width="210" height="210"
+                loadDisplayMode="scaleToFit"
+                translation="[855, 415]" />
+
+            <Label text="Scan to join on your phone or computer"
+                font="font:SmallSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 645]" />
+            <Label id="paidUrlLabel"
+                text="cratetv.net/watchparty"
+                font="font:SmallBoldSystemFont" color="#EF4444"
+                width="1920" horizAlign="center"
+                translation="[0, 675]" />
+        </Group>
+
+        <!-- ================================================================ -->
+        <!-- ENDED STATE                                                       -->
+        <!-- ================================================================ -->
+        <Group id="endedState" visible="false">
+            <Label text="THIS WATCH PARTY HAS ENDED"
+                font="font:SmallBoldSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 400]" />
+            <Label text="Press OK to watch from the beginning"
+                font="font:SmallSystemFont" color="#CCCCCC"
+                width="1920" horizAlign="center"
+                translation="[0, 450]" />
+
+            <!-- Watch from beginning button -->
+            <Rectangle id="watchBtn" width="360" height="56"
+                color="#EF4444" translation="[780, 530]" />
+            <Label text="WATCH FROM BEGINNING"
+                font="font:SmallBoldSystemFont" color="#EBEBEB"
+                width="360" height="56"
+                horizAlign="center" vertAlign="center"
+                translation="[780, 530]" />
+        </Group>
+
+        <!-- ================================================================ -->
+        <!-- NO LIVE PARTY STATE                                              -->
+        <!-- ================================================================ -->
+        <Group id="noLiveState" visible="false">
+            <Label text="NO WATCH PARTY IS LIVE RIGHT NOW"
+                font="font:SmallBoldSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 400]" />
+            <Label text="Watch parties are announced on cratetv.net"
+                font="font:SmallSystemFont" color="#666666"
+                width="1920" horizAlign="center"
+                translation="[0, 448]" />
+            <!-- QR to website -->
+            <Rectangle width="160" height="160" color="#EBEBEB" translation="[880, 510]" />
+            <Poster
+                width="150" height="150"
+                loadDisplayMode="scaleToFit"
+                translation="[885, 515]"
+                uri="https://api.qrserver.com/v1/create-qr-code/?size=150x150&amp;data=https://cratetv.net/watchparty" />
+            <Label text="cratetv.net/watchparty"
+                font="font:SmallSystemFont" color="#EF4444"
+                width="1920" horizAlign="center"
+                translation="[0, 684]" />
+        </Group>
+
+        <!-- ================================================================ -->
+        <!-- QA OVERLAY -- shown on top of player when isQALive = true         -->
+        <!-- ================================================================ -->
+        <Group id="qaOverlay" visible="false">
+            <Rectangle width="1920" height="60" color="#1A1A1A" opacity="0.95" />
+            <Rectangle width="12" height="12" color="#EF4444" translation="[40, 24]" />
+            <Label text="DIRECTOR STAGE -- Q&amp;A IN PROGRESS"
+                font="font:SmallBoldSystemFont" color="#EBEBEB"
+                translation="[64, 20]" />
+        </Group>
+    </children>
+</component>

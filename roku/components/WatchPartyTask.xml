@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Watch Party Status Task
+    Polls GET /api/get-watch-party-status?movieKey=...
+    Returns Firestore watch_parties/{movieKey} document as JSON.
+    Run once to get initial state, then re-run every 30s to poll.
+-->
+<component name="WatchPartyTask" extends="Task">
+    <interface>
+        <!-- Input -->
+        <field id="movieKey"   type="string"  value="" />
+        <field id="authToken"  type="string"  value="" />
+
+        <!-- Output -->
+        <field id="taskStatus"      type="string"  value="none" />
+        <field id="partyStatus"     type="string"  value="" />
+        <field id="isPlaying"       type="boolean" value="false" />
+        <field id="actualStartTime" type="integer" value="0" />
+        <field id="isQALive"        type="boolean" value="false" />
+        <field id="isPaid"          type="boolean" value="false" />
+        <field id="isUnlocked"      type="boolean" value="false" />
+        <field id="errorMessage"    type="string"  value="" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="WatchPartyTask.brs" />
+</component>

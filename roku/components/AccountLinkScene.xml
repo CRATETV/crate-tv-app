@@ -1,57 +1,175 @@
-
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Account Link Scene
+    Displays 6-digit link code and polls for authentication
+    Code is prominently displayed so user can see it
+-->
 <component name="AccountLinkScene" extends="Group">
-    <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
+    <interface>
+        <field id="linkComplete" type="boolean" value="false" alwaysNotify="true" />
+        <field id="skipLink" type="boolean" value="false" alwaysNotify="true" />
+        <field id="linkCode" type="string" value="" />
+        <field id="errorMessage" type="string" value="" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="AccountLinkScene.brs" />
+
     <children>
-        <Group id="linkingHub" translation="[960, 540]">
-            <!-- Title -->
-            <Label 
-                id="userNameLabel"
-                text="LINK YOUR ACCOUNT" 
-                width="1400" 
-                horizAlign="center" 
-                translation="[-700, -320]" 
-                font="font:LargeBoldSystemFont" 
-                color="0xFFFFFFFF" 
-            />
-            
-            <!-- Instructions: Increased spacing from title -->
-            <Label 
-                text="Visit cratetv.net/link-roku and enter this code:" 
-                width="1000" 
-                horizAlign="center" 
-                translation="[-500, -180]" 
-                font="font:SmallSystemFont" 
-                color="0x888888FF" 
+        <!-- Background -->
+        <Rectangle id="background" width="1920" height="1080" color="#050505" />
+
+        <!-- Content Container -->
+        <Group id="contentGroup" translation="[0, 0]">
+            <!-- Logo -->
+            <Poster
+                id="logo"
+                width="300"
+                height="150"
+                uri="pkg:/images/crate_logo.png"
+                translation="[810, 100]"
             />
 
-            <!-- High-Impact Code Display: Centered in block -->
-            <Rectangle width="600" height="200" translation="[-300, -60]" color="0x111111FF" radius="20">
-                <Label 
-                    id="codeLabel" 
-                    text="--- ---" 
-                    width="600" 
-                    height="200" 
-                    horizAlign="center" 
-                    vertAlign="center" 
-                    color="0xEF4444FF"
-                >
-                    <font role="sans" size="110" weight="bold" />
-                </Label>
+            <!-- Main Card -->
+            <Rectangle
+                id="linkCard"
+                width="750"
+                height="560"
+                color="#0A0A0A"
+                translation="[585, 290]"
+            >
+                <!-- Card border highlight -->
+                <Rectangle width="750" height="4" color="#EF4444" translation="[0, 0]" />
             </Rectangle>
 
-            <!-- Status: Increased spacing from code block -->
-            <Label 
-                id="statusLabel" 
-                text="Waiting for activation..." 
-                width="1000" 
-                horizAlign="center" 
-                translation="[-500, 220]" 
-                font="font:SmallestSystemFont" 
-                color="0x444444FF" 
+            <!-- Card Content -->
+            <Group id="cardContent" translation="[585, 290]">
+                <!-- Title -->
+                <Label
+                    id="titleLabel"
+                    text="Link Your Device"
+                    font="font:LargeBoldSystemFont"
+                    color="#EBEBEB"
+                    width="750"
+                    horizAlign="center"
+                    translation="[0, 40]"
+                />
+
+                <!-- Instructions -->
+                <Label
+                    id="instructionsLabel"
+                    text="Visit cratetv.net/link and enter this code:"
+                    font="font:MediumSystemFont"
+                    color="#A0A0A0"
+                    width="680"
+                    horizAlign="center"
+                    wrap="true"
+                    translation="[35, 110]"
+                />
+
+                <!-- Code Display Container (large, prominent) -->
+                <Rectangle
+                    id="codeBackground"
+                    width="550"
+                    height="130"
+                    color="#1A1A1A"
+                    translation="[100, 180]"
+                />
+
+                <!-- Link Code (big, red, centered) -->
+                <Label
+                    id="linkCodeLabel"
+                    text="------"
+                    font="font:LargeBoldSystemFont"
+                    color="#EF4444"
+                    width="550"
+                    height="130"
+                    horizAlign="center"
+                    vertAlign="center"
+                    translation="[100, 180]"
+                />
+
+                <!-- Loading Spinner (shown while fetching code) -->
+                <BusySpinner
+                    id="codeSpinner"
+                    poster="pkg:/images/spinner.png"
+                    translation="[355, 225]"
+                    visible="false"
+                />
+
+                <!-- Status Message -->
+                <Label
+                    id="statusLabel"
+                    text="Generating code..."
+                    font="font:SmallSystemFont"
+                    color="#666666"
+                    width="680"
+                    horizAlign="center"
+                    translation="[35, 335]"
+                />
+
+                <!-- Error Message -->
+                <Label
+                    id="errorLabel"
+                    text=""
+                    font="font:SmallSystemFont"
+                    color="#EF4444"
+                    width="680"
+                    horizAlign="center"
+                    wrap="true"
+                    visible="false"
+                    translation="[35, 370]"
+                />
+
+                <!-- Skip Button -->
+                <Rectangle
+                    id="skipButtonBg"
+                    width="220"
+                    height="50"
+                    color="#252525"
+                    translation="[265, 430]"
+                />
+                <Label
+                    id="skipButtonLabel"
+                    text="Skip for Now"
+                    font="font:SmallBoldSystemFont"
+                    color="#A0A0A0"
+                    width="220"
+                    height="50"
+                    horizAlign="center"
+                    vertAlign="center"
+                    translation="[265, 430]"
+                />
+            </Group>
+
+            <!-- Bottom Instructions -->
+            <Label
+                id="bottomLabel"
+                text="Your account lets you unlock premium content and sync across devices"
+                font="font:SmallSystemFont"
+                color="#666666"
+                width="600"
+                horizAlign="center"
+                wrap="true"
+                translation="[660, 900]"
             />
         </Group>
 
-        <Timer id="pollTimer" duration="5" repeat="true" />
+        <!-- Focus indicator for skip button -->
+        <Rectangle
+            id="focusRing"
+            width="228"
+            height="58"
+            color="#00000000"
+            visible="false"
+            translation="[846, 716]"
+        >
+            <Rectangle width="228" height="3" color="#EF4444" translation="[0, 0]" />
+            <Rectangle width="228" height="3" color="#EF4444" translation="[0, 55]" />
+            <Rectangle width="3" height="58" color="#EF4444" translation="[0, 0]" />
+            <Rectangle width="3" height="58" color="#EF4444" translation="[225, 0]" />
+        </Rectangle>
     </children>
 </component>

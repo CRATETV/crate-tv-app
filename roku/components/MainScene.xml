@@ -1,44 +1,86 @@
-
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Main Scene (V4 Studio)
+    Root scene with:
+    - Header nav bar (HOME, THE SQUARE, SEARCH, MY ACCOUNT)
+    - Scene container viewport that swaps based on nav selection
+    - Login flow → Home → Video playback
+-->
 <component name="MainScene" extends="Scene">
     <interface>
-        <!-- The configuration manifest passed from Main() -->
-        <field id="config" type="assocarray" />
-        <!-- Launch Arguments for Deep Linking (Requirement 5.1) -->
-        <field id="launchArgs" type="assocarray" />
+        <field id="currentScene" type="string" value="loading" />
+        <field id="selectedContent" type="node" />
+        <field id="exitApp" type="boolean" value="false" />
     </interface>
-    
-    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
-    
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="MainScene.brs" />
+
     <children>
-        <!-- Pure Black Cinematic Base -->
-        <Rectangle width="1920" height="1080" color="0x050505FF" />
-        
-        <!-- Announcement Banner (Requirement 6.2) -->
-        <Group id="announcementBanner" visible="false">
-            <Rectangle width="1920" height="50" color="0xEF4444FF" />
-            <Label 
-                id="announcementText" 
-                width="1920" 
-                height="50" 
-                horizAlign="center" 
-                vertAlign="center" 
-                font="font:SmallBoldSystemFont" 
-                color="0xFFFFFFFF" 
-            />
+        <!-- Background -->
+        <Rectangle id="background" width="1920" height="1080" color="#050505" />
+
+        <!-- Header Navigation Bar (persistent, above viewport) -->
+        <!-- visible="false" -- revealed in OnHomeFeedReady() after feed loads -->
+        <Header id="headerNav" translation="[0, 0]" visible="false" />
+
+        <!-- Scene Container / Viewport (below header) -->
+        <!-- Also starts hidden -- revealed atomically with the header -->
+        <Group id="sceneContainer" translation="[0, 60]" visible="false" />
+
+        <!-- LOADING COVER
+             Rendered LAST -- always on top. Pure black rectangle covers
+             sceneContainer until OnHomeFeedReady() hides it.
+             The CRATE logo is shown via manifest splash_screen_fhd/hd/sd
+             (native Roku splash -- displays before Main.brs even runs). -->
+        <Group id="loadingGroup" visible="true">
+            <Rectangle width="1920" height="1080" color="#050505" />
+            <Group translation="[660, 400]">
+                <!-- CRATE wordmark in pure text (no image, no line cutting through) -->
+                <Label text="CRATE"
+                       font="font:LargeBoldSystemFont"
+                       color="#EBEBEB"
+                       width="600"
+                       horizAlign="center"
+                       translation="[0, 0]" />
+                <Label text="TELEVISION  ·  POWERED BY CREATIVES"
+                       font="font:SmallSystemFont"
+                       color="#555555"
+                       width="600"
+                       horizAlign="center"
+                       translation="[0, 56]" />
+                <!-- Red accent line, standalone below tagline -->
+                <Rectangle width="48" height="3" color="#EF4444" translation="[276, 82]" />
+                <Label text="Your independent cinema, streaming now."
+                       font="font:SmallSystemFont"
+                       color="#444444"
+                       width="600"
+                       horizAlign="center"
+                       translation="[0, 106]" />
+                <!-- Progress bar -->
+                <Rectangle width="600" height="4" color="#1A1A1A" translation="[0, 146]" />
+                <Rectangle id="loadingBar" width="60" height="4" color="#EF4444" translation="[0, 146]" />
+                <Group id="loadingDots" translation="[264, 166]">
+                    <Rectangle id="dot1" width="12" height="12" color="#EF4444" translation="[0,  0]" />
+                    <Rectangle id="dot2" width="12" height="12" color="#333333" translation="[22, 0]" />
+                    <Rectangle id="dot3" width="12" height="12" color="#333333" translation="[44, 0]" />
+                </Group>
+                <Label id="loadingText"
+                       text="Loading content..."
+                       font="font:SmallSystemFont"
+                       color="#888888"
+                       width="600"
+                       horizAlign="center"
+                       translation="[0, 196]" />
+            </Group>
         </Group>
 
-        <!-- Initialized as hidden to prevent text flashes -->
-        <Header id="navBar" translation="[0, 40]" visible="false" />
-
-        <!-- Viewport hidden until data sync -->
-        <Group id="viewport" translation="[0, 160]" visible="false" />
-
-        <LoadingIndicator 
-            id="spinner" 
-            visible="true" 
-            translation="[960, 540]" 
-            fadeInterval="0.5"
-        />
+        <!-- Global Dialog Container -->
+        <Group id="dialogContainer" visible="false">
+            <Rectangle id="dialogOverlay" width="1920" height="1080" color="#000000" opacity="0.85" />
+            <Group id="dialogContent" translation="[560, 340]" />
+        </Group>
     </children>
 </component>

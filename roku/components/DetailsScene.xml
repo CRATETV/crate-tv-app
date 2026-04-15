@@ -1,162 +1,266 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CRATE TV - Details Scene (V4 Studio)
+    Content details with:
+    - HD backdrop
+    - Full metadata display
+    - Cast & Director lists
+    - Play button (or QR paywall for locked content)
+-->
 <component name="DetailsScene" extends="Group">
-    <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
     <interface>
-        <field id="content" type="node" onChange="onContentChange" />
-        <field id="command" type="assocarray" alwaysNotify="true" />
+        <field id="content" type="node" onChange="OnContentSet" />
+        <field id="playRequested" type="boolean" value="false" alwaysNotify="true" />
+        <field id="closeRequested" type="boolean" value="false" alwaysNotify="true" />
     </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="DetailsScene.brs" />
+
     <children>
-        <!-- Full background -->
-        <Rectangle width="1920" height="1080" color="#050505" />
-
-        <!-- Hero background — wide blurred poster fills screen -->
-        <Poster id="heroBg"
-            width="1920" height="1080"
-            loadDisplayMode="scaleToFill"
-            opacity="0.15"
+        <!-- Full-screen backdrop -->
+        <Poster
+            id="backdrop"
+            width="1920"
+            height="1080"
+            loadingBitmapOpacity="0.0"
+            failedBitmapOpacity="0.0"
         />
-        <!-- Overlay to darken it -->
-        <Rectangle width="1920" height="1080" color="#050505BB" />
 
-        <!-- Left: Portrait poster -->
-        <Group translation="[120, 120]">
-            <Poster id="itemPoster"
-                width="400" height="600"
-                loadDisplayMode="scaleToFill"
-            />
+        <!-- Dark overlay -->
+        <Rectangle
+            id="darkOverlay"
+            width="1920"
+            height="1080"
+            color="#050505"
+            opacity="0.7"
+        />
 
-            <!-- Laurel overlay on poster -->
-            <Poster id="laurelImage"
-                width="320" height="320"
-                translation="[40, 140]"
-                visible="false"
-            />
-        </Group>
+        <!-- Left panel gradient -->
+        <Rectangle
+            id="leftPanel"
+            width="850"
+            height="1080"
+            color="#050505"
+            opacity="0.95"
+        />
 
-        <!-- Right: Film info -->
-        <Group id="info" translation="[580, 100]">
-
-            <!-- Genre badges -->
-            <Label id="genresLabel"
-                width="1100"
-                font="font:SmallestBoldSystemFont"
-                color="#EF4444"
-            />
-
-            <!-- Title -->
-            <Label id="titleLabel"
-                translation="[0, 40]"
-                width="1100"
-                wrap="true"
-                maxLines="2"
-                color="#FFFFFF"
-            >
-                <font role="sans" size="72" weight="bold" />
-            </Label>
-
-            <!-- Meta row: year · runtime · director -->
-            <Label id="metaLabel"
-                translation="[0, 180]"
-                width="1100"
+        <!-- Content area -->
+        <Group id="contentArea" translation="[90, 80]">
+            <!-- Back hint -->
+            <Label
+                id="backHint"
+                text="‹ Back"
                 font="font:SmallSystemFont"
                 color="#666666"
             />
 
-            <!-- Synopsis -->
-            <Label id="synopsisLabel"
-                translation="[0, 240]"
-                width="1000"
-                wrap="true"
-                maxLines="6"
-                font="font:MediumSystemFont"
-                color="#AAAAAA"
-            />
-
-            <!-- Cast line -->
-            <Label id="castLabel"
-                translation="[0, 520]"
-                width="1000"
-                wrap="true"
+            <!-- Title -->
+            <Label
+                id="titleLabel"
+                font="font:LargeBoldSystemFont"
+                color="#EBEBEB"
+                width="700"
                 maxLines="2"
-                font="font:SmallSystemFont"
-                color="#555555"
+                wrap="true"
+                translation="[0, 60]"
             />
 
-            <!-- Award line -->
-            <Label id="awardLabel"
-                translation="[0, 580]"
-                width="800"
-                font="font:SmallestBoldSystemFont"
-                color="#EF4444"
-                visible="false"
-            />
-
-            <!-- ── BUTTONS ── -->
-            <!-- PLAY button -->
-            <Rectangle id="playBtn"
-                translation="[0, 660]"
-                width="280" height="80"
-                color="#FFFFFF"
-                visible="false"
+            <!-- Metadata row -->
+            <LayoutGroup
+                id="metaRow"
+                layoutDirection="horiz"
+                itemSpacings="[15]"
+                translation="[0, 170]"
             >
-                <Label text="▶  PLAY FILM"
-                    width="280" height="80"
-                    horizAlign="center" vertAlign="center"
-                    color="#000000"
-                    font="font:SmallBoldSystemFont"
-                />
-            </Rectangle>
-
-            <!-- TRAILER button -->
-            <Rectangle id="trailerBtn"
-                translation="[300, 660]"
-                width="280" height="80"
-                color="#1A1A1A"
-                visible="false"
-            >
-                <Label text="▷  PLAY TRAILER"
-                    width="280" height="80"
-                    horizAlign="center" vertAlign="center"
-                    color="#FFFFFF"
-                    font="font:SmallBoldSystemFont"
-                />
-            </Rectangle>
-
-            <!-- PAYWALL GROUP -->
-            <Group id="paywallGroup" translation="[0, 640]" visible="false">
-                <Label text="PREMIERE ACCESS"
-                    color="#EF4444"
-                    font="font:SmallBoldSystemFont"
-                />
-                <Label id="lockMessage"
-                    text="Unlock this film at cratetv.net"
-                    translation="[0, 44]"
-                    font="font:MediumSystemFont"
-                    color="#FFFFFF"
-                />
-                <!-- QR code box -->
-                <Rectangle width="220" height="220" translation="[0, 100]" color="#FFFFFF">
-                    <Poster id="qrCode" width="200" height="200" translation="[10, 10]" />
+                <Label id="yearLabel" font="font:SmallBoldSystemFont" color="#A0A0A0" />
+                <Rectangle id="ratingBadge" height="26" color="#333333" visible="false">
+                    <Label id="ratingLabel" font="font:SmallestBoldSystemFont" color="#EBEBEB" translation="[8, 4]" />
                 </Rectangle>
-                <Label text="Scan with your phone to unlock"
-                    translation="[240, 130]"
-                    font="font:SmallSystemFont"
-                    color="#AAAAAA"
-                />
-                <Label text="70% of every ticket goes to the filmmaker."
-                    translation="[240, 170]"
+                <Label id="durationLabel" font="font:SmallSystemFont" color="#A0A0A0" />
+            </LayoutGroup>
+
+            <!-- Genres -->
+            <Label
+                id="genresLabel"
+                font="font:SmallSystemFont"
+                color="#EF4444"
+                width="700"
+                translation="[0, 210]"
+            />
+
+            <!-- Description -->
+            <Label
+                id="descLabel"
+                font="font:MediumSystemFont"
+                color="#CCCCCC"
+                width="700"
+                maxLines="5"
+                wrap="true"
+                translation="[0, 250]"
+            />
+
+            <!-- Cast section -->
+            <Group id="castSection" translation="[0, 420]">
+                <Label
+                    id="castHeader"
+                    text="CAST"
                     font="font:SmallestBoldSystemFont"
-                    color="#444444"
+                    color="#666666"
+                />
+                <Label
+                    id="castLabel"
+                    font="font:SmallSystemFont"
+                    color="#A0A0A0"
+                    width="700"
+                    maxLines="2"
+                    wrap="true"
+                    translation="[0, 35]"
                 />
             </Group>
 
+            <!-- Director section -->
+            <Group id="directorSection" translation="[0, 530]">
+                <Label
+                    id="directorHeader"
+                    text="DIRECTOR"
+                    font="font:SmallestBoldSystemFont"
+                    color="#666666"
+                />
+                <Label
+                    id="directorLabel"
+                    font="font:SmallSystemFont"
+                    color="#A0A0A0"
+                    translation="[0, 35]"
+                />
+            </Group>
+
+            <!-- ============================================= -->
+            <!-- ACTION BUTTONS (for unlocked content) -->
+            <!-- ============================================= -->
+            <Group id="buttonGroup" translation="[0, 610]" visible="true">
+                <LayoutGroup
+                    id="buttonRow"
+                    layoutDirection="horiz"
+                    itemSpacings="[20]"
+                >
+                    <!-- Play button -->
+                    <Rectangle id="playBtnBg" width="220" height="56" color="#EF4444">
+                        <Label
+                            id="playBtnLabel"
+                            text="▶ PLAY"
+                            font="font:MediumBoldSystemFont"
+                            color="#EBEBEB"
+                            width="220"
+                            height="56"
+                            horizAlign="center"
+                            vertAlign="center"
+                        />
+                    </Rectangle>
+                    
+                    <!-- Resume button (shown if progress exists) -->
+                    <Rectangle id="resumeBtnBg" width="180" height="56" color="#333333" visible="false">
+                        <Label
+                            id="resumeBtnLabel"
+                            text="RESUME"
+                            font="font:SmallBoldSystemFont"
+                            color="#EBEBEB"
+                            width="180"
+                            height="56"
+                            horizAlign="center"
+                            vertAlign="center"
+                        />
+                    </Rectangle>
+                </LayoutGroup>
+            </Group>
+
+            <!-- ============================================= -->
+            <!-- PAYWALL (for locked content) -->
+            <!-- ============================================= -->
+            <Group id="paywallGroup" translation="[0, 580]" visible="false">
+                <!-- Lock message -->
+                <Label
+                    id="lockMessage"
+                    text="This content requires purchase"
+                    font="font:MediumBoldSystemFont"
+                    color="#EBEBEB"
+                    width="700"
+                />
+
+                <!-- QR Code -->
+                <Group id="qrSection" translation="[0, 50]">
+                    <Rectangle
+                        id="qrBg"
+                        width="160"
+                        height="160"
+                        color="#EBEBEB"
+                    />
+                    <Poster
+                        id="qrCode"
+                        width="140"
+                        height="140"
+                        translation="[10, 10]"
+                    />
+                    
+                    <Group translation="[180, 10]">
+                        <Label
+                            id="scanLabel"
+                            text="SCAN TO UNLOCK"
+                            font="font:SmallBoldSystemFont"
+                            color="#EF4444"
+                        />
+                        <Label
+                            id="priceLabel"
+                            font="font:MediumBoldSystemFont"
+                            color="#EBEBEB"
+                            translation="[0, 35]"
+                        />
+                        <Label
+                            id="urlLabel"
+                            font="font:SmallSystemFont"
+                            color="#A0A0A0"
+                            width="400"
+                            maxLines="2"
+                            wrap="true"
+                            translation="[0, 75]"
+                        />
+                    </Group>
+                </Group>
+            </Group>
         </Group>
 
-        <!-- Back hint -->
-        <Label text="← BACK"
-            translation="[120, 40]"
-            font="font:SmallestBoldSystemFont"
-            color="#333333"
-        />
+        <!-- Watch Party indicator -->
+        <Group id="watchPartyBanner" translation="[1480, 40]" visible="false">
+            <Rectangle
+                width="350"
+                height="50"
+                color="#EF4444"
+            />
+            <Label
+                text="🔴 LIVE WATCH PARTY"
+                font="font:SmallBoldSystemFont"
+                color="#EBEBEB"
+                width="350"
+                height="50"
+                horizAlign="center"
+                vertAlign="center"
+            />
+        </Group>
+
+        <!-- Focus indicator -->
+        <Rectangle
+            id="focusIndicator"
+            width="228"
+            height="64"
+            translation="[86, 656]"
+            color="#00000000"
+            visible="false"
+        >
+            <Rectangle width="228" height="3" color="#EBEBEB" translation="[0, 0]" />
+            <Rectangle width="228" height="3" color="#EBEBEB" translation="[0, 61]" />
+            <Rectangle width="3" height="64" color="#EBEBEB" translation="[0, 0]" />
+            <Rectangle width="3" height="64" color="#EBEBEB" translation="[225, 0]" />
+        </Rectangle>
     </children>
 </component>

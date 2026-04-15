@@ -1,170 +1,308 @@
-sub init()
-    m.top.setFocus(true)
-    m.titleLabel    = m.top.findNode("titleLabel")
-    m.genresLabel   = m.top.findNode("genresLabel")
-    m.synopsisLabel = m.top.findNode("synopsisLabel")
-    m.metaLabel     = m.top.findNode("metaLabel")
-    m.castLabel     = m.top.findNode("castLabel")
-    m.awardLabel    = m.top.findNode("awardLabel")
-    m.itemPoster    = m.top.findNode("itemPoster")
-    m.heroBg        = m.top.findNode("heroBg")
-    m.laurelImage   = m.top.findNode("laurelImage")
-    m.playBtn       = m.top.findNode("playBtn")
-    m.trailerBtn    = m.top.findNode("trailerBtn")
-    m.paywallGroup  = m.top.findNode("paywallGroup")
-    m.qrCode        = m.top.findNode("qrCode")
-    m.focusedButton = "play"
-end sub
+' ##############################################################################
+' CRATE TV - Details Scene Controller (V4 Studio)
+'
+' Displays movie details with:
+' - Full metadata (cast, director, genres)
+' - Play/Resume buttons for unlocked content
+' - QR code paywall for locked content
+' - Watch Party indicator
+' ##############################################################################
 
-sub onContentChange()
-    content = m.top.content
-    if content = invalid then return
+Sub Init()
+    Print "CrateTV [Details]: Initializing..."
+    
+    ' Cache UI references
+    m.backdrop = m.top.FindNode("backdrop")
+    m.titleLabel = m.top.FindNode("titleLabel")
+    m.yearLabel = m.top.FindNode("yearLabel")
+    m.ratingBadge = m.top.FindNode("ratingBadge")
+    m.ratingLabel = m.top.FindNode("ratingLabel")
+    m.durationLabel = m.top.FindNode("durationLabel")
+    m.genresLabel = m.top.FindNode("genresLabel")
+    m.descLabel = m.top.FindNode("descLabel")
+    m.castLabel = m.top.FindNode("castLabel")
+    m.castSection = m.top.FindNode("castSection")
+    m.directorLabel = m.top.FindNode("directorLabel")
+    m.directorSection = m.top.FindNode("directorSection")
+    
+    m.buttonGroup = m.top.FindNode("buttonGroup")
+    m.playBtnBg = m.top.FindNode("playBtnBg")
+    m.playBtnLabel = m.top.FindNode("playBtnLabel")
+    m.resumeBtnBg = m.top.FindNode("resumeBtnBg")
+    
+    m.paywallGroup = m.top.FindNode("paywallGroup")
+    m.qrCode = m.top.FindNode("qrCode")
+    m.priceLabel = m.top.FindNode("priceLabel")
+    m.urlLabel = m.top.FindNode("urlLabel")
+    
+    m.watchPartyBanner = m.top.FindNode("watchPartyBanner")
+    
+    ' State
+    m.isUnlocked = true
+    m.hasResume = false
+    m.focusedBtn = 0
+    m.movie = Invalid
+End Sub
 
-    ' ── POSTER & BACKGROUND ──────────────────────────────────────
-    m.itemPoster.uri = content.hdPosterUrl
-    ' Background uses wide hero if available
-    heroBgUrl = content.heroImage
-    if heroBgUrl = invalid or heroBgUrl = "" then heroBgUrl = content.hdPosterUrl
-    m.heroBg.uri = heroBgUrl
+' =============================================================================
+' CONTENT BINDING
+' =============================================================================
+Sub OnContentSet()
+    movie = m.top.content
+    If movie = Invalid
+        Print "CrateTV [Details]: ERROR - No content provided"
+        Return
+    End If
+    
+    m.movie = movie
+    
+    title = ""
+    If movie.title <> Invalid Then title = movie.title
+    Print "CrateTV [Details]: Displaying - " + title
+    
+    ' ----- BACKDROP -----
+    backdropUrl = ""
+    If movie.HasField("backdropUrl") And movie.backdropUrl <> Invalid
+        backdropUrl = movie.backdropUrl
+    Else If movie.HasField("heroImageUrl") And movie.heroImageUrl <> Invalid
+        backdropUrl = movie.heroImageUrl
+    Else If movie.HasField("posterUrl") And movie.posterUrl <> Invalid
+        backdropUrl = movie.posterUrl
+    Else If movie.HDPosterUrl <> Invalid
+        backdropUrl = movie.HDPosterUrl
+    End If
+    
+    If backdropUrl <> "" And m.backdrop <> Invalid
+        m.backdrop.uri = backdropUrl
+    End If
+    
+    ' ----- TITLE -----
+    If m.titleLabel <> Invalid
+        m.titleLabel.text = title
+    End If
+    
+    ' ----- YEAR -----
+    If m.yearLabel <> Invalid
+        ' Year hidden -- publishedAt dates are upload dates, not release years
+        m.yearLabel.text = ""
+    End If
+    
+    ' ----- RATING -----
+    If m.ratingBadge <> Invalid And m.ratingLabel <> Invalid
+        rating = ""
+        If movie.HasField("rating") And movie.rating <> Invalid
+            rating = movie.rating
+        End If
+        If rating <> ""
+            m.ratingLabel.text = rating
+            m.ratingBadge.width = Len(rating) * 10 + 16
+            m.ratingBadge.visible = true
+        Else
+            m.ratingBadge.visible = false
+        End If
+    End If
+    
+    ' ----- DURATION -----
+    If m.durationLabel <> Invalid
+        duration = ""
+        If movie.HasField("runtime") And movie.runtime <> Invalid
+            duration = movie.runtime
+        Else If movie.HasField("durationFormatted") And movie.durationFormatted <> Invalid
+            duration = movie.durationFormatted
+        End If
+        m.durationLabel.text = duration
+    End If
+    
+    ' ----- GENRES -----
+    If m.genresLabel <> Invalid
+        genres = ""
+        If movie.HasField("genres") And movie.genres <> Invalid
+            genres = movie.genres
+        End If
+        m.genresLabel.text = genres
+    End If
+    
+    ' ----- DESCRIPTION -----
+    If m.descLabel <> Invalid
+        desc = ""
+        If movie.description <> Invalid
+            desc = movie.description
+        End If
+        m.descLabel.text = desc
+    End If
+    
+    ' ----- CAST -----
+    If m.castLabel <> Invalid And m.castSection <> Invalid
+        cast = ""
+        If movie.HasField("cast") And movie.cast <> Invalid
+            cast = movie.cast
+        End If
+        If cast <> ""
+            m.castLabel.text = cast
+            m.castSection.visible = true
+        Else
+            m.castSection.visible = false
+        End If
+    End If
+    
+    ' ----- DIRECTOR -----
+    If m.directorLabel <> Invalid And m.directorSection <> Invalid
+        director = ""
+        If movie.HasField("director") And movie.director <> Invalid
+            director = movie.director
+        End If
+        If director <> ""
+            m.directorLabel.text = director
+            m.directorSection.visible = true
+        Else
+            m.directorSection.visible = false
+        End If
+    End If
+    
+    ' ----- WATCH PARTY -----
+    If m.watchPartyBanner <> Invalid
+        isWatchParty = false
+        If movie.HasField("isWatchPartyEnabled") And movie.isWatchPartyEnabled = true
+            isWatchParty = true
+        Else If movie.HasField("watchPartyStartTime") And movie.watchPartyStartTime <> Invalid And movie.watchPartyStartTime <> ""
+            isWatchParty = true
+        End If
+        m.watchPartyBanner.visible = isWatchParty
+    End If
+    
+    ' ----- UNLOCK STATUS -----
+    m.isUnlocked = true
+    If movie.HasField("isUnlocked")
+        m.isUnlocked = movie.isUnlocked
+    Else If movie.HasField("isFree")
+        m.isUnlocked = movie.isFree
+    End If
+    
+    If m.isUnlocked
+        ShowPlayButtons()
+    Else
+        ShowPaywall()
+    End If
+End Sub
 
-    ' ── TITLE ────────────────────────────────────────────────────
-    m.titleLabel.text = content.title
+' =============================================================================
+' PLAY BUTTONS (Unlocked Content)
+' =============================================================================
+Sub ShowPlayButtons()
+    If m.buttonGroup <> Invalid Then m.buttonGroup.visible = true
+    If m.paywallGroup <> Invalid Then m.paywallGroup.visible = false
+    
+    ' Check for resume capability
+    m.hasResume = false
+    If m.movie <> Invalid And m.movie.HasField("watchProgress")
+        If m.movie.watchProgress <> Invalid And m.movie.watchProgress > 0
+            m.hasResume = true
+        End If
+    End If
+    
+    If m.resumeBtnBg <> Invalid
+        m.resumeBtnBg.visible = m.hasResume
+    End If
+    
+    m.focusedBtn = 0
+    UpdateButtonFocus()
+End Sub
 
-    ' ── GENRES ───────────────────────────────────────────────────
-    genres = content.genres
-    if genres <> invalid and genres.count() > 0
-        genreText = ""
-        for i = 0 to genres.count() - 1
-            genreText = genreText + genres[i].toUpper()
-            if i < genres.count() - 1 then genreText = genreText + "  ·  "
-        end for
-        m.genresLabel.text = genreText
-    else
-        m.genresLabel.text = ""
-    end if
+' =============================================================================
+' PAYWALL (Locked Content)
+' =============================================================================
+Sub ShowPaywall()
+    If m.buttonGroup <> Invalid Then m.buttonGroup.visible = false
+    If m.paywallGroup <> Invalid Then m.paywallGroup.visible = true
+    
+    ' Generate QR code URL
+    purchaseUrl = ""
+    If m.movie <> Invalid And m.movie.HasField("purchaseUrl")
+        purchaseUrl = m.movie.purchaseUrl
+    End If
+    
+    If purchaseUrl <> "" And m.qrCode <> Invalid
+        ' Use QR code API
+        qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" + purchaseUrl
+        m.qrCode.uri = qrUrl
+    End If
+    
+    If m.urlLabel <> Invalid
+        m.urlLabel.text = purchaseUrl
+    End If
+    
+    ' Price
+    If m.priceLabel <> Invalid
+        price = ""
+        If m.movie <> Invalid And m.movie.HasField("price")
+            price = m.movie.price
+        End If
+        If price <> ""
+            m.priceLabel.text = "$" + price
+        Else
+            m.priceLabel.text = "Premium Content"
+        End If
+    End If
+End Sub
 
-    ' ── META ROW: year · runtime · director ──────────────────────
-    metaParts = []
-    if content.year <> invalid and content.year <> "" then metaParts.push(content.year)
-    if content.runtime <> invalid and content.runtime <> "" then metaParts.push(content.runtime)
-    if content.director <> invalid and content.director <> ""
-        metaParts.push("Dir. " + content.director)
-    end if
-    m.metaLabel.text = metaParts.join("   ·   ")
+' =============================================================================
+' BUTTON FOCUS
+' =============================================================================
+Sub UpdateButtonFocus()
+    If m.playBtnBg = Invalid Then Return
+    
+    If m.focusedBtn = 0
+        m.playBtnBg.color = "#EF4444"
+        If m.resumeBtnBg <> Invalid Then m.resumeBtnBg.color = "#333333"
+    Else
+        m.playBtnBg.color = "#555555"
+        If m.resumeBtnBg <> Invalid Then m.resumeBtnBg.color = "#EF4444"
+    End If
+End Sub
 
-    ' ── SYNOPSIS ─────────────────────────────────────────────────
-    m.synopsisLabel.text = content.description
-
-    ' ── CAST ─────────────────────────────────────────────────────
-    cast = content.cast
-    if cast <> invalid and cast.count() > 0
-        castNames = []
-        for i = 0 to min(cast.count() - 1, 4)
-            castNames.push(cast[i])
-        end for
-        m.castLabel.text = "Starring: " + castNames.join(", ")
-    else
-        m.castLabel.text = ""
-    end if
-
-    ' ── AWARD ────────────────────────────────────────────────────
-    awardName = content.awardName
-    if awardName <> invalid and awardName <> ""
-        awardYear = content.awardYear
-        if awardYear <> invalid and awardYear <> ""
-            m.awardLabel.text = "🏆  " + awardName + " — " + awardYear
-        else
-            m.awardLabel.text = "🏆  " + awardName
-        end if
-        m.awardLabel.visible = true
-    else
-        m.awardLabel.visible = false
-    end if
-
-    ' ── LAUREL ───────────────────────────────────────────────────
-    laurelUrl = content.customLaurelUrl
-    if laurelUrl <> invalid and laurelUrl <> ""
-        m.laurelImage.uri = laurelUrl
-        m.laurelImage.visible = true
-    else
-        m.laurelImage.visible = false
-    end if
-
-    ' ── PAYWALL / BUTTONS ────────────────────────────────────────
-    isLocked = (content.isUnlocked = false and content.isFree = false)
-    if not isLocked
-        m.playBtn.visible      = true
-        m.paywallGroup.visible = false
-        m.focusedButton        = "play"
-    else
-        m.playBtn.visible      = false
-        m.paywallGroup.visible = true
-        m.focusedButton        = "trailer"
-        ShowPaywall(content)
-    end if
-
-    ' Trailer button
-    if content.trailerUrl <> invalid and content.trailerUrl <> ""
-        m.trailerBtn.visible = true
-    else
-        m.trailerBtn.visible = false
-    end if
-
-    UpdateFocus()
-end sub
-
-sub UpdateFocus()
-    if m.focusedButton = "play"
-        m.playBtn.color    = "0xFFFFFFFF"
-        m.trailerBtn.color = "0x1A1A1AFF"
-    else if m.focusedButton = "trailer"
-        m.trailerBtn.color = "0xEF4444FF"
-        m.playBtn.color    = "0xFFFFFFFF"
-    end if
-end sub
-
-sub ShowPaywall(content)
-    purchaseUrl = content.purchaseUrl
-    if purchaseUrl = invalid or purchaseUrl = ""
-        purchaseUrl = "https://cratetv.net/movie/" + content.id + "?action=buy"
-    end if
-    ut = CreateObject("roUrlTransfer")
-    encodedUrl = ut.Escape(purchaseUrl)
-    m.qrCode.uri = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodedUrl
-end sub
-
-function min(a, b)
-    if a < b then return a
-    return b
-end function
-
-function onKeyEvent(key as String, press as Boolean) as Boolean
-    if press
-        if key = "up" or key = "down"
-            if m.playBtn.visible and m.trailerBtn.visible
-                if m.focusedButton = "play"
-                    m.focusedButton = "trailer"
-                else
-                    m.focusedButton = "play"
-                end if
-                UpdateFocus()
-                return true
-            end if
-        else if key = "OK"
-            if m.focusedButton = "play" and m.playBtn.visible
-                m.top.command = { action: "play", content: m.top.content }
-            else if m.focusedButton = "trailer" and m.trailerBtn.visible
-                trailerContent = CreateObject("roSGNode", "ContentNode")
-                trailerContent.url   = m.top.content.trailerUrl
-                trailerContent.title = m.top.content.title + " (Trailer)"
-                trailerContent.streamFormat = "mp4"
-                m.top.command = { action: "play", content: trailerContent }
-            end if
-            return true
-        else if key = "back"
-            m.top.command = { action: "close" }
-            return true
-        end if
-    end if
-    return false
-end function
+' =============================================================================
+' KEY HANDLER
+' =============================================================================
+Function OnKeyEvent(key as String, press as Boolean) as Boolean
+    If Not press Then Return false
+    
+    Print "CrateTV [Details]: Key = " + key
+    
+    If key = "back"
+        m.top.closeRequested = true
+        Return true
+    End If
+    
+    ' Only handle other keys if unlocked
+    If Not m.isUnlocked
+        Return true
+    End If
+    
+    If key = "left"
+        If m.focusedBtn > 0
+            m.focusedBtn = 0
+            UpdateButtonFocus()
+        End If
+        Return true
+    End If
+    
+    If key = "right"
+        If m.hasResume And m.focusedBtn < 1
+            m.focusedBtn = 1
+            UpdateButtonFocus()
+        End If
+        Return true
+    End If
+    
+    If key = "OK"
+        m.top.playRequested = true
+        Return true
+    End If
+    
+    If key = "play"
+        m.top.playRequested = true
+        Return true
+    End If
+    
+    Return false
+End Function
