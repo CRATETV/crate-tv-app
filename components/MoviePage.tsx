@@ -1,5 +1,4 @@
 
-import { heroImage, cardImage } from '../services/imageUrl';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -18,7 +17,7 @@ import { useSessionGuard } from '../hooks/useSessionGuard';
 import SessionKickedScreen from './SessionKickedScreen';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
-import VideoPlayer from './VideoPlayer';
+import CastButton from './CastButton';
 
 interface MoviePageProps {
   movieKey: string;
@@ -161,6 +160,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movie, getUserIdToken, markAsWatched]);
 
+  const toggleManualPause = (e: React.MouseEvent) => {
+      if (isEnded) return;
+      e.stopPropagation();
+      if (!videoRef.current) return;
+      if (videoRef.current.paused) {
+          videoRef.current.play();
+          setIsPaused(false);
+      } else {
+          videoRef.current.pause();
+          setIsPaused(true);
+      }
+  };
+
   const handlePurchaseSuccess = async () => {
       await purchaseMovie(movieKey);
       setIsPurchaseModalOpen(false);
@@ -185,9 +197,49 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
             <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
-                {/* Hidden preloader — buffers while on poster mode so play is instant */}
-                {hasAccess && !embedUrl && playerMode !== 'full' && (
-                    <video src={movie.fullMovie} preload="auto" muted playsInline className="hidden" aria-hidden="true" />
+                {/* Blurred backdrop — fills black bars when film isn't 16:9 */}
+                {hasAccess && !embedUrl && (
+                    <video
+                        src={movie.fullMovie}
+                        className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none ${playerMode === 'full' && !isEnded ? 'opacity-40' : 'opacity-0'} transition-opacity duration-300`}
+                        muted playsInline aria-hidden="true"
+                        ref={el => { if (el && videoRef.current) { el.currentTime = videoRef.current.currentTime; }}}
+                    />
+                )}
+                {/* Video element always rendered (hidden when not in full mode) for instant playback */}
+                {hasAccess && !embedUrl && (
+                    <video 
+                        ref={videoRef} 
+                        src={movie.fullMovie} 
+                        preload="auto"
+                        className={`absolute inset-0 w-full h-full object-contain ${playerMode === 'full' && !isEnded ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}
+                        controls={false} 
+                        playsInline 
+                        autoPlay={playerMode === 'full'}
+                        onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)} 
+                        onPlay={() => { setVideoError(false); !isEnded && playerMode === 'full' && setIsPaused(false); }} 
+                        onEnded={() => setIsEnded(true)} 
+                        onError={() => setVideoError(true)}
+                        controlsList="nodownload" 
+                    />
+                )}
+
+                {/* Video error state */}
+                {videoError && playerMode === 'full' && (
+                    <div className="absolute inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 gap-4">
+                        <div className="w-14 h-14 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <p className="text-white font-black uppercase tracking-widest text-sm">Playback Error</p>
+                        <p className="text-gray-500 text-xs text-center max-w-xs">Unable to load this film. Please check your connection and try again.</p>
+                        <button
+                            onClick={() => { setVideoError(false); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
+                            className="bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full transition-all"
+                        >
+                            Try Again
+                        </button>
+                        <button onClick={handleGoHome} className="text-gray-600 hover:text-white text-xs uppercase tracking-widest transition-colors">Go Home</button>
+                    </div>
                 )}
 
                 {playerMode === 'full' ? (
@@ -196,32 +248,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             {embedUrl ? (
                                 <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
                             ) : (
-                                <VideoPlayer
-                                    src={movie.fullMovie}
-                                    autoPlay={true}
-                                    onVideoReady={(el) => { (videoRef as React.MutableRefObject<HTMLVideoElement>).current = el; }}
-                                    onPlay={() => { setVideoError(false); setIsPaused(false); }}
-                                    onPause={() => setIsPaused(true)}
-                                    onEnded={() => setIsEnded(true)}
-                                    onError={() => setVideoError(true)}
-                                >
-                                    {/* Error overlay */}
-                                    {videoError && (
-                                        <div className="absolute inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 gap-4" onClick={e => e.stopPropagation()}>
-                                            <div className="w-14 h-14 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center">
-                                                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            </div>
-                                            <p className="text-white font-black uppercase tracking-widest text-sm">Playback Error</p>
-                                            <p className="text-gray-500 text-xs text-center max-w-xs">Unable to load this film. Please check your connection and try again.</p>
-                                            <button onClick={() => { setVideoError(false); videoRef.current?.load(); videoRef.current?.play().catch(() => {}); }} className="bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full transition-all">Try Again</button>
-                                            <button onClick={handleGoHome} className="text-gray-600 hover:text-white text-xs uppercase tracking-widest transition-colors">Go Home</button>
-                                        </div>
-                                    )}
-                                    {/* Pause overlay */}
+                                <div className="relative w-full h-full" onClick={toggleManualPause}>
+                                    {/* Video rendered above, this div is for overlays */}
+                                    <CastButton videoElement={videoRef.current} />
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-                                    {/* End screen */}
                                     {isEnded && (
-                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm" onClick={e => e.stopPropagation()}>
+                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                             <div className="max-w-2xl w-full space-y-12">
                                                 <div>
                                                     <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Transmission Complete</p>
@@ -248,12 +280,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                             </div>
                                         </div>
                                     )}
-                                </VideoPlayer>
+                                </div>
                             )}
                         </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
-                             <img src={cardImage(movie.poster)} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" loading="lazy" />
+                             <img src={movie.poster} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
                              <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
                              <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${movie.salePrice}</button>
@@ -267,7 +299,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         onClick={() => hasAccess && isMovieReleased(movie) && setPlayerMode('full')}
                     >
                         {/* Blurred backdrop */}
-                        <img src={heroImage(movie.poster)} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" loading="lazy" />
+                        <img src={movie.poster} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" />
                         {/* Poster */}
                         <img
                             src={movie.poster}

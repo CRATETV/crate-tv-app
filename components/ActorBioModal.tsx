@@ -1,5 +1,4 @@
 import { toast } from './Toast';
-import { avatarImage } from '../services/imageUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import { Actor } from '../types';
 import { findImdbUrl } from '../services/geminiService';
@@ -95,12 +94,11 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                  <div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
                     <img
-                        src={avatarImage(actor.highResPhoto)}
+                        src={`/api/proxy-image?url=${encodeURIComponent(actor.highResPhoto)}`}
                         alt={actor.name}
                         crossOrigin="anonymous"
                         className={`relative w-48 h-48 md:w-64 md:h-64 rounded-full object-cover shadow-2xl border-4 border-black transition-all duration-1000 ease-in-out ${isImageLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-xl scale-95'}`}
                         onLoad={() => setIsImageLoaded(true)}
-                        loading="lazy"
                     />
                  </div>
                  <div className="mt-8 space-y-4 w-full">

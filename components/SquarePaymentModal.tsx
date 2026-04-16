@@ -1,4 +1,3 @@
-import { getOptimizedImageUrl } from '../services/imageUrl';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +21,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
         
         <div className="relative h-full flex flex-col p-6">
             <div className="flex justify-between items-start border-b border-white/10 pb-4 mb-4">
-                <img src={getOptimizedImageUrl("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png", 256)} className="h-8 invert" alt="Crate" loading="lazy" />
+                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="h-8 invert" alt="Crate" />
                 <div className="text-right">
                     <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.3em]">Secure Verified Access</p>
                     <p className="text-[10px] font-mono text-white/40">HASH: {Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
