@@ -99,7 +99,8 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                         alt={actor.name}
                         crossOrigin="anonymous"
                         className={`relative w-48 h-48 md:w-64 md:h-64 rounded-full object-cover shadow-2xl border-4 border-black transition-all duration-1000 ease-in-out ${isImageLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-xl scale-95'}`}
-                        onLoad={() = loading="lazy"> setIsImageLoaded(true)}
+                        onLoad={() => setIsImageLoaded(true)}
+                        loading="lazy"
                     />
                  </div>
                  <div className="mt-8 space-y-4 w-full">

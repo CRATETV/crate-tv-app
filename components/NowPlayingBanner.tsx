@@ -43,7 +43,8 @@ const NowStreamingBanner: React.FC<NowStreamingBannerProps> = ({ movie, onSelect
         src={cardImage(movie.poster)}
         alt=""
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60"
-        onContextMenu={(e) = loading="lazy"> e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+        loading="lazy"
         crossOrigin="anonymous"
       />
       

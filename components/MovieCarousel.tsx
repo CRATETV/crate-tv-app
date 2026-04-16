@@ -114,7 +114,8 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                               src={cardImage(movie.poster)}
                               alt={movie.title}
                               className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover/ranked:scale-105 transition-transform duration-300 rounded-r-lg"
-                              onContextMenu={(e) = loading="lazy"> e.preventDefault()}
+                              onContextMenu={(e) => e.preventDefault()}
+                              loading="lazy"
                               crossOrigin="anonymous"
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent rounded-lg"></div>
