@@ -52,6 +52,19 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    },
+    {
+      "source": "/api/proxy-image(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, stale-while-revalidate=86400, immutable"
+        },
+        {
+          "key": "Vary",
+          "value": "Accept"
+        }
+      ]
     }
   ],
   "buildCommand": "npm run build",
@@ -69,5 +82,26 @@
       "destination": "/pwff:year",
       "permanent": false
     }
-  ]
+  ],
+  "images": {
+    "sizes": [
+      256,
+      384,
+      640,
+      750,
+      828,
+      1080,
+      1200
+    ],
+    "domains": [
+      "cratetelevision.s3.us-east-1.amazonaws.com",
+      "cratetelevision.s3.amazonaws.com"
+    ],
+    "formats": [
+      "image/avif",
+      "image/webp"
+    ],
+    "minimumCacheTTL": 2592000,
+    "dangerouslyAllowSVG": false
+  }
 }

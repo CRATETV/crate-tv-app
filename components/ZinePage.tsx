@@ -1,4 +1,5 @@
 
+import { heroImage as optimizedHeroImage, modalImage, getOptimizedImageUrl } from '../services/imageUrl';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -16,7 +17,7 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
     >
         <div className="relative overflow-hidden aspect-[4/3] bg-zinc-900">
             <img 
-                src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
+                src={optimizedHeroImage(story.heroImage)} 
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
                 alt="" 
                 crossOrigin="anonymous"
@@ -224,7 +225,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 </div>
                                 <div className="lg:col-span-5">
                                     <div className="aspect-[4/5] bg-zinc-900 overflow-hidden shadow-2xl">
-                                        <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
+                                        <img src={optimizedHeroImage(activeStory.heroImage)} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
                                     </div>
                                 </div>
                             </div>
@@ -245,7 +246,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                             )}
                                             {section.type === 'image' && (
                                                 <div className="my-16">
-                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto shadow-2xl" alt="" crossOrigin="anonymous" />
+                                                    <img src={modalImage(section.content)} className="w-full h-auto shadow-2xl" alt="" crossOrigin="anonymous" loading="lazy" />
                                                 </div>
                                             )}
                                             {section.type === 'video' && (
@@ -272,7 +273,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             <div className="mt-80 pt-32 border-t border-white/10 text-center flex flex-col items-center gap-20">
                                 <div className="relative">
                                     <div className="absolute inset-0 blur-[100px] bg-red-600/30 scale-150 rounded-full animate-pulse"></div>
-                                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-96 invert relative z-10 opacity-90" alt="Crate TV" />
+                                    <img src={getOptimizedImageUrl("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png", 256)} className="w-96 invert relative z-10 opacity-90" alt="Crate TV" loading="lazy" />
                                 </div>
                                 <div className="space-y-10">
                                     <button onClick={() => handleNavigate(null)} className="bg-white text-black font-black px-24 py-8 rounded-[3rem] uppercase tracking-[0.5em] text-sm hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_100px_rgba(255,255,255,0.2)]">Return to Hub</button>

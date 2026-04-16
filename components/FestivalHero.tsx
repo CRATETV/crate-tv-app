@@ -1,3 +1,4 @@
+import { festivalHeroImage } from '../services/imageUrl';
 import React from 'react';
 import { FestivalConfig, CrateFestConfig } from '../types';
 
@@ -33,10 +34,10 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
       {heroImage && (
         <div className="absolute inset-0 z-0">
             <img 
-                src={`/api/proxy-image?url=${encodeURIComponent(heroImage)}`} 
+                src={festivalHeroImage(heroImage)} 
                 className="w-full h-full object-cover opacity-40 blur-sm" 
                 alt="" 
-                referrerPolicy="no-referrer"
+                referrerPolicy="no-referrer" loading="lazy"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black"></div>
         </div>

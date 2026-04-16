@@ -1,3 +1,4 @@
+import { cardImage } from '../services/imageUrl';
 import React, { useState } from 'react';
 import { Movie } from '../types';
 
@@ -39,10 +40,11 @@ const NowStreamingBanner: React.FC<NowStreamingBannerProps> = ({ movie, onSelect
     >
       {/* Background Image */}
       <img
-        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+        src={cardImage(movie.poster)}
         alt=""
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60"
         onContextMenu={(e) => e.preventDefault()}
+        loading="lazy"
         crossOrigin="anonymous"
       />
       

@@ -1,5 +1,6 @@
 
 import { toast } from './Toast';
+import { getOptimizedImageUrl } from '../services/imageUrl';
 import React, { useState, useEffect } from 'react';
 
 const SmartInstallPrompt: React.FC = () => {
@@ -65,9 +66,9 @@ const SmartInstallPrompt: React.FC = () => {
                 <div className="flex items-center gap-5">
                     <div className="w-16 h-16 bg-red-600/10 border border-red-600/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-2xl overflow-hidden p-2">
                         <img 
-                            src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" 
+                            src={getOptimizedImageUrl("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png", 256)} 
                             className="w-full h-full object-contain brightness-0 invert" 
-                            alt="Crate" 
+                            alt="Crate" loading="lazy" 
                         />
                     </div>
                     <div className="flex-grow">

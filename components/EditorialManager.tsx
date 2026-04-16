@@ -1,4 +1,6 @@
 
+import { heroImage } from '../services/imageUrl';
+
 import React, { useState, useEffect } from 'react';
 import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
