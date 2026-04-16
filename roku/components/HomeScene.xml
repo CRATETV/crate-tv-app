@@ -111,16 +111,5 @@
                 </Rectangle>
             </Group>
         </Group>
-        <!-- TRAILER VIDEO — must be LAST child so it renders on top of everything -->
-        <Video id="heroTrailer"
-            width="1920" height="1080"
-            translation="[0, 0]"
-            visible="false"
-            mute="true"
-            loop="false"
-            transportBarVisible="false"
-        />
-        <Timer id="trailerDwellTimer" duration="1.5" repeat="false" />
-        <Timer id="trailerStopTimer"  duration="30"  repeat="false" />
     </children>
 </component>

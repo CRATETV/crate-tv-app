@@ -435,7 +435,9 @@ const App: React.FC = () => {
     }, [heroMovies.length]);
 
     const mainPaddingTop = useMemo(() => {
-        const bannerHeight = activeBannerType !== 'NONE' ? 48 : 0;
+        // Mobile banner is taller (festival name + CTA button = ~112px), desktop is slim (48px)
+        const isMobile = window.innerWidth < 768;
+        const bannerHeight = activeBannerType !== 'NONE' ? (isMobile ? 112 : 48) : 0;
         const headerHeight = 64;
         const isHomePage = window.location.pathname === '/';
         if (!isHomePage) return `${bannerHeight + headerHeight}px`;
@@ -513,25 +515,50 @@ const App: React.FC = () => {
                 />
             )}
             {activeBannerType === 'GENERAL_FESTIVAL' && (
-                <div 
+                <div
                     onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '2026'}`); window.dispatchEvent(new Event('pushstate')); }}
-                    className="fixed top-0 left-0 right-0 z-[110] text-white flex items-center justify-between px-4 md:px-8 shadow-lg h-12 cursor-pointer"
-                    style={{ background: "linear-gradient(to right, #E50914, #b91c1c)" }}
+                    className="fixed top-0 left-0 right-0 z-[110] cursor-pointer shadow-xl"
+                    style={{ background: "linear-gradient(135deg, #c50000, #E50914, #a00)" }}
                 >
-                    <div className="flex items-center gap-3">
-                        <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                        </span>
-                        <span className="font-black uppercase text-[9px] md:text-[10px] tracking-widest whitespace-nowrap">
-                            {settings?.pwffFestivalName || 'Playhouse West Film Festival'} — Now Streaming
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button className="bg-white text-red-600 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md whitespace-nowrap">
+                    {/* Mobile: tall, stacked, prominent */}
+                    <div className="md:hidden px-4 py-3 text-white">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                <span className="relative flex h-3 w-3 flex-shrink-0 mt-0.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="font-black uppercase text-[10px] tracking-widest text-white/70 leading-none mb-1">Now Streaming</p>
+                                    <p className="font-black text-base leading-tight text-white">
+                                        {settings?.pwffFestivalName || 'Playhouse West Film Festival 2026'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-2xl leading-none flex-shrink-0 -mt-1">&times;</button>
+                        </div>
+                        <button className="mt-3 w-full bg-white text-red-600 font-black py-2.5 rounded-xl text-sm uppercase tracking-widest shadow-md">
                             Watch Now →
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-xl leading-none ml-1">&times;</button>
+                    </div>
+
+                    {/* Desktop: slim single row */}
+                    <div className="hidden md:flex items-center justify-between px-8 h-12 text-white">
+                        <div className="flex items-center gap-3">
+                            <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                            </span>
+                            <span className="font-black uppercase text-[10px] tracking-widest whitespace-nowrap">
+                                {settings?.pwffFestivalName || 'Playhouse West Film Festival'} — Now Streaming
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button className="bg-white text-red-600 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md whitespace-nowrap">
+                                Watch Now →
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-xl leading-none ml-1">&times;</button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -540,7 +567,7 @@ const App: React.FC = () => {
                 searchQuery={searchQuery} 
                 onSearch={onSearch} 
                 onMobileSearchClick={handleSearchClick} 
-                topOffset={activeBannerType !== 'NONE' ? '3rem' : '0px'} 
+                topOffset={activeBannerType !== 'NONE' ? (window.innerWidth < 768 ? '7rem' : '3rem') : '0px'} 
                 hideLiveSpotlight={activeBannerType !== 'NONE'}
             />
 

@@ -506,6 +506,10 @@ const SubmitPage: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
+                                        <div className="mt-2 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 space-y-1">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Poster Requirements</p>
+                                            <p className="text-[11px] text-gray-500 leading-relaxed">Portrait orientation · <strong className="text-gray-400">2:3 ratio</strong> (e.g. 800×1200 or 1000×1500px) · Think movie one-sheet. Landscape images will be cropped and may not display correctly in our catalog or on Roku.</p>
+                                        </div>
                                         <input 
                                             ref={posterInputRef}
                                             type="file" 
@@ -535,6 +539,10 @@ const SubmitPage: React.FC = () => {
                                                     <p className="text-gray-600 text-xs mt-1">MP4, MOV up to 5GB</p>
                                                 </div>
                                             )}
+                                        </div>
+                                        <div className="mt-2 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 space-y-1">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Film Technical Requirements</p>
+                                            <p className="text-[11px] text-gray-500 leading-relaxed"><strong className="text-gray-400">16:9 widescreen</strong> aspect ratio · 1920×1080 (1080p) minimum · MP4 or MOV · H.264 codec preferred. Films shot in 4:3, vertical, or non-standard ratios may not display correctly across our web and Roku platforms.</p>
                                         </div>
                                         <input 
                                             ref={filmInputRef}

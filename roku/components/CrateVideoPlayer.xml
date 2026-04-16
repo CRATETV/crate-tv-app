@@ -41,6 +41,8 @@
             enableUI="false"
             notificationInterval="1"
             translation="[0, 0]"
+            fillMode="full"
+            displayMode="scale-to-fill"
         />
 
         <!--

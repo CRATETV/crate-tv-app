@@ -30,10 +30,7 @@ Sub Init()
     m.dynamicBackdrop = m.top.FindNode("dynamicBackdrop")
     
     m.rowList = m.top.FindNode("rowList")
-    m.heroTrailer       = m.top.FindNode("heroTrailer")
-    m.trailerDwellTimer = m.top.FindNode("trailerDwellTimer")
-    m.trailerStopTimer  = m.top.FindNode("trailerStopTimer")
-    m.dynamicBackdrop   = m.top.FindNode("dynamicBackdrop")
+
 
     m.contentLoaded = false
     m.feedData = Invalid
@@ -47,11 +44,7 @@ Sub Init()
     m.rowList.itemComponentName = "MoviePosterItem"
     m.rowList.ObserveField("rowItemFocused", "OnRowItemFocused")
     m.rowList.ObserveField("rowItemSelected", "OnRowItemSelected")
-    m.trailerDwellTimer.ObserveField("fire", "OnTrailerDwellFire")
-    m.trailerStopTimer.ObserveField("fire",  "OnTrailerStopFire")
-    if m.heroTrailer <> Invalid
-        m.heroTrailer.ObserveField("state", "OnTrailerStateChange")
-    end if
+
     
     ' =========================================================================
     ' CRITICAL FOR CERTIFICATION: Focus restoration
@@ -471,8 +464,6 @@ Sub OnRowItemFocused()
     ' Cache so OnKeyEvent can check row position without race condition
     m.currentRow = rowIndex
 
-    ' Stop any playing trailer immediately on focus change
-    StopTrailer()
 
     If m.rowListContent <> Invalid And rowIndex < m.rowListContent.GetChildCount()
         row = m.rowListContent.GetChild(rowIndex)
@@ -482,19 +473,7 @@ Sub OnRowItemFocused()
             If movie <> Invalid
                 m.top.focusedContent = movie
                 UpdateHeroSpotlight(movie)
-                ' Start dwell timer — plays fullMovie from trailerStart after 1.5s (same as web app)
-                streamUrl = ""
-                if movie.HasField("streamUrl") And movie.streamUrl <> Invalid then streamUrl = movie.streamUrl
-                if streamUrl = "" And movie.HasField("url") And movie.url <> Invalid then streamUrl = movie.url
-                hasDirectStream = streamUrl <> "" And Instr(1, LCase(streamUrl), "youtube") = 0 And Instr(1, LCase(streamUrl), "vimeo") = 0
-                if hasDirectStream
-                    Print "CrateTV [Trailer]: Dwell started for '" + movie.title + "'"
-                    m.currentFocusedForTrailer = movie
-                    m.trailerDwellTimer.control = "start"
-                else
-                    Print "CrateTV [Trailer]: No playable stream for '" + movie.title + "'"
-                    m.currentFocusedForTrailer = Invalid
-                end if
+
             End If
         End If
     End If
@@ -507,7 +486,6 @@ Sub OnRowItemSelected()
     rowIndex = selected[0]
     itemIndex = selected[1]
 
-    StopTrailer()
 
     If m.rowListContent <> Invalid And rowIndex < m.rowListContent.GetChildCount()
         row = m.rowListContent.GetChild(rowIndex)
@@ -733,84 +711,6 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
 End Function
 
 
-' =============================================================================
-' TRAILER AUTOPLAY — plays muted in hero after 1.5s dwell, 30s max
-' =============================================================================
-Sub OnTrailerDwellFire()
-    movie = m.currentFocusedForTrailer
-    if movie = Invalid then return
-
-    ' === EXACTLY LIKE THE WEB APP ===
-    ' Web app uses fullMovie + trailerStart offset, NOT a separate trailer file.
-    ' We do the same: play the full movie stream from trailerStart, stop after 30s.
-    streamUrl = ""
-    if movie.HasField("streamUrl") And movie.streamUrl <> Invalid And movie.streamUrl <> "" then streamUrl = movie.streamUrl
-    if streamUrl = "" And movie.HasField("url") And movie.url <> Invalid then streamUrl = movie.url
-
-    if streamUrl = ""
-        Print "CrateTV [Trailer]: No stream URL for '" + movie.title + "' - skipping"
-        return
-    end if
-
-    ' Check it is a direct video file (not YouTube/Vimeo)
-    sLower = LCase(streamUrl)
-    if Instr(1, sLower, "youtube") > 0 Or Instr(1, sLower, "youtu.be") > 0 Or Instr(1, sLower, "vimeo") > 0
-        Print "CrateTV [Trailer]: Skipping non-direct URL for '" + movie.title + "'"
-        return
-    end if
-
-    trailerContent = CreateObject("roSGNode", "ContentNode")
-    trailerContent.url = streamUrl
-
-    ' Detect format
-    if Instr(1, sLower, ".m3u8") > 0
-        trailerContent.streamFormat = "hls"
-    else if Instr(1, sLower, ".mpd") > 0
-        trailerContent.streamFormat = "dash"
-    else
-        trailerContent.streamFormat = "mp4"
-    end if
-
-    ' Seek to trailerStart — same as web app
-    startSecs = 0
-    if movie.HasField("trailerStart") And movie.trailerStart <> Invalid And movie.trailerStart > 0
-        startSecs = movie.trailerStart
-    end if
-    if startSecs > 0
-        trailerContent.bookmarkPosition = startSecs
-    end if
-
-    m.heroTrailer.content = trailerContent
-    m.heroTrailer.visible = true
-    m.heroTrailer.control = "play"
-    if m.dynamicBackdrop <> Invalid then m.dynamicBackdrop.opacity = 0.0
-    m.trailerStopTimer.control = "start"
-    Print "CrateTV [Trailer]: Playing '" + movie.title + "' from " + Str(startSecs) + "s -> " + streamUrl
-End Sub
-
-Sub OnTrailerStopFire()
-    StopTrailer()
-End Sub
-
-Sub OnTrailerStateChange()
-    state = m.heroTrailer.state
-    if state = "finished" Or state = "error"
-        m.trailerStopTimer.control = "stop"
-        StopTrailer()
-    end if
-End Sub
-
-Sub StopTrailer()
-    if m.trailerDwellTimer <> Invalid then m.trailerDwellTimer.control = "stop"
-    if m.trailerStopTimer  <> Invalid then m.trailerStopTimer.control  = "stop"
-    if m.heroTrailer <> Invalid
-        m.heroTrailer.control  = "stop"
-        m.heroTrailer.visible  = false
-        m.heroTrailer.content  = Invalid
-    end if
-    if m.dynamicBackdrop <> Invalid then m.dynamicBackdrop.opacity = 0.3
-    m.currentFocusedForTrailer = Invalid
-End Sub
 
 ' =============================================================================
 ' UTILITIES

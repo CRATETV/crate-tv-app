@@ -709,10 +709,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
+                                    {/* Blurred backdrop for non-16:9 films */}
+                                    <video
+                                        src={movie.fullMovie}
+                                        className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
+                                        muted playsInline aria-hidden="true"
+                                    />
                                     <video 
                                         ref={videoRef} 
                                         src={movie.fullMovie} 
-                                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
+                                        className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 
                                         playsInline

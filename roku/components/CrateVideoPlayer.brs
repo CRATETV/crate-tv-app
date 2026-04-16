@@ -135,6 +135,7 @@ Sub OnContentChange()
     End If
     
     ' Start playback
+    m.videoNode.fillMode = "full"
     m.videoNode.control = "play"
     
     Print "CrateTV: Starting playback - " + streamUrl

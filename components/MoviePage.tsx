@@ -197,6 +197,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
             <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
+                {/* Blurred backdrop — fills black bars when film isn't 16:9 */}
+                {hasAccess && !embedUrl && (
+                    <video
+                        src={movie.fullMovie}
+                        className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none ${playerMode === 'full' && !isEnded ? 'opacity-40' : 'opacity-0'} transition-opacity duration-300`}
+                        muted playsInline aria-hidden="true"
+                        ref={el => { if (el && videoRef.current) { el.currentTime = videoRef.current.currentTime; }}}
+                    />
+                )}
                 {/* Video element always rendered (hidden when not in full mode) for instant playback */}
                 {hasAccess && !embedUrl && (
                     <video 
