@@ -1,3 +1,4 @@
+import { getOptimizedImageUrl } from '../services/imageUrl';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -77,9 +78,9 @@ const LoginPage: React.FC = () => {
                     className="flex items-center gap-3 group"
                 >
                     <img
-                        src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png"
+                        src={getOptimizedImageUrl("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png", 256)}
                         alt="Crate TV"
-                        className="h-8 w-auto"
+                        className="h-8 w-auto" loading="lazy"
                     />
                 </button>
                 <button

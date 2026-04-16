@@ -1,3 +1,4 @@
+import { modalImage, getOptimizedImageUrl } from '../services/imageUrl';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import Countdown from './Countdown';
@@ -146,7 +147,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
         {/* Hero Section */}
         <div className="relative w-full aspect-video bg-black overflow-hidden shadow-2xl">
-            <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-60 blur-sm scale-110" />
+            <img src={modalImage(movie.poster)} alt="" className="w-full h-full object-cover opacity-60 blur-sm scale-110" loading="lazy" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/30"></div>
             
             {/* Desktop Hero Overlay */}
@@ -233,7 +234,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                     )}
                     <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
                         <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4">Official Accreditation</p>
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-20 opacity-20" alt="Crate Official" />
+                        <img src={getOptimizedImageUrl("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png", 256)} className="w-20 opacity-20" alt="Crate Official" loading="lazy" />
                     </div>
                 </div>
             </div>

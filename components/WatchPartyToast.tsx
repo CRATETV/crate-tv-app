@@ -1,3 +1,4 @@
+import { cardImage } from '../services/imageUrl';
 import React, { useState, useEffect } from 'react';
 import { Movie } from '../types';
 
@@ -88,9 +89,9 @@ const WatchPartyToast: React.FC<Props> = ({ movie, onEnterLobby }) => {
                     <div className="flex items-center gap-3">
                         {movie.poster && (
                             <img
-                                src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                                src={cardImage(movie.poster)}
                                 alt={movie.title}
-                                className="w-10 h-14 object-cover rounded-lg border border-white/10 flex-shrink-0"
+                                className="w-10 h-14 object-cover rounded-lg border border-white/10 flex-shrink-0" loading="lazy"
                             />
                         )}
                         <div>

@@ -1,4 +1,5 @@
 
+import { cardImage } from '../services/imageUrl';
 import React, { useRef, isValidElement } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
@@ -110,10 +111,10 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   >
                       <div className="relative aspect-[16/9] rounded-lg bg-transparent">
                           <img 
-                              src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                              src={cardImage(movie.poster)}
                               alt={movie.title}
                               className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover/ranked:scale-105 transition-transform duration-300 rounded-r-lg"
-                              onContextMenu={(e) => e.preventDefault()}
+                              onContextMenu={(e) = loading="lazy"> e.preventDefault()}
                               crossOrigin="anonymous"
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent rounded-lg"></div>

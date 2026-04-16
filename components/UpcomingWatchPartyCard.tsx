@@ -1,3 +1,4 @@
+import { cardImage } from '../services/imageUrl';
 import React, { useState, useEffect } from 'react';
 import { Movie } from '../types';
 
@@ -45,9 +46,9 @@ const UpcomingWatchPartyCard: React.FC<Props> = ({ movie, onEnterLobby }) => {
             {movie.poster && (
                 <div className="absolute inset-0 pointer-events-none">
                     <img
-                        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                        src={cardImage(movie.poster)}
                         alt=""
-                        className="w-full h-full object-cover opacity-10 blur-md scale-105"
+                        className="w-full h-full object-cover opacity-10 blur-md scale-105" loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/80 to-black/60" />
                 </div>
@@ -75,9 +76,9 @@ const UpcomingWatchPartyCard: React.FC<Props> = ({ movie, onEnterLobby }) => {
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
                     {movie.poster && (
                         <img
-                            src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                            src={cardImage(movie.poster)}
                             alt={movie.title}
-                            className="w-16 h-24 object-cover rounded-xl border border-white/10 flex-shrink-0 shadow-xl hidden md:block"
+                            className="w-16 h-24 object-cover rounded-xl border border-white/10 flex-shrink-0 shadow-xl hidden md:block" loading="lazy"
                         />
                     )}
 
