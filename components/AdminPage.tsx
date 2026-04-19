@@ -86,8 +86,6 @@ const AdminPage: React.FC = () => {
     const [showMoreTools, setShowMoreTools] = useState(false);
     const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
     const [isSaving, setIsSaving] = useState(false);
-    const [suppressBanners, setSuppressBanners] = useState(false);
-    const [bannerKillSaving, setBannerKillSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
     const allowedTabs = useMemo(() => {
@@ -178,7 +176,6 @@ const AdminPage: React.FC = () => {
                 if (data.settings?.pwffTeaserDescription) setPwffDescription(data.settings.pwffTeaserDescription);
                 if (data.settings?.pwffTeaserTagline) setPwffTagline(data.settings.pwffTeaserTagline);
                 if (data.settings?.pwffUrlYear) setPwffYear(data.settings.pwffUrlYear);
-                setSuppressBanners(!!data.settings?.suppressAllBanners);
             }
 
             if (pipelineRes.ok) {
@@ -496,35 +493,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
                     {activeTab === 'pulse' && (
                         <div>
-                            {/* ── BANNER KILL SWITCH ── */}
-                            <div className={`mb-6 flex items-center justify-between gap-4 p-5 rounded-2xl border ${suppressBanners ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/[0.02] border-white/5'}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${suppressBanners ? 'bg-amber-500/20' : 'bg-white/5'}`}>
-                                        {suppressBanners ? '🔇' : '📢'}
-                                    </div>
-                                    <div>
-                                        <p className={`text-sm font-black uppercase tracking-widest ${suppressBanners ? 'text-amber-400' : 'text-white'}`}>
-                                            {suppressBanners ? 'All Banners Suppressed' : 'Banners Active'}
-                                        </p>
-                                        <p className="text-[10px] text-gray-600 mt-0.5">
-                                            {suppressBanners ? 'No banners are showing on the site — toggle off to restore.' : 'Watch party, festival, and event banners show normally.'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={async () => {
-                                        setBannerKillSaving(true);
-                                        const newVal = !suppressBanners;
-                                        setSuppressBanners(newVal);
-                                        await handleSaveData('settings', { suppressAllBanners: newVal });
-                                        setBannerKillSaving(false);
-                                    }}
-                                    disabled={bannerKillSaving}
-                                    className={`relative w-14 h-7 rounded-full transition-colors flex-shrink-0 ${suppressBanners ? 'bg-amber-500' : 'bg-gray-700'} disabled:opacity-50`}
-                                >
-                                    <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all ${suppressBanners ? 'left-7' : 'left-0.5'}`} />
-                                </button>
-                            </div>
                             <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />
                         </div>
                     )}

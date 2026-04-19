@@ -339,7 +339,10 @@ const ProgrammeMode: React.FC = () => {
                 <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-3">
                     {festivalConfig?.title || 'Playhouse West Film Festival'}
                 </h1>
-                {festivalConfig?.subheader && <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mb-4">{festivalConfig.subheader}</p>}
+                {festivalConfig?.subheader
+                    ? <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mb-4">{festivalConfig.subheader}</p>
+                    : <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mb-4">{getPwffAnnualNumber(settings, festivalConfig)} Annual Official Selections</p>
+                }
                 {festivalConfig?.description && <p className="text-gray-400 text-sm max-w-xl mx-auto leading-relaxed mb-5">{festivalConfig.description}</p>}
                 {festivalConfig?.startDate && <p className="text-gray-600 text-xs font-bold uppercase tracking-widest mb-6">{festivalConfig.startDate}{festivalConfig.endDate && festivalConfig.endDate !== festivalConfig.startDate ? ` — ${festivalConfig.endDate}` : ''}</p>}
 
@@ -497,6 +500,31 @@ const ProgrammeMode: React.FC = () => {
 };
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+// Auto-calculates the annual edition number from the festival year
+// PWFF was founded in 2013 — 2026 = 13th Annual, 2027 = 14th Annual, etc.
+function getPwffAnnualNumber(settings?: any, festivalConfig?: any): string {
+    // Admin can override manually
+    if (settings?.pwffAnnualNumber) return ordinal(settings.pwffAnnualNumber);
+    
+    // Auto-calculate from year
+    const foundingYear = settings?.pwffFoundingYear || 2013;
+    const currentYear = new Date().getFullYear();
+    // Try to get year from festival config dates, fall back to current year
+    let festYear = currentYear;
+    if (festivalConfig?.startDate) {
+        const d = new Date(festivalConfig.startDate);
+        if (!isNaN(d.getTime())) festYear = d.getFullYear();
+    }
+    const edition = festYear - foundingYear + 1;
+    return ordinal(edition);
+}
+
+function ordinal(n: number): string {
+    const s = ['th','st','nd','rd'];
+    const v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
 const PwffPage: React.FC = () => {
     const { settings, isLoading, livePartyMovie, activeParties, festivalData, movies } = useFestival();
     const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user } = useAuth();

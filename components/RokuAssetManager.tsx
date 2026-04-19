@@ -1,6 +1,4 @@
 
-import { heroImage } from '../services/imageUrl';
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, RokuAsset } from '../types';
 import { getDbInstance } from '../services/firebaseClient';

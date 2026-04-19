@@ -184,11 +184,14 @@ export async function POST(request: Request) {
 
             await db.collection('movie_pipeline').doc(submissionKey).set(submission);
 
-            // Also log to audit
-            await db.collection('audit_log').add({
-                action: 'film_submitted',
-                details: `Film "${title}" submitted by ${director} (${email})`,
+            // Log to audit stream
+            await db.collection('audit_logs').add({
+                action: 'FILM_SUBMITTED',
+                type: 'MUTATION',
+                role: 'filmmaker',
+                details: `"${title}" submitted by ${director} (${email})`,
                 timestamp: FieldValue.serverTimestamp(),
+                ip: '',
                 metadata: { submissionKey, title, director, email }
             });
 

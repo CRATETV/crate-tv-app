@@ -1,4 +1,3 @@
-import { getOptimizedImageUrl } from '../services/imageUrl';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -110,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({
                         {/* Logo ONLY for LOGGED IN users (when no stream is active) */}
                         {user && !activeNotificationMovie && (
                              <a href="/" onClick={(e) => handleNavigate(e, '/')} className="block transition-transform hover:scale-105 active:scale-95">
-                                <img src={getOptimizedImageUrl("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png", 256)} alt="Crate" className="h-6 md:h-8 invert brightness-0" loading="lazy" />
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className="h-6 md:h-8 invert brightness-0" />
                              </a>
                         )}
                     </div>

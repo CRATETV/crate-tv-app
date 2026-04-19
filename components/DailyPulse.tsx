@@ -58,7 +58,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
         const unsubAudit = db.collection('audit_logs')
             .orderBy('timestamp', 'desc')
-            .limit(5)
+            .limit(20)
             .onSnapshot(snap => {
                 const audits: AuditEntry[] = [];
                 snap.forEach(doc => audits.push({ id: doc.id, ...doc.data() } as AuditEntry));
@@ -224,19 +224,62 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                 </div>
 
                 <div className="space-y-6">
+                    {/* Pipeline Alert — shows when new submissions are pending */}
+                    {pendingPipeline.length > 0 && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                                <span className="text-amber-400 font-black text-lg">!</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-amber-400 font-black uppercase tracking-widest text-[10px]">Pipeline Alert</p>
+                                <p className="text-white font-bold text-sm mt-0.5">
+                                    {pendingPipeline.length} film{pendingPipeline.length !== 1 ? 's' : ''} awaiting review
+                                </p>
+                                <p className="text-gray-600 text-[9px] mt-0.5 truncate">
+                                    Latest: {pendingPipeline[0]?.title || 'Untitled'}
+                                </p>
+                            </div>
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping flex-shrink-0"></span>
+                        </div>
+                    )}
+
                     <div className="bg-black border border-white/5 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden h-fit">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.08)_0%,transparent_70%)]"></div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-8 flex items-center gap-2">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-6 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
                             Audit Stream
                         </h3>
-                        <div className="space-y-6 relative z-10">
-                            {recentAudits.map(log => (
-                                <div key={log.id} className="p-4 bg-white/5 rounded-xl border border-white/5">
-                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">{log.action}</p>
-                                    <p className="text-[10px] text-gray-300 line-clamp-2 italic">"{log.details}"</p>
+                        <div className="space-y-3 relative z-10">
+                            {recentAudits.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <p className="text-gray-700 text-[10px] font-black uppercase tracking-widest">No activity yet</p>
+                                    <p className="text-gray-800 text-[9px] mt-1">Events will appear here as they happen</p>
                                 </div>
-                            ))}
+                            ) : recentAudits.map(log => {
+                                const isSubmission = log.action === 'FILM_SUBMITTED';
+                                const isLogin = log.action === 'ADMIN_LOGIN' || log.type === 'LOGIN';
+                                const isPurge = log.type === 'PURGE';
+                                const accentColor = isSubmission ? 'border-amber-500/30 bg-amber-500/5' 
+                                    : isPurge ? 'border-red-500/20 bg-red-500/5'
+                                    : isLogin ? 'border-blue-500/20 bg-blue-500/5'
+                                    : 'border-white/5 bg-white/[0.02]';
+                                const labelColor = isSubmission ? 'text-amber-400'
+                                    : isPurge ? 'text-red-400'
+                                    : isLogin ? 'text-blue-400'
+                                    : 'text-gray-500';
+                                const ts = log.timestamp?.toDate?.();
+                                const timeStr = ts ? ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                                return (
+                                    <div key={log.id} className={`p-3.5 rounded-xl border ${accentColor}`}>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <p className={`text-[8px] font-black uppercase tracking-widest ${labelColor}`}>{log.action?.replace(/_/g,' ') || 'EVENT'}</p>
+                                            {timeStr && <p className="text-[8px] text-gray-700">{timeStr}</p>}
+                                        </div>
+                                        <p className="text-[10px] text-gray-300 leading-relaxed">{log.details || '—'}</p>
+                                        {log.role && <p className="text-[8px] text-gray-700 mt-1 uppercase tracking-widest">{log.role}</p>}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

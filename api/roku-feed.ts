@@ -298,7 +298,15 @@ export async function GET(request: Request) {
         return valid;
     };
 
-    // 1. CRATE FEST (Highest Priority)
+    // Auto-calculate PWFF annual edition number (PWFF founded 2013)
+    function getPwffEdition(year: number): string {
+        const edition = year - 2013 + 1;
+        const s = ['th','st','nd','rd'];
+        const v = edition % 100;
+        return edition + (s[(v-20)%10] || s[v] || s[0]);
+    }
+
+    // 1. PWFF / CRATE FEST (Highest Priority — goes FIRST when festival is live)
     if ((config as any).crateFest) {
         const fest = (config as any).crateFest;
         const isLive = fest.isLive === true;
@@ -313,8 +321,12 @@ export async function GET(request: Request) {
             });
         
         if (children.length > 0) {
-            categories.push({
-                title: fest.title || "Film Festival",
+            // Auto-generate title with annual number
+            const festYear = new Date().getFullYear();
+            const edition = getPwffEdition(festYear);
+            const festTitle = fest.title || ('Playhouse West Film Festival — ' + edition + ' Annual');
+            categories.unshift({  // unshift = insert at position 0 (FIRST row)
+                title: festTitle,
                 type: 'standard',
                 categoryType: 'crateFest',
                 festivalIsLive: isLive,

@@ -214,6 +214,9 @@ export interface Category {
   title: string;
   movieKeys: string[];
   type?: string;
+  showInSquare?: boolean;   // if true, this category appears in The Square
+  squareAccentColor?: string; // optional accent color for Square display e.g. 'emerald' | 'amber' | 'red' | 'purple'
+  squareTagline?: string;   // optional subtitle shown under the section title in The Square
 }
 
 export interface FilmBlock {
@@ -419,6 +422,8 @@ export interface SiteSettings {
   pwffUrlYear?: string;           // e.g. "2026" — makes the URL cratetv.net/pwff2026
   suppressAllBanners?: boolean;   // kill switch — turns off every banner instantly
   pwffFullPassPrice?: number;      // price for the all-access festival pass
+  pwffAnnualNumber?: number;        // override for the annual edition number (auto-calculated if not set)
+  pwffFoundingYear?: number;        // year PWFF started — defaults to 2013
 }
 
 export interface PwffInterestEntry {

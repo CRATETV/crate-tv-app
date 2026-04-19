@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
-import { cardImage } from '../services/imageUrl';
 
 interface MovieCardProps {
   movie: Movie;
@@ -214,8 +213,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     )}
     <div
       ref={cardRef}
-      className={`group relative cursor-pointer aspect-[3/4] rounded-lg bg-gray-900 border border-white/5 transition-all duration-300 ${showExpanded ? 'z-50' : 'z-0 hover:z-40'}`}
-      style={{ isolation: showExpanded ? 'auto' : 'isolate' }}
+      className="group relative cursor-pointer aspect-[3/4] rounded-lg bg-gray-900 border border-white/5 transition-all duration-300 hover:z-40"
+      style={{ isolation: 'isolate' }}
       onClick={() => isMobile() ? setShowMobileSheet(true) : onSelectMovie(movie)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -238,7 +237,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <div className={`relative w-full h-full overflow-hidden rounded-lg transition-all duration-300 ${showExpanded ? 'brightness-50' : ''}`}>
         {!isImageLoaded && <div className="absolute inset-0 shimmer-bg" />}
         <img
-          src={cardImage(currentPoster)}
+          src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
           alt={movie.title}
           className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
@@ -300,19 +299,19 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               />
             ) : (
               <img
-                src={cardImage(currentPoster)}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
-                crossOrigin="anonymous" loading="lazy"
+                crossOrigin="anonymous"
               />
             )}
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
               <img
-                src={cardImage(currentPoster)}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-                crossOrigin="anonymous" loading="lazy"
+                crossOrigin="anonymous"
               />
             )}
 
@@ -485,10 +484,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 />
               ) : (
                 <img
-                  src={cardImage(currentPoster)}
+                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
-                  crossOrigin="anonymous" loading="lazy"
+                  crossOrigin="anonymous"
                 />
               )}
 

@@ -110,7 +110,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
     setCategories(defaultCats);
   }, [initialCategories]);
 
-  const handleCategoryChange = (key: string, field: 'title', value: string) => {
+  const handleCategoryChange = (key: string, field: 'title' | 'showInSquare' | 'squareTagline' | 'squareAccentColor', value: string | boolean) => {
     setCategories(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   };
 
@@ -267,16 +267,37 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                 const cat = category as Category;
                 if (PROTECTED_KEYS.includes(key)) return null;
                 return (
-                    <div key={key} className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-white/10 transition-all shadow-xl">
+                    <div key={key} className={`bg-white/[0.02] border p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6 group transition-all shadow-xl ${cat.showInSquare ? 'border-emerald-500/30 bg-emerald-500/[0.03]' : 'border-white/5 hover:border-white/10'}`}>
                         <div className="flex-grow w-full">
-                            <input type="text" value={cat.title} onChange={e => handleCategoryChange(key, 'title', e.target.value)} className="text-xl font-black uppercase tracking-tight bg-transparent text-white focus:outline-none w-full border-b border-transparent focus:border-white/10 italic" />
+                            <div className="flex items-center gap-3 mb-1">
+                                <input type="text" value={cat.title} onChange={e => handleCategoryChange(key, 'title', e.target.value)} className="text-xl font-black uppercase tracking-tight bg-transparent text-white focus:outline-none flex-1 border-b border-transparent focus:border-white/10 italic" />
+                                {cat.showInSquare && <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full whitespace-nowrap">In The Square</span>}
+                            </div>
                             <div className="flex items-center gap-3 mt-2">
                                 <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest">{cat.movieKeys.length} Records Connected</p>
                                 <div className="w-1 h-1 rounded-full bg-gray-800"></div>
                                 <p className="text-[8px] text-gray-800 font-black uppercase tracking-widest">UID: {key}</p>
                             </div>
+                            {/* Square tagline field — only shown when showInSquare is on */}
+                            {cat.showInSquare && (
+                                <input
+                                    type="text"
+                                    value={cat.squareTagline || ''}
+                                    onChange={e => handleCategoryChange(key, 'squareTagline', e.target.value)}
+                                    placeholder="Square tagline (e.g. Before the remakes, there were the originals.)"
+                                    className="mt-3 w-full text-xs bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2 text-emerald-300 placeholder-emerald-900 focus:outline-none focus:border-emerald-500/40"
+                                />
+                            )}
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
+                            {/* Show in Square toggle */}
+                            <button
+                                onClick={() => handleCategoryChange(key, 'showInSquare', !cat.showInSquare)}
+                                className={`flex items-center gap-2 font-black py-2.5 px-4 rounded-xl text-[9px] uppercase tracking-widest border transition-all ${cat.showInSquare ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' : 'bg-white/5 border-white/10 text-gray-600 hover:border-emerald-500/20 hover:text-emerald-600'}`}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${cat.showInSquare ? 'bg-emerald-400' : 'bg-gray-700'}`}></span>
+                                The Square
+                            </button>
                             <button onClick={() => setEditingCategoryKey(key)} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black py-3 px-8 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">Edit Content</button>
                             <button onClick={() => deleteCategory(key)} className="text-red-500 hover:text-red-400 font-black text-[9px] uppercase tracking-widest px-4 transition-colors">Purge</button>
                         </div>

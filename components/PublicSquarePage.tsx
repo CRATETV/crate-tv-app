@@ -10,6 +10,15 @@ import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from './SEO';
 
+// Accent color map for square rows
+const ACCENT_COLORS: Record<string, { text: string; glow: string; border: string; bg: string; tag: string }> = {
+    emerald: { text: 'text-emerald-500', glow: 'rgba(16,185,129,0.15)', border: 'border-emerald-500/20', bg: 'bg-emerald-600/10', tag: 'text-emerald-400' },
+    amber:   { text: 'text-amber-500',   glow: 'rgba(245,158,11,0.15)',  border: 'border-amber-500/20',   bg: 'bg-amber-600/10',   tag: 'text-amber-400' },
+    red:     { text: 'text-red-500',     glow: 'rgba(239,68,68,0.15)',   border: 'border-red-500/20',     bg: 'bg-red-600/10',     tag: 'text-red-400' },
+    purple:  { text: 'text-purple-500',  glow: 'rgba(168,85,247,0.15)',  border: 'border-purple-500/20',  bg: 'bg-purple-600/10',  tag: 'text-purple-400' },
+    blue:    { text: 'text-blue-500',    glow: 'rgba(59,130,246,0.15)',  border: 'border-blue-500/20',    bg: 'bg-blue-600/10',    tag: 'text-blue-400' },
+};
+
 const PublicSquarePage: React.FC = () => {
     const { isLoading: isFestivalLoading, movies, categories } = useFestival();
     const { watchlist: watchlistArray, toggleWatchlist, likedMovies: likedMoviesArray, toggleLikeMovie, watchedMovies: watchedMoviesArray } = useAuth();
@@ -28,6 +37,26 @@ const PublicSquarePage: React.FC = () => {
         return (category.movieKeys || [])
             .map(key => movies[key])
             .filter((m): m is Movie => !!m && !m.isUnlisted);
+    }, [movies, categories]);
+
+    // Any category with showInSquare: true (excluding the two hardcoded ones)
+    const squareRows = useMemo(() => {
+        return Object.entries(categories)
+            .filter(([key, cat]) =>
+                cat.showInSquare &&
+                key !== 'publicAccess' &&
+                key !== 'publicDomainIndie'
+            )
+            .map(([key, cat]) => ({
+                key,
+                title: cat.title,
+                tagline: cat.squareTagline || '',
+                accent: cat.squareAccentColor || 'red',
+                movies: (cat.movieKeys || [])
+                    .map(k => movies[k])
+                    .filter((m): m is Movie => !!m && !m.isUnlisted),
+            }))
+            .filter(r => r.movies.length > 0);
     }, [movies, categories]);
     
     const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
@@ -144,7 +173,38 @@ const PublicSquarePage: React.FC = () => {
                         </section>
                     )}
 
-                    {publicAccessMovies.length === 0 && vintageVisionsMovies.length === 0 && (
+                    {/* Dynamic Square Rows — any category with showInSquare: true */}
+                    {squareRows.map(row => {
+                        const accent = ACCENT_COLORS[row.accent] || ACCENT_COLORS.red;
+                        return (
+                            <section key={row.key} className="space-y-8 pt-12 border-t border-white/5">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                                    <div>
+                                        <h2 className={`text-3xl font-black uppercase tracking-widest italic ${accent.text}`}>{row.title}</h2>
+                                        {row.tagline && <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">{row.tagline}</p>}
+                                    </div>
+                                    <div className="h-px flex-grow bg-white/5 mx-10 hidden md:block"></div>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 md:gap-10">
+                                    {row.movies.map(movie => (
+                                        <div key={movie.key} className={`hover:shadow-[0_0_50px_${accent.glow}] rounded-lg transition-all duration-500 transform hover:scale-105`}>
+                                            <MovieCard
+                                                movie={movie}
+                                                onSelectMovie={handleSelectMovie}
+                                                isOnWatchlist={watchlist.has(movie.key)}
+                                                onToggleWatchlist={toggleWatchlist}
+                                                isLiked={likedMovies.has(movie.key)}
+                                                onToggleLike={toggleLikeMovie}
+                                                isWatched={watchedMovies.has(movie.key)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        );
+                    })}
+
+                    {publicAccessMovies.length === 0 && vintageVisionsMovies.length === 0 && squareRows.length === 0 && (
                         <div className="text-center py-32 border-2 border-dashed border-white/5 rounded-[4rem] opacity-30">
                             <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Establishing Local Uplink Feed...</p>
                         </div>

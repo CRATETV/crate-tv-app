@@ -1,4 +1,3 @@
-import { avatarImage } from '../services/imageUrl';
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -152,18 +151,18 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
             <main className="flex-grow">
                 <div className="relative w-full h-[60vh] bg-black">
                     <img
-                        src={avatarImage(profile.highResPhoto)}
+                        src={`/api/proxy-image?url=${encodeURIComponent(profile.highResPhoto)}`}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover opacity-30 blur-md"
-                        crossOrigin="anonymous" loading="lazy"
+                        crossOrigin="anonymous"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
                     <div className="relative z-10 h-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center md:justify-start gap-8 px-4 text-center md:text-left">
                         <img 
-                            src={avatarImage(profile.photo)}
+                            src={`/api/proxy-image?url=${encodeURIComponent(profile.photo)}`}
                             alt={profile.name}
                             crossOrigin="anonymous"
-                            className="w-48 h-48 rounded-full object-cover border-4 border-red-600 flex-shrink-0 bg-gray-700 shadow-2xl" loading="lazy"
+                            className="w-48 h-48 rounded-full object-cover border-4 border-red-600 flex-shrink-0 bg-gray-700 shadow-2xl"
                         />
                         <div>
                             <h1 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none">{profile.name}</h1>
