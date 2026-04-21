@@ -56,6 +56,7 @@ import LibraryPage from './components/LibraryPage';
 import ClaimPage from './components/ClaimPage';
 import NotFoundPage from './components/NotFoundPage';
 import ToastContainer from './components/Toast';
+import RedCarpetPage from './components/RedCarpetPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -163,6 +164,8 @@ const AppRouter: React.FC = () => {
        return <CrateFestPage />;
     case '/watchlist':
       return user ? <WatchlistPage /> : <RedirectToLogin />;
+    case '/red-carpet':
+      return <RedCarpetPageWrapper />;
     case '/public-square':
       return <PublicSquarePage />;
     case '/cratemas':

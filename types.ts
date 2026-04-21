@@ -424,6 +424,23 @@ export interface SiteSettings {
   pwffFullPassPrice?: number;      // price for the all-access festival pass
   pwffAnnualNumber?: number;        // override for the annual edition number (auto-calculated if not set)
   pwffFoundingYear?: number;        // year PWFF started — defaults to 2013
+  pwffRedCarpetEnabled?: boolean;   // turns on the virtual red carpet pre-show
+  pwffRedCarpetStartTime?: string;  // ISO datetime when carpet opens (30min before film)
+  pwffRedCarpetEndTime?: string;    // ISO datetime when carpet closes and film begins
+  pwffRedCarpetHost?: string;       // host name shown on carpet
+  pwffRedCarpetWelcomeVideo?: string; // S3 URL for host welcome clip
+  pwffRedCarpetFilmTitle?: string;  // opening night film title
+  pwffRedCarpetFilmDirector?: string; // opening night director name
+  pwffRedCarpetClips?: RedCarpetClip[]; // filmmaker intro clips
+}
+
+export interface RedCarpetClip {
+  id: string;
+  filmmakerName: string;
+  filmTitle: string;
+  videoUrl: string;      // S3 URL for the filmmaker's intro clip
+  durationSeconds?: number;
+  order?: number;
 }
 
 export interface PwffInterestEntry {

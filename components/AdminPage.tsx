@@ -91,7 +91,7 @@ const AdminPage: React.FC = () => {
     const [saveMessage, setSaveMessage] = useState('');
 
     const allowedTabs = useMemo(() => {
-        const isMaster = role === 'super_admin' || role === 'master';
+        const isMaster = role === 'super_admin' || role === 'master' || role === 'chief_architect' || role === 'Chief Architect';
         if (isMaster) return Object.keys(ALL_TABS);
 
         // These tabs are NEVER visible to non-master admins regardless of
