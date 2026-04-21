@@ -27,6 +27,7 @@ import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
 import RokuManagementTab from './RokuManagementTab';
 import RokuAnalyticsTab from './RokuAnalyticsTab';
+import FilmmakerOutreachTab from './FilmmakerOutreachTab';
 import TicketCodesTab from './TicketCodesTab';
 import MonthlySpotlightTab from './MonthlySpotlightTab';
 
@@ -95,7 +96,7 @@ const AdminPage: React.FC = () => {
 
         // These tabs are NEVER visible to non-master admins regardless of
         // what is stored in Firestore — hard-coded security boundary
-        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'rokuControl', 'rokuAnalytics'];
+        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'rokuControl', 'rokuAnalytics', 'outreach'];
 
         const specificTabs = permissions[role];
         // Only the pulse dashboard is always visible — everything else must be explicitly granted
@@ -458,7 +459,7 @@ const AdminPage: React.FC = () => {
                         </button>
                         {showMoreTools && (
                             <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['audit','📜 Audit Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['outreach','🎯 Outreach'],['audit','📜 Audit Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                                 <button
                                     key={tabId}
                                     onClick={() => navigateTo(tabId as string)}
@@ -580,6 +581,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'rokuControl' && <RokuManagementTab allMovies={Object.values(movies) as Movie[]} onSaveMovie={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'rokuAnalytics' && <RokuAnalyticsTab analytics={analytics} movies={movies} />}
+                    {activeTab === 'outreach' && <FilmmakerOutreachTab />}
                     {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
