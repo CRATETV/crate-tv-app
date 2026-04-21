@@ -193,6 +193,115 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         );
     }
 
+    // ── RED CARPET MODE — last 10 minutes before showtime ──────────────────
+    const isRedCarpetWindow = countdown &&
+        countdown.days === 0 &&
+        countdown.hours === 0 &&
+        countdown.minutes < 10;
+
+    if (isRedCarpetWindow) {
+        return (
+            <div className="fixed inset-0 bg-black z-40 overflow-hidden">
+                {/* Film grain */}
+                <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}>
+                </div>
+
+                {/* Blurred poster backdrop */}
+                <div className="absolute inset-0">
+                    <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-[0.08] blur-3xl scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/80" />
+                </div>
+
+                {/* Red top bar */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-red-600 z-20"></div>
+
+                {/* Top strip */}
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 md:px-12 py-5">
+                    <div className="flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-red-400">Virtual Red Carpet</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="flex -space-x-2">
+                            {viewers.slice(0, 5).map((v, i) => (
+                                <div key={v.id} className="w-6 h-6 rounded-full bg-gray-800 border-2 border-black"
+                                    style={{ zIndex: 5 - i }}
+                                    dangerouslySetInnerHTML={{ __html: avatars[v.avatar] || avatars['fox'] }}
+                                />
+                            ))}
+                        </div>
+                        {viewers.length > 0 && (
+                            <span className="text-xs font-bold text-white ml-1">{viewers.length} here</span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Main content */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center">
+                    <p className="text-[9px] font-black uppercase tracking-[0.5em] text-gray-600 mb-6">
+                        {movie.director && `Directed by ${movie.director}`}
+                    </p>
+
+                    <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none text-white mb-4 italic">
+                        {movie.title}
+                    </h1>
+
+                    <div className="w-16 h-0.5 bg-red-600 mb-8"></div>
+
+                    {/* Countdown */}
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Screening Begins In</p>
+                    <div className="flex items-center gap-3 mb-12">
+                        <div className="bg-white/[0.04] border border-white/10 rounded-2xl px-6 py-4 min-w-[80px]">
+                            <div className="text-4xl md:text-6xl font-black text-red-500 tabular-nums">{String(countdown.minutes).padStart(2, '0')}</div>
+                            <div className="text-[8px] uppercase tracking-widest text-gray-600 mt-1">Min</div>
+                        </div>
+                        <span className="text-3xl font-black text-gray-700">:</span>
+                        <div className="bg-white/[0.04] border border-white/10 rounded-2xl px-6 py-4 min-w-[80px]">
+                            <div className="text-4xl md:text-6xl font-black text-red-500 tabular-nums animate-pulse">{String(countdown.seconds).padStart(2, '0')}</div>
+                            <div className="text-[8px] uppercase tracking-widest text-gray-600 mt-1">Sec</div>
+                        </div>
+                    </div>
+
+                    {/* Director message if set */}
+                    {directorMessage && (
+                        <div className="border-l-2 border-red-600 pl-5 text-left max-w-sm mb-10">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-2">From the Director</p>
+                            <p className="text-gray-400 italic text-sm leading-relaxed">"{directorMessage}"</p>
+                            <p className="text-gray-700 text-[10px] mt-2">— {movie.director}</p>
+                        </div>
+                    )}
+
+                    {/* Admission prompt */}
+                    {!hasAccess && onBuyTicket && (
+                        <button
+                            onClick={onBuyTicket}
+                            className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-95 shadow-2xl"
+                        >
+                            Unlock Admission — ${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}
+                        </button>
+                    )}
+
+                    {hasAccess && (
+                        <p className="text-gray-700 text-[10px] uppercase tracking-widest">
+                            You're in — film starts automatically
+                        </p>
+                    )}
+                </div>
+
+                {/* Bottom PWFF badge */}
+                <div className="absolute bottom-8 left-0 right-0 flex justify-center z-10">
+                    <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 px-5 py-2.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Playhouse West Film Festival</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Crate TV</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="fixed inset-0 bg-black z-40 overflow-hidden">
             {/* Ambient background with poster */}

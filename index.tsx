@@ -3,7 +3,7 @@ import './src/index.css';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { FestivalProvider } from './contexts/FestivalContext';
+import { FestivalProvider, useFestival } from './contexts/FestivalContext';
 import { inject } from '@vercel/analytics';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
@@ -64,6 +64,21 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+
+// Virtual Red Carpet route — pulls settings from FestivalContext
+const RedCarpetRoute: React.FC = () => {
+  const { settings } = useFestival();
+  return (
+    <RedCarpetPage
+      settings={settings || {} as any}
+      onEnterWatchParty={() => {
+        const key = (settings as any)?.pwffOpeningNightMovieKey || '';
+        window.history.pushState({}, '', key ? `/watchparty/${key}` : '/');
+        window.dispatchEvent(new Event('pushstate'));
+      }}
+    />
+  );
+};
 
 // This component now contains the router and authentication logic.
 const AppRouter: React.FC = () => {
@@ -165,7 +180,7 @@ const AppRouter: React.FC = () => {
     case '/watchlist':
       return user ? <WatchlistPage /> : <RedirectToLogin />;
     case '/red-carpet':
-      return <RedCarpetPageWrapper />;
+      return <RedCarpetRoute />;
     case '/public-square':
       return <PublicSquarePage />;
     case '/cratemas':

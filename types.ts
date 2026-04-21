@@ -432,6 +432,7 @@ export interface SiteSettings {
   pwffRedCarpetFilmTitle?: string;  // opening night film title
   pwffRedCarpetFilmDirector?: string; // opening night director name
   pwffRedCarpetClips?: RedCarpetClip[]; // filmmaker intro clips
+  pwffOpeningNightMovieKey?: string;    // movie key for the opening night watch party
 }
 
 export interface RedCarpetClip {
