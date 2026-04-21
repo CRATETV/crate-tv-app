@@ -52,6 +52,8 @@ const ALL_TABS: Record<string, string> = {
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
     rokuControl: '📺 Roku Control',
+    rokuAnalytics: '📊 Roku Analytics',
+    outreach: '🎯 Outreach',
     audit: '📜 Audit Log',
     permissions: '🔑 Permissions',
     security: '🛡️ Security',
