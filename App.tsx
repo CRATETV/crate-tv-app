@@ -184,7 +184,7 @@ const App: React.FC = () => {
         
         // Don't show upcoming banner if party was terminated
         // Only show upcoming banner if movie has a valid future start time
-        const hasValidStartTime = livePartyMovie?.watchPartyStartTime && new Date(livePartyMovie.watchPartyStartTime).getTime() > Date.now() - (2 * 60 * 60 * 1000);
+        const hasValidStartTime = livePartyMovie?.watchPartyStartTime && new Date(livePartyMovie.watchPartyStartTime).getTime() > Date.now() - (24 * 60 * 60 * 1000);
         if (livePartyMovie && !isWatchPartyEnded && hasValidStartTime && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
         
         if (isFestivalLive && !dismissedBannerKeys.has('festival')) return 'GENERAL_FESTIVAL';

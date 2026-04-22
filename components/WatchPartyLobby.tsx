@@ -4,6 +4,15 @@ import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
 
+// Auto-transitions into the party after 1.5s — fixes "Starting Now" getting stuck on slow devices
+const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onPartyStart }) => {
+    useEffect(() => {
+        const t = setTimeout(() => onPartyStart(), 1500);
+        return () => clearTimeout(t);
+    }, [onPartyStart]);
+    return null;
+};
+
 interface WatchPartyLobbyProps {
     movie: Movie;
     partyState?: WatchPartyState;
@@ -170,6 +179,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 <div className="text-center space-y-6 animate-pulse">
                     <div className="text-red-500 text-8xl">▶</div>
                     <p className="text-2xl font-black uppercase tracking-widest">Starting Now</p>
+                    <StartingNowTransition onPartyStart={onPartyStart} />
                 </div>
             </div>
         );

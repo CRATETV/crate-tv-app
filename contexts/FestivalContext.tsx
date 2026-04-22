@@ -54,8 +54,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
-        // Tick every 30s normally; Countdown component handles per-second display
-        const timer = setInterval(() => setNow(new Date()), 30000);
+        // Tick every 10s — ensures banner shows promptly when party goes live
+        const timer = setInterval(() => setNow(new Date()), 10000);
         return () => clearInterval(timer);
     }, []);
 
@@ -73,7 +73,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const livePartyMovie = useMemo(() => {
         const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
-        const twoHoursInMs = 2 * 60 * 60 * 1000;
+        const twoHoursInMs = 24 * 60 * 60 * 1000; // 24 hours post-start window
 
         // ── PRIORITY 0: Check dedicated real-time schedule (instant, no S3 delay) ──
         // This fires the moment admin saves a watch party time
@@ -172,14 +172,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (!m.watchPartyStartTime) return false;
 
                 const start = new Date(m.watchPartyStartTime);
-                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
-                const twoHoursInMs = 2 * 60 * 60 * 1000;
+                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                const postStartWindow = 24 * 60 * 60 * 1000; // 24 hours
 
                 // Show if in future within 7 days
                 if (start.getTime() > now.getTime() && start.getTime() < (now.getTime() + sevenDaysInMs)) return true;
 
-                // Also show for up to 2 hours after scheduled start
-                if (start.getTime() <= now.getTime() && now.getTime() - start.getTime() < twoHoursInMs) return true;
+                // Also show for up to 24 hours after scheduled start
+                if (start.getTime() <= now.getTime() && now.getTime() - start.getTime() < postStartWindow) return true;
 
                 return false;
             })
@@ -362,6 +362,15 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             }, () => {});
 
             unsubs.push(subscribeWatchParties());
+
+            // Watchdog — resubscribe every 90s to prevent silent listener failure
+            // This ensures the banner appears promptly when a party goes live
+            let watchPartyUnsub = subscribeWatchParties();
+            const watchdog = setInterval(() => {
+                watchPartyUnsub();
+                watchPartyUnsub = subscribeWatchParties();
+            }, 90000);
+            unsubs.push(() => { clearInterval(watchdog); watchPartyUnsub(); });
 
             // Re-subscribe on auth change to pick up permission upgrades
             if (auth) {

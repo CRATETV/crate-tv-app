@@ -105,12 +105,17 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     return (
         <div 
-            className="fixed left-0 right-0 z-[110] p-2 md:p-3 flex items-center justify-between gap-2 md:gap-4 shadow-2xl h-12 border-b border-white/10 transition-all"
+            className="fixed left-0 right-0 z-[110] flex items-center justify-between gap-2 md:gap-4 shadow-2xl border-b border-white/10 transition-all"
             style={{ 
                 top: topOffset,
                 background: movie.isWatchPartyPaid && !alreadyHasAccess
                     ? 'linear-gradient(to right, #dc2626, #d97706, #312e81)'
-                    : 'linear-gradient(to right, #dc2626, #db2777, #312e81)'
+                    : 'linear-gradient(to right, #dc2626, #db2777, #312e81)',
+                paddingTop: 'max(8px, env(safe-area-inset-top))',
+                paddingBottom: '8px',
+                paddingLeft: '8px',
+                paddingRight: '8px',
+                minHeight: 'calc(48px + env(safe-area-inset-top))',
             }}
         >
             <div className="flex items-center gap-2 md:gap-4 ml-1 md:ml-8">
