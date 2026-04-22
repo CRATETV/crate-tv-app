@@ -435,9 +435,12 @@ const App: React.FC = () => {
     }, [heroMovies.length]);
 
     const mainPaddingTop = useMemo(() => {
-        // Mobile banner is taller (festival name + CTA button = ~112px), desktop is slim (48px)
         const isMobile = window.innerWidth < 768;
-        const bannerHeight = activeBannerType !== 'NONE' ? (isMobile ? 112 : 48) : 0;
+        // Only the festival banner is tall on mobile — watch party banner is always slim 48px
+        const isFestivalBanner = activeBannerType === 'GENERAL_FESTIVAL';
+        const bannerHeight = activeBannerType !== 'NONE'
+            ? (isFestivalBanner && isMobile ? 112 : 48)
+            : 0;
         const headerHeight = 64;
         const isHomePage = window.location.pathname === '/';
         if (!isHomePage) return `${bannerHeight + headerHeight}px`;
@@ -567,7 +570,7 @@ const App: React.FC = () => {
                 searchQuery={searchQuery} 
                 onSearch={onSearch} 
                 onMobileSearchClick={handleSearchClick} 
-                topOffset={activeBannerType !== 'NONE' ? (window.innerWidth < 768 ? '7rem' : '3rem') : '0px'} 
+                topOffset={activeBannerType !== 'NONE' ? (activeBannerType === 'GENERAL_FESTIVAL' && window.innerWidth < 768 ? '7rem' : '3rem') : '0px'} 
                 hideLiveSpotlight={activeBannerType !== 'NONE'}
             />
 

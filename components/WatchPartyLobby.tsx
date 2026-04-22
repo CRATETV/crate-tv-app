@@ -173,12 +173,15 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 </div>
             );
         }
-        // Paid users — show starting transition then enter
+        // Paid users — smooth loading transition into party
         return (
             <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-[fadeIn_0.5s_ease-out]">
-                <div className="text-center space-y-6 animate-pulse">
-                    <div className="text-red-500 text-8xl">▶</div>
-                    <p className="text-2xl font-black uppercase tracking-widest">Starting Now</p>
+                <div className="text-center space-y-6">
+                    <div className="relative w-16 h-16 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                        <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">Entering watch party</p>
                     <StartingNowTransition onPartyStart={onPartyStart} />
                 </div>
             </div>
