@@ -154,6 +154,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (!formData) return;
         const target = e.target as HTMLInputElement;
         const { name, value, type } = target;
+        
+        // datetime-local gives us local time — convert to proper ISO string
+        if (type === 'datetime-local') {
+            const isoValue = value ? new Date(value).toISOString() : '';
+            setFormData({ ...formData, [name]: isoValue });
+            return;
+        }
+        
         setFormData({ ...formData, [name]: type === 'checkbox' ? target.checked : (type === 'number' ? parseFloat(value) : value) });
     };
 
@@ -801,11 +809,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <input
                                                     type="datetime-local"
                                                     name="watchPartyStartTime"
-                                                    value={formData.watchPartyStartTime ? new Date(formData.watchPartyStartTime).toISOString().slice(0,16) : ''}
+                                                    value={formData.watchPartyStartTime ? (() => {
+                                                        const d = new Date(formData.watchPartyStartTime);
+                                                        const offset = d.getTimezoneOffset() * 60000;
+                                                        return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                                                    })() : ''}
                                                     onChange={handleChange}
                                                     className="form-input bg-black/40 border-red-500/30"
                                                 />
-                                                <p className="text-[9px] text-gray-600 uppercase font-bold">Set this → banner countdown appears on the site immediately. Leave blank for open lobby.</p>
+                                                <p className="text-[9px] text-gray-600 uppercase font-bold">Time is in your local timezone. Set this → banner countdown appears on the site immediately.</p>
                                             </div>
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                                 <div className="space-y-1">
