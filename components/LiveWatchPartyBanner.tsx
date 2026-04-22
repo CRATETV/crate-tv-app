@@ -164,13 +164,6 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                 >
                     {isLive ? 'Join Party' : 'Enter Lobby'}
                 </button>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onClose(); }} 
-                    className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/30 flex items-center justify-center text-white transition-colors ml-1 flex-shrink-0" 
-                    aria-label="Dismiss banner"
-                >
-                    <span className="text-base leading-none">&times;</span>
-                </button>
             </div>
         </div>
     );
