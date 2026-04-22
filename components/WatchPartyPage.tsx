@@ -224,6 +224,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
+    const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
@@ -522,6 +523,47 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // ── SESSION KICKED SCREEN ─────────────────────────────────────────────────
     if (sessionKicked) return <SessionKickedScreen reason={kickReason} />;
 
+    // ── WAITING SCREEN — user skipped lobby but party hasn't started yet ─────
+    // Shows a cinematic holding screen with the film preloading in background
+    const partyNotStarted = !partyState?.status || partyState?.status === 'waiting';
+    if (!showLobby && partyNotStarted && movie?.isWatchPartyEnabled) {
+        return (
+            <div className="fixed inset-0 bg-black flex items-center justify-center">
+                {/* Blurred poster backdrop */}
+                {movie.poster && (
+                    <div className="absolute inset-0">
+                        <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
+                        <div className="absolute inset-0 bg-black/80" />
+                    </div>
+                )}
+                {/* Hidden preload — buffers film while waiting */}
+                {movie.fullMovie && (
+                    <video src={movie.fullMovie} preload="auto" muted playsInline
+                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
+                        aria-hidden="true"
+                    />
+                )}
+                <div className="relative z-10 text-center space-y-6 px-8">
+                    <div className="relative w-12 h-12 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                        <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white">{movie.title}</h2>
+                        {movie.director && <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Directed by {movie.director}</p>}
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-700">Waiting for host to start the party</p>
+                    <button
+                        onClick={() => setShowLobby(true)}
+                        className="text-[9px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors border border-white/5 hover:border-white/20 px-4 py-2 rounded-lg"
+                    >
+                        Back to lobby
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     // Show pre-show lobby if party hasn't started yet — ALL users see the lobby
     // Unpaid users see a buy ticket prompt inside the lobby
     if (shouldShowLobby) {
@@ -535,6 +577,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     hasAccess={hasAccess}
                     onBuyTicket={() => setShowPaywall(true)}
                 />
+                {/* Hidden preload video — silently buffers the film while lobby is showing
+                    so there's no blank screen when the party starts */}
+                {hasAccess && movie.fullMovie && (
+                    <video
+                        src={movie.fullMovie}
+                        preload="auto"
+                        muted
+                        playsInline
+                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
+                        aria-hidden="true"
+                    />
+                )}
                 {showPaywall && (
                     <SquarePaymentModal 
                         movie={movie} 
@@ -709,6 +763,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
+                                    {/* Buffering spinner — shows until video has enough data to play */}
+                                    {isVideoBuffering && (
+                                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
+                                            {movie.poster && (
+                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
+                                            )}
+                                            <div className="relative z-10 text-center space-y-4">
+                                                <div className="relative w-14 h-14 mx-auto">
+                                                    <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                                    <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                                                </div>
+                                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Loading transmission</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
                                         src={movie.fullMovie}
@@ -725,6 +794,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         webkit-playsinline="true"
                                         preload="auto"
                                         controls={false}
+                                        onCanPlay={() => setIsVideoBuffering(false)}
+                                        onPlaying={() => setIsVideoBuffering(false)}
+                                        onWaiting={() => setIsVideoBuffering(true)}
+                                        onStalled={() => setIsVideoBuffering(true)}
                                     />
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
