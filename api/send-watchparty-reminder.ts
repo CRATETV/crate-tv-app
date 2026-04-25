@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
 
-export const config = { runtime: 'edge' };
+export const config = { runtime: 'nodejs' };
 
 export default async function handler(req: Request) {
     if (req.method !== 'POST') {
