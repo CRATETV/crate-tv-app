@@ -170,16 +170,16 @@ export async function POST(request: Request) {
             const isWatchParty = paymentType === 'watchPartyTicket';
             
             // Build watch party specific details
-            const watchPartyUrl = isWatchParty && movieKey
-                ? `${process.env.VITE_APP_URL || 'https://cratetv.net'}/watchparty/${movieKey}`
+            const watchPartyUrl = isWatchParty && itemId
+                ? `${process.env.VITE_APP_URL || 'https://cratetv.net'}/watchparty/${itemId}`
                 : null;
             
             // Get movie details for watch party confirmation
             let movieTitle = note;
             let watchPartyTime = '';
-            if (isWatchParty && movieKey && db) {
+            if (isWatchParty && itemId && db) {
                 try {
-                    const movieDoc = await db.collection('movies').doc(movieKey).get();
+                    const movieDoc = await db.collection('movies').doc(itemId).get();
                     if (movieDoc.exists) {
                         const movieData = movieDoc.data();
                         movieTitle = movieData?.title || note;

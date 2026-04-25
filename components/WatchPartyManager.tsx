@@ -620,7 +620,7 @@ const WatchPartyControlRoom: React.FC<{
                                                     const res = await fetch('/api/send-watchparty-reminder', {
                                                         method: 'POST',
                                                         headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ movieKey: item.movieKey || item.id, adminPassword: pwd }),
+                                                        body: JSON.stringify({ movieKey: (item.movieKeys && item.movieKeys.length === 1 ? item.movieKeys[0] : item.id), adminPassword: pwd }),
                                                     });
                                                     const data = await res.json();
                                                     if (data.success) {
