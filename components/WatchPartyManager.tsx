@@ -610,6 +610,34 @@ const WatchPartyControlRoom: React.FC<{
                                             )}
                                         </button>
                                     )}
+
+                                    {/* Send 24hr reminder to all ticket holders */}
+                                    {item.movieKey && (
+                                        <button
+                                            onClick={async () => {
+                                                const pwd = sessionStorage.getItem('adminPassword') || '';
+                                                try {
+                                                    const res = await fetch('/api/send-watchparty-reminder', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ movieKey: item.movieKey || item.id, adminPassword: pwd }),
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.success) {
+                                                        alert(`Reminder sent to ${data.sent} ticket holder${data.sent !== 1 ? 's' : ''}.`);
+                                                    } else {
+                                                        alert('Error: ' + (data.error || 'Send failed'));
+                                                    }
+                                                } catch (e) {
+                                                    alert('Network error — try again');
+                                                }
+                                            }}
+                                            className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-blue-500/30 transition-all flex items-center gap-2"
+                                        >
+                                            <span>📧</span>
+                                            Send Reminder
+                                        </button>
+                                    )}
                                     
                                     {/* Director welcome message button */}
                                     {countdown && (

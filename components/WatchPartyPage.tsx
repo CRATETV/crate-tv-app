@@ -666,6 +666,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 user={user}
                 isLiked={isLiked}
                 onToggleLike={handleToggleLike}
+                hasFestivalAllAccess={hasFestivalAllAccess}
+                onUpgradeToFullPass={() => setShowPaywall(true)}
             />
         );
     }

@@ -162,9 +162,21 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         const upcomingParties = movieArray
             .filter(m => m.isWatchPartyEnabled && !m.isUnlisted)
             .filter(m => {
-                // Don't show if party was explicitly ended
+                // Don't show if party was explicitly ended AND no future start time
                 const partyState = allPartyStates[m.key];
-                if (partyState?.status === 'ended') return false;
+                
+                // If ended but has a FUTURE start time set — ignore the ended status
+                // This handles the case where admin ended a test and scheduled a new one
+                if (partyState?.status === 'ended' && m.watchPartyStartTime) {
+                    const start = new Date(m.watchPartyStartTime);
+                    if (start.getTime() > now.getTime()) {
+                        // Has a future start time — stale ended doc should not block banner
+                    } else {
+                        return false;
+                    }
+                } else if (partyState?.status === 'ended') {
+                    return false;
+                }
                 // Don't show if already live (handled above)
                 if (activeParties[m.key]?.status === 'live') return false;
 

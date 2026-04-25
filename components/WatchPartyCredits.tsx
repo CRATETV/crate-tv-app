@@ -13,6 +13,8 @@ interface WatchPartyCreditsProps {
     user: { name?: string; email: string | null; avatar?: string } | null;
     isLiked: boolean;
     onToggleLike: () => void;
+    hasFestivalAllAccess?: boolean;
+    onUpgradeToFullPass?: () => void;
 }
 
 const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({ 
@@ -23,7 +25,9 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
     onRewatch,
     user,
     isLiked,
-    onToggleLike
+    onToggleLike,
+    hasFestivalAllAccess,
+    onUpgradeToFullPass,
 }) => {
     const [applauseCount, setApplauseCount] = useState(0);
     const [hasApplauded, setHasApplauded] = useState(false);
@@ -196,6 +200,24 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                     {showThankYou && (
                         <div className="animate-[fadeIn_0.5s_ease-out] bg-gradient-to-r from-red-900/20 via-transparent to-red-900/20 p-4 rounded-xl">
                             <p className="text-red-400 text-sm">Thank you for supporting independent film! 🎬</p>
+                        </div>
+                    )}
+
+                    {/* Upgrade to Full Pass — shown to block ticket holders only */}
+                    {!hasFestivalAllAccess && onUpgradeToFullPass && (
+                        <div className="animate-[fadeIn_0.8s_ease-out] bg-gradient-to-br from-red-900/20 via-black to-purple-900/20 border border-red-500/20 rounded-2xl p-8 text-center space-y-4">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-400">Festival All-Access</p>
+                            <h3 className="text-xl font-black uppercase text-white">Want to see more?</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">
+                                Upgrade to the All-Access Pass and watch every screening block from the festival — live and on-demand for two weeks.
+                            </p>
+                            <button
+                                onClick={onUpgradeToFullPass}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                            >
+                                Upgrade to All-Access — $50
+                            </button>
+                            <p className="text-gray-700 text-[10px]">Covers all festival blocks · 14 days access · Web + Roku</p>
                         </div>
                     )}
 

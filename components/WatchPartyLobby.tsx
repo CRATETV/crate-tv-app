@@ -316,9 +316,9 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     }
 
     return (
-        <div className="fixed inset-0 bg-black z-40 overflow-hidden">
+        <div className="fixed inset-0 bg-black z-40 overflow-y-auto overflow-x-hidden">
             {/* Ambient background with poster */}
-            <div className="absolute inset-0">
+            <div className="fixed inset-0 pointer-events-none">
                 <img 
                     src={movie.poster} 
                     alt="" 
@@ -326,22 +326,22 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                     style={{ transform: `scale(${1.1 + ambientPhase * 0.02})` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-black/70" />
-                
-                {/* Subtle animated grain */}
                 <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
             </div>
 
-            {/* Main content */}
-            <div className="relative z-10 h-full flex flex-col items-center justify-center p-8">
+            {/* Main content — min-h-screen so it fills but also scrolls when needed */}
+            <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 md:px-8 py-24 md:py-16"
+                style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top) + 4rem))', paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
                 
                 {/* Top bar - CRATE branding */}
-                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center">
+                <div className="fixed top-0 left-0 right-0 z-20 p-4 md:p-6 flex justify-between items-center"
+                    style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
                     <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">CRATE Watch Party</span>
                     </div>
                     {onClose && (
-                        <button onClick={onClose} className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors" aria-label="Close lobby">
+                        <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors" aria-label="Close lobby">
                             &times;
                         </button>
                     )}
@@ -360,10 +360,26 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         <span className="text-sm font-bold text-white ml-2">{viewers.length}</span>
                         <span className="text-xs text-gray-500">waiting</span>
                     </div>
+                    {/* Share button */}
+                    <button
+                        onClick={() => {
+                            const url = window.location.href;
+                            if (navigator.share) {
+                                navigator.share({ title: `Watch ${movie.title} on Crate TV`, url });
+                            } else {
+                                navigator.clipboard?.writeText(url);
+                                alert('Link copied! Share it with friends.');
+                            }
+                        }}
+                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 rounded-full transition-all text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white"
+                    >
+                        <span>Share</span>
+                        <span>↗</span>
+                    </button>
                 </div>
 
                 {/* Center content */}
-                <div className="text-center max-w-2xl mx-auto space-y-12">
+                <div className="text-center w-full max-w-2xl mx-auto space-y-10 md:space-y-12">
                     {/* Film poster - slowly revealing */}
                     <div className="relative mx-auto w-48 md:w-64">
                         <div className="absolute -inset-4 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />
@@ -418,7 +434,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
                     {/* Ticket purchase prompt for unpaid users */}
                     {!hasAccess && onBuyTicket && (
-                        <div className="animate-[fadeIn_0.8s_ease-out] space-y-3 max-w-sm mx-auto">
+                        <div className="animate-[fadeIn_0.8s_ease-out] space-y-3 w-full max-w-sm mx-auto px-4 md:px-0">
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center space-y-4">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Admission Required</p>
                                 <p className="text-gray-400 text-sm">Secure your seat before the party starts.</p>
@@ -442,41 +458,41 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             </span>
                         </div>
                     )}
-                </div>
 
-                {/* Bottom - Viewers arriving */}
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <div className="max-w-2xl mx-auto">
-                        {/* Recent arrivals ticker */}
-                        {viewers.length > 0 && (
-                            <div className="text-center space-y-4">
-                                <div className="flex items-center justify-center gap-2 text-gray-500 text-xs">
-                                    <span className="w-8 h-px bg-white/10" />
-                                    <span className="uppercase tracking-widest">Audience Gathering</span>
-                                    <span className="w-8 h-px bg-white/10" />
-                                </div>
-                                <div className="flex flex-wrap justify-center gap-2">
-                                    {viewers.slice(0, 12).map(v => (
-                                        <div 
-                                            key={v.id}
-                                            className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full pl-1 pr-3 py-1 animate-[fadeIn_0.5s_ease-out]"
-                                        >
-                                            <div 
-                                                className="w-6 h-6 rounded-full bg-gray-800 p-0.5"
-                                                dangerouslySetInnerHTML={{ __html: avatars[v.avatar] || avatars['fox'] }}
-                                            />
-                                            <span className="text-xs text-gray-400">{v.name}</span>
-                                        </div>
-                                    ))}
-                                    {viewers.length > 12 && (
-                                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1">
-                                            <span className="text-xs text-gray-400">+{viewers.length - 12} more</span>
-                                        </div>
-                                    )}
+                    {/* Audience gathering — inline so it never overlaps buttons */}
+                    {viewers.length > 0 && (
+                        <div className="w-full pt-6 pb-8 md:pb-12"
+                            style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+                            <div className="max-w-2xl mx-auto px-4 md:px-0">
+                                <div className="text-center space-y-4">
+                                    <div className="flex items-center justify-center gap-2 text-gray-500 text-xs">
+                                        <span className="w-8 h-px bg-white/10" />
+                                        <span className="uppercase tracking-widest">Audience Gathering</span>
+                                        <span className="w-8 h-px bg-white/10" />
+                                    </div>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {viewers.slice(0, 12).map(v => (
+                                            <div
+                                                key={v.id}
+                                                className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full pl-1 pr-3 py-1 animate-[fadeIn_0.5s_ease-out]"
+                                            >
+                                                <div
+                                                    className="w-6 h-6 rounded-full bg-gray-800 p-0.5"
+                                                    dangerouslySetInnerHTML={{ __html: avatars[v.avatar] || avatars['fox'] }}
+                                                />
+                                                <span className="text-xs text-gray-400">{v.name}</span>
+                                            </div>
+                                        ))}
+                                        {viewers.length > 12 && (
+                                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1">
+                                                <span className="text-xs text-gray-400">+{viewers.length - 12} more</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
