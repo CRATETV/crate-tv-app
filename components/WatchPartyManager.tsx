@@ -612,7 +612,7 @@ const WatchPartyControlRoom: React.FC<{
                                     )}
 
                                     {/* Send 24hr reminder to all ticket holders */}
-                                    {item.movieKey && (
+                                    {(item.movieKeys?.length === 1 || item.type !== 'block') && (
                                         <button
                                             onClick={async () => {
                                                 const pwd = sessionStorage.getItem('adminPassword') || '';
