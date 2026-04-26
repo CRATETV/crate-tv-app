@@ -478,8 +478,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movieKey));
         if (parentBlock) {
             if (unlockedFestivalBlockIds.has(parentBlock.id)) return true;
-            if (!parentBlock.price || parentBlock.price === 0) return true;
-            return false; // Paid block, not unlocked
+            // SECURITY: if block price is not set, default to PAID (not free)
+            // Admin must explicitly set price to 0 to make a block free
+            // This prevents accidental free access from missing price config
+            if (parentBlock.price === 0) return true; // explicitly free block
+            return false; // paid block — not unlocked
         }
 
         if (!movie.isWatchPartyPaid) return true;
