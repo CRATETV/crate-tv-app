@@ -3,7 +3,7 @@ import { getAdminDb } from './_lib/firebaseAdmin.js';
 
 export async function POST(request: Request) {
     try {
-        const { festivalName, festivalUrl } = await request.json();
+        const { festivalName, festivalUrl, bannerImageUrl } = await request.json();
 
         const db = getAdminDb();
         if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
@@ -58,6 +58,12 @@ export async function POST(request: Request) {
           <p style="margin:0 0 8px;font-size:10px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:#E50914;">Playhouse West-Philadelphia × Crate TV</p>
           <h1 style="margin:0;font-size:32px;font-weight:900;color:#ffffff;line-height:1.1;">The festival<br>is live.</h1>
         </td></tr>
+        
+        ${bannerImageUrl ? `
+        <!-- Festival poster / banner image -->
+        <tr><td style="padding:24px 40px 0;">
+          <img src="${bannerImageUrl}" alt="${name}" style="width:100%;max-width:480px;height:auto;border-radius:8px;display:block;margin:0 auto;" />
+        </td></tr>` : ''}
         
         <!-- Body -->
         <tr><td style="padding:32px 40px;">

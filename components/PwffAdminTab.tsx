@@ -60,6 +60,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
 
     const [notifyLoading, setNotifyLoading] = useState(false);
     const [notifyResult, setNotifyResult] = useState<{sent:number;errors:number;total:number} | null>(null);
+    const [notifyImageUrl, setNotifyImageUrl] = useState('');
     const [importText, setImportText] = useState('');
     const [importLoading, setImportLoading] = useState(false);
     const [importResult, setImportResult] = useState('');
@@ -119,7 +120,11 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
             const res = await fetch('/api/pwff-notify-live', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ festivalName: 'Playhouse West Film Festival 2026', festivalUrl: 'https://cratetv.net/pwff2026' })
+                body: JSON.stringify({ 
+                    festivalName: 'Playhouse West Film Festival 2026', 
+                    festivalUrl: 'https://cratetv.net/pwff2026',
+                    bannerImageUrl: notifyImageUrl || null
+                })
             });
             const data = await res.json();
             setNotifyResult(data);
@@ -478,6 +483,20 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                         >
                             {notifyLoading ? 'Sending...' : `🎬 Notify ${emails.length} — Festival is Live`}
                         </button>
+                    </div>
+                    {/* Image URL for blast email */}
+                    <div className="flex items-center gap-2 px-4 pb-3 border-b border-white/5">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 flex-shrink-0">Poster in email:</span>
+                        <input
+                            type="text"
+                            value={notifyImageUrl}
+                            onChange={e => setNotifyImageUrl(e.target.value)}
+                            placeholder="Paste S3 image URL (optional — adds poster to the blast email)"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-red-500/40 transition-all"
+                        />
+                        {notifyImageUrl && (
+                            <img src={notifyImageUrl} alt="preview" className="w-10 h-10 object-cover rounded-lg border border-white/10 flex-shrink-0" />
+                        )}
                     </div>
                 </div>
                 {notifyResult && (

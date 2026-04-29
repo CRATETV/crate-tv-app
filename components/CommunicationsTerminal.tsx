@@ -100,7 +100,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
             const response = await fetch('/api/send-bulk-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subject, htmlBody, password, audience }),
+                body: JSON.stringify({ subject, htmlBody, imageUrl: imageUrl || null, password, audience }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Dispatch failed.');
@@ -111,6 +111,8 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
             setMessage(err instanceof Error ? err.message : 'System rejection.');
         }
     };
+
+    const [imageUrl, setImageUrl] = useState('');
 
     return (
         <div className="space-y-10 animate-[fadeIn_0.4s_ease-out] pb-32">
@@ -141,7 +143,10 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
                         </div>
                     </div>
 
-                    <form onSubmit={handleSend} className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-t border-white/5 pt-12">
+                    <form onSubmit={e => {
+                        e.preventDefault();
+                        handleSend(e);
+                    }} className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-t border-white/5 pt-12">
                         <div className="space-y-6">
                             <div>
                                 <label className="form-label">Email Segment</label>
@@ -157,9 +162,28 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
                                 <label className="form-label">Headline (Subject)</label>
                                 <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Cinematic headline..." className="form-input bg-black border-white/10 text-xl font-black italic" required />
                             </div>
+
+                            {/* Image URL field */}
                             <div>
-                                <label className="form-label">Payload (Body HTML)</label>
-                                <textarea value={htmlBody} onChange={e => setHtmlBody(e.target.value)} placeholder="Enter content..." className="form-input bg-black border-white/10 h-[300px] font-mono text-xs" required />
+                                <label className="form-label">Image / Poster URL <span className="text-gray-700 font-normal normal-case tracking-normal">(optional — paste S3 or any public URL)</span></label>
+                                <div className="flex gap-3 items-center">
+                                    <input
+                                        type="text"
+                                        value={imageUrl}
+                                        onChange={e => setImageUrl(e.target.value)}
+                                        placeholder="https://cratetelevision.s3.amazonaws.com/your-poster.jpg"
+                                        className="form-input bg-black border-white/10 text-sm flex-1"
+                                    />
+                                    {imageUrl && (
+                                        <img src={imageUrl} alt="preview" className="w-14 h-14 object-cover rounded-xl border border-white/10 flex-shrink-0" />
+                                    )}
+                                </div>
+                                {imageUrl && <p className="text-[10px] text-gray-600 mt-1">Image will appear at the top of your email, full width.</p>}
+                            </div>
+
+                            <div>
+                                <label className="form-label">Payload (Body)</label>
+                                <textarea value={htmlBody} onChange={e => setHtmlBody(e.target.value)} placeholder="Write your message here — plain text or HTML both work..." className="form-input bg-black border-white/10 h-[240px] font-mono text-xs" required />
                             </div>
                             <button type="submit" disabled={status === 'sending' || !subject || !htmlBody} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-8 rounded-3xl uppercase tracking-[0.5em] text-sm shadow-xl transition-all">
                                 {status === 'sending' ? 'TRANSMITTING...' : 'EXECUTE GLOBAL DISPATCH'}
@@ -172,6 +196,12 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
                                 <div className="w-2 h-2 rounded-full bg-red-600"></div>
                                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Transmission Proof</span>
                              </div>
+                             {/* Image preview in proof pane */}
+                             {imageUrl && (
+                                <div className="rounded-xl overflow-hidden border border-white/10">
+                                    <img src={imageUrl} alt="Email banner" className="w-full h-auto object-cover" />
+                                </div>
+                             )}
                              <div className="flex-grow overflow-y-auto pr-4 scrollbar-hide text-gray-400 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: htmlBody || '<p style="opacity: 0.2">Manifest content pending uplink draft...</p>' }} />
                              <div className="pt-6 border-t border-white/5 text-center">
                                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-24 invert opacity-20 mx-auto" alt="" />

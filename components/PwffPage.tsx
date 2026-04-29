@@ -471,7 +471,8 @@ function getPwffAnnualNumber(settings?: any, festivalConfig?: any): string {
     if (settings?.pwffAnnualNumber) return ordinal(settings.pwffAnnualNumber);
     
     // Auto-calculate from year
-    const foundingYear = settings?.pwffFoundingYear || 2013;
+    // First festival was 2014 — so 2014=1st, 2026=13th, 2027=14th
+    const foundingYear = settings?.pwffFoundingYear || 2014;
     const currentYear = new Date().getFullYear();
     // Try to get year from festival config dates, fall back to current year
     let festYear = currentYear;

@@ -7,7 +7,7 @@ const LOGO_URL = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+b
 
 export async function POST(request: Request) {
     try {
-        const { password, subject, htmlBody, audience = 'subscribers' } = await request.json();
+        const { password, subject, htmlBody, imageUrl, audience = 'subscribers' } = await request.json();
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
@@ -77,6 +77,12 @@ export async function POST(request: Request) {
                                                 </a>
                                             </td>
                                         </tr>
+                                        ${imageUrl ? `
+                                        <tr>
+                                            <td style="padding-bottom: 32px;">
+                                                <img src="${imageUrl}" alt="" width="100%" style="display: block; border: 0; border-radius: 12px; max-width: 600px;" />
+                                            </td>
+                                        </tr>` : ''}
                                         <tr>
                                             <td style="font-size: 16px; line-height: 1.8; color: #cccccc; padding: 0 20px;">
                                                 ${htmlBody}
