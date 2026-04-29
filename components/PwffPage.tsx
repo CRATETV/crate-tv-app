@@ -284,25 +284,19 @@ const TeaserMode: React.FC<{
 // ─── PROGRAMME MODE ───────────────────────────────────────────────────────────
 const ProgrammeMode: React.FC = () => {
     const { festivalData, festivalConfig, movies, activeParties, settings } = useFestival();
-    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, user } = useAuth();
+    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, unlockedWatchPartyKeys, user } = useAuth();
 
     const [activeDay, setActiveDay] = useState(1);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
-    const [activeSection, setActiveSection] = useState<'programme' | 'directors' | 'faq'>('programme');
+    const [activeSection, setActiveSection] = useState<'programme' | 'directors'>('programme');
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
     const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks), [festivalData]);
     const allFestivalFilms = useMemo(() => allBlocks.flatMap(b => b.movieKeys.map(k => movies[k]).filter(Boolean)) as Movie[], [allBlocks, movies]);
     const filmsWithNotes = useMemo(() => allFestivalFilms.filter(m => m.festivalDirectorNote || m.festivalFilmmakerBio || m.festivalQuote), [allFestivalFilms]);
-    const totalFilms = allFestivalFilms.length;
 
     const navigate = (path: string) => { window.history.pushState({}, '', path); window.dispatchEvent(new Event('pushstate')); };
-
-    const handlePaymentSuccess = async (details: any) => {
-        if (details.itemId) await unlockFestivalBlock(details.itemId);
-        setTicketFlowBlock(null);
-    };
 
     const lobbyMovie = useMemo(() => {
         if (!showLobbyFor) return null;
@@ -312,185 +306,155 @@ const ProgrammeMode: React.FC = () => {
         return { key: block.id, title: block.title, isWatchPartyEnabled: true, isWatchPartyPaid: (block.price || 0) > 0, watchPartyPrice: block.price, poster: first?.poster || '', director: 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 } as Movie;
     }, [showLobbyFor, allBlocks, movies]);
 
-    // opening night date from first block with watchPartyStartTime
     const openingNightDate = useMemo(() => {
         const first = allBlocks.find(b => b.watchPartyStartTime);
         return first?.watchPartyStartTime;
     }, [allBlocks]);
 
-    const FAQ = [
-        { q: "Do I need to download anything?", a: "No. Everything streams right in your browser — phone, tablet, laptop, or smart TV. You can also watch on your Roku TV if you have the Crate TV channel installed." },
-        { q: "When can I watch the films?", a: "Each block goes live at the same time it screens physically in Philadelphia. Once it's live, you can watch and rewatch for two weeks after the festival ends." },
-        { q: "What's the difference between a block ticket and an all-access pass?", a: "A block ticket gives you access to one specific screening block. An all-access pass gets you into every block across the entire festival — it's the best value if you want to watch everything." },
-        { q: "I already have a Crate account. Do I still need a ticket?", a: "Yes — festival blocks are ticketed separately. Your existing Crate account handles payment, so checkout is quick." },
-        { q: "What happens after the festival ends?", a: "Your ticket gives you on-demand access to all the films in your block for two weeks after the festival. After that, selected films may remain in the Crate library." },
-        { q: "Is Crate TV free?", a: "Yes — creating a Crate account is completely free. Festival block tickets are sold separately for the PWFF programme." },
-    ];
-
     return (
-        <div className="max-w-3xl mx-auto px-4 pb-32 pt-8">
+        <div className="min-h-screen bg-[#050505] text-white">
 
-            {/* ── HERO ─────────────────────────────────────────────────────── */}
-            <div className="text-center py-12 md:py-20 mb-2">
-                <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-500/20 rounded-full px-4 py-1.5 mb-5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400">Official Programme</span>
-                </div>
-                <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-3">
-                    {festivalConfig?.title || 'Playhouse West Film Festival'}
-                </h1>
-                {festivalConfig?.subheader
-                    ? <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mb-4">{festivalConfig.subheader}</p>
-                    : <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mb-4">{getPwffAnnualNumber(settings, festivalConfig)} Annual Official Selections</p>
-                }
-                {festivalConfig?.description && <p className="text-gray-400 text-sm max-w-xl mx-auto leading-relaxed mb-5">{festivalConfig.description}</p>}
-                {festivalConfig?.startDate && <p className="text-gray-600 text-xs font-bold uppercase tracking-widest mb-6">{festivalConfig.startDate}{festivalConfig.endDate && festivalConfig.endDate !== festivalConfig.startDate ? ` — ${festivalConfig.endDate}` : ''}</p>}
+            {/* ZONE 1: THE HOOK */}
+            <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(229,9,20,0.12)_0%,transparent_65%)] pointer-events-none" />
+                <div className="relative max-w-2xl mx-auto px-4 pt-20 pb-16 text-center">
 
-                {/* Countdown */}
-                {openingNightDate && new Date(openingNightDate) > new Date() && (
-                    <div className="mb-8">
-                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Opening Night In</p>
-                        <div className="flex justify-center">
-                            <Countdown targetDate={openingNightDate} />
-                        </div>
+                    <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-500/20 rounded-full px-4 py-1.5 mb-8">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400">
+                            {getPwffAnnualNumber(settings, festivalConfig)} Annual
+                        </span>
                     </div>
-                )}
 
-                {/* Stats */}
-                {totalFilms > 0 && (
-                    <div className="flex justify-center gap-6 mb-8">
-                        <div className="text-center"><p className="text-2xl font-black text-white">{totalFilms}</p><p className="text-[9px] text-gray-600 uppercase tracking-widest">Films</p></div>
-                        <div className="w-px bg-white/10" />
-                        <div className="text-center"><p className="text-2xl font-black text-white">{festivalData.length}</p><p className="text-[9px] text-gray-600 uppercase tracking-widest">Day{festivalData.length !== 1 ? 's' : ''}</p></div>
-                        <div className="w-px bg-white/10" />
-                        <div className="text-center"><p className="text-2xl font-black text-white">{allBlocks.length}</p><p className="text-[9px] text-gray-600 uppercase tracking-widest">Block{allBlocks.length !== 1 ? 's' : ''}</p></div>
-                    </div>
-                )}
+                    <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] mb-4 text-white">
+                        {festivalConfig?.title || settings?.pwffFestivalName || 'Playhouse West Film Festival'}
+                    </h1>
 
-                {/* Pass CTA */}
-                {!hasFestivalAllAccess
-                    ? <div className="space-y-2">
-                        <button
-                            onClick={() => {
-                                // Create a synthetic "full festival" block for the ticket flow
-                                const fullPassBlock = { id: 'full-festival-pass', title: settings?.pwffFestivalName || 'PWFF Full Festival Pass', time: '', movieKeys: allBlocks.flatMap(b => b.movieKeys), price: 50 };
-                                setTicketFlowBlock(fullPassBlock as any);
-                            }}
-                            className="bg-white text-black font-black uppercase tracking-widest text-sm px-8 py-3.5 rounded-2xl hover:bg-gray-100 active:scale-95 transition-all shadow-lg"
-                        >
-                            All-Access Pass · ${settings?.pwffFullPassPrice || 50}
-                        </button>
-                        <p className="text-[10px] text-gray-600">Or buy individual block tickets below</p>
-                      </div>
-                    : <div className="inline-flex items-center gap-2 bg-green-900/20 border border-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />All-Access Pass Active</div>}
-            </div>
+                    {festivalConfig?.description && (
+                        <p className="text-gray-400 text-sm md:text-base max-w-lg mx-auto leading-relaxed mb-8">
+                            {festivalConfig.description}
+                        </p>
+                    )}
 
-            {/* ── EMAIL STRIP ───────────────────────────────────────────────── */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 mb-8 text-center">
-                <p className="text-sm font-bold text-white mb-1">Stay in the loop</p>
-                <p className="text-xs text-gray-500 mb-4">Get schedule updates and filmmaker news delivered to your inbox.</p>
-                <div className="flex justify-center"><EmailCapture source="programme" /></div>
-            </div>
-
-            {/* ── NAV TABS ──────────────────────────────────────────────────── */}
-            <div className="flex gap-1 mb-8 bg-white/[0.03] border border-white/5 rounded-xl p-1">
-                {([['programme', 'Programme'], ['directors', 'Filmmakers'], ['faq', 'FAQ']] as const).map(([key, label]) => (
-                    <button key={key} onClick={() => setActiveSection(key)}
-                        className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeSection === key ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-white'}`}>
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            {/* ── PROGRAMME TAB ─────────────────────────────────────────────── */}
-            {activeSection === 'programme' && (
-                <>
-                    {festivalData.length > 1 && (
-                        <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
-                            {festivalData.map(day => (
-                                <button key={day.day} onClick={() => setActiveDay(day.day)}
-                                    className={`flex-shrink-0 px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeDay === day.day ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-500 hover:text-white border border-white/5'}`}>
-                                    Day {day.day}{day.date ? ` · ${day.date}` : ''}
-                                </button>
-                            ))}
+                    {openingNightDate && new Date(openingNightDate) > new Date() && (
+                        <div className="mb-10">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Opening Night In</p>
+                            <div className="flex justify-center">
+                                <Countdown targetDate={openingNightDate} />
+                            </div>
                         </div>
                     )}
-                    <div className="space-y-5">
-                        {currentDay?.blocks.length > 0 ? currentDay.blocks.map(block => {
-                            const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
-                            const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
-                            const isLive = activeParties[block.id]?.status === 'live';
-                            // Screening window: available from screeningStartTime to screeningStartTime + 14 days
-                            const now = Date.now();
-                            const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime).getTime() : null;
-                            const screenEnd = screenStart ? screenStart + 14 * 24 * 60 * 60 * 1000 : null;
-                            const isInScreeningWindow = screenStart ? (now >= screenStart && (!screenEnd || now <= screenEnd)) : true;
-                            const isBeforeScreening = screenStart ? now < screenStart : false;
-                            return (
-                                <BlockCard key={block.id} block={block} films={films} isUnlocked={isUnlocked && isInScreeningWindow} isLive={isLive} isBeforeScreening={isBeforeScreening} screeningStartTime={block.screeningStartTime}
-                                    dayLabel={`Day ${currentDay.day}`}
-                                    onBuyTicket={() => setTicketFlowBlock(block)}
-                                    onEnterLobby={() => setShowLobbyFor(block.id)}
-                                    onWatch={key => navigate(`/movie/${key}?play=true`)}
-                                />
-                            );
-                        }) : (
-                            <div className="text-center py-16 border border-dashed border-white/5 rounded-2xl">
-                                <p className="text-gray-700 text-xs uppercase tracking-widest font-black">Programme coming soon</p>
+
+                    <div className="flex flex-col items-center gap-3">
+                        {!hasFestivalAllAccess ? (
+                            <>
+                                <button
+                                    onClick={() => {
+                                        const fullPassBlock = { id: 'full-festival-pass', title: settings?.pwffFestivalName || 'PWFF Full Festival Pass', time: '', movieKeys: allBlocks.flatMap(b => b.movieKeys), price: settings?.pwffFullPassPrice || 50 };
+                                        setTicketFlowBlock(fullPassBlock as any);
+                                    }}
+                                    className="bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-sm px-10 py-4 rounded-2xl active:scale-95 transition-all shadow-[0_0_30px_rgba(229,9,20,0.3)]"
+                                >
+                                    All-Access Pass — ${settings?.pwffFullPassPrice || 50}
+                                </button>
+                                <p className="text-[11px] text-gray-600">or buy individual block tickets below</p>
+                            </>
+                        ) : (
+                            <div className="inline-flex items-center gap-2 bg-green-900/20 border border-green-500/30 text-green-400 text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-full">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                All-Access Pass Active
                             </div>
                         )}
                     </div>
-                </>
-            )}
-
-            {/* ── FILMMAKERS TAB ────────────────────────────────────────────── */}
-            {activeSection === 'directors' && (
-                <div className="space-y-4">
-                    {filmsWithNotes.length > 0
-                        ? filmsWithNotes.map(m => <DirectorCard key={m.key} movie={m} />)
-                        : <div className="text-center py-16 border border-dashed border-white/5 rounded-2xl"><p className="text-gray-700 text-xs uppercase tracking-widest font-black">Filmmaker notes coming soon</p></div>}
                 </div>
-            )}
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            </div>
 
-            {/* ── FAQ TAB ───────────────────────────────────────────────────── */}
-            {activeSection === 'faq' && (
-                <div className="space-y-3">
-                    {FAQ.map((item, i) => (
-                        <details key={i} className="group bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
-                            <summary className="flex items-center justify-between p-5 cursor-pointer list-none">
-                                <span className="text-sm font-bold text-white">{item.q}</span>
-                                <svg className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-180 flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            </summary>
-                            <div className="px-5 pb-5 text-sm text-gray-400 leading-relaxed border-t border-white/5 pt-3">{item.a}</div>
-                        </details>
+            {/* ZONES 2 & 3: PROGRAMME + FILMMAKERS */}
+            <div className="max-w-2xl mx-auto px-4 pb-32">
+
+                <div className="flex gap-1 my-8 bg-white/[0.03] border border-white/5 rounded-xl p-1">
+                    {([['programme', 'Programme'], ['directors', 'Filmmakers']] as const).map(([key, label]) => (
+                        <button key={key} onClick={() => setActiveSection(key)}
+                            className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeSection === key ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                            {label}
+                        </button>
                     ))}
                 </div>
-            )}
 
-            {/* ── TICKET FLOW ───────────────────────────────────────────────── */}
+                {activeSection === 'programme' && (
+                    <>
+                        {festivalData.length > 1 && (
+                            <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
+                                {festivalData.map(day => (
+                                    <button key={day.day} onClick={() => setActiveDay(day.day)}
+                                        className={`flex-shrink-0 px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeDay === day.day ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-500 hover:text-white border border-white/5'}`}>
+                                        Day {day.day}{day.date ? ` · ${day.date}` : ''}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <div className="space-y-4">
+                            {currentDay?.blocks.length > 0 ? currentDay.blocks.map(block => {
+                                const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
+                                const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                                const partyState = activeParties[block.id];
+                                const isLive = partyState?.status === 'live';
+                                const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
+                                const isBeforeScreening = screenStart ? new Date() < screenStart : false;
+                                const isInWindow = screenStart ? new Date() >= screenStart : true;
+                                return (
+                                    <BlockCard key={block.id} block={block} films={films}
+                                        isUnlocked={isUnlocked && isInWindow}
+                                        isLive={isLive}
+                                        isBeforeScreening={isBeforeScreening}
+                                        screeningStartTime={block.screeningStartTime}
+                                        dayLabel={`Day ${activeDay}`}
+                                        onBuyTicket={() => setTicketFlowBlock(block)}
+                                        onEnterLobby={() => setShowLobbyFor(block.id)}
+                                        onWatch={key => navigate(`/watchparty/${key}`)}
+                                    />
+                                );
+                            }) : (
+                                <div className="text-center py-20 border border-dashed border-white/5 rounded-2xl">
+                                    <p className="text-gray-700 text-xs uppercase tracking-widest font-black">Programme coming soon</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {activeSection === 'directors' && (
+                    <div className="space-y-4">
+                        {filmsWithNotes.length > 0
+                            ? filmsWithNotes.map(m => <DirectorCard key={m.key} movie={m} />)
+                            : (
+                                <div className="text-center py-20 border border-dashed border-white/5 rounded-2xl">
+                                    <p className="text-gray-700 text-xs uppercase tracking-widest font-black">Filmmaker notes coming soon</p>
+                                </div>
+                            )}
+                    </div>
+                )}
+            </div>
+
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
-                return <FestivalTicketFlow
-                    block={ticketFlowBlock}
-                    blockMovie={bMovie}
+                return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    onSuccess={() => {
-                        const blockId = ticketFlowBlock.id;
-                        setTicketFlowBlock(null);
-                        setShowLobbyFor(blockId);
-                    }}
+                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
                 />;
             })()}
 
-            {/* ── LOBBY OVERLAY ─────────────────────────────────────────────── */}
-            {showLobbyFor && lobbyMovie && (
+            {lobbyMovie && showLobbyFor && (
                 <div className="fixed inset-0 z-[200] overflow-y-auto">
-                    <WatchPartyLobby movie={lobbyMovie} partyState={activeParties[showLobbyFor]}
+                    <WatchPartyLobby
+                        movie={lobbyMovie}
+                        partyState={activeParties[showLobbyFor]}
                         onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}`); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
-                        onBuyTicket={() => { const b = allBlocks.find(x => x.id === showLobbyFor); if (b) setTicketFlowBlock(b); }}
+                        onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) setTicketFlowBlock(b); }}
                         onClose={() => setShowLobbyFor(null)}
                     />
                 </div>
