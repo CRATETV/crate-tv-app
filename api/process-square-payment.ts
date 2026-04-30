@@ -252,7 +252,6 @@ export async function POST(request: Request) {
                 note,
                 amountPaid: amountInCents / 100,
                 email: email || null,
-                userId: userId || null,
                 promoCode: promoCode || null,
                 purchasedAt: FieldValue.serverTimestamp(),
                 isWatchParty: paymentType === 'watchPartyTicket',
