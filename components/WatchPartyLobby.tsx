@@ -47,14 +47,26 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
         const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.email || 'anon');
         
-        // Set viewer presence
+        // Set viewer presence (temporary — deleted on disconnect)
         viewerRef.set({
             name: user.name || 'Film Lover',
             avatar: user.avatar || 'fox',
             joinedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // Remove on disconnect
+        // Permanently log this viewer to festival_viewers for reporting
+        // This is separate from lobby_viewers — it persists after the party ends
+        const logRef = db.collection('festival_viewers').doc(`${movie.key}_${user.email || 'anon'}`);
+        logRef.set({
+            movieKey: movie.key,
+            movieTitle: movie.title,
+            email: user.email || null,
+            name: user.name || 'Film Lover',
+            firstJoinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true }); // merge:true so repeat visits update lastSeenAt not duplicate
+
+        // Remove presence on disconnect (but log persists)
         return () => {
             viewerRef.delete();
         };

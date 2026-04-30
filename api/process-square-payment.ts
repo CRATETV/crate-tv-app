@@ -243,6 +243,26 @@ export async function POST(request: Request) {
         }
     }
 
+    // --- LOG TICKET SALE FOR FESTIVAL REPORTING ---
+    if (db && (paymentType === 'watchPartyTicket' || paymentType === 'block' || paymentType === 'movie')) {
+        try {
+            await db.collection('festival_tickets').add({
+                itemId,
+                paymentType,
+                note,
+                amountPaid: amountInCents / 100,
+                email: email || null,
+                userId: userId || null,
+                promoCode: promoCode || null,
+                purchasedAt: FieldValue.serverTimestamp(),
+                isWatchParty: paymentType === 'watchPartyTicket',
+                isFestivalBlock: paymentType === 'block',
+            });
+        } catch (e) {
+            console.error('[Payment API] Failed to log ticket sale:', e);
+        }
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
