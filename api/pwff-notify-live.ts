@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         }
 
         const name = festivalName || 'Playhouse West Film Festival 2026';
-        const url = festivalUrl || 'https://cratetv.net/pwff2026';
+        const url = festivalUrl || 'https://cratetv.net/pwff-philly2026';
 
         let sent = 0;
         let errors = 0;

@@ -57,6 +57,7 @@ import ClaimPage from './components/ClaimPage';
 import NotFoundPage from './components/NotFoundPage';
 import ToastContainer from './components/Toast';
 import RedCarpetPage from './components/RedCarpetPage';
+import FaqPage from './components/FaqPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -131,10 +132,17 @@ const AppRouter: React.FC = () => {
     return <WatchPartyPage movieKey={watchPartyMatch[1]} />;
   }
 
-  // Match /pwff2026, /pwff2027 etc — public page, no auth needed
-  // Match /pwff2026 or /PWFF2026 — case insensitive
+  // Match /pwff2026, /pwff2027 etc — redirect old URLs to philly-specific ones
   const pwffYearMatch = route.toLowerCase().match(/^\/pwff(\d{4})$/);
-  if (pwffYearMatch) return <PwffPage />;
+  if (pwffYearMatch) {
+    // Redirect to the Philly-specific URL
+    window.history.replaceState({}, '', `/pwff-philly${pwffYearMatch[1]}`);
+    return <PwffPage />;
+  }
+
+  // Philadelphia specific festival URL — /pwff-philly2026
+  const pwffPhillyMatch = route.toLowerCase().match(/^\/pwff-philly(\d{4})$/);
+  if (pwffPhillyMatch) return <PwffPage />;
 
   // Prevent flashing LandingPage while Firebase restores session
   if (!authInitialized) {
@@ -181,6 +189,8 @@ const AppRouter: React.FC = () => {
       return user ? <WatchlistPage /> : <RedirectToLogin />;
     case '/red-carpet':
       return <RedCarpetRoute />;
+    case '/faq':
+      return <FaqPage />;
     case '/public-square':
       return <PublicSquarePage />;
     case '/cratemas':

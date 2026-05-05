@@ -122,7 +122,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     festivalName: 'Playhouse West Film Festival 2026', 
-                    festivalUrl: 'https://cratetv.net/pwff2026',
+                    festivalUrl: 'https://cratetv.net/pwff-philly2026',
                     bannerImageUrl: notifyImageUrl || null
                 })
             });

@@ -11,7 +11,7 @@
   </url>
 
   <url>
-    <loc>https://cratetv.net/pwff2026</loc>
+    <loc>https://cratetv.net/pwff-philly2026</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -26,6 +26,12 @@
     <loc>https://cratetv.net/library</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://cratetv.net/faq</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <url>

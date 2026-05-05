@@ -23,6 +23,7 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
           <div>
             <h3 className="font-bold text-white mb-4">Company</h3>
             <ul className="space-y-2">
+              <li><a href="/faq" onClick={(e) => handleNavigate(e, '/faq')} className="hover:text-white transition">About / FAQ</a></li>
               <li><a href="/zine" onClick={(e) => handleNavigate(e, '/zine')} className="hover:text-white transition">Crate Zine</a></li>
               <li><a href="/about" onClick={(e) => handleNavigate(e, '/about')} className="hover:text-white transition">About Us</a></li>
               <li><a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact</a></li>
@@ -66,6 +67,7 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
 
         <div className="border-t border-gray-800 pt-8 text-center text-sm mt-8">
           <p>&copy; {new Date().getFullYear()} Crate TV. All Rights Reserved.</p>
+          <p className="text-gray-600 text-[10px] uppercase tracking-[0.3em] mt-1">Television powered by creatives</p>
         </div>
       </div>
     </footer>

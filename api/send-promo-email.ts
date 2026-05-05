@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         const emailHtml = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid #e5e5e5; padding: 48px; border-radius: 32px; background-color: #050505; box-shadow: 0 20px 40px rgba(0,0,0,0.05);">
                 <div style="text-align: center; margin-bottom: 40px;">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" style="width: 140px; filter: invert(1);" />
+                    <img src="https://cratetv.net/crate-logo-email.png" alt="Crate TV" style="width: 140px; filter: invert(1);" />
                     <p style="text-transform: uppercase; font-size: 10px; letter-spacing: 4px; color: #888888; font-weight: 900; margin-top: 16px;">Elite Independent Infrastructure</p>
                 </div>
                 

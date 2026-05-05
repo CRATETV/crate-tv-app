@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         const welcomeHtml = `
             <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 40px; border-radius: 24px; background-color: #ffffff;">
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" style="width: 120px; filter: invert(1);" />
+                    <img src="https://cratetv.net/crate-logo-email.png" alt="Crate TV" style="width: 120px; filter: invert(1);" />
                 </div>
                 <h1 style="color: #ef4444; text-transform: uppercase; font-size: 24px; text-align: center; letter-spacing: 2px;">Uplink Secured</h1>
                 <p>Welcome to <strong>Crate Zine</strong>, the definitive record of the independent cinematic underground.</p>

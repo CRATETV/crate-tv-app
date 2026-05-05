@@ -3,7 +3,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
-const LOGO_URL = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png';
+const LOGO_URL = 'https://cratetv.net/crate-logo-email.png';
 
 export async function POST(request: Request) {
     try {
