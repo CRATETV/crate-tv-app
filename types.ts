@@ -170,6 +170,7 @@ export interface Movie {
   isSupportEnabled?: boolean;
   isWatchPartyEnabled?: boolean;
   watchPartyStartTime?: string;
+  watchPartyIntroVideoUrl?: string;  // Plays before the film — opening night use
   isWatchPartyPaid?: boolean;
   watchPartyPrice?: number;
   isForSale?: boolean;

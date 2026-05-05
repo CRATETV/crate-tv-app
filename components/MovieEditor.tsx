@@ -819,6 +819,20 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 />
                                                 <p className="text-[9px] text-gray-600 uppercase font-bold">Time is in your local timezone. Set this → banner countdown appears on the site immediately.</p>
                                             </div>
+
+                                            {/* Opening night intro video */}
+                                            <div>
+                                                <label className="form-label">Opening Night Intro Video <span className="text-gray-700 font-normal normal-case tracking-normal">(optional — plays before the film starts)</span></label>
+                                                <input
+                                                    type="text"
+                                                    name="watchPartyIntroVideoUrl"
+                                                    value={formData.watchPartyIntroVideoUrl || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="S3 URL of intro video..."
+                                                    className="form-input bg-black/40 border-red-500/30 font-mono text-xs"
+                                                />
+                                                <p className="text-[9px] text-gray-600 uppercase font-bold mt-1">Upload your festival intro video to S3, paste the URL here. It plays automatically for everyone before the film begins.</p>
+                                            </div>
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                                 <div className="space-y-1">
                                                     <p className="text-xs font-black text-white uppercase tracking-widest">Paid Watch Party</p>

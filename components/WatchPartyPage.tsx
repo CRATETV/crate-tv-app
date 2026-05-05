@@ -225,6 +225,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+    const [introPlaying, setIntroPlaying] = useState(false);
+    const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
@@ -648,6 +650,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 totalFilms={blockKeys.length}
                 secondsRemaining={intermissionSeconds}
             />
+        );
+    }
+
+    // ── INTRO VIDEO — plays before the main film on opening night ────────
+    const hasIntro = !!(movie?.watchPartyIntroVideoUrl);
+    const shouldShowIntro = hasIntro && !introDone && !showLobby && partyState?.status === 'live';
+
+    if (shouldShowIntro) {
+        return (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+                <video
+                    src={movie.watchPartyIntroVideoUrl}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    className="w-full h-full object-contain"
+                    onEnded={() => setIntroDone(true)}
+                    onError={() => setIntroDone(true)}
+                />
+            </div>
         );
     }
 
