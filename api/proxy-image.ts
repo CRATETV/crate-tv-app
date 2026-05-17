@@ -1,5 +1,10 @@
-// PERF FIX: If CloudFront is configured, redirect directly to CDN edge node.
-// Eliminates the serverless function proxy hop for every image — huge speed win.
+import sharp from 'sharp';
+
+// PERF: Converts every poster/image to WebP on first request.
+// WebP is 30-50% smaller than JPG at the same visual quality.
+// Vercel Edge caches the converted WebP for 1 year — subsequent requests
+// are served instantly from the edge without hitting this function at all.
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -9,40 +14,53 @@ export async function GET(request: Request) {
             return new Response('A valid S3 image URL is required.', { status: 400 });
         }
 
+        // Clean up the URL
         imageUrl = imageUrl.trim().replace(/\s/g, '%20').replace(/'/g, '%27');
 
-        // If CloudFront is configured, redirect to CDN instead of proxying.
-        // Browser loads the image directly from the nearest edge node worldwide.
+        // Route through CloudFront if configured (faster source fetch)
         const cfDomain = process.env.CLOUDFRONT_DOMAIN;
-        if (cfDomain) {
-            const cdnUrl = imageUrl.replace(
+        const sourceUrl = cfDomain
+            ? imageUrl.replace(
                 /https?:\/\/[a-z0-9-]+\.s3[a-z0-9.-]*\.amazonaws\.com/gi,
                 `https://${cfDomain}`
-            );
-            return new Response(null, {
-                status: 302,
+              )
+            : imageUrl;
+
+        const imageResponse = await fetch(sourceUrl);
+        if (!imageResponse.ok) {
+            return new Response(`Failed to fetch image. Status: ${imageResponse.status}`, {
+                status: imageResponse.status
+            });
+        }
+
+        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+        const contentType = imageResponse.headers.get('Content-Type') || '';
+
+        // Skip conversion for SVGs and GIFs
+        if (contentType.includes('svg') || contentType.includes('gif')) {
+            return new Response(imageBuffer, {
                 headers: {
-                    'Location': cdnUrl,
-                    'Cache-Control': 'public, max-age=604800, immutable',
+                    'Content-Type': contentType,
+                    'Cache-Control': 'public, max-age=31536000, immutable',
+                    'Access-Control-Allow-Origin': '*',
                 },
             });
         }
 
-        // Fallback: original proxy behaviour when CloudFront is not configured
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) {
-            return new Response(`Failed to fetch image. Status: ${imageResponse.status}`, { status: imageResponse.status });
-        }
+        // Convert to WebP — 75% quality gives great visuals at ~40% smaller file size
+        const webpBuffer = await sharp(imageBuffer)
+            .webp({ quality: 75 })
+            .toBuffer();
 
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const contentType = imageResponse.headers.get('Content-Type') || 'application/octet-stream';
-
-        return new Response(imageBuffer, {
+        return new Response(webpBuffer, {
             status: 200,
             headers: {
-                'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=604800, immutable',
+                'Content-Type': 'image/webp',
+                // Cache for 1 year at Vercel Edge — after first conversion, all
+                // subsequent requests are served instantly with zero function invocation
+                'Cache-Control': 'public, s-maxage=31536000, max-age=31536000, immutable',
                 'Access-Control-Allow-Origin': '*',
+                'X-Image-Optimized': 'webp',
             },
         });
 

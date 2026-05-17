@@ -237,7 +237,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <div className={`relative w-full h-full overflow-hidden rounded-lg transition-all duration-300 ${showExpanded ? 'brightness-50' : ''}`}>
         {!isImageLoaded && <div className="absolute inset-0 shimmer-bg" />}
         <img
-          src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+          src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`} loading="lazy" decoding="async"
           alt={movie.title}
           className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
@@ -299,7 +299,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               />
             ) : (
               <img
-                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`} loading="lazy" decoding="async"
                 alt={movie.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
@@ -308,7 +308,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
               <img
-                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`} loading="lazy" decoding="async"
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
                 crossOrigin="anonymous"
@@ -484,7 +484,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 />
               ) : (
                 <img
-                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`} loading="lazy" decoding="async"
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
