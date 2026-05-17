@@ -13,6 +13,12 @@
       ]
     },
     {
+      "source": "/api/proxy-image",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=31536000, immutable" }
+      ]
+    },
+    {
       "source": "/api/generate-laurel-svg",
       "headers": [
         { "key": "Cache-Control", "value": "public, s-maxage=86400" }
@@ -24,6 +30,5 @@
         { "key": "Cache-Control", "value": "public, s-maxage=86400" }
       ]
     }
-  ],
-  
+  ]
 }
