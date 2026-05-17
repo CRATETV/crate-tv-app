@@ -1,73 +1,33 @@
 {
-  "crons": [
-    {
-      "path": "/api/check-anniversaries",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/update-watch-parties",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron-monthly-spotlight",
-      "schedule": "0 14 * * 1"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
-    },
-    {
-      "source": "/robots.txt",
-      "destination": "/api/robots"
-    },
-    {
-      "source": "/.well-known/apple-developer-merchantid-domain-association",
-      "destination": "/api/apple-developer-merchantid-domain-association"
-    },
-    {
-      "source": "/((?!api/|.*\\..*).*)",
-      "destination": "/index.html"
-    }
-  ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/roku-feed",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        }
+        { "key": "Cache-Control", "value": "public, s-maxage=300, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/api/data-config",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=300" }
+      ]
+    },
+    {
+      "source": "/api/generate-laurel-svg",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=86400" }
+      ]
+    },
+    {
+      "source": "/api/robots",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=86400" }
       ]
     }
   ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "framework": "vite",
-  "redirects": [
-    {
-      "source": "/PWFF:year(\\d{4})",
-      "destination": "/pwff:year",
-      "permanent": false
-    },
-    {
-      "source": "/Pwff:year(\\d{4})",
-      "destination": "/pwff:year",
-      "permanent": false
+  "functions": {
+    "api/roku-feed.ts": {
+      "maxDuration": 30
     }
-  ]
+  }
 }
