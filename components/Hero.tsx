@@ -54,7 +54,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
           crossOrigin="anonymous"
-        />
+         fetchPriority="high" loading="eager"/>
 
         {!showVideo && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[80%] md:max-w-xs pointer-events-none transition-opacity duration-1000">

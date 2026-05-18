@@ -36,7 +36,8 @@
     "recharts": "^3.7.0",
     "resend": "^3.5.0",
     "simple-peer": "^9.11.1",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "sharp": "^0.33.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",

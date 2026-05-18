@@ -303,7 +303,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 alt={movie.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
-              />
+               loading="lazy" decoding="async"/>
             )}
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
@@ -312,7 +312,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
                 crossOrigin="anonymous"
-              />
+               loading="lazy" decoding="async"/>
             )}
 
             {/* Gradient over video */}
@@ -488,7 +488,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
-                />
+                 loading="lazy" decoding="async"/>
               )}
 
               {/* Gradient */}
