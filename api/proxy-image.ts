@@ -12,7 +12,7 @@ export async function GET(request: Request) {
             return new Response('Image URL is required.', { status: 400 });
         }
 
-        imageUrl = decodeURIComponent(imageUrl).trim().replace(/\s/g, '%20');
+        imageUrl = imageUrl.trim().replace(/\s/g, '%20');
 
         // Route through CloudFront if configured — serves from nearest edge worldwide
         const cfDomain = process.env.CLOUDFRONT_DOMAIN;
