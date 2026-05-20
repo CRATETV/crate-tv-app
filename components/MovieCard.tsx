@@ -240,7 +240,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
           onLoad={() => setIsImageLoaded(true)}
-          crossOrigin="anonymous"
         />
 
         {/* Badges */}
@@ -287,6 +286,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               <video
                 ref={videoRef}
                 src={videoSrc}
+                poster={`/api/proxy-image?url=${encodeURIComponent(movie.tvPoster || movie.poster || '')}`}
                 autoPlay
                 muted={isMuted}
                 playsInline
@@ -300,7 +300,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
-                crossOrigin="anonymous"
                loading="lazy" decoding="async"/>
             )}
             {/* Poster fade-in overlay when preview ends */}
@@ -309,7 +308,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-                crossOrigin="anonymous"
                loading="lazy" decoding="async"/>
             )}
 
@@ -485,7 +483,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                   src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
-                  crossOrigin="anonymous"
                  loading="lazy" decoding="async"/>
               )}
 
