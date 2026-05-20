@@ -8,23 +8,33 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // New professional intro master file
-  const introSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/New+Intro+.mp4";
+  const introSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/New%20Intro%20.mp4";
 
   useEffect(() => {
     const videoElement = videoRef.current;
     if (videoElement) {
       // Attempt to play the video. If autoplay is blocked by the browser, skip the intro.
-      videoElement.play().catch(error => {
-        console.warn("Autoplay was prevented by the browser. Skipping intro.", error);
-        onIntroEnd();
-      });
+      // Skip intro immediately on mobile if autoplay is blocked
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // On mobile, try to play but give up quickly — don't make users wait
+        const mobileTimeout = setTimeout(() => onIntroEnd(), 1500);
+        videoElement.play()
+          .then(() => clearTimeout(mobileTimeout))
+          .catch(() => { clearTimeout(mobileTimeout); onIntroEnd(); });
+      } else {
+        videoElement.play().catch(error => {
+          console.warn("Autoplay was prevented by the browser. Skipping intro.", error);
+          onIntroEnd();
+        });
+      }
     }
 
     // Failsafe timer. Set to 10 seconds to allow the full professional reveal to play.
     const failsafeTimer = setTimeout(() => {
       console.warn("Intro failsafe triggered. Proceeding to main application.");
       onIntroEnd();
-    }, 10000);
+    }, 3000); // Reduced from 10s — never make users wait more than 3s for intro
 
     return () => {
       clearTimeout(failsafeTimer);
