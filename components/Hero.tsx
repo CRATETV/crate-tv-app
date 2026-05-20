@@ -70,6 +70,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
             <video
                 key={`video-${currentMovie.key}`}
                 src={currentMovie.trailer}
+                preload="metadata"
                 autoPlay
                 muted={isMuted}
                 loop

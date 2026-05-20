@@ -92,11 +92,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
       window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
 
-    // Start preloading video immediately — don't wait for card to open
-    if (preloadRef.current && movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube')) {
-      preloadRef.current.src = movie.fullMovie;
-      preloadRef.current.load();
-    }
+    // PERF FIX: Removed aggressive background preload.
+    // Previously downloaded every full movie on hover — causing slow loads on every device.
+    // Video now loads only when user actually opens/clicks the movie card.
 
     hoverTimerRef.current = setTimeout(() => setShowExpanded(true), 200);
   };
@@ -205,7 +203,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <video
         ref={preloadRef}
         src={videoSrc}
-        preload="auto"
+        preload="none"
         muted
         playsInline
         className="hidden"
