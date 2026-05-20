@@ -1,9 +1,18 @@
 {
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
-      "source": "/api/roku-feed",
+      "source": "/api/proxy-image",
       "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=300, stale-while-revalidate=60" }
+        { "key": "Cache-Control", "value": "public, s-maxage=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/api/get-live-data",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=60, stale-while-revalidate=300" }
       ]
     },
     {
@@ -11,23 +20,6 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=300" }
       ]
-    },
-    {
-      "source": "/api/generate-laurel-svg",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=86400" }
-      ]
-    },
-    {
-      "source": "/api/robots",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=86400" }
-      ]
     }
-  ],
-  "functions": {
-    "api/roku-feed.ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
