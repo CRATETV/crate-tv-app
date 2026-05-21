@@ -12,10 +12,11 @@ export async function GET(request: Request) {
             return new Response('Image URL is required.', { status: 400 });
         }
 
-        // Normalize URL — S3 sometimes uses + for spaces in filenames, CloudFront needs %20
-        const urlParts = imageUrl.trim().split('?');
-        urlParts[0] = urlParts[0].replace(/\+/g, '%20').replace(/ /g, '%20');
-        imageUrl = urlParts.join('?');
+        try {
+            const urlParts = decodeURIComponent(imageUrl.trim()).split('?');
+            urlParts[0] = urlParts[0].replace(/\+/g, '%20').replace(/ /g, '%20');
+            imageUrl = urlParts.join('?');
+        } catch { imageUrl = imageUrl.trim().replace(/ /g, '%20'); }
 
         // Route through CloudFront if configured — serves from nearest edge worldwide
         const cfDomain = process.env.CLOUDFRONT_DOMAIN;
