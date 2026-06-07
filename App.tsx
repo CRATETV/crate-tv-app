@@ -52,12 +52,12 @@ const App: React.FC = () => {
     const { user, hasCrateFestPass, unlockedWatchPartyKeys, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     const { config: rokuConfig } = useRokuConfig();
-    
+
     const hiddenMovieSet = useMemo(
         () => new Set<string>(rokuConfig?.content?.hiddenMovies || []),
         [rokuConfig]
     );
-
+    
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);

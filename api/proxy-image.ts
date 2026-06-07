@@ -5,45 +5,62 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let imageUrl = searchParams.get('url');
 
-    // SECURITY CHECK: Allow any valid Amazon S3 image URL within our infrastructure
-    if (!imageUrl || (!imageUrl.includes('.s3.') && !imageUrl.includes('.amazonaws.com'))) {
-      return new Response('A valid S3 image URL is required.', { status: 400 });
+    if (!imageUrl) {
+      return new Response('A valid image URL is required.', { status: 400 });
     }
 
-    // Trim whitespace from the URL which can cause issues.
+    // Trim whitespace
     imageUrl = imageUrl.trim();
 
-    /**
-     * CRITICAL FIX: Standardize encoding for S3 compatibility.
-     * Spaces are re-encoded to %20, and literal plus signs are preserved.
-     */
+    // SECURITY CHECK: Only allow HTTPS URLs from known image hosting domains
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(imageUrl);
+    } catch {
+      return new Response('Invalid URL.', { status: 400 });
+    }
+
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isAllowed =
+      parsedUrl.protocol === 'https:' && (
+        hostname.includes('.s3.') ||
+        hostname.includes('.amazonaws.com') ||
+        hostname.includes('.cloudfront.net') ||
+        hostname.endsWith('.s3.amazonaws.com')
+      );
+
+    if (!isAllowed) {
+      return new Response('URL not permitted.', { status: 400 });
+    }
+
+    // Standardize encoding for S3 compatibility
     const correctedImageUrl = imageUrl
-        .replace(/\s/g, '%20') 
-        .replace(/'/g, '%27');
+      .replace(/\s/g, '%20')
+      .replace(/'/g, '%27');
 
     const imageResponse = await fetch(correctedImageUrl);
-    
+
     if (!imageResponse.ok) {
-      console.error(`Proxy failed to fetch: ${correctedImageUrl}, Status: ${imageResponse.status}`);
-      return new Response(`Failed to fetch image from source. Status: ${imageResponse.status}`, { status: imageResponse.status });
+      console.error(`Proxy failed: ${correctedImageUrl}, Status: ${imageResponse.status}`);
+      return new Response(`Failed to fetch image. Status: ${imageResponse.status}`, { status: imageResponse.status });
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
-    const contentType = imageResponse.headers.get('Content-Type') || 'application/octet-stream';
+    const contentType = imageResponse.headers.get('Content-Type') || 'image/jpeg';
 
-    // Return the image data with appropriate headers
     return new Response(imageBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        // Allow caching to improve performance
-        'Cache-Control': 'public, max-age=604800, immutable', // Cache for 1 week
+        // Cache at browser (1 year) + Vercel Edge Network (1 year) + stale-while-revalidate
+        'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400, immutable',
         'Access-Control-Allow-Origin': '*',
+        'Vary': 'Accept-Encoding',
       },
     });
 
   } catch (error) {
     console.error('Error in image proxy:', error);
-    return new Response('An internal server error occurred while proxying the image.', { status: 500 });
+    return new Response('Internal server error.', { status: 500 });
   }
 }
