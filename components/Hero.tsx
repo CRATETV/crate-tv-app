@@ -14,10 +14,8 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, onPlayMovie, onMoreInfo, hideContent = false }) => {
   const [showVideo, setShowVideo] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const videoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   
   if (!movies || movies.length === 0) {
     return <div className="w-full h-[56.25vw] bg-gray-900 animate-pulse"></div>;
@@ -40,32 +38,23 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
   useEffect(() => {
     setShowVideo(false);
-    setVideoReady(false);
     if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current);
-    // Show video after 1.5s MAX — or immediately when ready (whichever comes first)
     if (currentMovie.trailer) {
-      videoTimeoutRef.current = setTimeout(() => {
-        if (videoReady) setShowVideo(true);
-      }, 1500);
+      videoTimeoutRef.current = setTimeout(() => { setShowVideo(true); }, 3000);
     }
     return () => { if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current); };
   }, [currentIndex, currentMovie.trailer]);
 
-  // Show video the moment it has enough data to play smoothly
-  const handleVideoCanPlay = () => {
-    setVideoReady(true);
-    setShowVideo(true);
-  };
-
   return (
-    <div className="relative w-full h-[65vh] md:h-[28vw] md:max-h-[520px] min-h-[450px] bg-gray-900 overflow-hidden">
+    <div className="relative w-full h-[65vh] md:h-[28vw] md:max-h-[520px] min-h-[450px] bg-black overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
         <img
           key={`poster-${currentMovie.key}`}
           src={`/api/proxy-image?url=${encodeURIComponent(displayPoster)}`}
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
-         fetchPriority="high" loading="eager"/>
+          crossOrigin="anonymous"
+        />
 
         {!showVideo && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[80%] md:max-w-xs pointer-events-none transition-opacity duration-1000">
@@ -79,15 +68,12 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
         {currentMovie.trailer && (
             <video
-                ref={videoRef}
                 key={`video-${currentMovie.key}`}
                 src={currentMovie.trailer}
-                preload="metadata"
                 autoPlay
                 muted={isMuted}
                 loop
                 playsInline
-                onCanPlay={handleVideoCanPlay}
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${showVideo ? 'opacity-100' : 'opacity-0'}`}
             />
         )}

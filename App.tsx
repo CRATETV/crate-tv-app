@@ -51,6 +51,11 @@ const App: React.FC = () => {
     const { user, hasCrateFestPass, unlockedWatchPartyKeys, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     
+    const hiddenMovieSet = useMemo(
+        () => new Set<string>(settings?.content?.hiddenMovies || []),
+        [settings]
+    );
+
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
@@ -136,11 +141,11 @@ const App: React.FC = () => {
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
                 .map((key: string) => movies[key])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted);
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !hiddenMovieSet.has(m.key));
         }
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted)
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted && !hiddenMovieSet.has(m.key))
                 .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
                 .slice(0, 4);
         }
@@ -152,7 +157,7 @@ const App: React.FC = () => {
         if (!vaultCategory?.movieKeys) return [];
         return vaultCategory.movieKeys
             .map((key: string) => movies[key])
-            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted)
+            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !hiddenMovieSet.has(m.key))
             .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies, categories.vault]);
 
@@ -229,19 +234,19 @@ const App: React.FC = () => {
 
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted)
+            .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted && !hiddenMovieSet.has(m.key))
             .sort((a: Movie, b: Movie) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
     const topTenMovies = useMemo(() => {
-        return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
+        return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster && !hiddenMovieSet.has(m.key))
             .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, viewCounts]);
 
     const premierMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && m.isForSale)
+            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && m.isForSale && !hiddenMovieSet.has(m.key))
             .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies]);
 
@@ -266,7 +271,7 @@ const App: React.FC = () => {
 
         // Check regular movies first — show even if no start time set
         const movieResult = (Object.values(movies) as Movie[])
-            .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted)
+            .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted && !hiddenMovieSet.has(m.key))
             .filter(m => {
                 if (allPartyStates[m.key]?.status === 'ended') return false;
                 if (!m.watchPartyStartTime) return false; // no start time = don't show banner
@@ -369,7 +374,7 @@ const App: React.FC = () => {
 
         // 3. Filter movies by metadata OR category match
         return (Object.values(movies) as Movie[]).filter((movie) =>
-            movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) &&
+            movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) && !hiddenMovieSet.has(movie.key) &&
             (
                 expandedQueries.some(q => (movie.title || '').toLowerCase().includes(q)) ||
                 expandedQueries.some(q => (movie.director || '').toLowerCase().includes(q)) ||
@@ -676,7 +681,7 @@ const App: React.FC = () => {
                                 
                                 const categoryMovies = typedCategory.movieKeys
                                     .map((movieKey: string) => movies[movieKey])
-                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m))
+                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m) && !hiddenMovieSet.has(m.key))
                                     .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
                                 if (categoryMovies.length === 0) return null;

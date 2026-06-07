@@ -35,7 +35,7 @@ export const useFestival = () => {
 };
 
 export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [isLoading, setIsLoading] = useState(false); // PERF: show fallback data immediately, update silently
+    const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>(moviesData);
     const [categories, setCategories] = useState<Record<string, Category>>(categoriesData);
     const [zineStories, setZineStories] = useState<EditorialStory[]>([]);
@@ -258,13 +258,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const fetchData = async (forceNoCache = false) => {
         try {
-            // PERF: Removed t=${Date.now()} cache buster — it was bypassing ALL caching on every load
-        const controller = new AbortController();
-        const fetchTimeout = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(`/api/get-live-data${forceNoCache ? '?noCache=true' : ''}`, {
-            signal: controller.signal
-        });
-        clearTimeout(fetchTimeout);
+            const res = await fetch(`/api/get-live-data?t=${Date.now()}&noCache=${forceNoCache}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.movies) {

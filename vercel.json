@@ -1,25 +1,73 @@
 {
+  "crons": [
+    {
+      "path": "/api/check-anniversaries",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/update-watch-parties",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron-monthly-spotlight",
+      "schedule": "0 14 * * 1"
+    }
+  ],
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
+      "source": "/.well-known/apple-developer-merchantid-domain-association",
+      "destination": "/api/apple-developer-merchantid-domain-association"
+    },
+    {
+      "source": "/((?!api/|.*\\..*).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
-      "source": "/api/proxy-image",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=31536000, immutable" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
       ]
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "redirects": [
+    {
+      "source": "/PWFF:year(\\d{4})",
+      "destination": "/pwff:year",
+      "permanent": false
     },
     {
-      "source": "/api/get-live-data",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=60, stale-while-revalidate=300" }
-      ]
-    },
-    {
-      "source": "/api/data-config",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=300" }
-      ]
+      "source": "/Pwff:year(\\d{4})",
+      "destination": "/pwff:year",
+      "permanent": false
     }
   ]
 }

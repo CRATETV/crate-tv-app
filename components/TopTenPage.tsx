@@ -28,7 +28,7 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
             
             <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
-                <img src={movie.poster ? movie.poster.replace(/\+/g, "%20") : ""} alt={movie.title} className="w-full h-full object-cover" loading="lazy" />
+                <img src={movie.poster ? `/api/proxy-image?url=${encodeURIComponent(movie.poster)}` : ""} alt={movie.title} className="w-full h-full object-cover" loading="lazy" />
             </div>
 
             <div className="flex-grow min-w-0">
@@ -54,13 +54,18 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 );
 
 const TopTenPage: React.FC = () => {
-    const { movies, analytics, isLoading } = useFestival();
+    const { movies, analytics, isLoading, settings } = useFestival();
     const [isGenerating, setIsGenerating] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
     
+    const hiddenMovieSet = useMemo(
+        () => new Set<string>(settings?.content?.hiddenMovies || []),
+        [settings]
+    );
+
     const sortedMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && !m.isUnlisted && !!m.poster)
+            .filter(m => !!m && !m.isUnlisted && !!m.poster && !hiddenMovieSet.has(m.key))
             .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, analytics]);
