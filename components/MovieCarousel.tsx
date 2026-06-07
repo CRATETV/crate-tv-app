@@ -1,5 +1,5 @@
 
-import React, { useRef, isValidElement } from 'react';
+import React, { useRef, isValidElement, useState, useEffect } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
 import { useFestival } from '../contexts/FestivalContext';
@@ -19,11 +19,41 @@ interface MovieCarouselProps {
   allCategories?: Record<string, Category>;
   isComingSoonCarousel?: boolean;
   categoryKey?: string;
+  rowIndex?: number; // Controls load priority: 0-1 = immediate, 2+ = staggered cascade
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, onShowDetails, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false, categoryKey }) => {
+// Shimmer placeholder shown while carousel is off-screen
+const CardShimmer: React.FC<{ showRankings?: boolean }> = ({ showRankings }) => (
+  <div className={`flex-shrink-0 rounded-lg bg-white/[0.04] animate-pulse ${showRankings ? 'w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] aspect-video' : 'w-[32vw] sm:w-[28vw] md:w-[20vw] lg:w-[18vw] aspect-[3/4]'}`} />
+);
+
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, onShowDetails, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false, categoryKey, rowIndex = 0 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { settings } = useFestival();
+
+  // Cascade loading strategy:
+  // - Rows 0-1 (above the fold): render immediately, no observer needed
+  // - Rows 2+: IntersectionObserver fires when near viewport, then stagger
+  //   by (rowIndex - 2) * 120ms so rows load sequentially, not all at once
+  const [isVisible, setIsVisible] = useState(rowIndex <= 1);
+  useEffect(() => {
+    if (rowIndex <= 1) return; // Already visible
+    const el = containerRef.current;
+    if (!el) return;
+    const staggerMs = (rowIndex - 2) * 120;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => setIsVisible(true), staggerMs);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '350px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rowIndex]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -80,11 +110,16 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   };
 
   return (
-    <div className={`mb-8 md:mb-12 ${isHolidayRow ? 'relative z-10' : ''}`}>
+    <div ref={containerRef} className={`mb-8 md:mb-12 ${isHolidayRow ? 'relative z-10' : ''}`}>
       {renderTitle()}
       <div className="relative group/carousel-container">
         <div ref={scrollRef} className={carouselClasses}>
-          {movies.map((movie, index) => {
+          {!isVisible
+            ? // Shimmer placeholders until carousel enters viewport
+              Array.from({ length: Math.min(movies.length, 6) }).map((_, i) => (
+                <CardShimmer key={i} showRankings={showRankings} />
+              ))
+            : movies.map((movie, index) => {
              if (showRankings) {
               const rank = index + 1;
               const rankColors = [

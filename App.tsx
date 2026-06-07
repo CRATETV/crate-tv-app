@@ -613,6 +613,7 @@ const App: React.FC = () => {
                                     onToggleLike={toggleLikeMovie} 
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
+                                    rowIndex={0}
                                 />
                             )}
 
@@ -633,6 +634,7 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
                                     showRankings={true}
+                                    rowIndex={1}
                                 />
                             )}
 
@@ -658,6 +660,7 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
                                     categoryKey="premier"
+                                    rowIndex={2}
                                 />
                             )}
 
@@ -673,8 +676,8 @@ const App: React.FC = () => {
                                 />
                             )}
 
-                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
-                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
+                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" rowIndex={3} />}
+                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" rowIndex={4} />}
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
@@ -702,6 +705,7 @@ const App: React.FC = () => {
                                         onToggleWatchlist={toggleWatchlist} 
                                         onSupportMovie={() => {}} 
                                         categoryKey={key}
+                                        rowIndex={5 + Object.keys(categories).filter(k => !['featured','nowStreaming','publicAccess','publicDomainIndie','zine','editorial','vault'].includes(k)).indexOf(key)}
                                     />
                                 );
                             })}

@@ -54,6 +54,8 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
           crossOrigin="anonymous"
+          loading="eager"
+          fetchPriority="high"
         />
 
         {!showVideo && (
@@ -74,6 +76,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
                 muted={isMuted}
                 loop
                 playsInline
+                preload="auto"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${showVideo ? 'opacity-100' : 'opacity-0'}`}
             />
         )}

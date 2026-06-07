@@ -92,11 +92,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
       window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
 
-    // Start preloading video immediately — don't wait for card to open
-    if (preloadRef.current && movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube')) {
-      preloadRef.current.src = movie.fullMovie;
-      preloadRef.current.load();
-    }
+    // PERF FIX: Removed aggressive background preload.
+    // Previously downloaded every full movie on hover — causing slow loads on every device.
+    // Video now loads only when user actually opens/clicks the movie card.
 
     hoverTimerRef.current = setTimeout(() => setShowExpanded(true), 200);
   };
@@ -205,7 +203,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <video
         ref={preloadRef}
         src={videoSrc}
-        preload="auto"
+        preload="metadata"
         muted
         playsInline
         className="hidden"
@@ -242,7 +240,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
           onLoad={() => setIsImageLoaded(true)}
-          crossOrigin="anonymous"
         />
 
         {/* Badges */}
@@ -289,6 +286,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               <video
                 ref={videoRef}
                 src={videoSrc}
+                poster={`/api/proxy-image?url=${encodeURIComponent(movie.tvPoster || movie.poster || '')}`}
                 autoPlay
                 muted={isMuted}
                 playsInline
@@ -302,8 +300,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
-                crossOrigin="anonymous"
-              />
+               loading="lazy" decoding="async"/>
             )}
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
@@ -311,8 +308,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-                crossOrigin="anonymous"
-              />
+               loading="lazy" decoding="async"/>
             )}
 
             {/* Gradient over video */}
@@ -487,8 +483,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                   src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
-                  crossOrigin="anonymous"
-                />
+                 loading="lazy" decoding="async"/>
               )}
 
               {/* Gradient */}
