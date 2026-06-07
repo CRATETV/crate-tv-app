@@ -6,6 +6,7 @@ import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
+import { useRokuConfig } from '../hooks/useRokuConfig';
 import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 
@@ -54,13 +55,14 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 );
 
 const TopTenPage: React.FC = () => {
-    const { movies, analytics, isLoading, settings } = useFestival();
+    const { movies, analytics, isLoading } = useFestival();
+    const { config: rokuConfig } = useRokuConfig();
     const [isGenerating, setIsGenerating] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
     
     const hiddenMovieSet = useMemo(
-        () => new Set<string>(settings?.content?.hiddenMovies || []),
-        [settings]
+        () => new Set<string>(rokuConfig?.content?.hiddenMovies || []),
+        [rokuConfig]
     );
 
     const sortedMovies = useMemo(() => {

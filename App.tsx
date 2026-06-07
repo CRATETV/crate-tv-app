@@ -13,6 +13,7 @@ import { Movie, Actor, Category } from './types';
 import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
+import { useRokuConfig } from './hooks/useRokuConfig';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -50,10 +51,11 @@ const MaintenanceScreen: React.FC = () => (
 const App: React.FC = () => {
     const { user, hasCrateFestPass, unlockedWatchPartyKeys, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
+    const { config: rokuConfig } = useRokuConfig();
     
     const hiddenMovieSet = useMemo(
-        () => new Set<string>(settings?.content?.hiddenMovies || []),
-        [settings]
+        () => new Set<string>(rokuConfig?.content?.hiddenMovies || []),
+        [rokuConfig]
     );
 
     const [heroIndex, setHeroIndex] = useState(0);
