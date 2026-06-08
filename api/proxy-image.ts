@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     // Trim whitespace
     imageUrl = imageUrl.trim();
 
-    // SECURITY CHECK: Only allow HTTPS URLs from known image hosting domains
+    // SECURITY CHECK: Allow any HTTPS URL — block only private/internal addresses
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(imageUrl);
@@ -21,15 +21,15 @@ export async function GET(request: Request) {
     }
 
     const hostname = parsedUrl.hostname.toLowerCase();
-    const isAllowed =
-      parsedUrl.protocol === 'https:' && (
-        hostname.includes('.s3.') ||
-        hostname.includes('.amazonaws.com') ||
-        hostname.includes('.cloudfront.net') ||
-        hostname.endsWith('.s3.amazonaws.com')
-      );
+    const isPrivate =
+      hostname === 'localhost' ||
+      hostname.startsWith('127.') ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('169.254.') ||
+      hostname === '0.0.0.0';
 
-    if (!isAllowed) {
+    if (parsedUrl.protocol !== 'https:' || isPrivate) {
       return new Response('URL not permitted.', { status: 400 });
     }
 
