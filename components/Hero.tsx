@@ -55,8 +55,6 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           fetchPriority="high"
           loading="eager"
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
-          loading="eager"
-          fetchPriority="high"
         />
 
         {!showVideo && (
