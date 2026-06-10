@@ -92,9 +92,11 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
       window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
 
-    // PERF FIX: Removed aggressive background preload.
-    // Previously downloaded every full movie on hover — causing slow loads on every device.
-    // Video now loads only when user actually opens/clicks the movie card.
+    // Start preloading video immediately — don't wait for card to open
+    if (preloadRef.current && movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube')) {
+      preloadRef.current.src = movie.fullMovie;
+      preloadRef.current.load();
+    }
 
     hoverTimerRef.current = setTimeout(() => setShowExpanded(true), 200);
   };
@@ -203,7 +205,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <video
         ref={preloadRef}
         src={videoSrc}
-        preload="metadata"
+        preload="auto"
         muted
         playsInline
         className="hidden"
@@ -240,6 +242,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
           onLoad={() => setIsImageLoaded(true)}
+          crossOrigin="anonymous"
         />
 
         {/* Badges */}
@@ -259,6 +262,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             ) : (movie.awardName && movie.awardYear) ? (
               <LaurelPreview awardName={movie.awardName} year={movie.awardYear} color="#FFFFFF" />
             ) : null}
+          </div>
+        )}
+
+        {/* Viewer Notice Banner — shown on poster when admin has written a notice */}
+        {movie.viewerNotice && !showExpanded && (
+          <div className="absolute bottom-0 left-0 right-0 bg-amber-500/90 backdrop-blur-sm px-2 py-1.5 flex items-center gap-1.5 pointer-events-none">
+            <svg className="w-3 h-3 text-black flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+            <span className="text-black font-black text-[9px] uppercase tracking-widest truncate">Notice</span>
           </div>
         )}
       </div>
@@ -286,7 +297,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               <video
                 ref={videoRef}
                 src={videoSrc}
-                poster={`/api/proxy-image?url=${encodeURIComponent(movie.tvPoster || movie.poster || '')}`}
                 autoPlay
                 muted={isMuted}
                 playsInline
@@ -300,7 +310,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
-               loading="lazy" decoding="async"/>
+                crossOrigin="anonymous"
+              />
             )}
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
@@ -308,7 +319,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-               loading="lazy" decoding="async"/>
+                crossOrigin="anonymous"
+              />
             )}
 
             {/* Gradient over video */}
@@ -368,6 +380,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               <p className="text-gray-400 text-[10px] leading-relaxed line-clamp-2 mb-3">
                 {cleanSynopsis(movie.synopsis)}
               </p>
+            )}
+
+            {/* Viewer Notice */}
+            {movie.viewerNotice && (
+              <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-3">
+                <svg className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                <p className="text-amber-300 text-[10px] leading-relaxed">{movie.viewerNotice}</p>
+              </div>
             )}
 
             {/* Action buttons */}
@@ -483,7 +503,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                   src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
-                 loading="lazy" decoding="async"/>
+                  crossOrigin="anonymous"
+                />
               )}
 
               {/* Gradient */}
@@ -553,6 +574,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 <p className="text-gray-400 text-sm leading-relaxed mb-5">
                   {cleanSynopsis(movie.synopsis)}
                 </p>
+              )}
+
+              {/* Viewer Notice */}
+              {movie.viewerNotice && (
+                <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5">
+                  <svg className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                  <p className="text-amber-300 text-sm leading-relaxed">{movie.viewerNotice}</p>
+                </div>
               )}
 
               {/* Action buttons */}

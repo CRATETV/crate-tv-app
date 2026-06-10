@@ -373,10 +373,9 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 setAllPartyStates(allStates);
             }, () => {});
 
-            unsubs.push(subscribeWatchParties());
-
-            // Watchdog — resubscribe every 90s to prevent silent listener failure
-            // This ensures the banner appears promptly when a party goes live
+            // Single watchdog-managed subscription — starts immediately,
+            // rotates every 90s to prevent silent Firestore listener failure.
+            // Auth changes restart it cleanly without stacking new subscriptions.
             let watchPartyUnsub = subscribeWatchParties();
             const watchdog = setInterval(() => {
                 watchPartyUnsub();
@@ -384,11 +383,16 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             }, 90000);
             unsubs.push(() => { clearInterval(watchdog); watchPartyUnsub(); });
 
-            // Re-subscribe on auth change to pick up permission upgrades
+            // Re-subscribe on auth change to pick up permission upgrades.
+            // Unsubscribes the current one first so only one listener is ever active.
             if (auth) {
-                auth.onAuthStateChanged(user => {
-                    if (user) unsubs.push(subscribeWatchParties());
+                const unsubAuthChange = auth.onAuthStateChanged(user => {
+                    if (user) {
+                        watchPartyUnsub();
+                        watchPartyUnsub = subscribeWatchParties();
+                    }
                 });
+                unsubs.push(unsubAuthChange);
             }
         };
 

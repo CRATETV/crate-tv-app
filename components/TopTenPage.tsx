@@ -11,10 +11,24 @@ import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => {
-  const [imgSrc, setImgSrc] = React.useState(
-    movie.poster ? `/api/proxy-image?url=${encodeURIComponent(movie.poster)}` : ''
-  );
-  const [imgError, setImgError] = React.useState(false);
+  // Load order: CloudFront (fastest) → proxy (fallback) → direct URL (last resort)
+  const cdnPoster = toCdnUrl(movie.poster);
+  const [imgSrc, setImgSrc] = React.useState(cdnPoster || '');
+  const [fallbackStep, setFallbackStep] = React.useState(0);
+  const [loaded, setLoaded] = React.useState(false);
+
+  const handleError = () => {
+    if (fallbackStep === 0 && movie.poster) {
+      // Step 1: try proxy
+      setImgSrc(`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`);
+      setFallbackStep(1);
+    } else if (fallbackStep === 1 && movie.poster) {
+      // Step 2: try direct URL
+      setImgSrc(movie.poster);
+      setFallbackStep(2);
+    }
+    // Step 3: give up — show placeholder (no src update)
+  };
 
   return (
   <div 
@@ -35,19 +49,17 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
             
             <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
-                {imgError && (
-                  <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                    <span className="text-white/20 text-3xl font-black italic">#{rank}</span>
-                  </div>
+                {/* Skeleton shown while image loads */}
+                {!loaded && (
+                  <div className="absolute inset-0 bg-white/[0.06] animate-pulse" />
                 )}
                 <img
                   src={imgSrc}
                   alt={movie.title}
-                  className="w-full h-full object-cover"
-                  loading={rank <= 4 ? 'eager' : 'lazy'}
-                  fetchPriority={rank <= 2 ? 'high' : 'auto'}
-                  onError={() => setImgError(true)}
-                  style={imgError ? { display: 'none' } : {}}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                  loading={rank <= 3 ? 'eager' : 'lazy'}
+                  onLoad={() => setLoaded(true)}
+                  onError={handleError}
                 />
             </div>
 

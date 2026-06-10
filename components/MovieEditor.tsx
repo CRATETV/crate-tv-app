@@ -49,7 +49,8 @@ const emptyMovie: Movie = {
     salePrice: 5.00,
     isLiveStream: false,
     liveStreamEmbed: '',
-    zineUrl: ''
+    zineUrl: '',
+    viewerNotice: '',
 };
 
 const ActorEditorModal: React.FC<{ actor: Actor, onSave: (updated: Actor) => void, onClose: () => void }> = ({ actor, onSave, onClose }) => {
@@ -368,6 +369,16 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film/Series Title" className="form-input bg-black/40" />
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
                                     <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
+
+                                    <label className="form-label" style={{ color: '#f59e0b' }}>⚠ Viewer Notice <span className="text-gray-600 normal-case font-normal">(optional — shown on card & detail view)</span></label>
+                                    <textarea
+                                        name="viewerNotice"
+                                        value={formData.viewerNotice || ''}
+                                        onChange={handleChange}
+                                        rows={2}
+                                        placeholder="e.g. This film will not be available for virtual streaming. Please attend in person."
+                                        className="form-input bg-black/40 border-amber-500/30 focus:border-amber-500 text-amber-200 placeholder:text-amber-900"
+                                    />
                                     
                                     <div className="space-y-2">
                                         <label className="form-label">Editorial / Zine URL</label>

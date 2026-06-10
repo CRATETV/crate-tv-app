@@ -182,14 +182,8 @@ const FestivalView: React.FC<FestivalViewProps> = ({
               <div className="space-y-12">
                   {currentDayData.blocks.map(block => {
                       const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
-                      // BLOCK TIME-GATING: Only unlock if screeningStartTime has passed
-                      // This ensures each block plays independently at its scheduled time
-                      const blockHasStarted = !block.screeningStartTime || new Date(block.screeningStartTime) <= new Date();
-                      const isBlockUnlocked = blockHasStarted && (hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id));
-                      const blockStartsAt = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
-                      const minutesUntilStart = blockStartsAt ? Math.ceil((blockStartsAt.getTime() - Date.now()) / 60000) : 0;
+                      const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                       const isBlockLive = activeParties[block.id]?.status === 'live';
-                      const isBlockComingSoon = !blockHasStarted && blockStartsAt !== null;
                       
                       return (
                           <div key={block.id} className={`bg-white/[0.02] border rounded-[3.5rem] shadow-2xl overflow-hidden transition-all duration-700 ${isBlockLive ? 'border-red-600 ring-8 ring-red-600/5' : 'border-white/5'}`}>

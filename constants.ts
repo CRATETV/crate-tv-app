@@ -61,22 +61,22 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Grant Munro",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Pioneer of the pixilation technique.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       },
       {
         "name": "Jean-Paul Ladouceur",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Frequent collaborator with Norman McLaren.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Norman McLaren",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/Neighbours.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/Neighbours_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/Neighbours_Poster.webp",
     "likes": 1540,
     "durationInMinutes": 8,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -89,16 +89,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Specialist in high-tension dramatic performance.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Salome Denoon",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/Crossroads+.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/Crossroads+.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/Crossroads+.webp",
     "likes": 420,
     "durationInMinutes": 8,
     "publishedAt": "2025-03-10T12:00:00Z",
@@ -111,16 +111,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Tommy Jessop",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Tommy is a legendary actor—the first with Down syndrome to play Hamlet on stage.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Bugsy Steel",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/FighterShortFilm.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/FighterShortFilm.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/Fighter+.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/Fighter+.webp",
     "likes": 1240,
     "publishedAt": "2025-01-10T12:00:00Z",
     "isUnlisted": false
@@ -132,16 +132,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "S. Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Leading figure in experimental technical performance.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Netflix Open Source",
-    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Trailer.mp4",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Full_4K.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp",
+    "trailer": "https://d3jhtrl1gnrh4b.cloudfront.net/Meridian_Trailer.mp4",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/Meridian_Full_4K.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/Meridian_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/Meridian_Poster.webp",
     "likes": 850,
     "durationInMinutes": 12,
     "publishedAt": "2025-02-15T10:00:00Z",
@@ -155,16 +155,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Buster Keaton",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "The Great Stone Face.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Roscoe Arbuckle",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The_Cook_Restored.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TheCook_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TheCook_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/The_Cook_Restored.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/TheCook_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/TheCook_Poster.webp",
     "likes": 420,
     "publishedAt": "2025-01-05T09:00:00Z",
     "isUnlisted": false
@@ -176,9 +176,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [],
     "director": "Independent Visionary",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Short.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/Autumn_Short.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/Autumn_Art.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/Autumn_Art.webp",
     "likes": 310,
     "durationInMinutes": 8,
     "publishedAt": "2025-03-01T15:00:00Z",
@@ -191,16 +191,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Marcus Kane",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Specialist in psychological tension.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "The Collective",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Short.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/Gemini_Short.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/Gemini_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/Gemini_Poster.webp",
     "likes": 560,
     "durationInMinutes": 15,
     "publishedAt": "2025-04-12T18:00:00Z",
@@ -213,9 +213,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [],
     "director": "U.S. Naval Observatory (Archive)",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Archive.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/TimeService_Archive.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/TimeService_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/TimeService_Poster.webp",
     "likes": 280,
     "durationInMinutes": 10,
     "publishedAt": "2025-02-20T11:00:00Z",
@@ -228,23 +228,23 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Georges Méliès",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "The father of cinematic magic.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Georges Méliès",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/a+trip+to+the+moon+.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,
     "durationInMinutes": 14,
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false,
     "posterVariants": [
-       "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-       "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp"
+       "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/a+trip+to+the+moon+.webp",
+       "https://d3jhtrl1gnrh4b.cloudfront.net/Meridian_Poster.webp"
     ]
   },
   "fling": {
@@ -254,16 +254,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Marcus Kane",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Specialist in psychological tension.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Independent Visionary",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/Fling.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/Fling_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/Fling_Poster.webp",
     "likes": 450,
     "durationInMinutes": 90,
     "publishedAt": "2025-04-15T12:00:00Z",
@@ -276,16 +276,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "James Russell",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Early silent film actor.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Alice Guy-Blaché",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/AFoolAndHisMoney.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/AFoolAndHisMoney_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/AFoolAndHisMoney_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/AFoolAndHisMoney.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/AFoolAndHisMoney_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/AFoolAndHisMoney_Poster.webp",
     "likes": 150,
     "durationInMinutes": 14,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -298,16 +298,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Shemp Howard",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "One of the Three Stooges.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Edward Bernds",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/BridelessGroom.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/BridelessGroom_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/BridelessGroom_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/BridelessGroom.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/BridelessGroom_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/BridelessGroom_Poster.webp",
     "likes": 420,
     "durationInMinutes": 17,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -320,16 +320,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Maya Deren",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Pioneer of experimental cinema.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Maya Deren & Alexander Hammid",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/MeshesOfTheAfternoon.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/MeshesOfTheAfternoon_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/MeshesOfTheAfternoon_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/MeshesOfTheAfternoon.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/MeshesOfTheAfternoon_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/MeshesOfTheAfternoon_Poster.webp",
     "likes": 680,
     "durationInMinutes": 14,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -342,16 +342,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Simone Mareuil",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "French silent film actress.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Luis Buñuel",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/UnChienAndalou.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/UnChienAndalou_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/UnChienAndalou_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/UnChienAndalou.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/UnChienAndalou_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/UnChienAndalou_Poster.webp",
     "likes": 890,
     "durationInMinutes": 16,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -364,16 +364,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Marguerite Gance",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "French silent film actress.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Jean Epstein",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/HouseOfUsher.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/HouseOfUsher_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/HouseOfUsher_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/HouseOfUsher.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/HouseOfUsher_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/HouseOfUsher_Poster.webp",
     "likes": 520,
     "durationInMinutes": 63,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -386,16 +386,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Charlie Chaplin",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "The Little Tramp himself.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Charlie Chaplin",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ChaplinImmigrant.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ChaplinImmigrant_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ChaplinImmigrant_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/ChaplinImmigrant.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/ChaplinImmigrant_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/ChaplinImmigrant_Poster.webp",
     "likes": 1100,
     "durationInMinutes": 24,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -408,16 +408,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Charlie Chaplin",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "The Little Tramp himself.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Charlie Chaplin",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ChaplinPawnshop.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ChaplinPawnshop_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ChaplinPawnshop_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/ChaplinPawnshop.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/ChaplinPawnshop_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/ChaplinPawnshop_Poster.webp",
     "likes": 950,
     "durationInMinutes": 26,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -430,16 +430,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Lois Weber",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png",
         "bio": "Pioneer female director and actress.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png"
       }
     ],
     "director": "Lois Weber & Phillips Smalley",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense_Poster.webp",
+    "fullMovie": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/Suspense.mp4",
+    "poster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/Suspense_Poster.webp",
+    "tvPoster": "https://d3jhtrl1gnrh4b.cloudfront.net/public+domain+movies+/Suspense_Poster.webp",
     "likes": 340,
     "durationInMinutes": 10,
     "publishedAt": "2025-01-01T00:00:00Z",
@@ -459,7 +459,7 @@ export const aboutData: AboutData = {
   founderName: "Salome Denoon",
   founderTitle: "Founder & Architect",
   founderBio: "A filmmaker and developer dedicated to the future of distribution.",
-  founderPhoto: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+  founderPhoto: "https://d3jhtrl1gnrh4b.cloudfront.net/photos+/SalomeDenoon.png"
 };
 
 export const festivalConfigData: FestivalConfig = {

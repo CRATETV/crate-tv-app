@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieCarousel from './components/MovieCarousel';
@@ -582,14 +583,17 @@ const App: React.FC = () => {
             />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: mainPaddingTop }}>
+                <ErrorBoundary section="Hero">
                 {currentLiveHeroConfig ? (
                     <FestivalHero config={currentLiveHeroConfig} />
                 ) : (
                     heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}
+                </ErrorBoundary>
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
                     <div className="-mt-6 md:-mt-10 lg:-mt-14 space-y-12 md:y-16 relative z-20">
+                        <ErrorBoundary section="Content">
                         {searchQuery ? (
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
@@ -679,7 +683,7 @@ const App: React.FC = () => {
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" rowIndex={3} />}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" rowIndex={4} />}
                             
-                            {Object.entries(categories).map(([key, category]) => {
+                            {Object.entries(categories).map(([key, category], categoryIndex) => {
                                 const typedCategory = category as any;
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial', 'vault'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
@@ -705,12 +709,13 @@ const App: React.FC = () => {
                                         onToggleWatchlist={toggleWatchlist} 
                                         onSupportMovie={() => {}} 
                                         categoryKey={key}
-                                        rowIndex={5 + Object.keys(categories).filter(k => !['featured','nowStreaming','publicAccess','publicDomainIndie','zine','editorial','vault'].includes(k)).indexOf(key)}
+                                        rowIndex={5 + categoryIndex}
                                     />
                                 );
                             })}
                           </>
                         )}
+                        </ErrorBoundary>
                     </div>
                 </div>
             </main>
@@ -730,9 +735,9 @@ const App: React.FC = () => {
                 />
             )}
 
-            {detailsMovie && <MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} />}
+            {detailsMovie && <ErrorBoundary section="MovieDetails" silent><MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} /></ErrorBoundary>}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-            {isMobileSearchOpen && <SearchOverlay searchQuery={searchQuery} onSearch={onSearch} onClose={() => setIsMobileSearchOpen(false)} results={searchResults} onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }} />}
+            {isMobileSearchOpen && <ErrorBoundary section="Search" silent><SearchOverlay searchQuery={searchQuery} onSearch={onSearch} onClose={() => setIsMobileSearchOpen(false)} results={searchResults} onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }} /></ErrorBoundary>}
         </div>
     );
 };
