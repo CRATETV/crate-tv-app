@@ -14,6 +14,7 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
   const [imgSrc, setImgSrc] = React.useState(
     movie.poster ? `/api/proxy-image?url=${encodeURIComponent(movie.poster)}` : ''
   );
+  const [imgError, setImgError] = React.useState(false);
 
   return (
   <div 
@@ -34,17 +35,19 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
             
             <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
+                {imgError && (
+                  <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                    <span className="text-white/20 text-3xl font-black italic">#{rank}</span>
+                  </div>
+                )}
                 <img
                   src={imgSrc}
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   loading={rank <= 4 ? 'eager' : 'lazy'}
                   fetchPriority={rank <= 2 ? 'high' : 'auto'}
-                  onError={() => {
-                    if (movie.poster && imgSrc !== movie.poster) {
-                      setImgSrc(movie.poster);
-                    }
-                  }}
+                  onError={() => setImgError(true)}
+                  style={imgError ? { display: 'none' } : {}}
                 />
             </div>
 
