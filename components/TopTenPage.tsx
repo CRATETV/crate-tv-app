@@ -10,6 +10,16 @@ import { useRokuConfig } from '../hooks/useRokuConfig';
 import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 
+
+// Inline CDN helper — swaps S3 origin for CloudFront edge
+const toCdnUrl = (url?: string | null): string => {
+  if (!url) return '';
+  return url.replace(
+    'https://cratetelevision.s3.us-east-1.amazonaws.com',
+    'https://d3jhtrl1gnrh4b.cloudfront.net'
+  );
+};
+
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => {
   // Load order: CloudFront (fastest) → proxy (fallback) → direct URL (last resort)
   const cdnPoster = toCdnUrl(movie.poster);
