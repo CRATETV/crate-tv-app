@@ -64,7 +64,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const isFestivalFilm = !!movie.isFestival;
 
   const parentBlock = useMemo(() =>
-    festivalData?.flatMap((d: any) => d.blocks || []).find((b: any) =>
+    (festivalData || []).flatMap((d: any) => d.blocks || []).find((b: any) =>
       (b.movieKeys || []).includes(movie.key)
     ) || null,
     [festivalData, movie.key]
@@ -130,17 +130,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 )}
                 {needsFestivalTicket && (
                     <div className="flex flex-wrap gap-3">
-                        <button
-                            onClick={() => setShowPurchaseModal(true)}
-                            className="flex items-center justify-center px-8 py-3.5 bg-indigo-600 text-white font-black rounded-full hover:bg-indigo-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs"
-                        >
+                        <button onClick={() => setShowPurchaseModal(true)}
+                            className="flex items-center justify-center px-8 py-3.5 bg-indigo-600 text-white font-black rounded-full hover:bg-indigo-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs">
                             Rent Film — $5
                         </button>
                         {parentBlock && (
-                            <button
-                                onClick={() => { window.history.pushState({}, '', `/watchparty/${parentBlock.id}`); window.dispatchEvent(new Event('pushstate')); }}
-                                className="flex items-center justify-center px-8 py-3.5 bg-red-600 text-white font-black rounded-full hover:bg-red-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs"
-                            >
+                            <button onClick={() => { window.history.pushState({}, '', `/watchparty/${parentBlock.id}`); window.dispatchEvent(new Event('pushstate')); }}
+                                className="flex items-center justify-center px-8 py-3.5 bg-red-600 text-white font-black rounded-full hover:bg-red-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs">
                                 🎬 Full Block — $10
                             </button>
                         )}

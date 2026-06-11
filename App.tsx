@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import ErrorBoundary from './components/ErrorBoundary';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieCarousel from './components/MovieCarousel';
@@ -14,7 +13,6 @@ import { Movie, Actor, Category } from './types';
 import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
-import { useRokuConfig } from './hooks/useRokuConfig';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -52,12 +50,6 @@ const MaintenanceScreen: React.FC = () => (
 const App: React.FC = () => {
     const { user, hasCrateFestPass, unlockedWatchPartyKeys, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
-    const { config: rokuConfig } = useRokuConfig();
-
-    const hiddenMovieSet = useMemo(
-        () => new Set<string>(rokuConfig?.content?.hiddenMovies || []),
-        [rokuConfig]
-    );
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -144,11 +136,11 @@ const App: React.FC = () => {
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
                 .map((key: string) => movies[key])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !hiddenMovieSet.has(m.key));
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted);
         }
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted && !hiddenMovieSet.has(m.key))
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted)
                 .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
                 .slice(0, 4);
         }
@@ -160,7 +152,7 @@ const App: React.FC = () => {
         if (!vaultCategory?.movieKeys) return [];
         return vaultCategory.movieKeys
             .map((key: string) => movies[key])
-            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !hiddenMovieSet.has(m.key))
+            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted)
             .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies, categories.vault]);
 
@@ -237,19 +229,19 @@ const App: React.FC = () => {
 
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted && !hiddenMovieSet.has(m.key))
+            .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted)
             .sort((a: Movie, b: Movie) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
     const topTenMovies = useMemo(() => {
-        return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster && !hiddenMovieSet.has(m.key))
+        return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
             .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, viewCounts]);
 
     const premierMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && m.isForSale && !hiddenMovieSet.has(m.key))
+            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && m.isForSale)
             .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies]);
 
@@ -274,7 +266,7 @@ const App: React.FC = () => {
 
         // Check regular movies first — show even if no start time set
         const movieResult = (Object.values(movies) as Movie[])
-            .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted && !hiddenMovieSet.has(m.key))
+            .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted)
             .filter(m => {
                 if (allPartyStates[m.key]?.status === 'ended') return false;
                 if (!m.watchPartyStartTime) return false; // no start time = don't show banner
@@ -377,7 +369,7 @@ const App: React.FC = () => {
 
         // 3. Filter movies by metadata OR category match
         return (Object.values(movies) as Movie[]).filter((movie) =>
-            movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) && !hiddenMovieSet.has(movie.key) &&
+            movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) &&
             (
                 expandedQueries.some(q => (movie.title || '').toLowerCase().includes(q)) ||
                 expandedQueries.some(q => (movie.director || '').toLowerCase().includes(q)) ||
@@ -431,8 +423,11 @@ const App: React.FC = () => {
         setIsMobileSearchOpen(true);
     };
 
+    // Debounced search — avoids filtering on every keystroke
+    const searchTimeout = React.useRef<ReturnType<typeof setTimeout>>();
     const onSearch = useCallback((query: string) => {
-        setSearchQuery(query);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => setSearchQuery(query), 200);
     }, []);
 
     useEffect(() => {
@@ -442,8 +437,15 @@ const App: React.FC = () => {
         }
     }, [heroMovies.length]);
 
+    const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize, { passive: true });
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const mainPaddingTop = useMemo(() => {
-        const isMobile = window.innerWidth < 768;
+        const isMobile = windowWidth < 768;
         // Only the festival banner is tall on mobile — watch party banner is always slim 48px
         const isFestivalBanner = activeBannerType === 'GENERAL_FESTIVAL';
         const bannerHeight = activeBannerType !== 'NONE'
@@ -583,17 +585,14 @@ const App: React.FC = () => {
             />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: mainPaddingTop }}>
-                <ErrorBoundary section="Hero">
                 {currentLiveHeroConfig ? (
                     <FestivalHero config={currentLiveHeroConfig} />
                 ) : (
                     heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}
-                </ErrorBoundary>
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
                     <div className="-mt-6 md:-mt-10 lg:-mt-14 space-y-12 md:y-16 relative z-20">
-                        <ErrorBoundary section="Content">
                         {searchQuery ? (
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
@@ -617,7 +616,6 @@ const App: React.FC = () => {
                                     onToggleLike={toggleLikeMovie} 
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
-                                    rowIndex={0}
                                 />
                             )}
 
@@ -638,7 +636,6 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
                                     showRankings={true}
-                                    rowIndex={1}
                                 />
                             )}
 
@@ -664,7 +661,6 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
                                     categoryKey="premier"
-                                    rowIndex={2}
                                 />
                             )}
 
@@ -680,17 +676,17 @@ const App: React.FC = () => {
                                 />
                             )}
 
-                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" rowIndex={3} />}
-                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" rowIndex={4} />}
+                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
+                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
                             
-                            {Object.entries(categories).map(([key, category], categoryIndex) => {
+                            {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial', 'vault'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
                                 const categoryMovies = typedCategory.movieKeys
                                     .map((movieKey: string) => movies[movieKey])
-                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m) && !hiddenMovieSet.has(m.key))
+                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m))
                                     .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
                                 if (categoryMovies.length === 0) return null;
@@ -709,13 +705,11 @@ const App: React.FC = () => {
                                         onToggleWatchlist={toggleWatchlist} 
                                         onSupportMovie={() => {}} 
                                         categoryKey={key}
-                                        rowIndex={5 + categoryIndex}
                                     />
                                 );
                             })}
                           </>
                         )}
-                        </ErrorBoundary>
                     </div>
                 </div>
             </main>
@@ -735,9 +729,9 @@ const App: React.FC = () => {
                 />
             )}
 
-            {detailsMovie && <ErrorBoundary section="MovieDetails" silent><MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} /></ErrorBoundary>}
+            {detailsMovie && <MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} />}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-            {isMobileSearchOpen && <ErrorBoundary section="Search" silent><SearchOverlay searchQuery={searchQuery} onSearch={onSearch} onClose={() => setIsMobileSearchOpen(false)} results={searchResults} onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }} /></ErrorBoundary>}
+            {isMobileSearchOpen && <SearchOverlay searchQuery={searchQuery} onSearch={onSearch} onClose={() => setIsMobileSearchOpen(false)} results={searchResults} onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }} />}
         </div>
     );
 };

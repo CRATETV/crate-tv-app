@@ -47,6 +47,7 @@ const emptyMovie: Movie = {
     watchPartyPrice: 5.00,
     isForSale: false,
     isFestival: false,
+    viewerNotice: '',
     salePrice: 5.00,
     isLiveStream: false,
     liveStreamEmbed: '',
@@ -766,26 +767,34 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         </label>
                                     </div>
 
-                                    {/* Festival Film Toggle */}
+                                    {/* ── FESTIVAL FILM TOGGLE ───────────────────────────────────────────────────
+                                        Turning this on:
+                                        · Marks the film as isFestival = true
+                                        · Sets salePrice $5 (single VOD) and watchPartyPrice $10 (block)
+                                        · Disables the VOD Paywall toggle — no double payment possible
+                                        · Catalog shows "Festival Screening" button instead of rental
+                                    ────────────────────────────────────────────────────────────────────────── */}
                                     <div className="flex items-center justify-between p-4 bg-amber-900/10 rounded-2xl border border-amber-500/20">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black uppercase text-amber-400">🎬 Festival Film (PWFF)</p>
                                             <p className="text-[9px] text-gray-500 uppercase">
-                                                {(formData as any).isFestival
-                                                    ? '$5 single VOD · $10 block — pricing enforced automatically. VOD Paywall disabled.'
+                                                {formData.isFestival
+                                                    ? '$5 single VOD · $10 block — enforced server-side. VOD Paywall disabled.'
                                                     : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}
                                             </p>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={!!(formData as any).isFestival}
+                                                name="isFestival"
+                                                checked={!!formData.isFestival}
                                                 onChange={e => {
-                                                    handleChange({ target: { name: 'isFestival', type: 'checkbox', checked: e.target.checked } } as any);
+                                                    handleChange(e);
                                                     if (e.target.checked) {
+                                                        // Disable VOD paywall — festival films use their own pricing
                                                         handleChange({ target: { name: 'isForSale', type: 'checkbox', checked: false } } as any);
-                                                        handleChange({ target: { name: 'salePrice', type: 'number', value: '5.00' } } as any);
-                                                        handleChange({ target: { name: 'watchPartyPrice', type: 'number', value: '10.00' } } as any);
+                                                        handleChange({ target: { name: 'salePrice', type: 'number', value: '5' } } as any);
+                                                        handleChange({ target: { name: 'watchPartyPrice', type: 'number', value: '10' } } as any);
                                                         handleChange({ target: { name: 'isWatchPartyPaid', type: 'checkbox', checked: true } } as any);
                                                     }
                                                 }}
@@ -795,8 +804,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         </label>
                                     </div>
 
+                                    {/* Viewer Notice */}
+                                    <div>
+                                        <label className="text-[9px] font-black uppercase text-gray-500 tracking-widest block mb-2">⚠ Viewer Notice <span className="text-gray-700 normal-case font-normal">(optional)</span></label>
+                                        <textarea
+                                            name="viewerNotice"
+                                            value={formData.viewerNotice || ''}
+                                            onChange={handleChange}
+                                            rows={2}
+                                            placeholder="e.g. This film will not be available for virtual streaming."
+                                            className="form-input bg-black/40 border-amber-500/20 text-amber-200 placeholder:text-amber-900/50 text-xs"
+                                        />
+                                    </div>
+
                                     {/* VOD Paywall — hidden for festival films */}
-                                    {!(formData as any).isFestival && (
+                                    {!formData.isFestival && (
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">

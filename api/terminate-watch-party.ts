@@ -55,17 +55,24 @@ export async function POST(request: Request) {
       [`${movieKey}.isWatchPartyEnabled`]: false
     }).catch(() => {});
 
-    // Catalog release + festivalEndTime for auto-cleanup
+    // Release films to catalog + stamp festivalEndTime for 7-day cleanup cron
     try {
       const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
       let blockMovieKeys: string[] = [];
       let releaseAfterScreening = true;
       for (const dayDoc of daysSnap.docs) {
         const day = dayDoc.data();
-        const matched = (day.blocks || []).find((b: any) => b.id === movieKey);
+        const blocks = day.blocks || [];
+        const matched = blocks.find((b: any) => b.id === movieKey);
         if (matched) {
           blockMovieKeys = matched.movieKeys || [];
-          releaseAfterScreening = matched.releaseAfterScreening !== false;
+          releaseAfterScreening = !!matched.releaseAfterScreening;
+          // Stamp festivalEndTime for auto-hide cron
+          const idx = blocks.findIndex((b: any) => b.id === movieKey);
+          if (idx >= 0) {
+            blocks[idx] = { ...blocks[idx], festivalEndTime: new Date().toISOString() };
+            await dayDoc.ref.update({ blocks });
+          }
           break;
         }
       }
@@ -73,19 +80,11 @@ export async function POST(request: Request) {
         const updates: Record<string, any> = {};
         for (const key of blockMovieKeys) updates[`${key}.isUnlisted`] = false;
         await db.collection('data').doc('movies').update(updates);
+        console.log(`[Festival] Released ${blockMovieKeys.length} films to catalog`);
       }
-      // Store festivalEndTime so cron can auto-hide films after 7 days
-      for (const dayDoc of daysSnap.docs) {
-        const day = dayDoc.data();
-        const blocks = day.blocks || [];
-        const idx = blocks.findIndex((b: any) => b.id === movieKey);
-        if (idx >= 0) {
-          blocks[idx] = { ...blocks[idx], festivalEndTime: new Date().toISOString() };
-          await dayDoc.ref.update({ blocks });
-          break;
-        }
-      }
-    } catch (e) { console.error('[Festival Cleanup] Error:', e); }
+    } catch (e) {
+      console.error('[Festival] Catalog release error:', e);
+    }
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
 

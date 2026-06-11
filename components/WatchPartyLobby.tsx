@@ -15,11 +15,11 @@ const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onParty
 
 interface WatchPartyLobbyProps {
     movie: Movie;
-    movieKey?: string;
-    blockPrice?: number;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
-    user: { name?: string; email: string | null; avatar?: string } | null;
+    user: { name?: string; email: string | null; avatar?: string     movieKey?: string;    // URL key — may be a block.id
+    blockPrice?: number;  // block price if this is a festival block
+} | null;
     hasAccess?: boolean;
     onBuyTicket?: () => void;
     onClose?: () => void;
@@ -128,6 +128,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             if (diff <= 0) {
                 setCountdown(null);
                 if (diff < -1000) {
+                    // Trigger auto-start if party isn't live yet
                     const keyToStart = partyKey || movie.key;
                     if (!partyState || partyState.status !== 'live') {
                         fetch('/api/auto-start-watch-party', {

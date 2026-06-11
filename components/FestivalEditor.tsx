@@ -294,7 +294,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         {/* ── VIRTUAL SCREENING WINDOW ── */}
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                             <label className="text-[8px] text-amber-500 font-black tracking-widest uppercase">Virtual Screening Window</label>
-                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 1 week automatically.</p>
+                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 2 weeks automatically.</p>
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-1">
                                     <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
@@ -307,6 +307,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                 </div>
                                 {block.screeningStartTime && (
                                     <p className="text-[8px] text-gray-600 pb-2">
+                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                )}
+                                <label className="flex items-center gap-2 cursor-pointer mt-1">
+                                    <input type="checkbox" checked={!!block.releaseAfterScreening}
+                                        onChange={e => handleBlockChange(dayIndex, blockIndex, 'releaseAfterScreening', e.target.checked)}
+                                        className="w-3 h-3 accent-amber-500" />
+                                    <span className="text-[8px] text-gray-600">Release films to catalog after screening</span>
+                                </label>
+                                {false && <p className="text-[8px] text-gray-600 pb-2">
                                         Closes: {new Date(new Date(block.screeningStartTime).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </p>
                                 )}

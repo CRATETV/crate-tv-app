@@ -26,17 +26,18 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    let scheduledTime: number | null = null;
-
+    // Look up scheduled time — check individual movies first, then festival blocks
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
     const movie = movies[movieKey];
+    let scheduledTime: number;
 
     if (movie) {
       if (!movie.isWatchPartyEnabled) return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
       if (!movie.watchPartyStartTime) return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
       scheduledTime = new Date(movie.watchPartyStartTime).getTime();
     } else {
+      // movieKey is a festival block.id
       const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
       let blockData: any = null;
       for (const dayDoc of daysSnap.docs) {
@@ -44,15 +45,15 @@ export async function POST(request: Request) {
         if (found) { blockData = found; break; }
       }
       if (!blockData) return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
-      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening start time for this block.' }), { status: 400 });
+      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening time set for this block.' }), { status: 400 });
       scheduledTime = new Date(blockData.screeningStartTime).getTime();
     }
 
     // Check if we're within the valid auto-start window
-    const scheduledTimeNum = scheduledTime!;
+    // Allow starting up to 5 minutes before or 30 minutes after the scheduled time
     const now = Date.now();
-    const fiveMinutesBefore = scheduledTimeNum - (5 * 60 * 1000);
-    const thirtyMinutesAfter = scheduledTimeNum + (30 * 60 * 1000);
+    const fiveMinutesBefore = scheduledTime - (5 * 60 * 1000);
+    const thirtyMinutesAfter = scheduledTime + (30 * 60 * 1000);
 
     if (now < fiveMinutesBefore) {
       return new Response(JSON.stringify({ 
@@ -105,11 +106,11 @@ export async function POST(request: Request) {
       status: 'live',
       lastStartedAt: new Date().toISOString(),
       actualStartTime: FieldValue.serverTimestamp(),
-      filmStartTime: FieldValue.serverTimestamp(),
       isPlaying: true,
-      activeMovieIndex: 0,
-      intermissionUntil: null,
       currentTime: 0,
+      activeMovieIndex: 0,
+      filmStartTime: FieldValue.serverTimestamp(),
+      intermissionUntil: null,
       isQALive: false,
       lastUpdated: FieldValue.serverTimestamp(),
       backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase(),

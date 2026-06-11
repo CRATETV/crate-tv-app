@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+const toCdnUrl = (url?: string|null) => url ? url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net') : '';
 import { createPortal } from 'react-dom';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -69,7 +70,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     !!(movie.autoReleaseDate && new Date(movie.autoReleaseDate) > now && (movie.isForSale || movie.isWatchPartyPaid)),
   [movie.autoReleaseDate, movie.isForSale, movie.isWatchPartyPaid]);
 
-  const videoSrc = !isActuallyComingSoon ? movie.fullMovie : '';
+  const videoSrc = !isActuallyComingSoon ? toCdnUrl(movie.fullMovie) : '';
 
   const cleanSynopsis = (html: string) =>
     new DOMParser().parseFromString(html, 'text/html').body.textContent || '';

@@ -218,16 +218,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
 
+    // Detect if this is a festival block (movieKey is a block.id)
     const parentBlock = useMemo(() =>
         festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
         [festivalData, movieKey]
     );
 
-    const handlePaymentSuccess = () => {
-        if (parentBlock) { unlockFestivalBlock(parentBlock.id); }
-        else { parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey); }
+    // Unified unlock: block uses unlockFestivalBlock, individual uses unlockWatchParty
+    const handlePaymentSuccess = useCallback(() => {
+        if (parentBlock) unlockFestivalBlock(parentBlock.id);
+        else unlockWatchParty(movieKey);
         setShowPaywall(false);
-    };
+    }, [parentBlock, movieKey, unlockFestivalBlock, unlockWatchParty]);
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
@@ -286,7 +288,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-            parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
+            unlockWatchParty(movieKey);
             setIsBackstageVerified(true);
             setBackstageError(false);
             setBackstageInput('');
@@ -494,10 +496,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // SECURITY: if block price is not set, default to PAID (not free)
             // Admin must explicitly set price to 0 to make a block free
             // This prevents accidental free access from missing price config
-            if (parentBlock.price === 0) return true;
+            if (parentBlock.price === 0) return true; // explicitly free block
+            // Honour existing rental so viewers aren't charged twice
             const exp = rentals[movieKey];
             if (exp && new Date(exp) > new Date()) return true;
-            return false;
+            return false; // paid block — not unlocked
         }
 
         if (!movie.isWatchPartyPaid) return true;
@@ -612,10 +615,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 {showPaywall && (
                     <SquarePaymentModal 
                         movie={movie} 
-                        paymentType={parentBlock ? 'block' : 'watchPartyTicket'}
+                        paymentType={parentBlock ? "block" : "watchPartyTicket"}
                         block={parentBlock || undefined}
                         priceOverride={parentBlock?.price}
-                        onClose={() => setShowPaywall(false)} 
+                        onClose={() => setShowPaywall(false)}
                         onPaymentSuccess={handlePaymentSuccess} 
                     />
                 )}
@@ -754,7 +757,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         const key = window.prompt("Enter Backstage Key:");
                                         if (key && partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                             setIsBackstageVerified(true);
-                                            parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
+                                            unlockWatchParty(movieKey);
                                         } else if (key) {
                                             toast.error("Invalid access key.");
                                         }
@@ -891,7 +894,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             onBackstageVerify={(key) => {
                                 if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                     setIsBackstageVerified(true);
-                                    parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
+                                    unlockWatchParty(movieKey);
                                 } else {
                                     toast.error("Invalid access key.");
                                 }
@@ -910,7 +913,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         onBackstageVerify={(key) => {
                             if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                 setIsBackstageVerified(true);
-                                parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
+                                unlockWatchParty(movieKey);
                             } else {
                                 toast.error("Invalid access key.");
                             }
@@ -922,10 +925,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             {showPaywall && (
                 <SquarePaymentModal 
                     movie={movie} 
-                    paymentType={parentBlock ? 'block' : 'watchPartyTicket'}
+                    paymentType={parentBlock ? "block" : "watchPartyTicket"}
                     block={parentBlock || undefined}
                     priceOverride={parentBlock?.price}
-                    onClose={() => setShowPaywall(false)} 
+                    onClose={() => setShowPaywall(false)}
                     onPaymentSuccess={handlePaymentSuccess} 
                 />
             )}

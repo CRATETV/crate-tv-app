@@ -1,4 +1,5 @@
 
+const toCdnUrl = (url?: string|null) => url ? url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net') : '';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -71,7 +72,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         {currentMovie.trailer && (
             <video
                 key={`video-${currentMovie.key}`}
-                src={currentMovie.trailer}
+                src={toCdnUrl(currentMovie.trailer)}
                 autoPlay
                 muted={isMuted}
                 loop

@@ -110,8 +110,7 @@ export async function POST(request: Request) {
                 const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
                 let blockPrice = 10.00;
                 for (const dayDoc of daysSnap.docs) {
-                    const day = dayDoc.data();
-                    const found = day.blocks?.find((b: any) => b.id === itemId);
+                    const found = dayDoc.data().blocks?.find((b: any) => b.id === itemId);
                     if (found && typeof found.price === 'number') { blockPrice = found.price; break; }
                 }
                 amountInCents = Math.round(blockPrice * 100);

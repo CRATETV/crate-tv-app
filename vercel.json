@@ -1,5 +1,6 @@
 {
   "crons": [
+    { "path": "/api/cron-festival-cleanup", "schedule": "0 0 * * *" },
     {
       "path": "/api/check-anniversaries",
       "schedule": "0 10 * * *"
@@ -11,10 +12,6 @@
     {
       "path": "/api/cron-monthly-spotlight",
       "schedule": "0 14 * * 1"
-    },
-    {
-      "path": "/api/cron-festival-cleanup",
-      "schedule": "0 0 * * *"
     }
   ],
   "rewrites": [

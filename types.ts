@@ -193,8 +193,8 @@ export interface Movie {
   festivalFilmmakerPhoto?: string; // headshot URL
   festivalQuote?: string;          // pull quote for the hype section
   festivalAwards?: string;         // e.g. "Best Short — SXSW 2024"
-  isFestival?: boolean;            // marks film as a festival film — enables festival pricing ($5 VOD / $10 block)
-  viewerNotice?: string;           // admin notice shown on card + detail view
+  isFestival?: boolean;            // PWFF festival film — festival pricing, no VOD conflict
+  viewerNotice?: string;           // admin notice shown on card and detail view
 }
 
 export interface Actor {

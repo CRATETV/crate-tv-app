@@ -245,18 +245,30 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                                     )}
                                                 </div>
                                                 {!isMovieUnlocked ? (
+                                                    // Festival films: route to watch party (handles $10 block or $5 individual)
+                                                    // Non-festival films: standard VOD rental
                                                     <button 
-                                                        onClick={() => handlePurchaseClick('movie', movie)}
+                                                        onClick={() => movie.isFestival
+                                                            ? navigateToParty(movie.key)
+                                                            : handlePurchaseClick('movie', movie)
+                                                        }
                                                         className="w-full bg-white/5 hover:bg-red-600 hover:text-white text-gray-500 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-white/5 transition-all shadow-lg"
                                                     >
-                                                        Rent Master $5
+                                                        {movie.isFestival ? 'Get Ticket' : 'Rent Film $5'}
                                                     </button>
-                                                ) : isMovieLive && (
+                                                ) : isMovieLive ? (
                                                     <button 
                                                         onClick={() => navigateToParty(movie.key)}
                                                         className="w-full bg-gradient-to-r from-red-600 to-purple-700 hover:from-red-500 hover:to-purple-600 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-xl transition-all animate-pulse"
                                                     >
-                                                        Live Party Node
+                                                        Join Screening
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => navigateToParty(movie.key)}
+                                                        className="w-full bg-white/5 hover:bg-white/10 text-gray-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-white/5 transition-all"
+                                                    >
+                                                        Watch Now
                                                     </button>
                                                 )}
                                             </div>
