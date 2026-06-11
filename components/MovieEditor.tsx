@@ -1,6 +1,6 @@
 
 import { toast } from './Toast';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
 import AdminFilmDeepDive from './AdminFilmDeepDive';
@@ -144,8 +144,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     useEffect(() => {
         if (selectedMovieKey) {
             const movieData = allMovies[selectedMovieKey];
-            if (movieData) setFormData({ ...movieData });
+            if (movieData) {
+                setFormData({ ...movieData });
+                lastSavedDataRef.current = JSON.stringify(movieData);
+            }
             else if (selectedMovieKey.startsWith('movie_')) setFormData({ ...emptyMovie, key: selectedMovieKey });
+            setRemoteUpdateDetected(false);
             setProbeResult(null);
         } else setFormData(null);
     }, [selectedMovieKey, allMovies]);
@@ -357,6 +361,20 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             )}
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Push Global Manifest'}</button>
+                            {remoteUpdateDetected && (
+                                <button
+                                    onClick={() => {
+                                        if (selectedMovieKey && movies[selectedMovieKey]) {
+                                            setFormData({ ...movies[selectedMovieKey] });
+                                            lastSavedDataRef.current = JSON.stringify(movies[selectedMovieKey]);
+                                            setRemoteUpdateDetected(false);
+                                        }
+                                    }}
+                                    className="bg-amber-500 text-black px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-amber-400 transition-all animate-pulse"
+                                >
+                                    ⚠ Updated by another admin — click to reload
+                                </button>
+                            )}
                         </div>
                     </div>
 

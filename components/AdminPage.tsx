@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import MovieEditor from './MovieEditor';
@@ -228,6 +229,51 @@ const AdminPage: React.FC = () => {
             setIsLoading(false);
         }
     }, []);
+
+    // ── REAL-TIME ADMIN SYNC ─────────────────────────────────────────────────
+    // Listen for changes made by other admins. When any admin saves movies,
+    // settings, or festival data, this updates all open admin panels instantly.
+    const syncUnsubsRef = useRef<(() => void)[]>([]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const db = getDbInstance();
+        if (!db) return;
+
+        const unsubs: (() => void)[] = [];
+
+        // Movies — most critical for multi-admin sync
+        unsubs.push(
+            db.collection('data').doc('movies').onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data() || {};
+                    setMovies(data as Record<string, Movie>);
+                }
+            }, () => {}) // silent error — non-fatal
+        );
+
+        // Main data (settings, categories, festival config)
+        unsubs.push(
+            db.collection('data').doc('main').onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data() || {};
+                    if (data.categories) setCategories(data.categories);
+                    if (data.festivalData) setFestivalData(data.festivalData);
+                    if (data.festivalConfig) setFestivalConfig(data.festivalConfig);
+                    if (data.settings?.crateFestConfig) setCrateFestConfig(data.settings.crateFestConfig);
+                    if (data.settings?.pwffProgramVisible !== undefined) setPwffVisible(!!data.settings.pwffProgramVisible);
+                    if (data.settings?.pwffFestivalDate) setPwffDate(data.settings.pwffFestivalDate);
+                    if (data.settings?.pwffFestivalName) setPwffName(data.settings.pwffFestivalName);
+                    if (data.settings?.pwffTeaserDescription) setPwffDescription(data.settings.pwffTeaserDescription);
+                    if (data.settings?.pwffTeaserTagline) setPwffTagline(data.settings.pwffTeaserTagline);
+                    if (data.settings?.pwffUrlYear) setPwffYear(data.settings.pwffUrlYear);
+                }
+            }, () => {})
+        );
+
+        syncUnsubsRef.current = unsubs;
+        return () => unsubs.forEach(u => u());
+    }, [isAuthenticated]);
 
     const handleLogin = async (e?: React.FormEvent | null) => {
         e?.preventDefault();
