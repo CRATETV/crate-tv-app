@@ -228,10 +228,12 @@ export interface FilmBlock {
   time: string;
   movieKeys: string[];
   price?: number;
-  screeningStartTime?: string;  // When this block goes live for virtual viewers
-  screeningEndTime?: string;    // When virtual access closes
+  screeningStartTime?: string;     // When this block goes live for virtual viewers
+  screeningEndTime?: string;       // When virtual access closes
   watchPartyStartTime?: string;
   isWatchPartyEnabled?: boolean;
+  releaseAfterScreening?: boolean; // If true, films go to catalog after the watch party ends
+  festivalEndTime?: string;        // Stamped when watch party ends — used by cleanup cron
 }
 
 export interface FestivalDay {
