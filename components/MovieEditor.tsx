@@ -113,6 +113,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<any>(null);
+    const [remoteUpdateDetected, setRemoteUpdateDetected] = useState(false);
+    const lastSavedDataRef = useRef<string>('');
     const [deepDiveMovie, setDeepDiveMovie] = useState<Movie | null>(null);
 
     useEffect(() => {
@@ -364,9 +366,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             {remoteUpdateDetected && (
                                 <button
                                     onClick={() => {
-                                        if (selectedMovieKey && movies[selectedMovieKey]) {
-                                            setFormData({ ...movies[selectedMovieKey] });
-                                            lastSavedDataRef.current = JSON.stringify(movies[selectedMovieKey]);
+                                        if (selectedMovieKey && allMovies[selectedMovieKey]) {
+                                            setFormData({ ...allMovies[selectedMovieKey] });
+                                            lastSavedDataRef.current = JSON.stringify(allMovies[selectedMovieKey]);
                                             setRemoteUpdateDetected(false);
                                         }
                                     }}
