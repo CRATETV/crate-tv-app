@@ -316,10 +316,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                         className="w-3 h-3 accent-amber-500" />
                                     <span className="text-[8px] text-gray-600">Release films to catalog after screening</span>
                                 </label>
-                                {false && <p className="text-[8px] text-gray-600 pb-2">
-                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </p>
-                                )}
+                                
                             </div>
                         </div>
                    </div>

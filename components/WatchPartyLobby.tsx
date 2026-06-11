@@ -17,9 +17,9 @@ interface WatchPartyLobbyProps {
     movie: Movie;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
-    user: { name?: string; email: string | null; avatar?: string     movieKey?: string;    // URL key — may be a block.id
+    user: { name?: string; email: string | null; avatar?: string; } | null;
+    movieKey?: string;    // URL key — may be a block.id
     blockPrice?: number;  // block price if this is a festival block
-} | null;
     hasAccess?: boolean;
     onBuyTicket?: () => void;
     onClose?: () => void;
