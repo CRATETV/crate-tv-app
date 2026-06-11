@@ -15,6 +15,8 @@ const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onParty
 
 interface WatchPartyLobbyProps {
     movie: Movie;
+    movieKey?: string;
+    blockPrice?: number;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
     user: { name?: string; email: string | null; avatar?: string } | null;
@@ -30,7 +32,7 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice }) => {
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
@@ -125,8 +127,15 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
             if (diff <= 0) {
                 setCountdown(null);
-                // Final 10 second countdown already handled, transition to party
                 if (diff < -1000) {
+                    const keyToStart = partyKey || movie.key;
+                    if (!partyState || partyState.status !== 'live') {
+                        fetch('/api/auto-start-watch-party', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ movieKey: keyToStart })
+                        }).catch(() => {});
+                    }
                     onPartyStart();
                 }
                 return;
@@ -178,7 +187,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                 onClick={onBuyTicket}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}
+                                Unlock Admission // ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                             </button>
                         )}
                     </div>
@@ -303,7 +312,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             onClick={onBuyTicket}
                             className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-95 shadow-2xl"
                         >
-                            Unlock Admission — ${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}
+                            Unlock Admission — ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                         </button>
                     )}
 
@@ -454,7 +463,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                     onClick={onBuyTicket}
                                     className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                 >
-                                    Unlock Admission // ${movie.watchPartyPrice?.toFixed(2) ?? '50.00'}
+                                    Unlock Admission // ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                                 </button>
                                 <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
                             </div>

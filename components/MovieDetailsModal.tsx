@@ -3,6 +3,7 @@ import { Movie, Actor, Category, Episode } from '../types';
 import Countdown from './Countdown';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 import SquarePaymentModal from './SquarePaymentModal';
 
 interface MovieDetailsModalProps {
@@ -46,7 +47,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   onSupportMovie,
   onPlayMovie,
 }) => {
-  const { watchlist, toggleWatchlist, rentals, purchaseMovie } = useAuth();
+  const { watchlist, toggleWatchlist, rentals, purchaseMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
+  const { festivalData } = useFestival();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
@@ -59,11 +61,28 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return new Date(expiration) > new Date();
   }, [rentals, movie.key]);
 
-  const needsPurchase = movie.isForSale && !isRented;
+  const isFestivalFilm = !!movie.isFestival;
+
+  const parentBlock = useMemo(() =>
+    festivalData?.flatMap((d: any) => d.blocks || []).find((b: any) =>
+      (b.movieKeys || []).includes(movie.key)
+    ) || null,
+    [festivalData, movie.key]
+  );
+
+  const hasFestivalAccess = useMemo(() => {
+    if (isRented) return true;
+    if (hasFestivalAllAccess) return true;
+    if (parentBlock && unlockedFestivalBlockIds?.has(parentBlock.id)) return true;
+    return false;
+  }, [isRented, hasFestivalAllAccess, parentBlock, unlockedFestivalBlockIds]);
+
+  const needsPurchase = movie.isForSale && !isRented && !isFestivalFilm;
+  const needsFestivalTicket = isFestivalFilm && !hasFestivalAccess;
 
   const canCollectDonations = useMemo(() => {
-    return movie.isSupportEnabled !== false && !movie.isForSale;
-  }, [movie]);
+    return movie.isSupportEnabled !== false && !movie.isForSale && !isFestivalFilm;
+  }, [movie, isFestivalFilm]);
 
   useEffect(() => {
     if (released) return;
@@ -101,13 +120,31 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     <div className="flex flex-wrap items-center gap-3">
         {released ? (
             <>
-                {!movie.isSeries && (
+                {!movie.isSeries && !needsFestivalTicket && (
                     <button 
                         onClick={() => handlePlayButtonClick()} 
                         className={`flex items-center justify-center px-10 py-3.5 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-full hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs`}
                     >
-                        {needsPurchase ? 'Premium Rental' : 'Play Now'}
+                        {needsPurchase ? 'Rent Film' : 'Play Now'}
                     </button>
+                )}
+                {needsFestivalTicket && (
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            onClick={() => setShowPurchaseModal(true)}
+                            className="flex items-center justify-center px-8 py-3.5 bg-indigo-600 text-white font-black rounded-full hover:bg-indigo-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs"
+                        >
+                            Rent Film — $5
+                        </button>
+                        {parentBlock && (
+                            <button
+                                onClick={() => { window.history.pushState({}, '', `/watchparty/${parentBlock.id}`); window.dispatchEvent(new Event('pushstate')); }}
+                                className="flex items-center justify-center px-8 py-3.5 bg-red-600 text-white font-black rounded-full hover:bg-red-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs"
+                            >
+                                🎬 Full Block — $10
+                            </button>
+                        )}
+                    </div>
                 )}
                 {canCollectDonations && (
                     <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-10 py-3.5 bg-emerald-600 text-white font-black rounded-full hover:bg-emerald-500 transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] uppercase tracking-widest text-xs">

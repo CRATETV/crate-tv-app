@@ -212,11 +212,22 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
+
+    const parentBlock = useMemo(() =>
+        festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
+        [festivalData, movieKey]
+    );
+
+    const handlePaymentSuccess = () => {
+        if (parentBlock) { unlockFestivalBlock(parentBlock.id); }
+        else { parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey); }
+        setShowPaywall(false);
+    };
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
@@ -275,7 +286,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-            unlockWatchParty(movieKey);
+            parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
             setIsBackstageVerified(true);
             setBackstageError(false);
             setBackstageInput('');
@@ -483,8 +494,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // SECURITY: if block price is not set, default to PAID (not free)
             // Admin must explicitly set price to 0 to make a block free
             // This prevents accidental free access from missing price config
-            if (parentBlock.price === 0) return true; // explicitly free block
-            return false; // paid block — not unlocked
+            if (parentBlock.price === 0) return true;
+            const exp = rentals[movieKey];
+            if (exp && new Date(exp) > new Date()) return true;
+            return false;
         }
 
         if (!movie.isWatchPartyPaid) return true;
@@ -576,6 +589,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             <>
                 <WatchPartyLobby 
                     movie={movie}
+                    movieKey={movieKey}
+                    blockPrice={parentBlock?.price}
                     partyState={partyState}
                     onPartyStart={() => setShowLobby(false)}
                     user={user}
@@ -597,9 +612,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 {showPaywall && (
                     <SquarePaymentModal 
                         movie={movie} 
-                        paymentType="watchPartyTicket" 
+                        paymentType={parentBlock ? 'block' : 'watchPartyTicket'}
+                        block={parentBlock || undefined}
+                        priceOverride={parentBlock?.price}
                         onClose={() => setShowPaywall(false)} 
-                        onPaymentSuccess={() => { unlockWatchParty(movieKey); setShowPaywall(false); }} 
+                        onPaymentSuccess={handlePaymentSuccess} 
                     />
                 )}
             </>
@@ -737,7 +754,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         const key = window.prompt("Enter Backstage Key:");
                                         if (key && partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                             setIsBackstageVerified(true);
-                                            unlockWatchParty(movieKey);
+                                            parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
                                         } else if (key) {
                                             toast.error("Invalid access key.");
                                         }
@@ -874,7 +891,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             onBackstageVerify={(key) => {
                                 if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                     setIsBackstageVerified(true);
-                                    unlockWatchParty(movieKey);
+                                    parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
                                 } else {
                                     toast.error("Invalid access key.");
                                 }
@@ -893,7 +910,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         onBackstageVerify={(key) => {
                             if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                 setIsBackstageVerified(true);
-                                unlockWatchParty(movieKey);
+                                parentBlock ? unlockFestivalBlock(parentBlock.id) : unlockWatchParty(movieKey);
                             } else {
                                 toast.error("Invalid access key.");
                             }
@@ -905,9 +922,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             {showPaywall && (
                 <SquarePaymentModal 
                     movie={movie} 
-                    paymentType="watchPartyTicket" 
+                    paymentType={parentBlock ? 'block' : 'watchPartyTicket'}
+                    block={parentBlock || undefined}
+                    priceOverride={parentBlock?.price}
                     onClose={() => setShowPaywall(false)} 
-                    onPaymentSuccess={() => { unlockWatchParty(movieKey); setShowPaywall(false); }} 
+                    onPaymentSuccess={handlePaymentSuccess} 
                 />
             )}
         </div>

@@ -10,35 +10,10 @@ import { useRokuConfig } from '../hooks/useRokuConfig';
 import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 
-
-// Inline CDN helper — swaps S3 origin for CloudFront edge
-const toCdnUrl = (url?: string | null): string => {
-  if (!url) return '';
-  return url.replace(
-    'https://cratetelevision.s3.us-east-1.amazonaws.com',
-    'https://d3jhtrl1gnrh4b.cloudfront.net'
-  );
-};
-
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => {
-  // Load order: CloudFront (fastest) → proxy (fallback) → direct URL (last resort)
-  const cdnPoster = toCdnUrl(movie.poster);
-  const [imgSrc, setImgSrc] = React.useState(cdnPoster || '');
-  const [fallbackStep, setFallbackStep] = React.useState(0);
-  const [loaded, setLoaded] = React.useState(false);
-
-  const handleError = () => {
-    if (fallbackStep === 0 && movie.poster) {
-      // Step 1: try proxy
-      setImgSrc(`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`);
-      setFallbackStep(1);
-    } else if (fallbackStep === 1 && movie.poster) {
-      // Step 2: try direct URL
-      setImgSrc(movie.poster);
-      setFallbackStep(2);
-    }
-    // Step 3: give up — show placeholder (no src update)
-  };
+  const [imgSrc, setImgSrc] = React.useState(
+    movie.poster ? `/api/proxy-image?url=${encodeURIComponent(movie.poster)}` : ''
+  );
 
   return (
   <div 
@@ -59,17 +34,17 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
             
             <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
-                {/* Skeleton shown while image loads */}
-                {!loaded && (
-                  <div className="absolute inset-0 bg-white/[0.06] animate-pulse" />
-                )}
                 <img
                   src={imgSrc}
                   alt={movie.title}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-                  loading={rank <= 3 ? 'eager' : 'lazy'}
-                  onLoad={() => setLoaded(true)}
-                  onError={handleError}
+                  className="w-full h-full object-cover"
+                  loading={rank <= 4 ? 'eager' : 'lazy'}
+                  fetchPriority={rank <= 2 ? 'high' : 'auto'}
+                  onError={() => {
+                    if (movie.poster && imgSrc !== movie.poster) {
+                      setImgSrc(movie.poster);
+                    }
+                  }}
                 />
             </div>
 

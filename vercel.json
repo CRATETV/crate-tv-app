@@ -11,6 +11,10 @@
     {
       "path": "/api/cron-monthly-spotlight",
       "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron-festival-cleanup",
+      "schedule": "0 0 * * *"
     }
   ],
   "rewrites": [
@@ -32,15 +36,6 @@
     }
   ],
   "headers": [
-    {
-      "source": "/api/proxy-image",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400, immutable"
-        }
-      ]
-    },
     {
       "source": "/(.*)",
       "headers": [

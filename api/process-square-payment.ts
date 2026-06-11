@@ -96,14 +96,28 @@ export async function POST(request: Request) {
             }
         } else {
             const movieData = movieDoc.data();
-            const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
+            const isFestivalFilm = !!movieData?.isFestival;
+            const rawPrice = paymentType === 'movie'
+                ? (isFestivalFilm ? 5.00 : (movieData?.salePrice || 5.00))
+                : (isFestivalFilm ? 10.00 : (movieData?.watchPartyPrice || 5.00));
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
         }
     }
     else if (paymentType === 'block') {
-        amountInCents = 1000; // Fixed $10 for blocks currently
-        note = `Unlock Block: ${blockTitle || itemId}`;
+        if (db) {
+            try {
+                const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+                let blockPrice = 10.00;
+                for (const dayDoc of daysSnap.docs) {
+                    const day = dayDoc.data();
+                    const found = day.blocks?.find((b: any) => b.id === itemId);
+                    if (found && typeof found.price === 'number') { blockPrice = found.price; break; }
+                }
+                amountInCents = Math.round(blockPrice * 100);
+            } catch { amountInCents = 1000; }
+        } else { amountInCents = 1000; }
+        note = `Festival Block Ticket: ${blockTitle || itemId}`;
     }
     else if (staticPriceMap[paymentType]) {
         amountInCents = staticPriceMap[paymentType];

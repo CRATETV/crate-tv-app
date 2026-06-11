@@ -55,6 +55,38 @@ export async function POST(request: Request) {
       [`${movieKey}.isWatchPartyEnabled`]: false
     }).catch(() => {});
 
+    // Catalog release + festivalEndTime for auto-cleanup
+    try {
+      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+      let blockMovieKeys: string[] = [];
+      let releaseAfterScreening = true;
+      for (const dayDoc of daysSnap.docs) {
+        const day = dayDoc.data();
+        const matched = (day.blocks || []).find((b: any) => b.id === movieKey);
+        if (matched) {
+          blockMovieKeys = matched.movieKeys || [];
+          releaseAfterScreening = matched.releaseAfterScreening !== false;
+          break;
+        }
+      }
+      if (releaseAfterScreening && blockMovieKeys.length > 0) {
+        const updates: Record<string, any> = {};
+        for (const key of blockMovieKeys) updates[`${key}.isUnlisted`] = false;
+        await db.collection('data').doc('movies').update(updates);
+      }
+      // Store festivalEndTime so cron can auto-hide films after 7 days
+      for (const dayDoc of daysSnap.docs) {
+        const day = dayDoc.data();
+        const blocks = day.blocks || [];
+        const idx = blocks.findIndex((b: any) => b.id === movieKey);
+        if (idx >= 0) {
+          blocks[idx] = { ...blocks[idx], festivalEndTime: new Date().toISOString() };
+          await dayDoc.ref.update({ blocks });
+          break;
+        }
+      }
+    } catch (e) { console.error('[Festival Cleanup] Error:', e); }
+
     return new Response(JSON.stringify({ success: true }), { status: 200 });
 
   } catch (error) {

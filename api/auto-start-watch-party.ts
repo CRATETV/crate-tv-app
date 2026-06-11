@@ -26,29 +26,33 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // Get the movie data to verify scheduled time
+    let scheduledTime: number | null = null;
+
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
     const movie = movies[movieKey];
 
-    if (!movie) {
-      return new Response(JSON.stringify({ error: 'Movie not found.' }), { status: 404 });
-    }
-
-    if (!movie.isWatchPartyEnabled) {
-      return new Response(JSON.stringify({ error: 'Watch party not enabled for this movie.' }), { status: 400 });
-    }
-
-    if (!movie.watchPartyStartTime) {
-      return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
+    if (movie) {
+      if (!movie.isWatchPartyEnabled) return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
+      if (!movie.watchPartyStartTime) return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
+      scheduledTime = new Date(movie.watchPartyStartTime).getTime();
+    } else {
+      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+      let blockData: any = null;
+      for (const dayDoc of daysSnap.docs) {
+        const found = (dayDoc.data().blocks || []).find((b: any) => b.id === movieKey);
+        if (found) { blockData = found; break; }
+      }
+      if (!blockData) return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
+      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening start time for this block.' }), { status: 400 });
+      scheduledTime = new Date(blockData.screeningStartTime).getTime();
     }
 
     // Check if we're within the valid auto-start window
-    // Allow starting up to 5 minutes before or 30 minutes after the scheduled time
-    const scheduledTime = new Date(movie.watchPartyStartTime).getTime();
+    const scheduledTimeNum = scheduledTime!;
     const now = Date.now();
-    const fiveMinutesBefore = scheduledTime - (5 * 60 * 1000);
-    const thirtyMinutesAfter = scheduledTime + (30 * 60 * 1000);
+    const fiveMinutesBefore = scheduledTimeNum - (5 * 60 * 1000);
+    const thirtyMinutesAfter = scheduledTimeNum + (30 * 60 * 1000);
 
     if (now < fiveMinutesBefore) {
       return new Response(JSON.stringify({ 
@@ -101,7 +105,10 @@ export async function POST(request: Request) {
       status: 'live',
       lastStartedAt: new Date().toISOString(),
       actualStartTime: FieldValue.serverTimestamp(),
+      filmStartTime: FieldValue.serverTimestamp(),
       isPlaying: true,
+      activeMovieIndex: 0,
+      intermissionUntil: null,
       currentTime: 0,
       isQALive: false,
       lastUpdated: FieldValue.serverTimestamp(),
