@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useFestival } from '../contexts/FestivalContext';
-import { getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import MovieEditor from './MovieEditor';
@@ -96,18 +95,14 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
-    // ── REAL-TIME DATA FROM FESTIVAL CONTEXT ─────────────────────────────────
-    // FestivalContext has working onSnapshot listeners — use its live data
-    // instead of AdminPage's own stale copy. This means ALL admins see the
-    // same data the moment any change is saved to Firestore.
-    const { 
-        movies: liveMovies, 
-        categories: liveCategories, 
-        festivalData: liveFestivalData, 
-        festivalConfig: liveFestivalConfig 
-    } = useFestival();
+    // ── LIVE DATA SYNC ────────────────────────────────────────────────────────
+    // FestivalContext has real-time Firestore listeners. Sync its data into
+    // AdminPage local state so all sub-components (MovieEditor, FestivalEditor,
+    // etc.) see updates from other admins automatically.
+    const { movies: liveMovies, categories: liveCategories,
+            festivalData: liveFestivalData, festivalConfig: liveFestivalConfig,
+            refreshData } = useFestival();
 
-    // Merge live data into admin state so all downstream components get it
     useEffect(() => { if (Object.keys(liveMovies).length > 0) setMovies(liveMovies); }, [liveMovies]);
     useEffect(() => { if (Object.keys(liveCategories).length > 0) setCategories(liveCategories); }, [liveCategories]);
     useEffect(() => { if (liveFestivalData.length > 0) setFestivalData(liveFestivalData); }, [liveFestivalData]);
@@ -171,6 +166,22 @@ const AdminPage: React.FC = () => {
             }).catch(() => {});
         }
     }, [activeTab, isAuthenticated]);
+
+    // ── POLLING FALLBACK ─────────────────────────────────────────────────────
+    // Re-fetch every 15 seconds regardless of Firestore listener state.
+    // Guarantees all admins see changes within 15s even if listeners fail.
+    const pollRef = useRef<ReturnType<typeof setInterval>>();
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const pass = sessionStorage.getItem('adminPassword');
+        if (!pass) return;
+        // Start polling
+        pollRef.current = setInterval(() => {
+            fetchAllData(pass);
+            refreshData();
+        }, 15000);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
@@ -298,6 +309,7 @@ const AdminPage: React.FC = () => {
             if (response.ok) {
                 setSaveMessage(`Manifest Synchronized.`);
                 await fetchAllData(pass!);
+                refreshData(); // Update FestivalContext so all clients re-sync
             }
         } catch (err) {
             setSaveMessage("Sync failed.");

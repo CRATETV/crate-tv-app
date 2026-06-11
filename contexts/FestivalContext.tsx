@@ -292,27 +292,62 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (!db) return;
 
             // Movies — watch party fields
-            unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
-                if (!doc.exists) return;
-                const firebaseMovies = doc.data() as Record<string, Movie>;
+            // Listen to movies collection — one doc per film, full data
+            unsubs.push(db.collection('movies').onSnapshot(snapshot => {
+                if (snapshot.empty) return;
                 setMovies(prev => {
-                    const merged = { ...prev };
-                    Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
-                        if (merged[key]) {
-                            merged[key] = {
-                                ...merged[key],
-                                isWatchPartyEnabled: fbMovie.isWatchPartyEnabled ?? merged[key].isWatchPartyEnabled,
-                                watchPartyStartTime: fbMovie.watchPartyStartTime ?? merged[key].watchPartyStartTime,
-                                isWatchPartyPaid: fbMovie.isWatchPartyPaid ?? merged[key].isWatchPartyPaid,
-                                watchPartyPrice: fbMovie.watchPartyPrice ?? merged[key].watchPartyPrice,
-                            };
+                    const updated = { ...prev };
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'removed') {
+                            delete updated[change.doc.id];
                         } else {
-                            merged[key] = fbMovie;
+                            updated[change.doc.id] = { key: change.doc.id, ...change.doc.data() } as Movie;
                         }
                     });
-                    return merged;
+                    return updated;
                 });
-            }));
+            }, () => {}));
+
+            // Also listen to data/movies for watch party fields
+            unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
+                if (!doc.exists) return;
+                const wpData = doc.data() as Record<string, any>;
+                setMovies(prev => {
+                    const updated = { ...prev };
+                    Object.entries(wpData).forEach(([key, m]) => {
+                        if (updated[key]) {
+                            updated[key] = { ...updated[key],
+                                isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
+                                watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
+                                isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
+                                watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
+                            };
+                        }
+                    });
+                    return updated;
+                });
+            }, () => {}));
+
+            // Listen to categories collection for real-time category changes
+            unsubs.push(db.collection('categories').onSnapshot(snapshot => {
+                if (snapshot.empty) return;
+                setCategories(prev => {
+                    const updated = { ...prev };
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'removed') delete updated[change.doc.id];
+                        else updated[change.doc.id] = change.doc.data() as Category;
+                    });
+                    return updated;
+                });
+            }, () => {}));
+
+            // Sync version — fires after every publish-data save
+            // Triggers a full re-fetch so all clients get the latest assembled manifest
+            let syncInitialized = false;
+            unsubs.push(db.collection('data').doc('sync').onSnapshot(() => {
+                if (!syncInitialized) { syncInitialized = true; return; }
+                fetchData(true);
+            }, () => {}));
 
             // View counts
             unsubs.push(db.collection('view_counts').onSnapshot(snapshot => {
@@ -373,9 +408,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 setAllPartyStates(allStates);
             }, () => {});
 
-            // Single watchdog-managed subscription — starts immediately,
-            // rotates every 90s to prevent silent Firestore listener failure.
-            // Auth changes restart it cleanly without stacking new subscriptions.
+            unsubs.push(subscribeWatchParties());
+
+            // Watchdog — resubscribe every 90s to prevent silent listener failure
+            // This ensures the banner appears promptly when a party goes live
             let watchPartyUnsub = subscribeWatchParties();
             const watchdog = setInterval(() => {
                 watchPartyUnsub();
@@ -383,16 +419,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             }, 90000);
             unsubs.push(() => { clearInterval(watchdog); watchPartyUnsub(); });
 
-            // Re-subscribe on auth change to pick up permission upgrades.
-            // Unsubscribes the current one first so only one listener is ever active.
+            // Re-subscribe on auth change to pick up permission upgrades
             if (auth) {
-                const unsubAuthChange = auth.onAuthStateChanged(user => {
-                    if (user) {
-                        watchPartyUnsub();
-                        watchPartyUnsub = subscribeWatchParties();
-                    }
+                auth.onAuthStateChanged(user => {
+                    if (user) unsubs.push(subscribeWatchParties());
                 });
-                unsubs.push(unsubAuthChange);
             }
         };
 
