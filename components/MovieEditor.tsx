@@ -46,11 +46,11 @@ const emptyMovie: Movie = {
     isWatchPartyPaid: false,
     watchPartyPrice: 5.00,
     isForSale: false,
+    isFestival: false,
     salePrice: 5.00,
     isLiveStream: false,
     liveStreamEmbed: '',
-    zineUrl: '',
-    viewerNotice: '',
+    zineUrl: ''
 };
 
 const ActorEditorModal: React.FC<{ actor: Actor, onSave: (updated: Actor) => void, onClose: () => void }> = ({ actor, onSave, onClose }) => {
@@ -369,16 +369,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film/Series Title" className="form-input bg-black/40" />
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
                                     <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
-
-                                    <label className="form-label" style={{ color: '#f59e0b' }}>⚠ Viewer Notice <span className="text-gray-600 normal-case font-normal">(optional — shown on card & detail view)</span></label>
-                                    <textarea
-                                        name="viewerNotice"
-                                        value={formData.viewerNotice || ''}
-                                        onChange={handleChange}
-                                        rows={2}
-                                        placeholder="e.g. This film will not be available for virtual streaming. Please attend in person."
-                                        className="form-input bg-black/40 border-amber-500/30 focus:border-amber-500 text-amber-200 placeholder:text-amber-900"
-                                    />
                                     
                                     <div className="space-y-2">
                                         <label className="form-label">Editorial / Zine URL</label>
@@ -764,7 +754,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Access & Monetization</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    {/* Listed / Unlisted */}
+                                    {/* Film Visibility */}
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black uppercase text-gray-300">Film Visibility</p>
@@ -775,6 +765,38 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <div className="w-11 h-6 bg-green-600 rounded-full peer peer-checked:bg-gray-700 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                         </label>
                                     </div>
+
+                                    {/* Festival Film Toggle */}
+                                    <div className="flex items-center justify-between p-4 bg-amber-900/10 rounded-2xl border border-amber-500/20">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black uppercase text-amber-400">🎬 Festival Film (PWFF)</p>
+                                            <p className="text-[9px] text-gray-500 uppercase">
+                                                {(formData as any).isFestival
+                                                    ? '$5 single VOD · $10 block — pricing enforced automatically. VOD Paywall disabled.'
+                                                    : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}
+                                            </p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!(formData as any).isFestival}
+                                                onChange={e => {
+                                                    handleChange({ target: { name: 'isFestival', type: 'checkbox', checked: e.target.checked } } as any);
+                                                    if (e.target.checked) {
+                                                        handleChange({ target: { name: 'isForSale', type: 'checkbox', checked: false } } as any);
+                                                        handleChange({ target: { name: 'salePrice', type: 'number', value: '5.00' } } as any);
+                                                        handleChange({ target: { name: 'watchPartyPrice', type: 'number', value: '10.00' } } as any);
+                                                        handleChange({ target: { name: 'isWatchPartyPaid', type: 'checkbox', checked: true } } as any);
+                                                    }
+                                                }}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-amber-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                        </label>
+                                    </div>
+
+                                    {/* VOD Paywall — hidden for festival films */}
+                                    {!(formData as any).isFestival && (
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
@@ -788,7 +810,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 </div>
                                             )}
                                         </div>
-
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                                 <span className="text-[10px] font-black uppercase text-gray-300">Creator Support</span>
@@ -797,6 +818,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <p className="text-[8px] text-gray-600 uppercase px-2 font-bold">Enables community tips/donations</p>
                                         </div>
                                     </div>
+                                    )}
                                 </div>
                             </section>
 
