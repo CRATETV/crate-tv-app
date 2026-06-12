@@ -217,6 +217,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
+
+    // Detect if this watch party is for a festival block (movieKey === block.id)
+    const parentBlock = useMemo(() =>
+        festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
+        [festivalData, movieKey]
+    );
+
+    // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
+    const handlePaymentSuccess = useCallback(() => {
+        if (parentBlock) unlockFestivalBlock(parentBlock.id);
+        else unlockWatchParty(movieKey);
+        setShowPaywall(false);
+    }, [parentBlock, movieKey, unlockFestivalBlock, unlockWatchParty]);
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
