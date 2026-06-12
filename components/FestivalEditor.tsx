@@ -183,7 +183,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
 
   const displayData = isDirty ? localData : data;
-  const displayData = isDirty ? localData : data;
   return (
     <div className="space-y-12 pb-32 animate-[fadeIn_0.5s_ease-out]">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
