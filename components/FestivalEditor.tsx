@@ -30,7 +30,6 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
     .filter(movie => (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
-  const displayData = isDirty ? localData : data;
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[200] p-4" onClick={onClose}>
       <div className="bg-[#0a0a0a] rounded-[2.5rem] border border-white/10 shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -183,6 +182,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
      onDataChange(newData);
   };
 
+  const displayData = isDirty ? localData : data;
   const displayData = isDirty ? localData : data;
   return (
     <div className="space-y-12 pb-32 animate-[fadeIn_0.5s_ease-out]">
