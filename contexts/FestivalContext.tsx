@@ -292,20 +292,22 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (!db) return;
 
             // Movies — watch party fields
-            // Full movies collection listener — fires when any film is saved by any admin
+            // movies collection — startTransition so updates happen silently without UI flicker
             unsubs.push(db.collection('movies').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
-                setMovies(prev => {
-                    const updated = { ...prev };
-                    snapshot.docChanges().forEach(change => {
-                        if (change.type === 'removed') delete updated[change.doc.id];
-                        else updated[change.doc.id] = { key: change.doc.id, ...change.doc.data() } as Movie;
+                startTransition(() => {
+                    setMovies(prev => {
+                        const updated = { ...prev };
+                        snapshot.docChanges().forEach(change => {
+                            if (change.type === 'removed') delete updated[change.doc.id];
+                            else updated[change.doc.id] = { key: change.doc.id, ...change.doc.data() } as Movie;
+                        });
+                        return updated;
                     });
-                    return updated;
                 });
             }, () => {}));
 
-            // Watch party fields from data/movies secondary doc
+            // data/movies — watch party fields only
             unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
                 if (!doc.exists) return;
                 const wpData = doc.data() as Record<string, any>;
@@ -323,16 +325,18 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
             }, () => {}));
 
-            // Categories collection listener
+            // categories collection — silent background update
             unsubs.push(db.collection('categories').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
-                setCategories(prev => {
-                    const updated = { ...prev };
-                    snapshot.docChanges().forEach(change => {
-                        if (change.type === 'removed') delete updated[change.doc.id];
-                        else updated[change.doc.id] = change.doc.data() as Category;
+                startTransition(() => {
+                    setCategories(prev => {
+                        const updated = { ...prev };
+                        snapshot.docChanges().forEach(change => {
+                            if (change.type === 'removed') delete updated[change.doc.id];
+                            else updated[change.doc.id] = change.doc.data() as Category;
+                        });
+                        return updated;
                     });
-                    return updated;
                 });
             }, () => {}));
 

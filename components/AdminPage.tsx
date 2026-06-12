@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import { useFestival } from '../contexts/FestivalContext';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -95,15 +95,26 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
-    // Live data from FestivalContext — has real-time Firestore listeners
+    // Live data from FestivalContext Firestore listeners
     const { movies: liveMovies, categories: liveCategories,
             festivalData: liveFestivalData, festivalConfig: liveFestivalConfig,
             refreshData } = useFestival();
 
-    useEffect(() => { if (Object.keys(liveMovies).length > 0) setMovies(liveMovies); }, [liveMovies]);
-    useEffect(() => { if (Object.keys(liveCategories).length > 0) setCategories(liveCategories); }, [liveCategories]);
-    useEffect(() => { if (liveFestivalData.length > 0) setFestivalData(liveFestivalData); }, [liveFestivalData]);
-    useEffect(() => { if (liveFestivalConfig) setFestivalConfig(liveFestivalConfig); }, [liveFestivalConfig]);
+    // Sync movies + categories in real time — safe because MovieEditor
+    // no longer resets formData when allMovies changes
+    useEffect(() => { if (Object.keys(liveMovies).length > 0) startTransition(() => setMovies(liveMovies)); }, [liveMovies]);
+    useEffect(() => { if (Object.keys(liveCategories).length > 0) startTransition(() => setCategories(liveCategories)); }, [liveCategories]);
+
+    // Only sync festival data when admin is NOT actively editing it
+    // Prevents wiping unsaved block edits while they're working
+    useEffect(() => {
+        if (activeTab === 'festHub') return; // don't overwrite while editing
+        if (liveFestivalData.length > 0) startTransition(() => setFestivalData(liveFestivalData));
+    }, [liveFestivalData, activeTab]);
+    useEffect(() => {
+        if (activeTab === 'festHub') return;
+        if (liveFestivalConfig) startTransition(() => setFestivalConfig(liveFestivalConfig));
+    }, [liveFestivalConfig, activeTab]);
 
     const allowedTabs = useMemo(() => {
         const roleLower = role.toLowerCase();
@@ -164,15 +175,6 @@ const AdminPage: React.FC = () => {
         }
     }, [activeTab, isAuthenticated]);
 
-    // 60s polling — safety net only, Firestore listeners handle real-time updates
-    const pollRef = useRef<ReturnType<typeof setInterval>>();
-    useEffect(() => {
-        if (!isAuthenticated) return;
-        const pass = sessionStorage.getItem('adminPassword');
-        if (!pass) return;
-        pollRef.current = setInterval(() => fetchAllData(pass), 60000);
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, [isAuthenticated]); // eslint-disable-line
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);

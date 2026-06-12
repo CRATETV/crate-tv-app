@@ -146,11 +146,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     }, [movieToCreate, onCreationDone]);
 
     useEffect(() => {
-        // Unsubscribe from previous film's document listener
+        // Unsub from previous film's listener
         if (docUnsubRef.current) { docUnsubRef.current(); docUnsubRef.current = null; }
+
         if (!selectedMovieKey) { setFormData(null); return; }
 
-        // Load initial form data
+        // Load form data ONCE when switching films — never again
+        // allMovies is intentionally NOT in the dep array so polls/listeners
+        // never wipe what you're currently typing
         const movieData = allMovies[selectedMovieKey];
         if (movieData) {
             setFormData({ ...movieData });
@@ -161,20 +164,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setProbeResult(null);
         setRemoteUpdateDetected(false);
 
-        // Direct listener on this film's Firestore document
-        // Detects actor changes, title changes, anything another admin saves
+        // Direct Firestore listener — detects when another admin changes THIS film
+        // Shows an amber banner instead of silently overwriting your work
         const db = getDbInstance();
-        if (!db) return;
-        const unsub = db.collection('movies').doc(selectedMovieKey).onSnapshot(doc => {
-            if (!doc.exists) return;
-            const incomingStr = JSON.stringify({ key: doc.id, ...doc.data() });
-            if (lastSavedDataRef.current && incomingStr !== lastSavedDataRef.current) {
-                setRemoteUpdateDetected(true);
-            }
-        }, () => {});
-        docUnsubRef.current = unsub;
-        return () => { unsub(); docUnsubRef.current = null; };
-    }, [selectedMovieKey]); // eslint-disable-line
+        if (db) {
+            const unsub = db.collection('movies').doc(selectedMovieKey).onSnapshot(doc => {
+                if (!doc.exists) return;
+                const incomingStr = JSON.stringify({ key: doc.id, ...doc.data() });
+                if (lastSavedDataRef.current && incomingStr !== lastSavedDataRef.current) {
+                    setRemoteUpdateDetected(true);
+                }
+            }, () => {});
+            docUnsubRef.current = unsub;
+        }
+        return () => { if (docUnsubRef.current) { docUnsubRef.current(); docUnsubRef.current = null; } };
+    }, [selectedMovieKey]); // ← allMovies intentionally excluded — prevents form reset on sync
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         if (!formData) return;
@@ -245,6 +249,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setIsSaving(true);
         try {
             await onSave({ [formData.key]: formData });
+        lastSavedDataRef.current = JSON.stringify(formData);
+        setRemoteUpdateDetected(false);
 
             // ── INSTANT BANNER: only schedule if enabled AND has a real future start time
             {
@@ -390,8 +396,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         lastSavedDataRef.current = JSON.stringify(allMovies[selectedMovieKey]);
                                         setRemoteUpdateDetected(false);
                                     }
-                                }} className="bg-amber-500 text-black px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-amber-400 transition-all animate-pulse">
-                                    ⚠ Updated by another admin — reload
+                                }} className="bg-amber-500 text-black px-6 py-3 rounded-xl uppercase text-[10px] font-black animate-pulse shadow-xl hover:bg-amber-400 transition-all">
+                                    ⚠ Another admin made changes — click to load
                                 </button>
                             )}
                         </div>
@@ -805,7 +811,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <div className="flex items-center justify-between p-4 bg-amber-900/10 rounded-2xl border border-amber-500/20">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black uppercase text-amber-400">🎬 Festival Film (PWFF)</p>
-                                            <p className="text-[9px] text-gray-500 uppercase">{formData.isFestival ? '$5 single VOD · $10 block — enforced server-side. VOD Paywall disabled.' : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}</p>
+                                            <p className="text-[9px] text-gray-500 uppercase">{formData.isFestival ? '$5 single VOD · $10 block — enforced. VOD Paywall disabled.' : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}</p>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" checked={!!formData.isFestival} onChange={e => {
