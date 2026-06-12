@@ -300,23 +300,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                     <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
                                     <input
                                         type="datetime-local"
-                                        value={block.screeningStartTime ? formatISOForInput(block.screeningStartTime) : ''}
+                                        value={block.screeningStartTime ? block.screeningStartTime.slice(0,16) : ''}
                                         onChange={e => handleBlockChange(dayIndex, blockIndex, 'screeningStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
                                         className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-amber-500"
                                     />
                                 </div>
                                 {block.screeningStartTime && (
                                     <p className="text-[8px] text-gray-600 pb-2">
-                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </p>
                                 )}
-                                <label className="flex items-center gap-2 cursor-pointer mt-1">
-                                    <input type="checkbox" checked={!!block.releaseAfterScreening}
-                                        onChange={e => handleBlockChange(dayIndex, blockIndex, 'releaseAfterScreening', e.target.checked)}
-                                        className="w-3 h-3 accent-amber-500" />
-                                    <span className="text-[8px] text-gray-600">Release films to catalog after screening</span>
-                                </label>
-                                
                             </div>
                         </div>
                    </div>

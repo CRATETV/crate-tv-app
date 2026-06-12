@@ -95,9 +95,7 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
-    // ── LIVE DATA SYNC ────────────────────────────────────────────────────────
-    // FestivalContext has real-time Firestore listeners. Merging into AdminPage
-    // means all sections (films, categories, festival hub) stay in sync.
+    // Live data from FestivalContext — has real-time Firestore listeners
     const { movies: liveMovies, categories: liveCategories,
             festivalData: liveFestivalData, festivalConfig: liveFestivalConfig,
             refreshData } = useFestival();
@@ -166,17 +164,13 @@ const AdminPage: React.FC = () => {
         }
     }, [activeTab, isAuthenticated]);
 
-    // ── POLLING SAFETY NET ───────────────────────────────────────────────────
-    // Re-fetches every 60 seconds as a fallback. Firestore listeners handle
-    // near-instant updates — this just catches anything they miss.
+    // 60s polling — safety net only, Firestore listeners handle real-time updates
     const pollRef = useRef<ReturnType<typeof setInterval>>();
     useEffect(() => {
         if (!isAuthenticated) return;
         const pass = sessionStorage.getItem('adminPassword');
         if (!pass) return;
-        pollRef.current = setInterval(() => {
-            fetchAllData(pass);
-        }, 60000);
+        pollRef.current = setInterval(() => fetchAllData(pass), 60000);
         return () => { if (pollRef.current) clearInterval(pollRef.current); };
     }, [isAuthenticated]); // eslint-disable-line
 

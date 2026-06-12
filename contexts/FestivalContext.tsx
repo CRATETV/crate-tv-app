@@ -292,7 +292,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (!db) return;
 
             // Movies — watch party fields
-            // ── Full movies collection — fires when any film is saved ──────────────
+            // Full movies collection listener — fires when any film is saved by any admin
             unsubs.push(db.collection('movies').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
                 setMovies(prev => {
@@ -305,7 +305,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
             }, () => {}));
 
-            // ── Watch party fields from data/movies ──────────────────────────────
+            // Watch party fields from data/movies secondary doc
             unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
                 if (!doc.exists) return;
                 const wpData = doc.data() as Record<string, any>;
@@ -323,7 +323,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
             }, () => {}));
 
-            // ── Categories collection ─────────────────────────────────────────────
+            // Categories collection listener
             unsubs.push(db.collection('categories').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
                 setCategories(prev => {
@@ -334,15 +334,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     });
                     return updated;
                 });
-            }, () => {}));
-
-            // ── Sync version — stamps after every publish-data save ───────────────
-            // Triggers a full re-fetch so settings, pipeline, and anything not
-            // covered by collection listeners is also refreshed.
-            let syncInitialized = false;
-            unsubs.push(db.collection('data').doc('sync').onSnapshot(() => {
-                if (!syncInitialized) { syncInitialized = true; return; }
-                fetchData(true);
             }, () => {}));
 
             // View counts

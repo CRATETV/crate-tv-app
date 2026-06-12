@@ -1,6 +1,7 @@
 
 import { toast } from './Toast';
 import React, { useState, useEffect, useRef } from 'react';
+import { getDbInstance } from '../services/firebaseClient';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
 import AdminFilmDeepDive from './AdminFilmDeepDive';
@@ -105,6 +106,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [remoteUpdateDetected, setRemoteUpdateDetected] = useState(false);
+    const lastSavedDataRef = useRef<string>('');
+    const docUnsubRef = useRef<(() => void) | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSpotlighting, setIsSpotlighting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -113,8 +117,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<any>(null);
-    const [remoteUpdateDetected, setRemoteUpdateDetected] = useState(false);
-    const lastSavedDataRef = useRef<string>('');
     const [deepDiveMovie, setDeepDiveMovie] = useState<Movie | null>(null);
 
     useEffect(() => {
@@ -144,17 +146,35 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     }, [movieToCreate, onCreationDone]);
 
     useEffect(() => {
-        if (selectedMovieKey) {
-            const movieData = allMovies[selectedMovieKey];
-            if (movieData) {
-                setFormData({ ...movieData });
-                lastSavedDataRef.current = JSON.stringify(movieData);
+        // Unsubscribe from previous film's document listener
+        if (docUnsubRef.current) { docUnsubRef.current(); docUnsubRef.current = null; }
+        if (!selectedMovieKey) { setFormData(null); return; }
+
+        // Load initial form data
+        const movieData = allMovies[selectedMovieKey];
+        if (movieData) {
+            setFormData({ ...movieData });
+            lastSavedDataRef.current = JSON.stringify(movieData);
+        } else if (selectedMovieKey.startsWith('movie_')) {
+            setFormData({ ...emptyMovie, key: selectedMovieKey });
+        }
+        setProbeResult(null);
+        setRemoteUpdateDetected(false);
+
+        // Direct listener on this film's Firestore document
+        // Detects actor changes, title changes, anything another admin saves
+        const db = getDbInstance();
+        if (!db) return;
+        const unsub = db.collection('movies').doc(selectedMovieKey).onSnapshot(doc => {
+            if (!doc.exists) return;
+            const incomingStr = JSON.stringify({ key: doc.id, ...doc.data() });
+            if (lastSavedDataRef.current && incomingStr !== lastSavedDataRef.current) {
+                setRemoteUpdateDetected(true);
             }
-            else if (selectedMovieKey.startsWith('movie_')) setFormData({ ...emptyMovie, key: selectedMovieKey });
-            setRemoteUpdateDetected(false);
-            setProbeResult(null);
-        } else setFormData(null);
-    }, [selectedMovieKey, allMovies]);
+        }, () => {});
+        docUnsubRef.current = unsub;
+        return () => { unsub(); docUnsubRef.current = null; };
+    }, [selectedMovieKey]); // eslint-disable-line
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         if (!formData) return;
@@ -364,17 +384,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Push Global Manifest'}</button>
                             {remoteUpdateDetected && (
-                                <button
-                                    onClick={() => {
-                                        if (selectedMovieKey && allMovies[selectedMovieKey]) {
-                                            setFormData({ ...allMovies[selectedMovieKey] });
-                                            lastSavedDataRef.current = JSON.stringify(allMovies[selectedMovieKey]);
-                                            setRemoteUpdateDetected(false);
-                                        }
-                                    }}
-                                    className="bg-amber-500 text-black px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-amber-400 transition-all animate-pulse"
-                                >
-                                    ⚠ Updated by another admin — click to reload
+                                <button onClick={() => {
+                                    if (selectedMovieKey && allMovies[selectedMovieKey]) {
+                                        setFormData({ ...allMovies[selectedMovieKey] });
+                                        lastSavedDataRef.current = JSON.stringify(allMovies[selectedMovieKey]);
+                                        setRemoteUpdateDetected(false);
+                                    }
+                                }} className="bg-amber-500 text-black px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-amber-400 transition-all animate-pulse">
+                                    ⚠ Updated by another admin — reload
                                 </button>
                             )}
                         </div>
@@ -773,7 +790,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Access & Monetization</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    {/* Film Visibility */}
+                                    {/* Listed / Unlisted */}
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black uppercase text-gray-300">Film Visibility</p>
@@ -784,37 +801,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <div className="w-11 h-6 bg-green-600 rounded-full peer peer-checked:bg-gray-700 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                         </label>
                                     </div>
-
-                                    {/* Festival Film Toggle — single setState to avoid stale closure bug */}
+                                    {/* Festival Film Toggle */}
                                     <div className="flex items-center justify-between p-4 bg-amber-900/10 rounded-2xl border border-amber-500/20">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black uppercase text-amber-400">🎬 Festival Film (PWFF)</p>
-                                            <p className="text-[9px] text-gray-500 uppercase">
-                                                {formData.isFestival
-                                                    ? '$5 single VOD · $10 block — enforced server-side. VOD Paywall disabled.'
-                                                    : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}
-                                            </p>
+                                            <p className="text-[9px] text-gray-500 uppercase">{formData.isFestival ? '$5 single VOD · $10 block — enforced server-side. VOD Paywall disabled.' : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}</p>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={!!formData.isFestival}
-                                                onChange={e => {
-                                                    const on = e.target.checked;
-                                                    // Single setState — avoids stale closure overwrite bug
-                                                    setFormData(prev => prev ? {
-                                                        ...prev,
-                                                        isFestival: on,
-                                                        ...(on ? {
-                                                            isForSale: false,
-                                                            salePrice: 5,
-                                                            watchPartyPrice: 10,
-                                                            isWatchPartyPaid: true,
-                                                        } : {})
-                                                    } : prev);
-                                                }}
-                                                className="sr-only peer"
-                                            />
+                                            <input type="checkbox" checked={!!formData.isFestival} onChange={e => {
+                                                const on = e.target.checked;
+                                                setFormData(prev => prev ? { ...prev, isFestival: on, ...(on ? { isForSale: false, salePrice: 5, watchPartyPrice: 10, isWatchPartyPaid: true } : {}) } : prev);
+                                            }} className="sr-only peer" />
                                             <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-amber-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                         </label>
                                     </div>
@@ -822,9 +819,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     {/* Viewer Notice */}
                                     <div>
                                         <label className="text-[9px] font-black uppercase text-gray-500 tracking-widest block mb-2">⚠ Viewer Notice <span className="text-gray-700 normal-case font-normal">(optional)</span></label>
-                                        <textarea name="viewerNotice" value={formData.viewerNotice || ''} onChange={handleChange} rows={2}
-                                            placeholder="e.g. This film will not be available for virtual streaming."
-                                            className="form-input bg-black/40 border-amber-500/20 text-amber-200 placeholder:text-amber-900/50 text-xs" />
+                                        <textarea name="viewerNotice" value={formData.viewerNotice || ''} onChange={handleChange} rows={2} placeholder="e.g. This film will not be available for virtual streaming." className="form-input bg-black/40 border-amber-500/20 text-amber-200 placeholder:text-amber-900/50 text-xs" />
                                     </div>
 
                                     {/* VOD Paywall — hidden for festival films */}
