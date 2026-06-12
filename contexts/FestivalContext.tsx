@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
@@ -292,7 +292,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (!db) return;
 
             // Movies — watch party fields
-            // movies collection — startTransition so updates happen silently without UI flicker
+            // Full movies collection listener — silent background update
             unsubs.push(db.collection('movies').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
                 startTransition(() => {
@@ -307,25 +307,27 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
             }, () => {}));
 
-            // data/movies — watch party fields only
+            // data/movies — watch party fields
             unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
                 if (!doc.exists) return;
                 const wpData = doc.data() as Record<string, any>;
-                setMovies(prev => {
-                    const updated = { ...prev };
-                    Object.entries(wpData).forEach(([key, m]) => {
-                        if (updated[key]) updated[key] = { ...updated[key],
-                            isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
-                            watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
-                            isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
-                            watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
-                        };
+                startTransition(() => {
+                    setMovies(prev => {
+                        const updated = { ...prev };
+                        Object.entries(wpData).forEach(([key, m]) => {
+                            if (updated[key]) updated[key] = { ...updated[key],
+                                isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
+                                watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
+                                isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
+                                watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
+                            };
+                        });
+                        return updated;
                     });
-                    return updated;
                 });
             }, () => {}));
 
-            // categories collection — silent background update
+            // Categories collection — silent background update
             unsubs.push(db.collection('categories').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
                 startTransition(() => {
