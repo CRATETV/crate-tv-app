@@ -41,8 +41,9 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                // 60s browser cache, 30s stale-while-revalidate — fast loads without stale data
-                'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
+                // Admin polls use noCache=true — bypass all caching so they always get fresh data
+                // Public loads use 60s cache for performance
+                'Cache-Control': noCache ? 'no-store, no-cache, must-revalidate' : 'public, max-age=60, stale-while-revalidate=30',
             },
         });
     } catch (error) {

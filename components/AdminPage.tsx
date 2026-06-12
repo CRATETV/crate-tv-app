@@ -96,9 +96,8 @@ const AdminPage: React.FC = () => {
     const [saveMessage, setSaveMessage] = useState('');
 
     // ── LIVE DATA SYNC ────────────────────────────────────────────────────────
-    // FestivalContext has real-time Firestore listeners. Sync its data into
-    // AdminPage local state so all sub-components (MovieEditor, FestivalEditor,
-    // etc.) see updates from other admins automatically.
+    // FestivalContext has real-time Firestore listeners. Merging into AdminPage
+    // means all sections (films, categories, festival hub) stay in sync.
     const { movies: liveMovies, categories: liveCategories,
             festivalData: liveFestivalData, festivalConfig: liveFestivalConfig,
             refreshData } = useFestival();
@@ -167,21 +166,19 @@ const AdminPage: React.FC = () => {
         }
     }, [activeTab, isAuthenticated]);
 
-    // ── POLLING FALLBACK ─────────────────────────────────────────────────────
-    // Re-fetch every 15 seconds regardless of Firestore listener state.
-    // Guarantees all admins see changes within 15s even if listeners fail.
+    // ── POLLING SAFETY NET ───────────────────────────────────────────────────
+    // Re-fetches every 60 seconds as a fallback. Firestore listeners handle
+    // near-instant updates — this just catches anything they miss.
     const pollRef = useRef<ReturnType<typeof setInterval>>();
     useEffect(() => {
         if (!isAuthenticated) return;
         const pass = sessionStorage.getItem('adminPassword');
         if (!pass) return;
-        // Start polling
         pollRef.current = setInterval(() => {
             fetchAllData(pass);
-            refreshData();
-        }, 15000);
+        }, 60000);
         return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isAuthenticated]); // eslint-disable-line
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
@@ -309,7 +306,7 @@ const AdminPage: React.FC = () => {
             if (response.ok) {
                 setSaveMessage(`Manifest Synchronized.`);
                 await fetchAllData(pass!);
-                refreshData(); // Update FestivalContext so all clients re-sync
+                refreshData();
             }
         } catch (err) {
             setSaveMessage("Sync failed.");

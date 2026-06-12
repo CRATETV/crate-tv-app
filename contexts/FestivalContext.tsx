@@ -292,43 +292,38 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (!db) return;
 
             // Movies — watch party fields
-            // Listen to movies collection — one doc per film, full data
+            // ── Full movies collection — fires when any film is saved ──────────────
             unsubs.push(db.collection('movies').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
                 setMovies(prev => {
                     const updated = { ...prev };
                     snapshot.docChanges().forEach(change => {
-                        if (change.type === 'removed') {
-                            delete updated[change.doc.id];
-                        } else {
-                            updated[change.doc.id] = { key: change.doc.id, ...change.doc.data() } as Movie;
-                        }
+                        if (change.type === 'removed') delete updated[change.doc.id];
+                        else updated[change.doc.id] = { key: change.doc.id, ...change.doc.data() } as Movie;
                     });
                     return updated;
                 });
             }, () => {}));
 
-            // Also listen to data/movies for watch party fields
+            // ── Watch party fields from data/movies ──────────────────────────────
             unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
                 if (!doc.exists) return;
                 const wpData = doc.data() as Record<string, any>;
                 setMovies(prev => {
                     const updated = { ...prev };
                     Object.entries(wpData).forEach(([key, m]) => {
-                        if (updated[key]) {
-                            updated[key] = { ...updated[key],
-                                isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
-                                watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
-                                isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
-                                watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
-                            };
-                        }
+                        if (updated[key]) updated[key] = { ...updated[key],
+                            isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
+                            watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
+                            isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
+                            watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
+                        };
                     });
                     return updated;
                 });
             }, () => {}));
 
-            // Listen to categories collection for real-time category changes
+            // ── Categories collection ─────────────────────────────────────────────
             unsubs.push(db.collection('categories').onSnapshot(snapshot => {
                 if (snapshot.empty) return;
                 setCategories(prev => {
@@ -341,8 +336,9 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
             }, () => {}));
 
-            // Sync version — fires after every publish-data save
-            // Triggers a full re-fetch so all clients get the latest assembled manifest
+            // ── Sync version — stamps after every publish-data save ───────────────
+            // Triggers a full re-fetch so settings, pipeline, and anything not
+            // covered by collection listeners is also refreshed.
             let syncInitialized = false;
             unsubs.push(db.collection('data').doc('sync').onSnapshot(() => {
                 if (!syncInitialized) { syncInitialized = true; return; }

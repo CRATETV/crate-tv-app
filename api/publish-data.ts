@@ -193,11 +193,9 @@ export async function POST(request: Request) {
         // 2. TRIGGER S3 REBUILD AND WAIT (CRITICAL: Ensures Roku & Web see changes simultaneously)
         await assembleAndSyncMasterData(db);
 
-        // 3. STAMP SYNC VERSION so all connected clients re-fetch immediately
+        // 3. STAMP SYNC VERSION — fires onSnapshot for all connected admin clients
         await db.collection('data').doc('sync').set({
-            version: Date.now(),
-            type,
-            updatedBy: operatorName || 'admin',
+            version: Date.now(), type, updatedBy: operatorName || 'admin',
             updatedAt: FieldValue.serverTimestamp()
         });
 
