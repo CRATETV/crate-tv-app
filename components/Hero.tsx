@@ -51,12 +51,12 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 overflow-hidden">
         <img
           key={`poster-${currentMovie.key}`}
-          src={`/api/proxy-image?url=${encodeURIComponent(displayPoster)}`}
+          src={toCdnUrl(displayPoster)}
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
           crossOrigin="anonymous"
           loading="eager"
-          fetchPriority="high"
+          fetchPriority="high" decoding="async"
         />
 
         {!showVideo && (

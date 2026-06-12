@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': contentType,
         // Cache at browser (1 year) + Vercel Edge Network (1 year) + stale-while-revalidate
-        'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400, immutable',
+        'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
         'Vary': 'Accept-Encoding',
       },
