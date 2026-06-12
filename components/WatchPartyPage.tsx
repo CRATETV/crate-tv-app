@@ -217,19 +217,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
-
-    // Detect if this is a festival block (movieKey is a block.id)
-    const parentBlock = useMemo(() =>
-        festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
-        [festivalData, movieKey]
-    );
-
-    // Unified unlock: block uses unlockFestivalBlock, individual uses unlockWatchParty
-    const handlePaymentSuccess = useCallback(() => {
-        if (parentBlock) unlockFestivalBlock(parentBlock.id);
-        else unlockWatchParty(movieKey);
-        setShowPaywall(false);
-    }, [parentBlock, movieKey, unlockFestivalBlock, unlockWatchParty]);
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
@@ -496,11 +483,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // SECURITY: if block price is not set, default to PAID (not free)
             // Admin must explicitly set price to 0 to make a block free
             // This prevents accidental free access from missing price config
-            if (parentBlock.price === 0) return true; // explicitly free block
-            // Honour existing rental so viewers aren't charged twice
+            if (parentBlock.price === 0) return true;
             const exp = rentals[movieKey];
             if (exp && new Date(exp) > new Date()) return true;
-            return false; // paid block — not unlocked
+            return false;
         }
 
         if (!movie.isWatchPartyPaid) return true;
@@ -617,7 +603,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         movie={movie} 
                         paymentType={parentBlock ? "block" : "watchPartyTicket"}
                         block={parentBlock || undefined}
-                        priceOverride={parentBlock?.price}
                         onClose={() => setShowPaywall(false)}
                         onPaymentSuccess={handlePaymentSuccess} 
                     />
@@ -927,7 +912,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     movie={movie} 
                     paymentType={parentBlock ? "block" : "watchPartyTicket"}
                     block={parentBlock || undefined}
-                    priceOverride={parentBlock?.price}
                     onClose={() => setShowPaywall(false)}
                     onPaymentSuccess={handlePaymentSuccess} 
                 />

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // Look up scheduled time — check individual movies first, then festival blocks
+    // Get the movie data to verify scheduled time
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
     const movie = movies[movieKey];
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       if (!movie.watchPartyStartTime) return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
       scheduledTime = new Date(movie.watchPartyStartTime).getTime();
     } else {
-      // movieKey is a festival block.id
+      // movieKey is a festival block.id — look up screeningStartTime
       const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
       let blockData: any = null;
       for (const dayDoc of daysSnap.docs) {
@@ -45,12 +45,11 @@ export async function POST(request: Request) {
         if (found) { blockData = found; break; }
       }
       if (!blockData) return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
-      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening time set for this block.' }), { status: 400 });
+      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening time for this block.' }), { status: 400 });
       scheduledTime = new Date(blockData.screeningStartTime).getTime();
     }
 
-    // Check if we're within the valid auto-start window
-    // Allow starting up to 5 minutes before or 30 minutes after the scheduled time
+    // Check if we're within the valid auto-start window (5 min before → 30 min after)
     const now = Date.now();
     const fiveMinutesBefore = scheduledTime - (5 * 60 * 1000);
     const thirtyMinutesAfter = scheduledTime + (30 * 60 * 1000);

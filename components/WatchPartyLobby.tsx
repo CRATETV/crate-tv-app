@@ -17,9 +17,9 @@ interface WatchPartyLobbyProps {
     movie: Movie;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
-    user: { name?: string; email: string | null; avatar?: string; } | null;
-    movieKey?: string;    // URL key — may be a block.id
-    blockPrice?: number;  // block price if this is a festival block
+    user: { name?: string; email: string | null; avatar?: string     movieKey?: string;
+    blockPrice?: number;
+} | null;
     hasAccess?: boolean;
     onBuyTicket?: () => void;
     onClose?: () => void;
@@ -32,7 +32,7 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose }), movieKey: partyKey, blockPrice }) => {
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
@@ -128,7 +128,6 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             if (diff <= 0) {
                 setCountdown(null);
                 if (diff < -1000) {
-                    // Trigger auto-start if party isn't live yet
                     const keyToStart = partyKey || movie.key;
                     if (!partyState || partyState.status !== 'live') {
                         fetch('/api/auto-start-watch-party', {

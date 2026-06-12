@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     try {
       const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
       let blockMovieKeys: string[] = [];
-      let releaseAfterScreening = true;
+      let releaseAfterScreening = false; // opt-in — default is NOT to release
       for (const dayDoc of daysSnap.docs) {
         const day = dayDoc.data();
         const blocks = day.blocks || [];
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         if (matched) {
           blockMovieKeys = matched.movieKeys || [];
           releaseAfterScreening = !!matched.releaseAfterScreening;
-          // Stamp festivalEndTime for auto-hide cron
+          // Stamp festivalEndTime so cron can auto-hide after 7 days
           const idx = blocks.findIndex((b: any) => b.id === movieKey);
           if (idx >= 0) {
             blocks[idx] = { ...blocks[idx], festivalEndTime: new Date().toISOString() };
@@ -82,9 +82,7 @@ export async function POST(request: Request) {
         await db.collection('data').doc('movies').update(updates);
         console.log(`[Festival] Released ${blockMovieKeys.length} films to catalog`);
       }
-    } catch (e) {
-      console.error('[Festival] Catalog release error:', e);
-    }
+    } catch (e) { console.error('[Festival] Catalog release error:', e); }
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
 
