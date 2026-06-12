@@ -1,5 +1,5 @@
+const toCdnUrl = (url?: string|null) => !url ? '' : url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net');
 import React, { useMemo, useRef, useState } from 'react';
-const toCdnUrl = (url?: string|null) => url ? url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net') : '';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import BackToTopButton from './BackToTopButton';
@@ -7,21 +7,15 @@ import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
-import { useRokuConfig } from '../hooks/useRokuConfig';
 import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 
-const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => {
-  const [imgSrc, setImgSrc] = React.useState(
-    movie.poster ? `/api/proxy-image?url=${encodeURIComponent(movie.poster)}` : ''
-  );
-
-  return (
-  <div 
-      onClick={() => onSelect(movie)}
-      className="group relative flex items-center bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-red-600/30 p-4 md:p-8 rounded-[2.5rem] transition-all duration-500 cursor-pointer overflow-hidden animate-[fadeIn_0.5s_ease-out]"
-      style={{ animationDelay: `${rank * 100}ms` }}
-  >
+const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => (
+    <div 
+        onClick={() => onSelect(movie)}
+        className="group relative flex items-center bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-red-600/30 p-4 md:p-8 rounded-[2.5rem] transition-all duration-500 cursor-pointer overflow-hidden animate-[fadeIn_0.5s_ease-out]"
+        style={{ animationDelay: `${rank * 100}ms` }}
+    >
         <span 
             className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[12rem] md:text-[18rem] leading-none select-none opacity-[0.03] group-hover:opacity-[0.08] transition-opacity italic"
             style={{ WebkitTextStroke: '2px white', color: 'transparent' }}
@@ -35,18 +29,7 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
             
             <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
-                <img
-                  src={imgSrc}
-                  alt={movie.title}
-                  className="w-full h-full object-cover"
-                  loading={rank <= 4 ? 'eager' : 'lazy'}
-                  fetchPriority={rank <= 2 ? 'high' : 'auto'}
-                  onError={() => {
-                    if (movie.poster && imgSrc !== movie.poster) {
-                      setImgSrc(movie.poster);
-                    }
-                  }}
-                />
+                <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
             </div>
 
             <div className="flex-grow min-w-0">
@@ -69,26 +52,19 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
         </div>
     </div>
-  );
-};
+);
 
 const TopTenPage: React.FC = () => {
     const { movies, analytics, isLoading } = useFestival();
-    const { config: rokuConfig } = useRokuConfig();
     const [isGenerating, setIsGenerating] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
-
-    const hiddenMovieSet = useMemo(
-        () => new Set<string>(rokuConfig?.content?.hiddenMovies || []),
-        [rokuConfig]
-    );
-
+    
     const sortedMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && !m.isUnlisted && !!m.poster && !hiddenMovieSet.has(m.key))
+            .filter(m => !!m && !m.isUnlisted && !!m.poster)
             .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
-    }, [movies, analytics, hiddenMovieSet]);
+    }, [movies, analytics]);
 
     const handleSelectMovie = (movie: Movie) => {
         window.history.pushState({}, '', `/movie/${movie.key}?play=true`);

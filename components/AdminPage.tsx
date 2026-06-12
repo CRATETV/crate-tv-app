@@ -95,20 +95,14 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
-    // Live data from FestivalContext Firestore listeners
     const { movies: liveMovies, categories: liveCategories,
             festivalData: liveFestivalData, festivalConfig: liveFestivalConfig,
             refreshData } = useFestival();
 
-    // Sync movies + categories in real time — safe because MovieEditor
-    // no longer resets formData when allMovies changes
     useEffect(() => { if (Object.keys(liveMovies).length > 0) startTransition(() => setMovies(liveMovies)); }, [liveMovies]);
     useEffect(() => { if (Object.keys(liveCategories).length > 0) startTransition(() => setCategories(liveCategories)); }, [liveCategories]);
-
-    // Only sync festival data when admin is NOT actively editing it
-    // Prevents wiping unsaved block edits while they're working
     useEffect(() => {
-        if (activeTab === 'festHub') return; // don't overwrite while editing
+        if (activeTab === 'festHub') return;
         if (liveFestivalData.length > 0) startTransition(() => setFestivalData(liveFestivalData));
     }, [liveFestivalData, activeTab]);
     useEffect(() => {
@@ -174,7 +168,6 @@ const AdminPage: React.FC = () => {
             }).catch(() => {});
         }
     }, [activeTab, isAuthenticated]);
-
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
@@ -567,7 +560,7 @@ const AdminPage: React.FC = () => {
                                 allMovies={movies}
                                 onDataChange={(d) => setFestivalData(d)}
                                 onConfigChange={(c) => setFestivalConfig(c)}
-                                onSave={(latestConfig) => handleSaveData('festival', { config: latestConfig, data: festivalData })}
+                                onSave={(latestConfig, latestData) => handleSaveData('festival', { config: latestConfig, data: latestData ?? festivalData })}
                                 isSaving={isSaving}
                             />
                         </div>

@@ -172,7 +172,7 @@ const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWa
                 </div>
                 <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Directed by {movie.director}</p>
                 <div className="flex flex-wrap gap-2 mb-1">
-                    {movie.durationInMinutes && <span className="text-[10px] text-gray-600">{movie.durationInMinutes} min</span>}
+                    {(movie.durationInMinutes ?? 0) > 0 && <span className="text-[10px] text-gray-600">{movie.durationInMinutes} min</span>}
                     {movie.genres?.map(g => <span key={g} className="text-[10px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">{g}</span>)}
                     {movie.festivalAwards && <span className="text-[10px] text-amber-400 font-bold">{movie.festivalAwards}</span>}
                 </div>

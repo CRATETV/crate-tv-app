@@ -1,5 +1,5 @@
 
-const toCdnUrl = (url?: string|null) => url ? url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net') : '';
+const toCdnUrl = (url?: string|null) => !url ? '' : url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net');
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -51,12 +51,10 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 overflow-hidden">
         <img
           key={`poster-${currentMovie.key}`}
-          src={toCdnUrl(displayPoster)}
+          src={toCdnUrl(displayPoster)} decoding="async"
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
           crossOrigin="anonymous"
-          loading="eager"
-          fetchPriority="high" decoding="async"
         />
 
         {!showVideo && (
@@ -72,12 +70,11 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         {currentMovie.trailer && (
             <video
                 key={`video-${currentMovie.key}`}
-                src={toCdnUrl(currentMovie.trailer)}
+                src={currentMovie.trailer}
                 autoPlay
                 muted={isMuted}
                 loop
                 playsInline
-                preload="auto"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${showVideo ? 'opacity-100' : 'opacity-0'}`}
             />
         )}

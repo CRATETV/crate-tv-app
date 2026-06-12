@@ -80,7 +80,7 @@ interface FestivalEditorProps {
     allMovies: Record<string, Movie>;
     onDataChange: (data: FestivalDay[]) => void;
     onConfigChange: (config: FestivalConfig) => void;
-    onSave: (config: FestivalConfig) => void;
+    onSave: (config: FestivalConfig, data?: FestivalDay[]) => void;
     isSaving: boolean;
 }
 
@@ -100,40 +100,24 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  // ── LOCAL STATE ────────────────────────────────────────────────────────────
-  // FestivalEditor owns its data while editing. External prop changes (from
-  // Firestore listeners or polling) are only accepted when the form is clean.
-  // This prevents datetime inputs from reverting while you're typing.
-  const [localData, setLocalData] = useState(data);
-  const [localConfig, setLocalConfig] = useState(config);
-
-  // Accept external updates only when not dirty
-  React.useEffect(() => {
-    if (!isDirty) { setLocalData(data); setLocalConfig(config); }
-  }, [data, config]); // eslint-disable-line
-
   const handleSaveManifest = () => {
-      onSave(localConfig);
-      onDataChange(localData);
+      onSave(config);
       setIsDirty(false);
+
   };
 
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: any) => {
     setIsDirty(true);
-    setLocalData(prev => {
-        const newData = prev.map(d => ({ ...d, blocks: d.blocks.map(b => ({ ...b })) }));
-        newData[dayIndex].blocks[blockIndex] = { ...newData[dayIndex].blocks[blockIndex], [field]: value };
-        return newData;
-    });
+    const newData = [...data];
+    newData[dayIndex].blocks[blockIndex] = { ...newData[dayIndex].blocks[blockIndex], [field]: value };
+    onDataChange(newData);
   };
   
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
     setIsDirty(true);
-    setLocalData(prev => {
-        const newData = prev.map(d => ({ ...d, blocks: d.blocks.map(b => ({ ...b })) }));
-        newData[dayIndex].blocks[blockIndex].movieKeys = newMovieKeys;
-        return newData;
-    });
+    const newData = [...data];
+    newData[dayIndex].blocks[blockIndex].movieKeys = newMovieKeys;
+    onDataChange(newData);
     setEditingBlock(null);
   };
 
@@ -143,22 +127,21 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     let finalValue: any = value;
     if (type === 'datetime-local') finalValue = value ? new Date(value).toISOString() : '';
     else if (type === 'checkbox') finalValue = (e.target as HTMLInputElement).checked;
-    setLocalConfig(prev => ({ ...prev, [name]: finalValue }));
+    onConfigChange({ ...config, [name]: finalValue });
   };
 
   const addDay = () => {
     setIsDirty(true);
-    const newDayNum = localData.length + 1;
-    setLocalData(prev => [...prev, { day: newDayNum, date: 'October 20, 2026', blocks: [] }]);
+    const newDayNum = data.length + 1;
+    onDataChange([...data, { day: newDayNum, date: 'October 20, 2026', blocks: [] }]);
   };
 
   const removeDay = (index: number) => {
       if (!window.confirm("Remove this session day?")) return;
       setIsDirty(true);
-      setLocalData(prev => {
-          const filtered = prev.filter((_, i) => i !== index);
-          return filtered.map((d, i) => ({ ...d, day: i + 1 }));
-      });
+      const filtered = data.filter((_, i) => i !== index);
+      const reindexed = filtered.map((d, i) => ({ ...d, day: i + 1 }));
+      onDataChange(reindexed);
   };
 
   const addBlock = (dayIndex: number) => {
@@ -170,8 +153,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       movieKeys: [],
       price: 10.00
     };
-    const newData = [...localData];
-    newData[dayIndex].blocks = [...newData[dayIndex].blocks]; newData[dayIndex].blocks.push(newBlock);
+    const newData = [...data];
+    newData[dayIndex].blocks.push(newBlock);
     onDataChange(newData);
   };
   
@@ -182,7 +165,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
      onDataChange(newData);
   };
 
-  const displayData = isDirty ? localData : data;
   return (
     <div className="space-y-12 pb-32 animate-[fadeIn_0.5s_ease-out]">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -209,15 +191,15 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                   <label className="form-label">Festival Title</label>
-                  <input type="text" name="title" value={localConfig.title || ''} onChange={handleConfigChange} className="form-input bg-black/40 font-black uppercase italic" />
+                  <input type="text" name="title" value={config.title || ''} onChange={handleConfigChange} className="form-input bg-black/40 font-black uppercase italic" />
               </div>
               <div>
                   <label className="form-label">Sub-Heading (Tagline)</label>
-                  <input type="text" name="subheader" value={localConfig.subheader || ''} onChange={handleConfigChange} className="form-input bg-black/40" />
+                  <input type="text" name="subheader" value={config.subheader || ''} onChange={handleConfigChange} className="form-input bg-black/40" />
               </div>
               <div className="md:col-span-2">
                   <label className="form-label">Description Brief</label>
-                  <textarea name="description" value={localConfig.description || ''} onChange={handleConfigChange} className="form-input bg-black/40 h-24" />
+                  <textarea name="description" value={config.description || ''} onChange={handleConfigChange} className="form-input bg-black/40 h-24" />
               </div>
               <div>
                   <label className="form-label">Festival Start Date (Calendar)</label>
@@ -233,7 +215,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                     <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Make visible to public web nodes</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" name="isFestivalLive" checked={localConfig.isFestivalLive} onChange={handleConfigChange} className="sr-only peer" />
+                    <input type="checkbox" name="isFestivalLive" checked={config.isFestivalLive} onChange={handleConfigChange} className="sr-only peer" />
                     <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
@@ -251,7 +233,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
             </button>
         </div>
 
-        {displayData.map((day, dayIndex) => (
+        {data.map((day, dayIndex) => (
           <div key={dayIndex} className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-10 relative group/day">
             <button 
                 onClick={() => removeDay(dayIndex)}
@@ -325,7 +307,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                 </div>
                                 {block.screeningStartTime && (
                                     <p className="text-[8px] text-gray-600 pb-2">
-                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </p>
                                 )}
                             </div>
