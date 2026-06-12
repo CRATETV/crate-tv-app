@@ -164,13 +164,24 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setProbeResult(null);
         setRemoteUpdateDetected(false);
 
-        // Direct Firestore listener — detects when another admin changes THIS film
-        // Shows an amber banner instead of silently overwriting your work
+        // Direct Firestore listener on this film's document.
+        // First fire: silently loads the latest Firestore state — shows actors and
+        //   any changes made before you opened this film. No banner, no disruption.
+        // Subsequent fires: banner only appears for changes made WHILE you're editing.
         const db = getDbInstance();
         if (db) {
+            let isFirstFire = true;
             const unsub = db.collection('movies').doc(selectedMovieKey).onSnapshot(doc => {
                 if (!doc.exists) return;
-                const incomingStr = JSON.stringify({ key: doc.id, ...doc.data() });
+                const incoming = { key: doc.id, ...doc.data() } as Movie;
+                const incomingStr = JSON.stringify(incoming);
+                if (isFirstFire) {
+                    isFirstFire = false;
+                    setFormData({ ...incoming });
+                    lastSavedDataRef.current = incomingStr;
+                    setRemoteUpdateDetected(false);
+                    return;
+                }
                 if (lastSavedDataRef.current && incomingStr !== lastSavedDataRef.current) {
                     setRemoteUpdateDetected(true);
                 }
