@@ -91,7 +91,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
                 {currentMovie.title}
               </h1>
               <p className="hidden sm:block text-sm md:text-base lg:text-lg max-w-xl mb-6 animate-[fadeInHeroContent_1s_ease-out] line-clamp-2 text-gray-200 leading-relaxed font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                {currentMovie.synopsis.replace(/<[^>]+>/g, '')}
+                {(currentMovie.synopsis || '').replace(/<[^>]+>/g, '')}
               </p>
               
               <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 animate-[fadeInHeroContent_1.2s_ease-out] pointer-events-auto">

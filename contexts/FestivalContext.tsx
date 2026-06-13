@@ -300,7 +300,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                         const updated = { ...prev };
                         snapshot.docChanges().forEach(change => {
                             if (change.type === 'removed') delete updated[change.doc.id];
-                            else updated[change.doc.id] = { key: change.doc.id, ...change.doc.data() } as Movie;
+                            else updated[change.doc.id] = { ...updated[change.doc.id], key: change.doc.id, ...change.doc.data() } as Movie; // merge — preserve S3 fields
                         });
                         return updated;
                     });
