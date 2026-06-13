@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error('Database offline.');
 
-    const VOD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+    const VOD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
     const now = Date.now();
     const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
     let hiddenFilms: string[] = [];

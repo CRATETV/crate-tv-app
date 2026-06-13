@@ -307,7 +307,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                 </div>
                                 {block.screeningStartTime && (
                                     <p className="text-[8px] text-gray-600 pb-2">
-                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        Closes: {new Date(new Date(block.screeningStartTime).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </p>
                                 )}
                             </div>
