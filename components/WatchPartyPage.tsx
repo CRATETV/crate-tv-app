@@ -265,7 +265,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return {
                 key: block.id,
                 title: block.title,
-                watchPartyStartTime: block.watchPartyStartTime,
+                watchPartyStartTime: block.screeningStartTime, // ← critical: blocks use screeningStartTime, not watchPartyStartTime
                 isWatchPartyEnabled: true,
                 isWatchPartyPaid: (block.price || 0) > 0,
                 watchPartyPrice: block.price,
@@ -437,14 +437,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         const partyRef = db.collection('watch_parties').doc(movieKey);
         const intermissionEnd = Date.now() + 60000; // 60 second intermission
+        const targetIdx = currentIdx + 1;
 
-        partyRef.update({
-            activeMovieIndex: currentIdx + 1,
-            intermissionUntil: intermissionEnd,
-            filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-            isPlaying: true,
-            currentTime: 0,
-        }).catch(() => {}); // If another client beat us here, ignore
+        // TRANSACTION GUARD: multiple viewers detect "ended" within the same
+        // ~1s sync window. Without a transaction, each would re-write
+        // activeMovieIndex + a NEW serverTimestamp, repeatedly resetting
+        // filmStartTime and causing the next film to keep restarting from 0.
+        // The transaction ensures only the FIRST detection actually advances —
+        // every subsequent attempt sees activeMovieIndex already changed and no-ops.
+        db.runTransaction(async (tx) => {
+            const snap = await tx.get(partyRef);
+            const current = snap.data();
+            if ((current?.activeMovieIndex ?? 0) !== currentIdx) return; // already advanced by another client
+            tx.update(partyRef, {
+                activeMovieIndex: targetIdx,
+                intermissionUntil: intermissionEnd,
+                filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+                isPlaying: true,
+                currentTime: 0,
+            });
+        }).catch(() => {});
 
         // Reset local ended state
         setIsEnded(false);
