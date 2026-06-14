@@ -195,7 +195,7 @@ const BlockCard: React.FC<{
 }> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
-    const screenEnd = screenStart ? new Date(screenStart.getTime() + 14 * 24 * 60 * 60 * 1000) : null;
+    const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
     return (
         <div className={`rounded-2xl border overflow-hidden ${isLive ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.12)]' : 'border-white/8'}`}>
             <div className="bg-white/[0.02] border-b border-white/5 p-5 md:p-7">

@@ -294,7 +294,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         {/* ── VIRTUAL SCREENING WINDOW ── */}
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                             <label className="text-[8px] text-amber-500 font-black tracking-widest uppercase">Virtual Screening Window</label>
-                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 2 weeks automatically.</p>
+                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 1 week automatically.</p>
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-1">
                                     <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
