@@ -107,16 +107,29 @@ export async function POST(request: Request) {
     else if (paymentType === 'block') {
         if (db) {
             try {
-                const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
-                let blockPrice = 10.00;
-                for (const dayDoc of daysSnap.docs) {
-                    const found = dayDoc.data().blocks?.find((b: any) => b.id === itemId);
-                    if (found && typeof found.price === 'number') { blockPrice = found.price; break; }
+                if (itemId === 'full-festival-pass') {
+                    const settingsDoc = await db.collection('settings').doc('site').get();
+                    const passPrice = settingsDoc.data()?.pwffFullPassPrice ?? 50.00;
+                    amountInCents = Math.round(passPrice * 100);
+                    note = `Festival All-Access Pass`;
+                } else {
+                    const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+                    let blockPrice = 10.00;
+                    for (const dayDoc of daysSnap.docs) {
+                        const found = dayDoc.data().blocks?.find((b: any) => b.id === itemId);
+                        if (found && typeof found.price === 'number') { blockPrice = found.price; break; }
+                    }
+                    amountInCents = Math.round(blockPrice * 100);
+                    note = `Festival Block Ticket: ${blockTitle || itemId}`;
                 }
-                amountInCents = Math.round(blockPrice * 100);
-            } catch { amountInCents = 1000; }
-        } else { amountInCents = 1000; }
-        note = `Festival Block Ticket: ${blockTitle || itemId}`;
+            } catch {
+                amountInCents = itemId === 'full-festival-pass' ? 5000 : 1000;
+                note = itemId === 'full-festival-pass' ? 'Festival All-Access Pass' : `Festival Block Ticket: ${blockTitle || itemId}`;
+            }
+        } else {
+            amountInCents = itemId === 'full-festival-pass' ? 5000 : 1000;
+            note = itemId === 'full-festival-pass' ? 'Festival All-Access Pass' : `Festival Block Ticket: ${blockTitle || itemId}`;
+        }
     }
     else if (staticPriceMap[paymentType]) {
         amountInCents = staticPriceMap[paymentType];
