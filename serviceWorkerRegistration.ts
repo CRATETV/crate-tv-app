@@ -22,6 +22,16 @@ export function register(config?: Config) {
 }
 
 function registerValidSW(swUrl: string, config?: Config) {
+  // When the new service worker takes control, reload the page once so
+  // the user gets the latest app shell automatically — no manual
+  // close-and-reopen required.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
