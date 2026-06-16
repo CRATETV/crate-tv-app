@@ -1,12 +1,32 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 
+// Fields that must NEVER be sent to the client in the public catalog response.
+// These are raw S3/CloudFront URLs — anyone who gets them can watch films for free.
+// The only way to get a playable URL is through /api/get-stream-url, which
+// verifies Firebase auth + payment server-side before returning a signed URL.
+const SENSITIVE_FIELDS = [
+    'fullMovie',
+    'streamUrl',
+    'rokuStreamUrl',
+    'liveStreamUrl',
+    'watchPartyIntroVideoUrl',
+    'subtitleUrl',
+] as const;
+
+function stripSensitiveFields(movie: Movie): Movie {
+    const safe: any = { ...movie };
+    for (const field of SENSITIVE_FIELDS) {
+        delete safe[field];
+    }
+    return safe as Movie;
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const noCache = searchParams.get('noCache') === 'true';
 
-        // Fetch fresh data from S3, bypassing any server-side cache if noCache is true
         const data = await getApiData({ noCache });
 
         if (data && data.movies) {
@@ -15,7 +35,8 @@ export async function GET(request: Request) {
             
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
-                finalMovies[m.key] = m;
+                // Strip all video URLs — clients must use /api/get-stream-url instead
+                finalMovies[m.key] = stripSensitiveFields(m);
             });
 
             data.movies = finalMovies;
@@ -23,17 +44,14 @@ export async function GET(request: Request) {
 
         if (data.categories) {
             const finalCategories: Record<string, Category> = {};
-
             Object.entries(data.categories).forEach(([key, category]) => {
                 const cat = category as Category;
                 if (!cat || !cat.title) return;
-                
                 if (Array.isArray(cat.movieKeys)) {
                     cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
                 }
                 finalCategories[key] = cat;
             });
-
             data.categories = finalCategories;
         }
 
@@ -41,9 +59,7 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                // Admin polls use noCache=true — bypass all caching so they always get fresh data
-                // Public loads use 60s cache for performance
-                'Cache-Control': noCache ? 'no-store, no-cache, must-revalidate' : 'public, max-age=60, stale-while-revalidate=30',
+                'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
             },
         });
     } catch (error) {
