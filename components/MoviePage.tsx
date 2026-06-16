@@ -188,7 +188,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   if (isDataLoading) return <LoadingSpinner />;
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
 
-  const embedUrl = getEmbedUrl(movie.fullMovie);
+  const embedUrl = getEmbedUrl(movie.fullMovie || "");
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050505] text-white">
