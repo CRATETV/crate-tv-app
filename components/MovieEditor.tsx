@@ -662,7 +662,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <div className="flex gap-2">
                                             <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40 flex-grow text-xs font-mono" placeholder="https://..." />
                                             <button 
-                                                onClick={() => handleRunProbe(formData.fullMovie)}
+                                                onClick={() => handleRunProbe(formData.fullMovie || "")}
                                                 disabled={isProbing || !formData.fullMovie}
                                                 className="bg-red-600 text-white font-black px-6 rounded-2xl uppercase text-[10px] tracking-widest disabled:opacity-30"
                                             >
