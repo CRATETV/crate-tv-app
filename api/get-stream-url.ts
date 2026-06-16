@@ -12,7 +12,6 @@
  */
 
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { CloudFrontClient, SignedUrl } from '@aws-sdk/cloudfront-signer';
 import { createSign } from 'crypto';
 
 // ── CloudFront signed URL generator ──────────────────────────────────────────

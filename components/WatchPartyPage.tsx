@@ -599,7 +599,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                 )}
                 {/* Hidden preload — buffers film while waiting */}
-                {secureStreamUrl || '' && (
+                {secureStreamUrl && (
                     <video src={secureStreamUrl || ''} preload="auto" muted playsInline
                         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
                         aria-hidden="true"
@@ -643,7 +643,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     so there's no blank screen when the party starts */}
                 {hasAccess && secureStreamUrl && (
                     <video
-                        src={secureStreamUrl}
+                        src={secureStreamUrl ?? undefined}
                         preload="auto"
                         muted
                         playsInline
@@ -864,7 +864,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     )}
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
-                                        src={secureStreamUrl}
+                                        src={secureStreamUrl ?? undefined}
                                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
                                         muted playsInline aria-hidden="true"
                                     />
