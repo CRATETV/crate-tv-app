@@ -207,13 +207,29 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                             Join Live Session
                                         </button>
                                     )}
-                                    {!isBlockUnlocked && (
-                                    <button
-                                        onClick={() => handlePurchaseClick('block', block)}
-                                        className="bg-white text-black font-black px-10 py-5 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-gray-200 active:scale-95"
-                                    >
-                                        Unlock Block // $10.00
-                                    </button>
+                                    {!isBlockLive && isBlockUnlocked && (
+                                        <button
+                                            onClick={() => navigateToParty(block.id)}
+                                            className="bg-white/10 border border-white/20 text-white font-black px-10 py-5 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-white/20 active:scale-95"
+                                        >
+                                            Enter Screening Lobby
+                                        </button>
+                                    )}
+                                    {!isBlockUnlocked && (!block.price || block.price === 0) && (
+                                        <button
+                                            onClick={() => handlePurchaseClick('block', block)}
+                                            className="bg-white text-black font-black px-10 py-5 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-gray-200 active:scale-95"
+                                        >
+                                            Watch Free
+                                        </button>
+                                    )}
+                                    {!isBlockUnlocked && block.price && block.price > 0 && (
+                                        <button
+                                            onClick={() => handlePurchaseClick('block', block)}
+                                            className="bg-white text-black font-black px-10 py-5 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-gray-200 active:scale-95"
+                                        >
+                                            Unlock Block // ${block.price?.toFixed(2)}
+                                        </button>
                                     )}
                                 </div>
                                </div>
