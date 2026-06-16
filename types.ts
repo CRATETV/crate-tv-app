@@ -193,8 +193,6 @@ export interface Movie {
   festivalFilmmakerPhoto?: string; // headshot URL
   festivalQuote?: string;          // pull quote for the hype section
   festivalAwards?: string;         // e.g. "Best Short — SXSW 2024"
-  isFestival?: boolean;            // PWFF festival film — festival pricing, no VOD conflict
-  viewerNotice?: string;           // admin notice shown on card and detail view
 }
 
 export interface Actor {
@@ -228,12 +226,10 @@ export interface FilmBlock {
   time: string;
   movieKeys: string[];
   price?: number;
-  screeningStartTime?: string;     // When this block goes live for virtual viewers
-  screeningEndTime?: string;       // When virtual access closes
+  screeningStartTime?: string;  // When this block goes live for virtual viewers
+  screeningEndTime?: string;    // When virtual access closes
   watchPartyStartTime?: string;
   isWatchPartyEnabled?: boolean;
-  releaseAfterScreening?: boolean; // If true, films go to catalog after the watch party ends
-  festivalEndTime?: string;        // Stamped when watch party ends — used by cleanup cron
 }
 
 export interface FestivalDay {
