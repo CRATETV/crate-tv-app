@@ -92,12 +92,20 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
 
     // ── PAYMENT HANDLERS ──────────────────────────────────────────────────────
     const handlePaymentSuccess = async (details: any) => {
+        // Unlock the block in Firestore first
         if (details.itemId) {
-            await unlockFestivalBlock(details.itemId);
+            try {
+                await unlockFestivalBlock(details.itemId);
+            } catch (err) {
+                console.error('[FestivalTicketFlow] unlockFestivalBlock failed:', err);
+            }
         }
-        // Show lobby FIRST — don't close the flow yet
-        // onSuccess is called when user leaves the lobby
-        setStep('lobby');
+        // Small delay to let the success animation show, then transition to lobby
+        // Using setTimeout ensures the SquarePaymentModal fully unmounts before
+        // we render WatchPartyLobby — prevents the "stuck on success screen" bug
+        setTimeout(() => {
+            setStep('lobby');
+        }, 500);
     };
 
     // ── LOBBY HANDLER ─────────────────────────────────────────────────────────
