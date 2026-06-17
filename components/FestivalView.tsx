@@ -66,6 +66,8 @@ const FestivalView: React.FC<FestivalViewProps> = ({
         } else if (details.paymentType === 'block' && details.itemId) {
             await unlockFestivalBlock(details.itemId);
             setIsPaymentModalOpen(false);
+            // Navigate straight to lobby — no re-payment on re-entry
+            setTimeout(() => navigateToParty(details.itemId), 400);
         } else if (details.paymentType === 'movie' && details.itemId) {
             await purchaseMovie(details.itemId);
             setIsPaymentModalOpen(false);

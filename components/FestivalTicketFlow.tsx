@@ -40,17 +40,21 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
     const isFree = !block.price || block.price === 0;
 
     const initialStep = (): Step => {
+        // Free blocks skip login — go straight to lobby
+        if (isFree) return 'lobby';
         if (!user) return 'auth';
-        if (alreadyHasAccess || isFree) return 'lobby';
+        if (alreadyHasAccess) return 'lobby';
         return 'payment';
     };
 
     const [step, setStep] = useState<Step>(initialStep);
 
     // When user logs in mid-flow, advance past auth step
+    // Free blocks never reach auth step, but guard here too
     useEffect(() => {
+        if (isFree && step !== 'lobby') { setStep('lobby'); return; }
         if (user && step === 'auth') {
-            const nextStep = (alreadyHasAccess || isFree) ? 'lobby' : 'payment';
+            const nextStep = alreadyHasAccess ? 'lobby' : 'payment';
             setStep(nextStep);
         }
     }, [user, step, alreadyHasAccess, isFree]);
