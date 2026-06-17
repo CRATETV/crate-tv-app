@@ -188,6 +188,13 @@ const App: React.FC = () => {
         if (livePartyMovie && !isWatchPartyEnded && hasValidStartTime && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
         
         if (isFestivalLive && !dismissedBannerKeys.has('festival')) return 'GENERAL_FESTIVAL';
+
+        // ── PWFF PHILLY 2026 PROMO BANNER ──────────────────────────────────────
+        // Show from today through August 23 2026 (festival end date) so anyone
+        // landing on cratetv.net sees the festival even before it goes live.
+        const PWFF_END = new Date('2026-08-23T23:59:59-04:00');
+        const isPwffPromoWindow = new Date() <= PWFF_END;
+        if (isPwffPromoWindow && !dismissedBannerKeys.has('pwff-promo')) return 'GENERAL_FESTIVAL';
         
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, dismissedBannerKeys, activeParties, allPartyStates]);
@@ -423,11 +430,8 @@ const App: React.FC = () => {
         setIsMobileSearchOpen(true);
     };
 
-    // Debounced search — avoids filtering on every keystroke
-    const searchTimeout = React.useRef<ReturnType<typeof setTimeout>>();
     const onSearch = useCallback((query: string) => {
-        if (searchTimeout.current) clearTimeout(searchTimeout.current);
-        searchTimeout.current = setTimeout(() => setSearchQuery(query), 200);
+        setSearchQuery(query);
     }, []);
 
     useEffect(() => {
@@ -437,15 +441,8 @@ const App: React.FC = () => {
         }
     }, [heroMovies.length]);
 
-    const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize, { passive: true });
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
     const mainPaddingTop = useMemo(() => {
-        const isMobile = windowWidth < 768;
+        const isMobile = window.innerWidth < 768;
         // Only the festival banner is tall on mobile — watch party banner is always slim 48px
         const isFestivalBanner = activeBannerType === 'GENERAL_FESTIVAL';
         const bannerHeight = activeBannerType !== 'NONE'
@@ -527,11 +524,19 @@ const App: React.FC = () => {
                     onClose={() => dismissBanner('cratefest')} 
                 />
             )}
-            {activeBannerType === 'GENERAL_FESTIVAL' && (
+            {activeBannerType === 'GENERAL_FESTIVAL' && (() => {
+                // Determine if this is the live festival or the pre-festival promo
+                const PWFF_START = new Date('2026-08-21T00:00:00-04:00');
+                const isPreFestival = new Date() < PWFF_START;
+                const dismissKey = isPreFestival ? 'pwff-promo' : 'festival';
+                const label = isPreFestival ? 'Coming Aug 21–23' : 'Now Streaming';
+                const ctaText = isPreFestival ? 'Get Tickets →' : 'Watch Now →';
+                const festName = settings?.pwffFestivalName || 'Playhouse West Film Festival 2026';
+                return (
                 <div
-                    onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '2026'}`); window.dispatchEvent(new Event('pushstate')); }}
+                    onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '-philly2026'}`); window.dispatchEvent(new Event('pushstate')); }}
                     className="fixed top-0 left-0 right-0 z-[110] cursor-pointer shadow-xl"
-                    style={{ background: "linear-gradient(135deg, #c50000, #E50914, #a00)" }}
+                    style={{ background: "linear-gradient(135deg, #1a0a00, #8B0000, #c50000)" }}
                 >
                     {/* Mobile: tall, stacked, prominent */}
                     <div className="md:hidden px-4 py-3 text-white">
@@ -542,16 +547,14 @@ const App: React.FC = () => {
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
                                 </span>
                                 <div className="min-w-0">
-                                    <p className="font-black uppercase text-[10px] tracking-widest text-white/70 leading-none mb-1">Now Streaming</p>
-                                    <p className="font-black text-base leading-tight text-white">
-                                        {settings?.pwffFestivalName || 'Playhouse West Film Festival 2026'}
-                                    </p>
+                                    <p className="font-black uppercase text-[10px] tracking-widest text-white/70 leading-none mb-1">{label}</p>
+                                    <p className="font-black text-base leading-tight text-white">{festName}</p>
                                 </div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-2xl leading-none flex-shrink-0 -mt-1">&times;</button>
+                            <button onClick={(e) => { e.stopPropagation(); dismissBanner(dismissKey); }} className="text-white/50 hover:text-white text-2xl leading-none flex-shrink-0 -mt-1">&times;</button>
                         </div>
-                        <button className="mt-3 w-full bg-white text-red-600 font-black py-2.5 rounded-xl text-sm uppercase tracking-widest shadow-md">
-                            Watch Now →
+                        <button className="mt-3 w-full bg-white text-red-900 font-black py-2.5 rounded-xl text-sm uppercase tracking-widest shadow-md">
+                            {ctaText}
                         </button>
                     </div>
 
@@ -563,18 +566,19 @@ const App: React.FC = () => {
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                             </span>
                             <span className="font-black uppercase text-[10px] tracking-widest whitespace-nowrap">
-                                {settings?.pwffFestivalName || 'Playhouse West Film Festival'} — Now Streaming
+                                {festName} — {label}
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="bg-white text-red-600 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md whitespace-nowrap">
-                                Watch Now →
+                            <button className="bg-white text-red-900 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md whitespace-nowrap">
+                                {ctaText}
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-xl leading-none ml-1">&times;</button>
+                            <button onClick={(e) => { e.stopPropagation(); dismissBanner(dismissKey); }} className="text-white/50 hover:text-white text-xl leading-none ml-1">&times;</button>
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
 
             <Header 
                 searchQuery={searchQuery} 

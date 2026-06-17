@@ -195,7 +195,7 @@ const BlockCard: React.FC<{
 }> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
-    const screenEnd = screenStart ? new Date(screenStart.getTime() + 14 * 24 * 60 * 60 * 1000) : null;
+    const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null; // 7 days — matches cron cleanup window
     return (
         <div className={`rounded-2xl border overflow-hidden ${isLive ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.12)]' : 'border-white/8'}`}>
             <div className="bg-white/[0.02] border-b border-white/5 p-5 md:p-7">
@@ -303,7 +303,7 @@ const ProgrammeMode: React.FC = () => {
         const block = allBlocks.find(b => b.id === showLobbyFor);
         if (!block) return null;
         const first = movies[block.movieKeys?.[0]];
-        return { key: block.id, title: block.title, isWatchPartyEnabled: true, isWatchPartyPaid: (block.price || 0) > 0, watchPartyPrice: block.price, poster: first?.poster || '', director: 'Festival Event', synopsis: '', cast: [], trailer: '', tvPoster: '', likes: 0 } as Movie;
+        return { key: block.id, title: block.title, isWatchPartyEnabled: true, isWatchPartyPaid: (block.price || 0) > 0, watchPartyPrice: block.price, poster: first?.poster || '', director: 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 } as Movie;
     }, [showLobbyFor, allBlocks, movies]);
 
     const openingNightDate = useMemo(() => {
@@ -439,7 +439,7 @@ const ProgrammeMode: React.FC = () => {
 
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];
-                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', tvPoster: '', likes: 0 };
+                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
                     onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
@@ -556,7 +556,7 @@ const PwffPage: React.FC = () => {
             />
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];
-                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', tvPoster: '', likes: 0 };
+                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
                     onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
@@ -592,7 +592,7 @@ const PwffPage: React.FC = () => {
             <ProgrammeMode />
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];
-                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', tvPoster: '', likes: 0 };
+                const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
                     onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}

@@ -80,7 +80,7 @@ interface FestivalEditorProps {
     allMovies: Record<string, Movie>;
     onDataChange: (data: FestivalDay[]) => void;
     onConfigChange: (config: FestivalConfig) => void;
-    onSave: (config: FestivalConfig, data?: FestivalDay[]) => void;
+    onSave: (config: FestivalConfig) => void;
     isSaving: boolean;
 }
 
@@ -294,13 +294,13 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         {/* ── VIRTUAL SCREENING WINDOW ── */}
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                             <label className="text-[8px] text-amber-500 font-black tracking-widest uppercase">Virtual Screening Window</label>
-                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 1 week automatically.</p>
+                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 2 weeks automatically.</p>
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-1">
                                     <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
                                     <input
                                         type="datetime-local"
-                                        value={formatISOForInput(block.screeningStartTime)}
+                                        value={block.screeningStartTime ? block.screeningStartTime.slice(0,16) : ''}
                                         onChange={e => handleBlockChange(dayIndex, blockIndex, 'screeningStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
                                         className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-amber-500"
                                     />
