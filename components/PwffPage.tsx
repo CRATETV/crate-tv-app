@@ -399,10 +399,12 @@ const ProgrammeMode: React.FC = () => {
                                 const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                                 const partyState = activeParties[block.id];
-                                const isLive = partyState?.status === 'live';
                                 const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
                                 const isBeforeScreening = screenStart ? new Date() < screenStart : false;
                                 const isInWindow = screenStart ? new Date() >= screenStart : true;
+                                // Only show "Live Now" if Firebase says live AND screening time has actually passed
+                                // This prevents stale Firestore state from showing "Live Now" prematurely
+                                const isLive = partyState?.status === 'live' && isInWindow;
                                 return (
                                     <BlockCard key={block.id} block={block} films={films}
                                         isUnlocked={isUnlocked && isInWindow}

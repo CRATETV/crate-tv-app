@@ -153,6 +153,24 @@ export async function POST(request: Request) {
                         batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day_${day.day}`), day);
                     }
                 });
+
+                // Reset any stale 'live' watch party states for blocks whose
+                // screeningStartTime is in the future — prevents old test data
+                // from showing "Live Now" before the actual screening time.
+                const allBlocks = days.flatMap((day: any) => day.blocks || []);
+                const now = new Date();
+                for (const block of allBlocks) {
+                    if (!block?.id || !block?.screeningStartTime) continue;
+                    const screeningTime = new Date(block.screeningStartTime);
+                    if (screeningTime > now) {
+                        const partyRef = db.collection('watch_parties').doc(block.id);
+                        const partyDoc = await partyRef.get();
+                        if (partyDoc.exists && partyDoc.data()?.status === 'live') {
+                            batch.set(partyRef, { status: 'waiting' }, { merge: true });
+                            console.log(`[PUBLISH] Reset stale live status for block ${block.id} (${block.title})`);
+                        }
+                    }
+                }
             }
             auditDetails = `Instant Sync: Festival manifest updated for ${days?.length || 0} days.`;
         }
@@ -192,12 +210,6 @@ export async function POST(request: Request) {
 
         // 2. TRIGGER S3 REBUILD AND WAIT (CRITICAL: Ensures Roku & Web see changes simultaneously)
         await assembleAndSyncMasterData(db);
-
-        // 3. STAMP SYNC VERSION — fires onSnapshot for all connected admin clients
-        await db.collection('data').doc('sync').set({
-            version: Date.now(), type, updatedBy: operatorName || 'admin',
-            updatedAt: FieldValue.serverTimestamp()
-        });
 
         return new Response(JSON.stringify({ 
             success: true, 

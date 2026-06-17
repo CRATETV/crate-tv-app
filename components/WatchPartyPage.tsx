@@ -463,7 +463,24 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // Falls back to direct Firestore write if API fails.
     useEffect(() => {
         if (!movie?.watchPartyStartTime) return;
-        if (partyState?.status === 'live' || partyState?.status === 'ended') return;
+        if (partyState?.status === 'ended') return;
+
+        // ── STALE STATE RESET ─────────────────────────────────────────────────
+        // If Firebase says 'live' but the screening time is still in the future,
+        // it's a stale document from a previous test — reset it to 'waiting'.
+        const screeningTime = new Date(movie.watchPartyStartTime).getTime();
+        if (partyState?.status === 'live' && Date.now() < screeningTime) {
+            const db = getDbInstance();
+            if (db) {
+                console.log('[AUTO-START] Resetting stale live status — screening time not yet reached');
+                db.collection('watch_parties').doc(movieKey).set({
+                    status: 'waiting',
+                }, { merge: true });
+            }
+            return;
+        }
+
+        if (partyState?.status === 'live') return;
 
         const startTime = new Date(movie.watchPartyStartTime).getTime();
         const now = Date.now();
