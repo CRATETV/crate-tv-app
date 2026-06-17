@@ -26,30 +26,45 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // Get the movie data to verify scheduled time
+    // Get the movie/block data to verify scheduled time
+    // Check movies collection first, then festival blocks
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
-    const movie = movies[movieKey];
-    let scheduledTime: number;
+    let movie = movies[movieKey];
+    let scheduledTimeStr: string | null = null;
 
     if (movie) {
-      if (!movie.isWatchPartyEnabled) return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
-      if (!movie.watchPartyStartTime) return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
-      scheduledTime = new Date(movie.watchPartyStartTime).getTime();
+        scheduledTimeStr = movie.watchPartyStartTime || null;
     } else {
-      // movieKey is a festival block.id — look up screeningStartTime
-      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
-      let blockData: any = null;
-      for (const dayDoc of daysSnap.docs) {
-        const found = (dayDoc.data().blocks || []).find((b: any) => b.id === movieKey);
-        if (found) { blockData = found; break; }
-      }
-      if (!blockData) return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
-      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening time for this block.' }), { status: 400 });
-      scheduledTime = new Date(blockData.screeningStartTime).getTime();
+        // Not a standalone movie — check festival blocks
+        const festivalDaysSnapshot = await db.collection('festival').doc('schedule').collection('days').get();
+        let foundBlock: any = null;
+        festivalDaysSnapshot.forEach(doc => {
+            const day = doc.data();
+            if (day.blocks) {
+                day.blocks.forEach((block: any) => {
+                    if (block.id === movieKey) foundBlock = block;
+                });
+            }
+        });
+        if (foundBlock) {
+            movie = foundBlock;
+            // Festival blocks use screeningStartTime OR watchPartyStartTime
+            scheduledTimeStr = foundBlock.watchPartyStartTime || foundBlock.screeningStartTime || null;
+        }
     }
 
-    // Check if we're within the valid auto-start window (5 min before → 30 min after)
+    if (!movie) {
+      return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
+    }
+
+    if (!scheduledTimeStr) {
+      return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
+    }
+
+    // Check if we're within the valid auto-start window
+    // Allow starting up to 5 minutes before or 30 minutes after the scheduled time
+    const scheduledTime = new Date(scheduledTimeStr).getTime();
     const now = Date.now();
     const fiveMinutesBefore = scheduledTime - (5 * 60 * 1000);
     const thirtyMinutesAfter = scheduledTime + (30 * 60 * 1000);
@@ -65,7 +80,7 @@ export async function POST(request: Request) {
     if (now > thirtyMinutesAfter) {
       return new Response(JSON.stringify({ 
         error: 'Auto-start window has expired. An admin must manually start the party.',
-        scheduledTime: movie.watchPartyStartTime
+        scheduledTime: scheduledTimeStr
       }), { status: 400 });
     }
 
@@ -105,11 +120,9 @@ export async function POST(request: Request) {
       status: 'live',
       lastStartedAt: new Date().toISOString(),
       actualStartTime: FieldValue.serverTimestamp(),
+      filmStartTime: scheduledTimeStr,
       isPlaying: true,
       currentTime: 0,
-      activeMovieIndex: 0,
-      filmStartTime: FieldValue.serverTimestamp(),
-      intermissionUntil: null,
       isQALive: false,
       lastUpdated: FieldValue.serverTimestamp(),
       backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase(),

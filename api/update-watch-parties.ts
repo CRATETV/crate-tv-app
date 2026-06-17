@@ -54,9 +54,11 @@ export async function GET(request: Request) {
             const day = doc.data();
             if (day.blocks) {
                 day.blocks.forEach((block: any) => {
-                    if (block.isWatchPartyEnabled) {
+                    if (block.isWatchPartyEnabled !== false) {
                         const state = partyStates.get(block.id);
-                        const startTime = block.watchPartyStartTime ? new Date(block.watchPartyStartTime) : null;
+                        // Use watchPartyStartTime OR screeningStartTime (whichever admin set)
+                        const startTimeStr = block.watchPartyStartTime || block.screeningStartTime;
+                        const startTime = startTimeStr ? new Date(startTimeStr) : null;
                         
                         if (startTime && startTime <= now && (!state || state.status !== 'live')) {
                             batch.set(db.collection('watch_parties').doc(block.id), {
@@ -65,10 +67,12 @@ export async function GET(request: Request) {
                                 isPlaying: true,
                                 currentTime: 0,
                                 actualStartTime: FieldValue.serverTimestamp(),
+                                filmStartTime: startTimeStr,
                                 lastUpdated: FieldValue.serverTimestamp(),
                                 backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
                             }, { merge: true });
                             mutationsCount++;
+                            console.log(`[AUTO-START] Block ${block.id} (${block.title}) started at ${startTimeStr}`);
                         }
                     }
                 });

@@ -458,9 +458,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [isEnded, showCredits, movie]);
 
     // ── TIME-BASED AUTO-START ────────────────────────────────────────────────
-    // When watchPartyStartTime passes and the party isn't already live,
-    // automatically flip status to 'live' in Firebase so the lobby hides
-    // and the film starts — no manual admin action needed.
+    // When screeningStartTime passes, call the server API to start the party.
+    // We use the API (not direct Firestore write) so all party setup runs properly.
+    // Falls back to direct Firestore write if API fails.
     useEffect(() => {
         if (!movie?.watchPartyStartTime) return;
         if (partyState?.status === 'live' || partyState?.status === 'ended') return;
@@ -469,7 +469,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const now = Date.now();
         const delay = startTime - now;
 
-        const goLive = () => {
+        const goLive = async () => {
+            // Try API first (handles full party setup including message cleanup)
+            try {
+                const res = await fetch('/api/auto-start-watch-party', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieKey, startTime: movie.watchPartyStartTime })
+                });
+                const result = await res.json();
+                if (result.success || result.alreadyLive) {
+                    console.log('[AUTO-START] Party started via API:', movieKey);
+                    setShowLobby(false);
+                    return;
+                }
+                console.warn('[AUTO-START] API returned error:', result.error);
+            } catch (err) {
+                console.warn('[AUTO-START] API call failed, falling back to direct write:', err);
+            }
+            // Fallback: write directly to Firestore
             const db = getDbInstance();
             if (db) {
                 db.collection('watch_parties').doc(movieKey).set({
@@ -477,7 +495,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     actualStartTime: movie.watchPartyStartTime,
                     filmStartTime: movie.watchPartyStartTime,
                     isPlaying: true,
+                    currentTime: 0,
                     activeMovieIndex: 0,
+                    type: 'block',
                 }, { merge: true });
             }
             setShowLobby(false);
