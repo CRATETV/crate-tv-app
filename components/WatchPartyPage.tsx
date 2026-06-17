@@ -13,7 +13,6 @@ import WatchPartyLobby from './WatchPartyLobby';
 import WatchPartyCredits from './WatchPartyCredits';
 import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
-import { getAuthInstance } from '../services/firebaseClient';
 import { useSessionGuard } from '../hooks/useSessionGuard';
 
 interface WatchPartyPageProps {
@@ -224,9 +223,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
-    const [secureStreamUrl, setSecureStreamUrl] = useState<string | null>(null);
-    const [streamUrlLoading, setStreamUrlLoading] = useState(false);
-    const secureUrlRef = useRef<{ url: string; expiresAt: Date } | null>(null);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
@@ -261,7 +257,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 isWatchPartyPaid: (block.price || 0) > 0,
                 watchPartyPrice: block.price,
                 director: activeFilm?.director || 'Festival Event',
-                // fullMovie intentionally omitted — use /api/get-stream-url instead
+                fullMovie: activeFilm?.fullMovie || '',
                 isLiveStream: activeFilm?.isLiveStream || false,
                 liveStreamEmbed: activeFilm?.liveStreamEmbed || '',
                 poster: activeFilm?.poster || '',
@@ -461,6 +457,41 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     }, [isEnded, showCredits, movie]);
 
+    // ── TIME-BASED AUTO-START ────────────────────────────────────────────────
+    // When watchPartyStartTime passes and the party isn't already live,
+    // automatically flip status to 'live' in Firebase so the lobby hides
+    // and the film starts — no manual admin action needed.
+    useEffect(() => {
+        if (!movie?.watchPartyStartTime) return;
+        if (partyState?.status === 'live' || partyState?.status === 'ended') return;
+
+        const startTime = new Date(movie.watchPartyStartTime).getTime();
+        const now = Date.now();
+        const delay = startTime - now;
+
+        const goLive = () => {
+            const db = getDbInstance();
+            if (db) {
+                db.collection('watch_parties').doc(movieKey).set({
+                    status: 'live',
+                    actualStartTime: movie.watchPartyStartTime,
+                    filmStartTime: movie.watchPartyStartTime,
+                    isPlaying: true,
+                    activeMovieIndex: 0,
+                }, { merge: true });
+            }
+            setShowLobby(false);
+        };
+
+        if (delay <= 0) {
+            goLive();
+            return;
+        }
+
+        const timer = setTimeout(goLive, delay);
+        return () => clearTimeout(timer);
+    }, [movie?.watchPartyStartTime, movieKey, partyState?.status]);
+
     // Determine if we should show lobby
     const shouldShowLobby = useMemo(() => {
         // Never show if party is live or ended
@@ -495,59 +526,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const exp = rentals[movieKey];
         return !!(exp && new Date(exp) > new Date());
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
-
-    // ── SECURE STREAM URL — fetch from server when access is granted ──────────
-    // This is the critical security fix: we never use secureStreamUrl || '' directly.
-    // Instead we request a signed, expiring URL from the server which verifies
-    // Firebase auth + Firestore payment state before issuing it.
-    useEffect(() => {
-        if (!hasAccess || !movie) return;
-        // Don't refetch if we already have a valid URL
-        if (secureUrlRef.current && secureUrlRef.current.expiresAt > new Date(Date.now() + 60000)) return;
-
-        const fetchSecureUrl = async () => {
-            setStreamUrlLoading(true);
-            try {
-                const auth = getAuthInstance();
-                const currentUser = auth?.currentUser;
-                if (!currentUser) return;
-                const idToken = await currentUser.getIdToken();
-
-                // Find the parent block ID if this is a festival film
-                const parentBlock = festivalData.flatMap((d: any) => d.blocks).find((b: any) => b.movieKeys?.includes(movieKey));
-                const blockId = parentBlock?.id || (movieKey.startsWith('block_') ? movieKey : undefined);
-
-                const res = await fetch('/api/get-stream-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey, blockId, idToken }),
-                });
-                const data = await res.json();
-                if (data.url) {
-                    secureUrlRef.current = { url: data.url, expiresAt: new Date(data.expiresAt) };
-                    setSecureStreamUrl(data.url);
-                } else {
-                    console.error('[get-stream-url]', data.error);
-                }
-            } catch (err) {
-                console.error('[get-stream-url] fetch failed', err);
-            } finally {
-                setStreamUrlLoading(false);
-            }
-        };
-
-        fetchSecureUrl();
-    }, [hasAccess, movie, movieKey, festivalData]);
-
-    // Refresh the signed URL before it expires (every 3.5 hours)
-    useEffect(() => {
-        if (!hasAccess) return;
-        const interval = setInterval(() => {
-            secureUrlRef.current = null;
-            setSecureStreamUrl(null);
-        }, 3.5 * 60 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [hasAccess]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
@@ -599,8 +577,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                 )}
                 {/* Hidden preload — buffers film while waiting */}
-                {secureStreamUrl && (
-                    <video src={secureStreamUrl || ''} preload="auto" muted playsInline
+                {movie.fullMovie && (
+                    <video src={movie.fullMovie} preload="auto" muted playsInline
                         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
                         aria-hidden="true"
                     />
@@ -641,9 +619,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 />
                 {/* Hidden preload video — silently buffers the film while lobby is showing
                     so there's no blank screen when the party starts */}
-                {hasAccess && secureStreamUrl && (
+                {hasAccess && movie.fullMovie && (
                     <video
-                        src={secureStreamUrl ?? undefined}
+                        src={movie.fullMovie}
                         preload="auto"
                         muted
                         playsInline
@@ -864,13 +842,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     )}
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
-                                        src={secureStreamUrl ?? undefined}
+                                        src={movie.fullMovie}
                                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
                                         muted playsInline aria-hidden="true"
                                     />
                                     <video 
                                         ref={videoRef} 
-                                        src={secureStreamUrl || ''} 
+                                        src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 

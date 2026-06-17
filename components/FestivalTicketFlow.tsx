@@ -55,6 +55,15 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
         }
     }, [user, step, alreadyHasAccess, isFree]);
 
+    // ── RE-ENTRY FIX ──────────────────────────────────────────────────────────
+    // If user already has access (loaded async from Firestore) but we're stuck
+    // on 'payment', correct the step immediately — no re-payment needed.
+    useEffect(() => {
+        if (step === 'payment' && (alreadyHasAccess || isFree)) {
+            setStep('lobby');
+        }
+    }, [alreadyHasAccess, isFree, step]);
+
     // ── AUTH FORM STATE ───────────────────────────────────────────────────────
     const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
     const [name, setName] = useState('');
