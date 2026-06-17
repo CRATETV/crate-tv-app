@@ -31,7 +31,7 @@ interface FestivalTicketFlowProps {
 }
 
 const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMovie, onClose, onSuccess }) => {
-    const { user, signIn, signUp, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess } = useAuth();
+    const { user, signIn, signUp, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, sendPasswordReset } = useAuth();
     const { activeParties } = useFestival();
 
     // ── STEP LOGIC ────────────────────────────────────────────────────────────
@@ -72,6 +72,23 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [resetMessage, setResetMessage] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+
+    const handleForgotPassword = async () => {
+        if (!email.trim()) { setAuthError('Enter your email address first, then click Forgot Password.'); return; }
+        setAuthError('');
+        setResetMessage('');
+        setResetLoading(true);
+        try {
+            await sendPasswordReset(email.trim());
+            setResetMessage('Password reset email sent — check your inbox.');
+        } catch (err: any) {
+            setAuthError(err.message || 'Failed to send reset email.');
+        } finally {
+            setResetLoading(false);
+        }
+    };
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -284,21 +301,36 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
                         </button>
                     </form>
 
-                    <div className="mt-4 text-center">
+                    <div className="mt-4 text-center space-y-2">
                         {authMode === 'signup' ? (
                             <p className="text-xs text-gray-600">
                                 Already have a Crate account?{' '}
-                                <button onClick={() => { setAuthMode('login'); setAuthError(''); }} className="text-gray-400 hover:text-white font-bold transition-colors">
+                                <button onClick={() => { setAuthMode('login'); setAuthError(''); setResetMessage(''); }} className="text-gray-400 hover:text-white font-bold transition-colors">
                                     Sign in
                                 </button>
                             </p>
                         ) : (
-                            <p className="text-xs text-gray-600">
-                                New to Crate?{' '}
-                                <button onClick={() => { setAuthMode('signup'); setAuthError(''); }} className="text-gray-400 hover:text-white font-bold transition-colors">
-                                    Create a free account
+                            <>
+                                <p className="text-xs text-gray-600">
+                                    New to Crate?{' '}
+                                    <button onClick={() => { setAuthMode('signup'); setAuthError(''); setResetMessage(''); }} className="text-gray-400 hover:text-white font-bold transition-colors">
+                                        Create a free account
+                                    </button>
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={handleForgotPassword}
+                                    disabled={resetLoading}
+                                    className="text-[11px] text-gray-600 hover:text-gray-400 underline underline-offset-4 transition-colors disabled:opacity-50"
+                                >
+                                    {resetLoading ? 'Sending...' : 'Forgot password?'}
                                 </button>
-                            </p>
+                                {resetMessage && (
+                                    <p className="text-xs text-green-400 bg-green-900/20 border border-green-500/20 rounded-lg px-3 py-2">
+                                        {resetMessage}
+                                    </p>
+                                )}
+                            </>
                         )}
                     </div>
 
