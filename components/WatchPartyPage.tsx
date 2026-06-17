@@ -475,7 +475,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const res = await fetch('/api/auto-start-watch-party', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey, startTime: movie.watchPartyStartTime })
+                    body: JSON.stringify({ movieKey, startTime: movie.watchPartyStartTime || (movie as any).screeningStartTime })
                 });
                 const result = await res.json();
                 if (result.success || result.alreadyLive) {

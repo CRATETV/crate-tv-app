@@ -15,7 +15,7 @@ import { FieldValue } from 'firebase-admin/firestore';
  */
 export async function POST(request: Request) {
   try {
-    const { movieKey } = await request.json();
+    const { movieKey, startTime: clientStartTime } = await request.json();
 
     if (!movieKey) {
       return new Response(JSON.stringify({ error: 'Movie key required.' }), { status: 400 });
@@ -58,6 +58,10 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
     }
 
+    // Fall back to startTime passed from the client if we can't find it in the DB
+    if (!scheduledTimeStr && clientStartTime) {
+      scheduledTimeStr = clientStartTime;
+    }
     if (!scheduledTimeStr) {
       return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
     }

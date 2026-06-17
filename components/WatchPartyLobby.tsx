@@ -35,7 +35,9 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
     const [finalCount, setFinalCount] = useState<number | null>(null);
 
-    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
+    // Use watchPartyStartTime OR screeningStartTime — whichever the admin set
+    const startTimeStr = (movie as any).watchPartyStartTime || (movie as any).screeningStartTime || null;
+    const startTime = startTimeStr ? new Date(startTimeStr) : null;
 
     // Register viewer presence
     useEffect(() => {
@@ -244,7 +246,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
                     {/* Festival label */}
                     <p className="text-[9px] font-black uppercase tracking-[0.5em] text-red-500">
-                        Playhouse West Film Festival · 2026
+                        Playhouse West Film Festival - Philadelphia · 2026
                     </p>
 
                     {/* Title */}

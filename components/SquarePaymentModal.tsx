@@ -14,49 +14,81 @@ interface SquarePaymentModalProps {
     priceOverride?: number; 
 }
 
-const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type }) => (
-    <div className="relative w-full aspect-[1.6/1] bg-gradient-to-br from-gray-900 to-black rounded-2xl border border-white/20 overflow-hidden shadow-2xl animate-[ticketEntry_0.8s_cubic-bezier(0.34,1.56,0.64,1)]">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 via-transparent to-red-600/20"></div>
-        
-        <div className="relative h-full flex flex-col p-6">
-            <div className="flex justify-between items-start border-b border-white/10 pb-4 mb-4">
-                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="h-8 invert" alt="Crate" />
-                <div className="text-right">
-                    <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.3em]">Secure Verified Access</p>
-                    <p className="text-[10px] font-mono text-white/40">HASH: {Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
-                </div>
-            </div>
-            
-            <div className="flex-grow flex flex-col justify-center">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
-                    {type === 'juryPass' ? 'Grand Jury Credentials' : type === 'watchPartyTicket' ? 'Live Screening Pass' : type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
-                </p>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{details.title}</h3>
-                <p className="text-xs text-gray-400 mt-2 font-mono">Issued to: {details.email || 'Verified Member'}</p>
+const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type }) => {
+    const ticketId = React.useMemo(() => Math.random().toString(36).substring(2, 10).toUpperCase(), []);
+    const isPass = type === 'pass' || type === 'crateFestPass' || type === 'juryPass';
+    const label = type === 'juryPass' ? 'Grand Jury Credentials'
+        : type === 'pass' ? 'Festival All-Access Pass'
+        : type === 'crateFestPass' ? 'Crate Fest All-Access'
+        : type === 'block' ? 'Screening Block Pass'
+        : type === 'movie' ? 'Authorized Rental'
+        : 'Official Selection Access';
+
+    return (
+        <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl"
+            style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a0a00 50%, #0a0a0a 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+            {/* Gold top accent */}
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, transparent, #c8960c, #f5d06e, #c8960c, transparent)' }} />
+
+            {/* Film strip holes top */}
+            <div className="flex gap-3 px-4 py-2 opacity-20">
+                {[...Array(8)].map((_, i) => <div key={i} className="w-4 h-3 rounded-sm bg-white/40 flex-shrink-0" />)}
             </div>
 
-            <div className="mt-auto flex justify-between items-end border-t border-white/10 pt-4">
-                <div className="flex gap-4">
-                    <div>
-                        <p className="text-[7px] text-gray-500 uppercase font-black">Status</p>
-                        <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Authorized</p>
-                    </div>
-                    <div>
-                        <p className="text-[7px] text-gray-500 uppercase font-black">Rank</p>
-                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">{type === 'juryPass' ? 'Jury Member' : 'Patron'}</p>
+            <div className="px-8 pb-8 pt-2 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="h-7 invert opacity-80" alt="Crate" />
+                    <div className="text-right">
+                        <p className="text-[8px] font-black uppercase tracking-[0.4em]" style={{ color: '#c8960c' }}>Playhouse West Film Festival</p>
+                        <p className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-600">Philadelphia · 2026</p>
                     </div>
                 </div>
-                <div className="bg-white p-1 rounded">
-                    <div className="w-10 h-10 bg-black flex items-center justify-center">
-                        <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M3 4h14v2H3V4zm0 4h14v2H3V8zm0 4h14v2H3v-2zm0 4h14v2H3v-2z" /></svg>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(200,150,12,0.4))' }} />
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#c8960c' }} />
+                    <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(200,150,12,0.4), transparent)' }} />
+                </div>
+
+                {/* Main credential */}
+                <div className="text-center space-y-2">
+                    <p className="text-[9px] font-black uppercase tracking-[0.5em] text-gray-500">{label}</p>
+                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white leading-tight">{details.title}</h2>
+                    <p className="text-xs text-gray-600 font-mono">Issued to: {details.email || 'Verified Member'}</p>
+                </div>
+
+                {/* Status row */}
+                <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-4">
+                    <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-gray-600 mb-1">Access Level</p>
+                        <p className="text-xs font-black uppercase tracking-wider" style={{ color: isPass ? '#c8960c' : '#22c55e' }}>
+                            {isPass ? '⭐ All-Access' : '✓ Confirmed'}
+                        </p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-gray-600 mb-1">Credential ID</p>
+                        <p className="text-[10px] font-mono text-white/40">{ticketId}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-gray-600 mb-1">Valid</p>
+                        <p className="text-[10px] font-black text-white">Aug 21–23</p>
                     </div>
                 </div>
             </div>
+
+            {/* Film strip holes bottom */}
+            <div className="flex gap-3 px-4 py-2 opacity-20">
+                {[...Array(8)].map((_, i) => <div key={i} className="w-4 h-3 rounded-sm bg-white/40 flex-shrink-0" />)}
+            </div>
+
+            {/* Gold bottom accent */}
+            <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, #c8960c, #f5d06e, #c8960c, transparent)' }} />
         </div>
-        <div className="absolute top-0 right-1/4 bottom-0 w-px bg-white/5 border-l border-white/10"></div>
-    </div>
-);
+    );
+};
 
 const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ 
     movie, 
@@ -275,16 +307,31 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
                 <div className="p-8 space-y-8">
                     {paymentSuccess ? (
-                        <div className="space-y-8 py-6">
+                        <div className="space-y-6 py-4">
+                            {/* Animated checkmark */}
                             <div className="flex justify-center">
-                                <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center animate-bounce shadow-[0_0_40px_rgba(34,197,94,0.2)]">
-                                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                <div className="relative">
+                                    <div className="w-24 h-24 rounded-full flex items-center justify-center"
+                                        style={{ background: 'radial-gradient(circle, rgba(200,150,12,0.15) 0%, transparent 70%)', border: '2px solid rgba(200,150,12,0.3)' }}>
+                                        <svg className="w-12 h-12" fill="none" stroke="#c8960c" viewBox="0 0 24 24"
+                                            style={{ filter: 'drop-shadow(0 0 12px rgba(200,150,12,0.6))' }}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    {/* Pulse rings */}
+                                    <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+                                        style={{ border: '2px solid #c8960c' }} />
                                 </div>
                             </div>
-                            <div className="text-center">
-                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white italic">Authorization Confirmed</h3>
-                                <p className="text-gray-400 mt-2 font-medium">Access protocols updated. Redirecting to content...</p>
+                            {/* Headline */}
+                            <div className="text-center space-y-2">
+                                <p className="text-[9px] font-black uppercase tracking-[0.5em]" style={{ color: '#c8960c' }}>Payment Successful</p>
+                                <h3 className="text-4xl font-black uppercase tracking-tighter text-white italic leading-none">
+                                    You're In.
+                                </h3>
+                                <p className="text-gray-500 text-sm">Your credential is ready. Entering the lobby now.</p>
                             </div>
+                            {/* Ticket */}
                             <DigitalTicket details={{ title: itemTitle, email: user?.email }} type={paymentType} />
                         </div>
                     ) : (
