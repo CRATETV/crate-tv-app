@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
-import { useFestival } from '../contexts/FestivalContext';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import MovieEditor from './MovieEditor';
@@ -94,21 +93,6 @@ const AdminPage: React.FC = () => {
     const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
-
-    const { movies: liveMovies, categories: liveCategories,
-            festivalData: liveFestivalData, festivalConfig: liveFestivalConfig,
-            refreshData } = useFestival();
-
-    useEffect(() => { if (Object.keys(liveMovies).length > 0) startTransition(() => setMovies(liveMovies)); }, [liveMovies]);
-    useEffect(() => { if (Object.keys(liveCategories).length > 0) startTransition(() => setCategories(liveCategories)); }, [liveCategories]);
-    useEffect(() => {
-        if (activeTab === 'festHub') return;
-        if (liveFestivalData.length > 0) startTransition(() => setFestivalData(liveFestivalData));
-    }, [liveFestivalData, activeTab]);
-    useEffect(() => {
-        if (activeTab === 'festHub') return;
-        if (liveFestivalConfig) startTransition(() => setFestivalConfig(liveFestivalConfig));
-    }, [liveFestivalConfig, activeTab]);
 
     const allowedTabs = useMemo(() => {
         const roleLower = role.toLowerCase();
@@ -295,7 +279,6 @@ const AdminPage: React.FC = () => {
             if (response.ok) {
                 setSaveMessage(`Manifest Synchronized.`);
                 await fetchAllData(pass!);
-                refreshData();
             }
         } catch (err) {
             setSaveMessage("Sync failed.");
@@ -560,7 +543,7 @@ const AdminPage: React.FC = () => {
                                 allMovies={movies}
                                 onDataChange={(d) => setFestivalData(d)}
                                 onConfigChange={(c) => setFestivalConfig(c)}
-                                onSave={(latestConfig, latestData) => handleSaveData('festival', { config: latestConfig, data: latestData ?? festivalData })}
+                                onSave={(latestConfig: import('../types').FestivalConfig) => { handleSaveData('festival', { config: latestConfig, data: festivalData }); }}
                                 isSaving={isSaving}
                             />
                         </div>
