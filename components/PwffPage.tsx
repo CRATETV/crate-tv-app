@@ -232,7 +232,7 @@ const BlockCard: React.FC<{
                                 ? <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>
                                 : block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
-                                    : <span className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Free</span>}
+                                    : <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>}
                     </div>
                 </div>
             </div>

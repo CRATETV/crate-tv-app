@@ -219,7 +219,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                     )}
                                     {!isBlockUnlocked && (!block.price || block.price === 0) && (
                                         <button
-                                            onClick={() => handlePurchaseClick('block', block)}
+                                            onClick={() => navigateToParty(block.id)}
                                             className="bg-white text-black font-black px-10 py-5 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-gray-200 active:scale-95"
                                         >
                                             Watch Free

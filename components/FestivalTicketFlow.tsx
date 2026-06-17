@@ -31,7 +31,7 @@ interface FestivalTicketFlowProps {
 }
 
 const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMovie, onClose, onSuccess }) => {
-    const { user, signIn, signUp, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, sendPasswordReset } = useAuth();
+    const { user, authInitialized, signIn, signUp, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, sendPasswordReset } = useAuth();
     const { activeParties } = useFestival();
 
     // ── STEP LOGIC ────────────────────────────────────────────────────────────
@@ -42,6 +42,8 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
     const initialStep = (): Step => {
         // Free blocks skip login — go straight to lobby
         if (isFree) return 'lobby';
+        // Auth not ready yet — start at auth so we show a loader, not payment
+        if (!authInitialized) return 'auth';
         if (!user) return 'auth';
         if (alreadyHasAccess) return 'lobby';
         return 'payment';
@@ -49,24 +51,21 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
 
     const [step, setStep] = useState<Step>(initialStep);
 
-    // When user logs in mid-flow, advance past auth step
-    // Free blocks never reach auth step, but guard here too
+    // ── CORRECT STEP ONCE AUTH & DATA LOAD ───────────────────────────────────
+    // This is the critical re-entry fix: auth loads async after component mounts.
+    // We watch authInitialized + alreadyHasAccess and jump to the right step.
     useEffect(() => {
+        // Free blocks always go to lobby
         if (isFree && step !== 'lobby') { setStep('lobby'); return; }
+        // Wait for auth to finish loading
+        if (!authInitialized) return;
+        // User has access — skip to lobby regardless of current step
+        if (alreadyHasAccess && step !== 'lobby') { setStep('lobby'); return; }
+        // User is logged in and past auth step — send to payment if no access
         if (user && step === 'auth') {
-            const nextStep = alreadyHasAccess ? 'lobby' : 'payment';
-            setStep(nextStep);
+            setStep(alreadyHasAccess ? 'lobby' : 'payment');
         }
-    }, [user, step, alreadyHasAccess, isFree]);
-
-    // ── RE-ENTRY FIX ──────────────────────────────────────────────────────────
-    // If user already has access (loaded async from Firestore) but we're stuck
-    // on 'payment', correct the step immediately — no re-payment needed.
-    useEffect(() => {
-        if (step === 'payment' && (alreadyHasAccess || isFree)) {
-            setStep('lobby');
-        }
-    }, [alreadyHasAccess, isFree, step]);
+    }, [user, step, alreadyHasAccess, isFree, authInitialized]);
 
     // ── AUTH FORM STATE ───────────────────────────────────────────────────────
     const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
@@ -151,6 +150,18 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
         document.body.style.overflow = 'hidden';
         return () => { document.body.style.overflow = ''; };
     }, []);
+
+    // ── LOADING STATE — wait for auth before showing any step ────────────────
+    if (!isFree && !authInitialized) {
+        return (
+            <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto" />
+                    <p className="text-white/40 text-xs uppercase tracking-widest font-black">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     // ── STEP: LOBBY (full-screen, no wrapper) ─────────────────────────────────
     if (step === 'lobby') {

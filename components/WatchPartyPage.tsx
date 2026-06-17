@@ -212,7 +212,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
+    const { user, authInitialized, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
@@ -252,7 +252,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return {
                 key: block.id,
                 title: block.title,
-                watchPartyStartTime: block.watchPartyStartTime,
+                watchPartyStartTime: block.watchPartyStartTime || block.screeningStartTime,
                 isWatchPartyEnabled: true,
                 isWatchPartyPaid: (block.price || 0) > 0,
                 watchPartyPrice: block.price,
@@ -505,6 +505,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [partyState, showLobby, movie]);
 
     const hasAccess = useMemo(() => {
+        // ── WAIT FOR AUTH ─────────────────────────────────────────────────────
+        // Don't evaluate access until Firebase auth has fully initialized and
+        // the user profile (with unlockedBlocks) has loaded from Firestore.
+        // Without this guard, re-entry always shows the paywall for ~1s then
+        // snaps to the lobby — confusing and can trigger double-payment clicks.
+        if (!authInitialized) return null; // null = still loading
+
         if (isControllerMode || isBackstageVerified) return true;
         if (!movie) return false;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
@@ -525,10 +532,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!movie.isWatchPartyPaid) return true;
         const exp = rentals[movieKey];
         return !!(exp && new Date(exp) > new Date());
-    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
+    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData, authInitialized]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
-    const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
+    const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess === true);
     const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
@@ -540,6 +547,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     };
 
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
+    // Wait for auth to initialize before showing paywall — prevents false "pay again" on re-entry
+    if (hasAccess === null) return <LoadingSpinner />;
 
     if (isControllerMode) {
         return (
@@ -793,7 +802,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {!hasAccess ? (
+                        {hasAccess === false ? (
                              <div className="text-center px-6 py-12 space-y-10 animate-[fadeIn_0.8s_ease-out] max-w-lg mx-auto w-full">
                                 <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission Required.</h2>
                                 <div className="space-y-6">
