@@ -175,7 +175,7 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
                     subject: '🎬 Your CrateFest Digital Access Code',
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #fff; padding: 40px; border-radius: 16px;">
-                            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" style="height: 40px; margin-bottom: 24px;" />
+                            <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" style="height: 40px; margin-bottom: 24px;" />
                             <h1 style="color: #fff; font-size: 28px; margin-bottom: 16px;">Your Digital Access Code</h1>
                             <p style="color: #888; font-size: 16px; line-height: 1.6;">
                                 Hi${name ? ` ${name}` : ''},<br/><br/>

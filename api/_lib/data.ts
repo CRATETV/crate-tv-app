@@ -4,7 +4,7 @@ import { moviesData as fallbackMovies, categoriesData as fallbackCategories, fes
 
 let cachedData: any = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 1000;  // 5 seconds — fast enough for real-time admin sync
+const CACHE_DURATION = 30 * 1000; // 30 seconds for faster updates
 
 let s3Client: S3Client | null = null;
 const getS3Client = () => {

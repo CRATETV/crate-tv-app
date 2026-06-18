@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron-festival-cleanup",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/check-anniversaries",
       "schedule": "0 10 * * *"
     },
@@ -54,24 +50,6 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
-        }
-      ]
-    },
-    {
-      "source": "/index.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/((?!api/|.*\\..*).*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     }

@@ -43,7 +43,7 @@ const CastCard: React.FC<CastCardProps> = ({ actor, onClick }) => (
     >
         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-transparent group-hover:border-red-500 transition-colors mb-2 shadow-lg ring-offset-2 ring-offset-black group-hover:ring-2 ring-red-500/50">
             <img 
-                src={actor.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'} 
+                src={actor.photo || 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png'} 
                 alt={actor.name} 
                 className="w-full h-full object-cover pointer-events-none"
             />

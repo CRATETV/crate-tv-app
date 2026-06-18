@@ -26,7 +26,7 @@ const TalentPage: React.FC = () => {
                 {/* Hero Section */}
                 <div className="relative h-[60vh] md:h-[70vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden border-b border-white/5">
                     <div className="absolute inset-0 bg-black">
-                        <div className="absolute inset-0 bg-[url('https://cratetelevision.s3.us-east-1.amazonaws.com/talent-bg.jpg')] opacity-30 grayscale blur-sm scale-110"></div>
+                        <div className="absolute inset-0 bg-[url('https://d3jhtrl1gnrh4b.cloudfront.net/talent-bg.jpg')] opacity-30 grayscale blur-sm scale-110"></div>
                         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black to-black"></div>
                     </div>
                     <div className="relative z-10 max-w-5xl space-y-6 animate-[fadeIn_1.2s_ease-out]">

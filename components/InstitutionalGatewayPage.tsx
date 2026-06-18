@@ -22,7 +22,7 @@ const InstitutionalGatewayPage: React.FC = () => {
             <div className="max-w-4xl mx-auto space-y-16 animate-[fadeIn_0.8s_ease-out]">
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/5 pb-10 gap-8">
                     <div className="space-y-2">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-40 mb-4" alt="Crate" />
+                        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-40 mb-4" alt="Crate" />
                         <h1 className="text-4xl font-black uppercase tracking-tighter italic">Institutional Access Gateway.</h1>
                         <p className="text-gray-500 font-bold uppercase tracking-[0.4em] text-[10px]">Resource Identification: ACADEMIC_NODE_BRIDGE</p>
                     </div>

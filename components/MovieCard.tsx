@@ -1,4 +1,3 @@
-const toCdnUrl = (url?: string|null) => !url ? '' : url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net');
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Movie } from '../types';
@@ -238,12 +237,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <div className={`relative w-full h-full overflow-hidden rounded-lg transition-all duration-300 ${showExpanded ? 'brightness-50' : ''}`}>
         {!isImageLoaded && <div className="absolute inset-0 shimmer-bg" />}
         <img
-          src={toCdnUrl(currentPoster)}
+          src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
           alt={movie.title}
           className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
-          decoding="async"
           onLoad={() => setIsImageLoaded(true)}
+          crossOrigin="anonymous"
         />
 
         {/* Badges */}
@@ -300,7 +299,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               />
             ) : (
               <img
-                src={toCdnUrl(currentPoster)}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
@@ -309,7 +308,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
               <img
-                src={toCdnUrl(currentPoster)}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
                 crossOrigin="anonymous"
@@ -485,7 +484,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 />
               ) : (
                 <img
-                  src={toCdnUrl(currentPoster)}
+                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"

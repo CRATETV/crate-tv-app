@@ -78,8 +78,8 @@ export async function POST(request: Request) {
             name: userData.name,
             slug: newSlug,
             bio: bestActorData?.bio || 'Biography data pending synchronization.',
-            photo: bestActorData?.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
-            highResPhoto: bestActorData?.highResPhoto || bestActorData?.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+            photo: bestActorData?.photo || 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png',
+            highResPhoto: bestActorData?.highResPhoto || bestActorData?.photo || 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png',
             imdbUrl: '',
             email: userData.email || '',
         };

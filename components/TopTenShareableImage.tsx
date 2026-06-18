@@ -38,7 +38,7 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
       <div className="flex justify-between items-start mb-14 relative z-10">
         <div className="flex items-center gap-6">
             <img 
-              src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png")}`} 
+              src={`/api/proxy-image?url=${encodeURIComponent("https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png")}`} 
               alt="Crate TV Logo" 
               className="w-40 invert brightness-0 opacity-80" 
               crossOrigin="anonymous" 

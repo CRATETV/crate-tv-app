@@ -8,7 +8,7 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // New professional intro master file
-  const introSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/New+Intro+.mp4";
+  const introSrc = "https://d3jhtrl1gnrh4b.cloudfront.net/New+Intro+.mp4";
 
   useEffect(() => {
     const videoElement = videoRef.current;

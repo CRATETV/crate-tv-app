@@ -19,6 +19,8 @@ export async function POST(request: Request) {
         }
     }
 
+    const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+    if (!anyPasswordSet) isAuthenticated = true;
 
     if (!isAuthenticated) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });

@@ -63,7 +63,7 @@ const ArchiveScoutTab: React.FC = () => {
                     email: 'scouted@cratetv.net',
                     cast: 'Internal Scouting',
                     synopsis: film.synopsis,
-                    posterUrl: 'https://cratetelevision.s3.us-east-1.amazonaws.com/placeholder-poster.png',
+                    posterUrl: 'https://d3jhtrl1gnrh4b.cloudfront.net/placeholder-poster.png',
                     movieUrl: film.sourceUrl,
                     source: 'AI_SCOUTED',
                     website_url_check: '' // Honeypot bypass

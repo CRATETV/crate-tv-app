@@ -157,8 +157,8 @@ const BillingReminders: React.FC = () => {
             setBills(JSON.parse(savedBills));
         } else {
             const defaultBills: Bill[] = [
-                { name: 'Vercel', logoUrl: 'https://cratetelevision.s3.us-east-1.amazonaws.com/vercel.png', billingUrl: 'https://vercel.com/dashboard/billing', storageKey: 'cratetv-vercel-billing-date' },
-                { name: 'Amazon Web Services', logoUrl: 'https://cratetelevision.s3.us-east-1.amazonaws.com/aws.png', billingUrl: 'https://console.aws.amazon.com/billing/', storageKey: 'cratetv-aws-billing-date' }
+                { name: 'Vercel', logoUrl: 'https://d3jhtrl1gnrh4b.cloudfront.net/vercel.png', billingUrl: 'https://vercel.com/dashboard/billing', storageKey: 'cratetv-vercel-billing-date' },
+                { name: 'Amazon Web Services', logoUrl: 'https://d3jhtrl1gnrh4b.cloudfront.net/aws.png', billingUrl: 'https://console.aws.amazon.com/billing/', storageKey: 'cratetv-aws-billing-date' }
             ];
             setBills(defaultBills);
             localStorage.setItem('cratetv-custom-bills', JSON.stringify(defaultBills));

@@ -1,4 +1,3 @@
-const toCdnUrl = (url?: string|null) => !url ? '' : url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net');
 import React, { useMemo, useRef, useState } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';

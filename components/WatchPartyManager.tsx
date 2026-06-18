@@ -373,7 +373,7 @@ const WatchPartyControlRoom: React.FC<{
                         return;
                     }
                     if (allMovies[input]) {
-                        embedUrl = allMovies[input].fullMovie || "";
+                        embedUrl = allMovies[input].fullMovie;
                     } else {
                         alert("Invalid movie key. Using input as raw URL.");
                         embedUrl = input;

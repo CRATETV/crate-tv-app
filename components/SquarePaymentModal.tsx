@@ -39,7 +39,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
             <div className="px-8 pb-8 pt-2 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="h-7 invert opacity-80" alt="Crate" />
+                    <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="h-7 invert opacity-80" alt="Crate" />
                     <div className="text-right">
                         <p className="text-[8px] font-black uppercase tracking-[0.4em]" style={{ color: '#c8960c' }}>Playhouse West Film Festival</p>
                         <p className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-600">Philadelphia · 2026</p>

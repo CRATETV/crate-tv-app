@@ -96,40 +96,14 @@ export async function POST(request: Request) {
             }
         } else {
             const movieData = movieDoc.data();
-            const isFestivalFilm = !!movieData?.isFestival;
-            const rawPrice = paymentType === 'movie'
-                ? (isFestivalFilm ? 5.00 : (movieData?.salePrice || 5.00))
-                : (isFestivalFilm ? 10.00 : (movieData?.watchPartyPrice || 5.00));
+            const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
         }
     }
     else if (paymentType === 'block') {
-        if (db) {
-            try {
-                if (itemId === 'full-festival-pass') {
-                    const settingsDoc = await db.collection('settings').doc('site').get();
-                    const passPrice = settingsDoc.data()?.pwffFullPassPrice ?? 50.00;
-                    amountInCents = Math.round(passPrice * 100);
-                    note = `Festival All-Access Pass`;
-                } else {
-                    const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
-                    let blockPrice = 10.00;
-                    for (const dayDoc of daysSnap.docs) {
-                        const found = dayDoc.data().blocks?.find((b: any) => b.id === itemId);
-                        if (found && typeof found.price === 'number') { blockPrice = found.price; break; }
-                    }
-                    amountInCents = Math.round(blockPrice * 100);
-                    note = `Festival Block Ticket: ${blockTitle || itemId}`;
-                }
-            } catch {
-                amountInCents = itemId === 'full-festival-pass' ? 5000 : 1000;
-                note = itemId === 'full-festival-pass' ? 'Festival All-Access Pass' : `Festival Block Ticket: ${blockTitle || itemId}`;
-            }
-        } else {
-            amountInCents = itemId === 'full-festival-pass' ? 5000 : 1000;
-            note = itemId === 'full-festival-pass' ? 'Festival All-Access Pass' : `Festival Block Ticket: ${blockTitle || itemId}`;
-        }
+        amountInCents = 1000; // Fixed $10 for blocks currently
+        note = `Unlock Block: ${blockTitle || itemId}`;
     }
     else if (staticPriceMap[paymentType]) {
         amountInCents = staticPriceMap[paymentType];

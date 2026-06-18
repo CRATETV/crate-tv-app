@@ -77,7 +77,7 @@ const LoginPage: React.FC = () => {
                     className="flex items-center gap-3 group"
                 >
                     <img
-                        src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png"
+                        src="https://d3jhtrl1gnrh4b.cloudfront.net/logo%20with%20background%20removed%20.png"
                         alt="Crate TV"
                         className="h-8 w-auto"
                     />

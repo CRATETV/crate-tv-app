@@ -46,7 +46,7 @@ const InstallInstructionsModal: React.FC<InstallInstructionsModalProps> = ({ onC
                 To add Crate TV to your Home Screen, tap the <span className="font-bold text-white">Share</span> icon in Safari, then select '<span className="font-bold text-white">Add to Home Screen</span>'.
               </p>
               <div className="flex items-center justify-center text-center p-4 bg-gray-800 rounded-lg">
-                  <p className="text-lg font-semibold">Tap <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ios-share.png" alt="iOS Share Icon" className="w-6 h-6 inline-block mx-1" />, then 'Add to Home Screen'</p>
+                  <p className="text-lg font-semibold">Tap <img src="https://d3jhtrl1gnrh4b.cloudfront.net/ios-share.png" alt="iOS Share Icon" className="w-6 h-6 inline-block mx-1" />, then 'Add to Home Screen'</p>
               </div>
             </>
           ) : (

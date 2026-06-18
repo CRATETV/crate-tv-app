@@ -69,7 +69,7 @@ const FilmmakerSignupPage: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white">
             <style>{`
                 body {
-                    background-image: url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg');
+                    background-image: url('https://d3jhtrl1gnrh4b.cloudfront.net/filmmaker-bg.jpg');
                     background-size: cover;
                     background-position: center;
                 }

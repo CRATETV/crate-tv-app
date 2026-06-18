@@ -31,7 +31,7 @@ const MaintenanceScreen: React.FC = () => (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
         <div className="relative z-10 space-y-10 max-w-lg">
-            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-40 mx-auto opacity-20" alt="Crate" />
+            <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-40 mx-auto opacity-20" alt="Crate" />
             <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 bg-amber-600/10 border border-amber-500/20 px-4 py-1 rounded-full">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>

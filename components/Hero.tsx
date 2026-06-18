@@ -1,5 +1,4 @@
 
-const toCdnUrl = (url?: string|null) => !url ? '' : url.replace('https://cratetelevision.s3.us-east-1.amazonaws.com', 'https://d3jhtrl1gnrh4b.cloudfront.net');
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -51,9 +50,10 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 overflow-hidden">
         <img
           key={`poster-${currentMovie.key}`}
-          src={toCdnUrl(displayPoster)} decoding="async"
+          src={`/api/proxy-image?url=${encodeURIComponent(displayPoster)}`}
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
+          crossOrigin="anonymous"
         />
 
         {!showVideo && (
@@ -90,7 +90,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
                 {currentMovie.title}
               </h1>
               <p className="hidden sm:block text-sm md:text-base lg:text-lg max-w-xl mb-6 animate-[fadeInHeroContent_1s_ease-out] line-clamp-2 text-gray-200 leading-relaxed font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                {(currentMovie.synopsis || '').replace(/<[^>]+>/g, '')}
+                {currentMovie.synopsis.replace(/<[^>]+>/g, '')}
               </p>
               
               <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 animate-[fadeInHeroContent_1.2s_ease-out] pointer-events-auto">

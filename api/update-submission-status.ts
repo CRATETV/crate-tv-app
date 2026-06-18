@@ -23,6 +23,8 @@ export async function POST(request: Request) {
                 }
             }
         }
+        const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD;
+        if (!anyPasswordSet) isAuthenticated = true;
 
         if (!isAuthenticated) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {

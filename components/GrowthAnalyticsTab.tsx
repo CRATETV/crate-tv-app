@@ -121,7 +121,7 @@ const GrowthAnalyticsTab: React.FC = () => {
             {fundingProfile && (
                 <div className="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
                     <div className="flex items-center gap-3 mb-6">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/aws.png" className="w-8 h-8 opacity-50 grayscale" alt="AWS" />
+                        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/aws.png" className="w-8 h-8 opacity-50 grayscale" alt="AWS" />
                         <h3 className="text-sm font-black uppercase tracking-[0.4em] text-gray-500">Strategic Business Profile</h3>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
@@ -297,7 +297,7 @@ const GrowthAnalyticsTab: React.FC = () => {
                 </div>
                 <div ref={snapshotRef} className="printable-area bg-white text-black p-12 rounded-3xl shadow-2xl">
                      <div className="flex justify-between items-center mb-12">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-48 h-auto invert" />
+                        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" alt="Crate TV" className="w-48 h-auto invert" />
                         <div className="text-right">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Performance Audit</h2>
                             <p className="text-gray-500 font-bold">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>

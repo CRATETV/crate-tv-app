@@ -253,7 +253,7 @@ const StudioMail: React.FC<StudioMailProps> = ({ analytics, festivalConfig, movi
                 <div className="flex-grow bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] flex flex-col shadow-2xl overflow-hidden relative">
                     {!selectedMessage && !isNewCompose ? (
                         <div className="flex-grow flex flex-col items-center justify-center text-center opacity-20 space-y-4">
-                            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-32 invert" alt="" />
+                            <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-32 invert" alt="" />
                             <p className="text-sm font-black uppercase tracking-[0.5em]">Studio Communications Hub</p>
                         </div>
                     ) : (

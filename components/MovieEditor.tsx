@@ -1,7 +1,6 @@
 
 import { toast } from './Toast';
-import React, { useState, useEffect, useRef } from 'react';
-import { getDbInstance } from '../services/firebaseClient';
+import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
 import AdminFilmDeepDive from './AdminFilmDeepDive';
@@ -106,9 +105,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [remoteUpdateDetected, setRemoteUpdateDetected] = useState(false);
-    const lastSavedDataRef = useRef<string>('');
-    const docUnsubRef = useRef<(() => void) | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSpotlighting, setIsSpotlighting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -136,8 +132,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({
                     name: name.trim(),
                     bio: 'Biographical data pending.',
-                    photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
-                    highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
+                    photo: 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png',
+                    highResPhoto: 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png'
                 })) : []
             });
             setSelectedMovieKey(newKey);
@@ -146,50 +142,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     }, [movieToCreate, onCreationDone]);
 
     useEffect(() => {
-        // Unsub from previous film's listener
-        if (docUnsubRef.current) { docUnsubRef.current(); docUnsubRef.current = null; }
-
-        if (!selectedMovieKey) { setFormData(null); return; }
-
-        // Load form data ONCE when switching films — never again
-        // allMovies is intentionally NOT in the dep array so polls/listeners
-        // never wipe what you're currently typing
-        const movieData = allMovies[selectedMovieKey];
-        if (movieData) {
-            setFormData({ ...movieData });
-            lastSavedDataRef.current = JSON.stringify(movieData);
-        } else if (selectedMovieKey.startsWith('movie_')) {
-            setFormData({ ...emptyMovie, key: selectedMovieKey });
-        }
-        setProbeResult(null);
-        setRemoteUpdateDetected(false);
-
-        // Direct Firestore listener on this film's document.
-        // First fire: silently loads the latest Firestore state — shows actors and
-        //   any changes made before you opened this film. No banner, no disruption.
-        // Subsequent fires: banner only appears for changes made WHILE you're editing.
-        const db = getDbInstance();
-        if (db) {
-            let isFirstFire = true;
-            const unsub = db.collection('movies').doc(selectedMovieKey).onSnapshot(doc => {
-                if (!doc.exists) return;
-                const incoming = { key: doc.id, ...doc.data() } as Movie;
-                const incomingStr = JSON.stringify(incoming);
-                if (isFirstFire) {
-                    isFirstFire = false;
-                    setFormData({ ...incoming });
-                    lastSavedDataRef.current = incomingStr;
-                    setRemoteUpdateDetected(false);
-                    return;
-                }
-                if (lastSavedDataRef.current && incomingStr !== lastSavedDataRef.current) {
-                    setRemoteUpdateDetected(true);
-                }
-            }, () => {});
-            docUnsubRef.current = unsub;
-        }
-        return () => { if (docUnsubRef.current) { docUnsubRef.current(); docUnsubRef.current = null; } };
-    }, [selectedMovieKey]); // ← allMovies intentionally excluded — prevents form reset on sync
+        if (selectedMovieKey) {
+            const movieData = allMovies[selectedMovieKey];
+            if (movieData) setFormData({ ...movieData });
+            else if (selectedMovieKey.startsWith('movie_')) setFormData({ ...emptyMovie, key: selectedMovieKey });
+            setProbeResult(null);
+        } else setFormData(null);
+    }, [selectedMovieKey, allMovies]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         if (!formData) return;
@@ -210,9 +169,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (!formData || !newActorName.trim()) return;
         const actor: Actor = {
             name: newActorName.trim(),
-            photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+            photo: 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png',
             bio: 'Biographical data pending.',
-            highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
+            highResPhoto: 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png'
         };
         setFormData({ ...formData, cast: [...formData.cast, actor] });
         setNewActorName('');
@@ -260,8 +219,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setIsSaving(true);
         try {
             await onSave({ [formData.key]: formData });
-        lastSavedDataRef.current = JSON.stringify(formData);
-        setRemoteUpdateDetected(false);
 
             // ── INSTANT BANNER: only schedule if enabled AND has a real future start time
             {
@@ -349,7 +306,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-6">
                                                 <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 shadow-2xl">
-                                                    <img src={movie.poster || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'} className="w-full h-full object-cover" alt="" />
+                                                    <img src={movie.poster || 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png'} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div>
                                                     <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
@@ -400,17 +357,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             )}
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Push Global Manifest'}</button>
-                            {remoteUpdateDetected && (
-                                <button onClick={() => {
-                                    if (selectedMovieKey && allMovies[selectedMovieKey]) {
-                                        setFormData({ ...allMovies[selectedMovieKey] });
-                                        lastSavedDataRef.current = JSON.stringify(allMovies[selectedMovieKey]);
-                                        setRemoteUpdateDetected(false);
-                                    }
-                                }} className="bg-amber-500 text-black px-6 py-3 rounded-xl uppercase text-[10px] font-black animate-pulse shadow-xl hover:bg-amber-400 transition-all">
-                                    ⚠ Another admin made changes — click to load
-                                </button>
-                            )}
                         </div>
                     </div>
 
@@ -662,7 +608,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <div className="flex gap-2">
                                             <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40 flex-grow text-xs font-mono" placeholder="https://..." />
                                             <button 
-                                                onClick={() => handleRunProbe(formData.fullMovie || "")}
+                                                onClick={() => handleRunProbe(formData.fullMovie)}
                                                 disabled={isProbing || !formData.fullMovie}
                                                 className="bg-red-600 text-white font-black px-6 rounded-2xl uppercase text-[10px] tracking-widest disabled:opacity-30"
                                             >
@@ -818,29 +764,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <div className="w-11 h-6 bg-green-600 rounded-full peer peer-checked:bg-gray-700 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                         </label>
                                     </div>
-                                    {/* Festival Film Toggle */}
-                                    <div className="flex items-center justify-between p-4 bg-amber-900/10 rounded-2xl border border-amber-500/20">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-black uppercase text-amber-400">🎬 Festival Film (PWFF)</p>
-                                            <p className="text-[9px] text-gray-500 uppercase">{formData.isFestival ? '$5 single VOD · $10 block — enforced. VOD Paywall disabled.' : 'Mark as a PWFF festival film — sets festival pricing, prevents double payment'}</p>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" checked={!!formData.isFestival} onChange={e => {
-                                                const on = e.target.checked;
-                                                setFormData(prev => prev ? { ...prev, isFestival: on, ...(on ? { isForSale: false, salePrice: 5, watchPartyPrice: 10, isWatchPartyPaid: true } : {}) } : prev);
-                                            }} className="sr-only peer" />
-                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-amber-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                                        </label>
-                                    </div>
-
-                                    {/* Viewer Notice */}
-                                    <div>
-                                        <label className="text-[9px] font-black uppercase text-gray-500 tracking-widest block mb-2">⚠ Viewer Notice <span className="text-gray-700 normal-case font-normal">(optional)</span></label>
-                                        <textarea name="viewerNotice" value={formData.viewerNotice || ''} onChange={handleChange} rows={2} placeholder="e.g. This film will not be available for virtual streaming." className="form-input bg-black/40 border-amber-500/20 text-amber-200 placeholder:text-amber-900/50 text-xs" />
-                                    </div>
-
-                                    {/* VOD Paywall — hidden for festival films */}
-                                    {!formData.isFestival && (
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
@@ -854,6 +777,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 </div>
                                             )}
                                         </div>
+
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                                                 <span className="text-[10px] font-black uppercase text-gray-300">Creator Support</span>
@@ -862,7 +786,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <p className="text-[8px] text-gray-600 uppercase px-2 font-bold">Enables community tips/donations</p>
                                         </div>
                                     </div>
-                                    )}
                                 </div>
                             </section>
 

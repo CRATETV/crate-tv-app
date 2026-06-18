@@ -105,7 +105,7 @@ const CrateFestPage: React.FC = () => {
             <main className="flex-grow transition-all duration-500" style={{ paddingTop: (showPartyBanner || isCrateFestActive) ? '3rem' : '0px' }}>
                 <div className="relative h-[80vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
                     <div className="absolute inset-0 bg-black">
-                        <div className="absolute inset-0 bg-[url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg')] opacity-20 blur-xl animate-[pulse_10s_infinite]"></div>
+                        <div className="absolute inset-0 bg-[url('https://d3jhtrl1gnrh4b.cloudfront.net/filmmaker-bg.jpg')] opacity-20 blur-xl animate-[pulse_10s_infinite]"></div>
                         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black to-black"></div>
                     </div>
                     <div className="relative z-10 max-w-7xl space-y-10 animate-[fadeIn_1.2s_ease-out]">

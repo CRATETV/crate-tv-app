@@ -22,7 +22,7 @@ const CratemasPage: React.FC = () => {
             heroBg: 'bg-gradient-to-b from-[#064e3b] to-[#042116]',
             titleGradient: 'from-red-600 via-white to-green-600',
             glow: 'rgba(255,0,0,0.6)',
-            texture: "bg-[url('https://cratetelevision.s3.us-east-1.amazonaws.com/snow-texture.png')]",
+            texture: "bg-[url('https://d3jhtrl1gnrh4b.cloudfront.net/snow-texture.png')]",
             icon: '🎄'
         },
         valentines: {

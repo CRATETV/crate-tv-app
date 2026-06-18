@@ -14,7 +14,7 @@ import { Movie } from '../types';
 const merchItems = [
     {
         name: 'Crate TV Classic Tee',
-        imageUrl: 'https://cratetelevision.s3.us-east-1.amazonaws.com/merch-tee.jpg',
+        imageUrl: 'https://d3jhtrl1gnrh4b.cloudfront.net/merch-tee.jpg',
         storeUrl: 'https://cratetv.creator-spring.com/listing/crate-tv-logo-apparel',
         description: 'The official Crate TV logo on a comfortable, high-quality classic tee. Perfect for filmmakers, film lovers, and supporters of indie cinema.'
     },
@@ -50,7 +50,7 @@ const MerchPage: React.FC = () => {
             <main className="flex-grow">
                 <div 
                     className="relative py-24 md:py-32 bg-cover bg-center"
-                    style={{ backgroundImage: `url('https://cratetelevision.s3.us-east-1.amazonaws.com/merch-bg.jpg')` }}
+                    style={{ backgroundImage: `url('https://d3jhtrl1gnrh4b.cloudfront.net/merch-bg.jpg')` }}
                     onContextMenu={(e) => e.preventDefault()}
                 >
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>

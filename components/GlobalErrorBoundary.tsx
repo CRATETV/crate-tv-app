@@ -42,7 +42,7 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
             <div className="relative z-10 space-y-8 max-w-lg">
                 <img 
-                    src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" 
+                    src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" 
                     className="w-40 mx-auto opacity-20" 
                     alt="Crate" 
                 />

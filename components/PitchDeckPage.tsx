@@ -18,7 +18,7 @@ const Slide: React.FC<{
         </div>
         <div className="flex justify-between items-start mb-16 relative z-10">
             <div className="flex items-center gap-10">
-                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className={`w-32 h-auto ${!dark && 'invert'}`} />
+                <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" alt="Crate" className={`w-32 h-auto ${!dark && 'invert'}`} />
                 <div className="h-10 w-px bg-white/10"></div>
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40">PARTNER ADVISORY // SECURE</p>
@@ -85,7 +85,7 @@ const PitchDeckPage: React.FC = () => {
             <div className="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-[1000] p-8 text-center overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)]"></div>
                 <div className="w-40 h-40 mb-16 relative">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-full h-full object-contain animate-pulse" alt="Crate" />
+                    <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-full h-full object-contain animate-pulse" alt="Crate" />
                 </div>
                 <h2 className="text-white font-black uppercase tracking-[1em] text-sm mb-6">Securing Strategy Session</h2>
                 <p className="text-red-600 font-black uppercase text-xl tracking-[0.2em] animate-bounce">IDENTIFIED: {target.toUpperCase()}</p>
@@ -177,7 +177,7 @@ const PitchDeckPage: React.FC = () => {
 
             <Slide targetCompany={target} dark={true} gradient="bg-[#050505]">
                 <div className="flex flex-col items-center justify-center text-center py-20">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-80 h-auto invert mb-20 animate-pulse" />
+                    <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-80 h-auto invert mb-20 animate-pulse" />
                     <h3 className="text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none italic mb-10">Let's Build.</h3>
                     <p className="text-3xl font-black italic text-gray-600 uppercase tracking-widest">{studioEmail}</p>
                 </div>
