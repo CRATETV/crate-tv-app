@@ -319,7 +319,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 // Calculate target position based on elapsed time since THIS FILM started
                 const targetPosition = Math.max(0, elapsedSinceStart);
                 
-                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+                // Use actual video duration first, fall back to durationInMinutes, then 1hr default
+                const movieDuration = (video.duration > 0 && isFinite(video.duration))
+                    ? video.duration
+                    : movie?.durationInMinutes
+                        ? movie.durationInMinutes * 60
+                        : 3600;
                 
                 if (targetPosition >= movieDuration) {
                     if (!isEnded) {
@@ -398,6 +403,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // Active whenever the user has paid access (live OR on-demand VOD)
 
     // ── BLOCK AUTO-ADVANCE: when a film ends in a block, advance to next film ───
+    // Uses server API to advance — direct Firestore writes are blocked by security rules
     useEffect(() => {
         if (!isEnded) return;
         const m = movie as any;
@@ -417,23 +423,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return;
         }
 
-        // There's a next film — write intermission + advance to Firestore
-        // Only the FIRST viewer to detect end triggers the advance (guard with a ref)
-        const db = getDbInstance();
-        if (!db) return;
+        // Call server API to advance — handles race conditions between multiple viewers
+        const advanceFilm = async () => {
+            try {
+                const res = await fetch('/api/advance-block-film', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        partyId: movieKey,
+                        currentIndex: currentIdx,
+                        totalFilms: blockKeys.length,
+                    }),
+                });
+                const result = await res.json();
+                console.log('[ADVANCE] Result:', result);
+            } catch (err) {
+                console.error('[ADVANCE] Failed to advance film:', err);
+            }
+        };
 
-        const partyRef = db.collection('watch_parties').doc(movieKey);
-        const intermissionEnd = Date.now() + 60000; // 60 second intermission
-
-        partyRef.update({
-            activeMovieIndex: currentIdx + 1,
-            intermissionUntil: intermissionEnd,
-            filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-            isPlaying: true,
-            currentTime: 0,
-        }).catch(() => {}); // If another client beat us here, ignore
-
-        // Reset local ended state
+        advanceFilm();
         setIsEnded(false);
     }, [isEnded]);
 
@@ -906,6 +915,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         onPlaying={() => setIsVideoBuffering(false)}
                                         onWaiting={() => setIsVideoBuffering(true)}
                                         onStalled={() => setIsVideoBuffering(true)}
+                                        onEnded={() => {
+                                            // Native video ended event — most reliable trigger for advancement
+                                            if (!isEnded) {
+                                                console.log('[VIDEO] onEnded fired — advancing to next film');
+                                                setIsEnded(true);
+                                            }
+                                        }}
                                     />
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
