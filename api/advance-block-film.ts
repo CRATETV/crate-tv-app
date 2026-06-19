@@ -1,4 +1,4 @@
-import { getAdminDb } from './_firebaseAdmin';
+import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function handler(request: Request): Promise<Response> {
