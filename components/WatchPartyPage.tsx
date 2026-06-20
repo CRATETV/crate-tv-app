@@ -312,8 +312,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             try {
                 // For blocks, use filmStartTime (when current film started) for accurate sync
                 // For single movies, fall back to actualStartTime
-                const startRef = partyState.filmStartTime || partyState.actualStartTime;
-                const serverStart = (startRef as any).toDate().getTime();
+                // startRef can be a Firestore Timestamp (.toDate()), an ISO string, or a number —
+                // handle all three since our API writes plain strings while client writes Timestamps
+                const startRef: any = partyState.filmStartTime || partyState.actualStartTime;
+                let serverStart: number;
+                if (!startRef) {
+                    return; // No start time yet — skip this sync tick
+                } else if (typeof startRef.toDate === 'function') {
+                    serverStart = startRef.toDate().getTime();
+                } else if (typeof startRef === 'string') {
+                    serverStart = new Date(startRef).getTime();
+                } else if (typeof startRef === 'number') {
+                    serverStart = startRef;
+                } else {
+                    return; // Unrecognized format — skip rather than crash
+                }
+                if (!isFinite(serverStart)) return;
                 const elapsedSinceStart = (now - serverStart) / 1000;
                 
                 // Calculate target position based on elapsed time since THIS FILM started

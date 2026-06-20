@@ -51,7 +51,9 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             joinedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         const logRef = db.collection('festival_viewers').doc(`${movie.key}_${user.email || 'anon'}`);
+        // userId is REQUIRED to match Firestore security rules (request.resource.data.userId == request.auth.uid)
         logRef.set({
+            userId: user.uid || null,
             movieKey: movie.key,
             movieTitle: movie.title,
             email: user.email || null,
