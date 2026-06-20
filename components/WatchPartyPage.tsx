@@ -535,6 +535,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         const goLive = async () => {
             // Try API first (handles full party setup including message cleanup)
+            // IMPORTANT: only fall back to a direct Firestore write on a genuine
+            // network failure (fetch throws). If the API responds but rejects the
+            // request (e.g. "window expired"), do NOT fall back — Firestore rules
+            // block client writes to watch_parties, so the fallback would just
+            // throw a permissions error for no benefit.
+            let networkFailure = false;
             try {
                 const res = await fetch('/api/auto-start-watch-party', {
                     method: 'POST',
@@ -547,11 +553,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     setShowLobby(false);
                     return;
                 }
-                console.warn('[AUTO-START] API returned error:', result.error);
+                // API responded but declined (e.g. window expired) — this is final,
+                // an admin needs to manually start it. Don't attempt a client write.
+                console.warn('[AUTO-START] API declined to start the party:', result.error);
+                return;
             } catch (err) {
-                console.warn('[AUTO-START] API call failed, falling back to direct write:', err);
+                console.warn('[AUTO-START] Network error reaching API, will attempt direct write:', err);
+                networkFailure = true;
             }
-            // Fallback: write directly to Firestore
+            if (!networkFailure) return;
+            // Fallback: write directly to Firestore (only reached on network failure)
             const db = getDbInstance();
             if (db) {
                 db.collection('watch_parties').doc(movieKey).set({
@@ -687,10 +698,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-700">Waiting for host to start the party</p>
                     <button
-                        onClick={() => setShowLobby(true)}
+                        onClick={() => { window.history.pushState({}, '', '/pwff-philly2026'); window.dispatchEvent(new Event('pushstate')); }}
                         className="text-[9px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors border border-white/5 hover:border-white/20 px-4 py-2 rounded-lg"
                     >
-                        Back to lobby
+                        Back to Festival Schedule
                     </button>
                 </div>
             </div>
