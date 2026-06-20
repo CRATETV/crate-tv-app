@@ -221,6 +221,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
+    const advanceRequestedForIndexRef = useRef<number | null>(null);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
@@ -437,6 +438,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return;
         }
 
+        // ── PREVENT INFINITE RETRY LOOP ──────────────────────────────────────
+        // The sync heartbeat re-evaluates every ~1s and will see the film is
+        // still "ended" (elapsed time keeps growing) until partyState.activeMovieIndex
+        // actually changes from Firestore. Without this guard, isEnded keeps
+        // toggling true→false→true and fires the API hundreds of times per minute.
+        // Only fire the API once per film index; wait for the index to change
+        // (via the Firestore listener) before allowing another attempt.
+        if (advanceRequestedForIndexRef.current === currentIdx) {
+            return; // Already requested advance for this film — waiting on server
+        }
+        advanceRequestedForIndexRef.current = currentIdx;
+
         // Call server API to advance — handles race conditions between multiple viewers
         const advanceFilm = async () => {
             try {
@@ -453,12 +466,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 console.log('[ADVANCE] Result:', result);
             } catch (err) {
                 console.error('[ADVANCE] Failed to advance film:', err);
+                // Allow a retry after a short delay on network failure
+                setTimeout(() => {
+                    if (advanceRequestedForIndexRef.current === currentIdx) {
+                        advanceRequestedForIndexRef.current = null;
+                    }
+                }, 5000);
             }
         };
 
         advanceFilm();
+    }, [isEnded, partyState?.activeMovieIndex]);
+
+    // Reset the advance-request guard whenever the server actually moves us to a new film
+    useEffect(() => {
+        advanceRequestedForIndexRef.current = null;
         setIsEnded(false);
-    }, [isEnded]);
+    }, [partyState?.activeMovieIndex]);
 
     // ── INTERMISSION COUNTDOWN: tick down locally from partyState ───────
     useEffect(() => {
