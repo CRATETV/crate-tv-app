@@ -224,6 +224,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const advanceRequestedForIndexRef = useRef<number | null>(null);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
+
+    // ── SINGLE SOURCE OF TRUTH FOR HIDING THE LOBBY ──────────────────────────
+    // Once Firestore confirms the party is actually live (via the real-time
+    // listener, not an API response we hope matches), hide the lobby. This
+    // avoids the race condition where the API says "started" a beat before
+    // our local partyState has caught up to reflect it.
+    useEffect(() => {
+        if (partyState?.status === 'live' && showLobby) {
+            setShowLobby(false);
+        }
+    }, [partyState?.status]);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
@@ -563,7 +574,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const result = await res.json();
                 if (result.success || result.alreadyLive) {
                     console.log('[AUTO-START] Party started via API:', movieKey);
-                    setShowLobby(false);
+                    // Don't setShowLobby(false) here — that causes a race condition.
+                    // The API confirms Firestore was written, but OUR local partyState
+                    // (from the Firestore onSnapshot listener) hasn't necessarily caught
+                    // up yet. If we hide the lobby now, there's a render in between
+                    // where showLobby=false AND partyState.status is still 'waiting',
+                    // which falls into the "Waiting for host" screen by mistake.
+                    // Instead, just wait — the listener will update partyState to 'live'
+                    // within ~1s, and a separate effect (below) hides the lobby once
+                    // partyState actually confirms it.
                     return;
                 }
                 // API responded but declined (e.g. window expired) — this is final,
