@@ -268,7 +268,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 _blockTitle: block.title,
                 _activeFilmTitle: activeFilm?.title || block.title,
                 _activeFilmDirector: activeFilm?.director || 'Festival Event',
-            } as Movie & { _blockMovieKeys?: string[]; _blockTitle?: string; _activeFilmTitle?: string; _activeFilmDirector?: string };
+                // Full lineup — poster, title, director, synopsis for every film in the block
+                // so the lobby can show "Tonight's lineup" instead of just the first film
+                _blockLineup: block.movieKeys.map((key: string, i: number) => {
+                    const m = allMovies[key];
+                    return {
+                        key,
+                        title: m?.title || 'Untitled',
+                        director: m?.director || '',
+                        poster: m?.poster || '',
+                        synopsis: m?.synopsis || '',
+                        isActive: i === safeIdx,
+                    };
+                }),
+            } as Movie & { _blockMovieKeys?: string[]; _blockTitle?: string; _activeFilmTitle?: string; _activeFilmDirector?: string; _blockLineup?: any[] };
         }
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);

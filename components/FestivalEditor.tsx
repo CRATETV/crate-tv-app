@@ -300,7 +300,15 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                     <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
                                     <input
                                         type="datetime-local"
-                                        value={block.screeningStartTime ? block.screeningStartTime.slice(0,16) : ''}
+                                        // CRITICAL: datetime-local inputs work in LOCAL time, but we store UTC ISO strings.
+                                        // Naively slicing the ISO string shows UTC time labeled as local — causing the
+                                        // displayed value to drift from what the admin actually typed (e.g. typing 9:55 AM
+                                        // shows back as 1:55 PM). We must convert UTC -> local before displaying.
+                                        value={block.screeningStartTime ? (() => {
+                                            const d = new Date(block.screeningStartTime);
+                                            const tzOffsetMs = d.getTimezoneOffset() * 60000;
+                                            return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+                                        })() : ''}
                                         onChange={e => handleBlockChange(dayIndex, blockIndex, 'screeningStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
                                         className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-amber-500"
                                     />

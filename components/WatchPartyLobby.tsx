@@ -223,8 +223,11 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 </div>
             </div>
 
+            {/* SCROLLABLE CONTENT — hero section + lineup, audience strip pinned below */}
+            <div className="relative z-10 h-full overflow-y-auto pb-24">
+
             {/* MAIN LAYOUT — two column on desktop, stacked on mobile */}
-            <div className="relative z-10 h-full flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 px-6 md:px-16 pt-20 pb-8">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 px-6 md:px-16 pt-20 pb-8 min-h-[calc(100vh-6rem)]">
 
                 {/* LEFT — Poster */}
                 <div className="flex-shrink-0 relative">
@@ -327,6 +330,53 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* TONIGHT'S LINEUP — full block film list with posters, shown below the hero */}
+            {(() => {
+                const lineup: any[] = (movie as any)._blockLineup;
+                if (!lineup || lineup.length <= 1) return null;
+                return (
+                    <div className="px-6 md:px-16 mt-4 mb-8">
+                        <div className="max-w-3xl mx-auto border-t border-white/8 pt-6">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">
+                                Tonight's Lineup · {lineup.length} Films
+                            </p>
+                            <div className="flex flex-col gap-2.5">
+                                {lineup.map((film, i) => (
+                                    <div
+                                        key={film.key}
+                                        className={`flex items-center gap-4 rounded-xl px-3.5 py-2.5 border transition-colors ${
+                                            film.isActive
+                                                ? 'bg-red-600/[0.06] border-red-500/25'
+                                                : 'bg-white/[0.02] border-white/5'
+                                        }`}
+                                    >
+                                        <span className={`text-xs font-black min-w-[18px] ${film.isActive ? 'text-red-400' : 'text-gray-600'}`}>
+                                            {String(i + 1).padStart(2, '0')}
+                                        </span>
+                                        {film.poster ? (
+                                            <img src={film.poster} alt={film.title} className="w-9 h-[3.25rem] rounded-md object-cover flex-shrink-0" />
+                                        ) : (
+                                            <div className="w-9 h-[3.25rem] rounded-md bg-white/5 flex-shrink-0" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-bold truncate ${film.isActive ? 'text-white' : 'text-gray-300'}`}>{film.title}</p>
+                                            <p className={`text-[11px] truncate ${film.isActive ? 'text-gray-400' : 'text-gray-600'}`}>{film.director}</p>
+                                        </div>
+                                        {film.isActive && (
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/15 px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap">
+                                                Up now
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             </div>
 
             {/* BOTTOM — Audience strip */}
