@@ -5,9 +5,11 @@ import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
 
 const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onPartyStart }) => {
+    // Go straight into the film — no artificial delay. The video is already
+    // buffering silently in the background (preloaded while the countdown ran),
+    // so there's no need to make the viewer wait on a fake "entering" screen.
     useEffect(() => {
-        const t = setTimeout(() => onPartyStart(), 1500);
-        return () => clearTimeout(t);
+        onPartyStart();
     }, [onPartyStart]);
     return null;
 };

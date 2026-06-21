@@ -294,7 +294,7 @@ const AdminPage: React.FC = () => {
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
                 <div className="relative z-10 w-full max-w-md space-y-12 animate-[fadeIn_0.8s_ease-out]">
                     <div className="text-center space-y-4">
-                        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-40 mx-auto drop-shadow-2xl" alt="Crate" />
+                        <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Crate</h2>
                         <div className="h-px w-20 bg-red-600 mx-auto"></div>
                         <h1 className="text-sm font-black uppercase tracking-[0.5em] text-gray-500">Infrastructure Terminal</h1>
                     </div>
