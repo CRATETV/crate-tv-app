@@ -109,7 +109,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: any) => {
     setIsDirty(true);
     const newData = [...data];
-    newData[dayIndex].blocks[blockIndex] = { ...newData[dayIndex].blocks[blockIndex], [field]: value };
+    let update: any = { [field]: value };
+    // CRITICAL: keep watchPartyStartTime in sync with screeningStartTime.
+    // The lobby/auto-start code reads watchPartyStartTime (falling back to
+    // screeningStartTime), so without this sync the countdown can show
+    // "screening time not set" even though the admin clearly set a time.
+    if (field === 'screeningStartTime') {
+        update.watchPartyStartTime = value;
+        update.isWatchPartyEnabled = !!value;
+    }
+    newData[dayIndex].blocks[blockIndex] = { ...newData[dayIndex].blocks[blockIndex], ...update };
     onDataChange(newData);
   };
   
