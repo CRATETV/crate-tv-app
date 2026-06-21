@@ -120,8 +120,15 @@ export async function POST(request: Request) {
     }
 
     // Start the party!
+    // IMPORTANT: explicitly reset activeMovieIndex to 0. Without this, a leftover
+    // value from a PREVIOUS test/screening (e.g. activeMovieIndex: 2, left over
+    // after the block finished all its films last time) silently survives because
+    // we use { merge: true }. That made fresh test runs start already pointing at
+    // the LAST film in the block, which immediately triggered "show credits"
+    // instead of playing from the beginning.
     await partyRef.set({
       status: 'live',
+      activeMovieIndex: 0,
       lastStartedAt: new Date().toISOString(),
       actualStartTime: FieldValue.serverTimestamp(),
       filmStartTime: scheduledTimeStr,

@@ -63,6 +63,7 @@ export async function GET(request: Request) {
                         if (startTime && startTime <= now && (!state || state.status !== 'live')) {
                             batch.set(db.collection('watch_parties').doc(block.id), {
                                 status: 'live',
+                                activeMovieIndex: 0, // Reset — don't inherit leftover index from a previous screening
                                 type: 'block',
                                 isPlaying: true,
                                 currentTime: 0,

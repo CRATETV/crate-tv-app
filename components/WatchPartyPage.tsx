@@ -235,6 +235,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setShowLobby(false);
         }
     }, [partyState?.status]);
+
+    // DEBUG: log partyState whenever it changes, to catch stale activeMovieIndex
+    // left over from a previous test run
+    useEffect(() => {
+        console.log('[PARTY STATE]', JSON.stringify({
+            status: partyState?.status,
+            activeMovieIndex: partyState?.activeMovieIndex,
+            filmStartTime: partyState?.filmStartTime,
+        }));
+    }, [partyState?.status, partyState?.activeMovieIndex]);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
@@ -447,17 +457,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!isEnded) return;
         const m = movie as any;
         const blockKeys: string[] | undefined = m?._blockMovieKeys;
+        console.log('[ADVANCE DEBUG] isEnded fired. movieKey:', movieKey, 'blockKeys:', blockKeys, 'partyState.activeMovieIndex:', partyState?.activeMovieIndex);
         if (!blockKeys || blockKeys.length === 0) {
             // Single movie — show credits as before
+            console.log('[ADVANCE DEBUG] No blockKeys found — treating as single movie, showing credits');
             if (!showCredits) setShowCredits(true);
             return;
         }
 
         const currentIdx = partyState?.activeMovieIndex ?? 0;
         const isLastFilm = currentIdx >= blockKeys.length - 1;
+        console.log('[ADVANCE DEBUG] currentIdx:', currentIdx, 'blockKeys.length:', blockKeys.length, 'isLastFilm:', isLastFilm);
 
         if (isLastFilm) {
             // All films done — show credits
+            console.log('[ADVANCE DEBUG] isLastFilm is true — showing credits instead of advancing');
             if (!showCredits) setShowCredits(true);
             return;
         }
