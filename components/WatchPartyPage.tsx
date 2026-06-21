@@ -1018,6 +1018,44 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             }
                                         }}
                                     />
+
+                                    {/* ── ADMIN MANUAL ADVANCE CONTROL ──────────────────────────────────
+                                        Visible ONLY to the admin account, ONLY during a multi-film block.
+                                        Safety net in case auto-advance doesn't fire — click to move to the
+                                        next film without waiting on the automatic system. */}
+                                    {user?.email === 'salomerebadenoon@gmail.com' && (movie as any)?._blockMovieKeys?.length > 1 && (
+                                        <div className="absolute bottom-6 right-6 z-[170]">
+                                            <button
+                                                onClick={async () => {
+                                                    const blockKeys: string[] = (movie as any)._blockMovieKeys;
+                                                    const currentIdx = partyState?.activeMovieIndex ?? 0;
+                                                    if (!window.confirm(`Advance from film ${currentIdx + 1} of ${blockKeys.length} to the next film now?`)) return;
+                                                    try {
+                                                        const res = await fetch('/api/advance-block-film', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                partyId: movieKey,
+                                                                currentIndex: currentIdx,
+                                                                totalFilms: blockKeys.length,
+                                                            }),
+                                                        });
+                                                        const result = await res.json();
+                                                        console.log('[MANUAL ADVANCE] Result:', result);
+                                                        if (!result.success) {
+                                                            alert('Advance failed: ' + (result.message || result.error || 'Unknown error'));
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('[MANUAL ADVANCE] Failed:', err);
+                                                        alert('Network error — could not advance the film. Check your connection and try again.');
+                                                    }
+                                                }}
+                                                className="bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl shadow-2xl border-2 border-black/20 active:scale-95 transition-all"
+                                            >
+                                                ⏭ Next Film (Admin)
+                                            </button>
+                                        </div>
+                                    )}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
                                             <div className="max-w-2xl space-y-10">
