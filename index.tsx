@@ -141,6 +141,9 @@ const AppRouter: React.FC = () => {
   }
 
   // Philadelphia specific festival URL — /pwff-philly2026
+  // This single page handles all three phases per block: upcoming (buy ticket),
+  // live (join watch party), and aired (rewatch on demand) — see BlockCard
+  // in PwffPage.tsx for the per-block state logic.
   const pwffPhillyMatch = route.toLowerCase().match(/^\/pwff-philly(\d{4})$/);
   if (pwffPhillyMatch) return <PwffPage />;
 

@@ -155,7 +155,7 @@ const DirectorCard: React.FC<{ movie: Movie }> = ({ movie }) => {
 };
 
 // ─── FILM ROW ─────────────────────────────────────────────────────────────────
-const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWatch: () => void }> = ({ movie, index, isUnlocked, onWatch }) => {
+const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWatch: () => void; isAired?: boolean }> = ({ movie, index, isUnlocked, onWatch, isAired }) => {
     const [expanded, setExpanded] = useState(false);
     return (
         <div className="flex gap-4 py-5 border-b border-white/5 last:border-0">
@@ -168,7 +168,7 @@ const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWa
             <div className="flex-grow min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-0.5">
                     <h4 className="text-sm font-black text-white uppercase tracking-tight">{movie.title}</h4>
-                    {isUnlocked && <button onClick={onWatch} className="text-[9px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded-full flex-shrink-0">Watch</button>}
+                    {isUnlocked && <button onClick={onWatch} className="text-[9px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded-full flex-shrink-0">{isAired ? 'Watch' : 'Join Party'}</button>}
                 </div>
                 <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Directed by {movie.director}</p>
                 <div className="flex flex-wrap gap-2 mb-1">
@@ -192,10 +192,15 @@ const BlockCard: React.FC<{
     block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean;
     isBeforeScreening?: boolean; screeningStartTime?: string;
     dayLabel: string; onBuyTicket: () => void; onEnterLobby: () => void; onWatch: (key: string) => void;
-}> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
+    onRewatch: (key: string) => void;
+}> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch, onRewatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
     const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null; // 7 days — matches cron cleanup window
+    // A block has "aired" once its screening time has passed AND it's not currently
+    // live. At that point it switches from "join the party" to "watch on demand" —
+    // individual films open the normal player instead of the synced watch party.
+    const isAired = !!screenStart && new Date() >= screenStart && !isLive;
     return (
         <div className={`rounded-2xl border overflow-hidden ${isLive ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.12)]' : 'border-white/8'}`}>
             <div className="bg-white/[0.02] border-b border-white/5 p-5 md:p-7">
@@ -228,17 +233,32 @@ const BlockCard: React.FC<{
                             ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Join Live</button>
                             : isBeforeScreening && isUnlocked
                                 ? <div className="inline-flex items-center gap-1.5 bg-amber-900/20 border border-amber-500/20 text-amber-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Ticket Confirmed</div>
-                            : isUnlocked
-                                ? <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>
-                                : block.price && block.price > 0
+                            : isBeforeScreening
+                                ? (block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
-                                    : <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>}
+                                    : <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>)
+                            : isAired && isUnlocked
+                                ? <button onClick={() => films[0] && onRewatch(films[0].key)} className="bg-white/10 hover:bg-white/20 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">▶ Rewatch</button>
+                            : isAired
+                                ? (block.price && block.price > 0
+                                    ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Unlock · ${block.price.toFixed(2)}</button>
+                                    : <button onClick={() => films[0] && onRewatch(films[0].key)} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">▶ Watch</button>)
+                            : <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>}
                     </div>
                 </div>
             </div>
             <div className="px-5 md:px-7">
                 {films.length > 0
-                    ? films.map((f, i) => <FilmRow key={f.key} movie={f} index={i} isUnlocked={isUnlocked} onWatch={() => onWatch(f.key)} />)
+                    ? films.map((f, i) => (
+                        <FilmRow
+                            key={f.key}
+                            movie={f}
+                            index={i}
+                            isUnlocked={isUnlocked}
+                            isAired={isAired}
+                            onWatch={() => isAired ? onRewatch(f.key) : onWatch(f.key)}
+                        />
+                    ))
                     : <p className="py-8 text-center text-gray-700 text-xs uppercase tracking-widest font-black">Programme coming soon</p>}
             </div>
         </div>
@@ -415,6 +435,7 @@ const ProgrammeMode: React.FC = () => {
                                         onBuyTicket={() => setTicketFlowBlock(block)}
                                         onEnterLobby={() => setShowLobbyFor(block.id)}
                                         onWatch={key => navigate(`/watchparty/${key}`)}
+                                        onRewatch={key => { window.history.pushState({}, '', `/movie/${key}?play=true`); window.dispatchEvent(new Event('pushstate')); }}
                                     />
                                 );
                             }) : (

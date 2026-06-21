@@ -35,7 +35,7 @@ const getEmbedUrl = (url: string): string | null => {
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, festivalData } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -61,23 +61,41 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
 
+  // Find which festival block (if any) this film belongs to — used both for
+  // access checks and for the rewatch window expiry below.
+  const parentFestivalBlock = useMemo(() => {
+    const allBlocks = festivalData.flatMap((d: any) => d.blocks);
+    return allBlocks.find((b: any) => b.movieKeys?.includes(movieKey)) || null;
+  }, [festivalData, movieKey]);
+
   const hasAccess = useMemo(() => {
     if (!movie) return false;
     const hasGuestPass = localStorage.getItem('crate_guest_jury_active') === 'true';
     if (hasJuryPass || hasGuestPass) return true;
+
+    // Festival catalog rewatch — same access logic as the live event, so a
+    // ticket holder can come back during the 7-day window and just press
+    // play like any other Crate TV title, no watch party/lobby involved.
+    if (parentFestivalBlock) {
+      if (hasFestivalAllAccess) return true;
+      if (unlockedFestivalBlockIds.has(parentFestivalBlock.id)) return true;
+      if (unlockedWatchPartyKeys.has(parentFestivalBlock.id)) return true;
+      // Free block — anyone can rewatch
+      if (!(parentFestivalBlock.price > 0)) return true;
+      return false;
+    }
+
     if (!movie.isForSale) return true;
     const expiration = rentals[movieKey];
     return expiration ? new Date(expiration) > new Date() : false;
-  }, [movie, rentals, movieKey, hasJuryPass]);
+  }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys]);
 
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked
   // (meaning they bought a ticket — so we need to make sure only they watch)
   const isFestivalFilm = useMemo(() => {
-    if (!movie) return false;
-    const allBlocks = festivalData.flatMap((d: any) => d.blocks);
-    return allBlocks.some((b: any) => b.movieKeys?.includes(movieKey) && (b.price || 0) > 0);
-  }, [movie, festivalData, movieKey]);
+    return !!parentFestivalBlock && (parentFestivalBlock.price || 0) > 0;
+  }, [parentFestivalBlock]);
 
   const needsSessionGuard = isFestivalFilm && hasAccess;
   const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, needsSessionGuard);

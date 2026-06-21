@@ -5,10 +5,6 @@
       "schedule": "0 10 * * *"
     },
     {
-      "path": "/api/update-watch-parties",
-      "schedule": "* * * * *"
-    },
-    {
       "path": "/api/cron-monthly-spotlight",
       "schedule": "0 14 * * 1"
     }

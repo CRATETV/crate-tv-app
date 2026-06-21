@@ -532,6 +532,9 @@ const App: React.FC = () => {
                 const label = isPreFestival ? 'Coming Aug 21–23' : 'Now Streaming';
                 const ctaText = isPreFestival ? 'Get Tickets →' : 'Watch Now →';
                 const festName = settings?.pwffFestivalName || 'Playhouse West Film Festival 2026';
+                // Single URL throughout — the page itself adapts per block
+                // (upcoming / live / rewatchable) so there's only ever one
+                // link to share, print on posters, etc.
                 return (
                 <div
                     onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '-philly2026'}`); window.dispatchEvent(new Event('pushstate')); }}
@@ -560,12 +563,12 @@ const App: React.FC = () => {
 
                     {/* Desktop: slim single row */}
                     <div className="hidden md:flex items-center justify-between px-8 h-12 text-white">
-                        <div className="flex items-center gap-3">
-                            <span className="relative flex h-2.5 w-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                             </span>
-                            <span className="font-black uppercase text-[10px] tracking-widest whitespace-nowrap">
+                            <span className="font-black uppercase text-[10px] tracking-widest truncate">
                                 {festName} — {label}
                             </span>
                         </div>

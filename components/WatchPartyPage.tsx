@@ -221,7 +221,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
-    const advanceRequestedForIndexRef = useRef<number | null>(null);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
 
@@ -236,15 +235,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     }, [partyState?.status]);
 
-    // DEBUG: log partyState whenever it changes, to catch stale activeMovieIndex
-    // left over from a previous test run
-    useEffect(() => {
-        console.log('[PARTY STATE]', JSON.stringify({
-            status: partyState?.status,
-            activeMovieIndex: partyState?.activeMovieIndex,
-            filmStartTime: partyState?.filmStartTime,
-        }));
-    }, [partyState?.status, partyState?.activeMovieIndex]);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
@@ -451,76 +441,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     // Active whenever the user has paid access (live OR on-demand VOD)
 
-    // ── BLOCK AUTO-ADVANCE: when a film ends in a block, advance to next film ───
-    // Uses server API to advance — direct Firestore writes are blocked by security rules
-    useEffect(() => {
-        if (!isEnded) return;
-        const m = movie as any;
-        const blockKeys: string[] | undefined = m?._blockMovieKeys;
-        console.log('[ADVANCE DEBUG] isEnded fired. movieKey:', movieKey, 'blockKeys:', blockKeys, 'partyState.activeMovieIndex:', partyState?.activeMovieIndex);
-        if (!blockKeys || blockKeys.length === 0) {
-            // Single movie — show credits as before
-            console.log('[ADVANCE DEBUG] No blockKeys found — treating as single movie, showing credits');
-            if (!showCredits) setShowCredits(true);
-            return;
-        }
-
-        const currentIdx = partyState?.activeMovieIndex ?? 0;
-        const isLastFilm = currentIdx >= blockKeys.length - 1;
-        console.log('[ADVANCE DEBUG] currentIdx:', currentIdx, 'blockKeys.length:', blockKeys.length, 'isLastFilm:', isLastFilm);
-
-        if (isLastFilm) {
-            // All films done — show credits
-            console.log('[ADVANCE DEBUG] isLastFilm is true — showing credits instead of advancing');
-            if (!showCredits) setShowCredits(true);
-            return;
-        }
-
-        // ── PREVENT INFINITE RETRY LOOP ──────────────────────────────────────
-        // The sync heartbeat re-evaluates every ~1s and will see the film is
-        // still "ended" (elapsed time keeps growing) until partyState.activeMovieIndex
-        // actually changes from Firestore. Without this guard, isEnded keeps
-        // toggling true→false→true and fires the API hundreds of times per minute.
-        // Only fire the API once per film index; wait for the index to change
-        // (via the Firestore listener) before allowing another attempt.
-        if (advanceRequestedForIndexRef.current === currentIdx) {
-            return; // Already requested advance for this film — waiting on server
-        }
-        advanceRequestedForIndexRef.current = currentIdx;
-
-        // Call server API to advance — handles race conditions between multiple viewers
-        const advanceFilm = async () => {
-            try {
-                const res = await fetch('/api/advance-block-film', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        partyId: movieKey,
-                        currentIndex: currentIdx,
-                        totalFilms: blockKeys.length,
-                    }),
-                });
-                const result = await res.json();
-                console.log('[ADVANCE] Result:', result);
-            } catch (err) {
-                console.error('[ADVANCE] Failed to advance film:', err);
-                // Allow a retry after a short delay on network failure
-                setTimeout(() => {
-                    if (advanceRequestedForIndexRef.current === currentIdx) {
-                        advanceRequestedForIndexRef.current = null;
-                    }
-                }, 5000);
-            }
-        };
-
-        advanceFilm();
-    }, [isEnded, partyState?.activeMovieIndex]);
-
-    // Reset the advance-request guard whenever the server actually moves us to a new film
-    useEffect(() => {
-        advanceRequestedForIndexRef.current = null;
-        setIsEnded(false);
-    }, [partyState?.activeMovieIndex]);
+    // ── BLOCK ADVANCEMENT: now MANUAL ONLY, via Control Room (?mode=controller) ──
+    // Auto-advance was removed — it was the source of repeated race conditions
+    // (infinite retry loops, premature "all films done" triggers from stale
+    // activeMovieIndex, conflicts between multiple viewers' browsers all trying
+    // to advance independently). The admin now watches the stream and clicks
+    // "Advance" in the Control Room, which calls /api/advance-block-film once,
+    // authoritatively, for everyone. Single source of truth, no races.
+    //
+    // isEnded is still used below for the single-movie "show credits" treatment.
 
     // ── INTERMISSION COUNTDOWN: tick down locally from partyState ───────
     useEffect(() => {
@@ -542,96 +471,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     }, [isEnded, showCredits, movie]);
 
-    // ── TIME-BASED AUTO-START ────────────────────────────────────────────────
-    // When screeningStartTime passes, call the server API to start the party.
-    // We use the API (not direct Firestore write) so all party setup runs properly.
-    // Falls back to direct Firestore write if API fails.
-    useEffect(() => {
-        if (!movie?.watchPartyStartTime) return;
-        if (partyState?.status === 'ended') return;
-
-        // ── STALE STATE RESET ─────────────────────────────────────────────────
-        // If Firebase says 'live' but the screening time is still in the future,
-        // it's a stale document from a previous test — reset it to 'waiting'.
-        const screeningTime = new Date(movie.watchPartyStartTime).getTime();
-        if (partyState?.status === 'live' && Date.now() < screeningTime) {
-            const db = getDbInstance();
-            if (db) {
-                console.log('[AUTO-START] Resetting stale live status — screening time not yet reached');
-                db.collection('watch_parties').doc(movieKey).set({
-                    status: 'waiting',
-                }, { merge: true });
-            }
-            return;
-        }
-
-        if (partyState?.status === 'live') return;
-
-        const startTime = new Date(movie.watchPartyStartTime).getTime();
-        const now = Date.now();
-        const delay = startTime - now;
-
-        const goLive = async () => {
-            // Try API first (handles full party setup including message cleanup)
-            // IMPORTANT: only fall back to a direct Firestore write on a genuine
-            // network failure (fetch throws). If the API responds but rejects the
-            // request (e.g. "window expired"), do NOT fall back — Firestore rules
-            // block client writes to watch_parties, so the fallback would just
-            // throw a permissions error for no benefit.
-            let networkFailure = false;
-            try {
-                const res = await fetch('/api/auto-start-watch-party', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey, startTime: movie.watchPartyStartTime || (movie as any).screeningStartTime })
-                });
-                const result = await res.json();
-                if (result.success || result.alreadyLive) {
-                    console.log('[AUTO-START] Party started via API:', movieKey);
-                    // Don't setShowLobby(false) here — that causes a race condition.
-                    // The API confirms Firestore was written, but OUR local partyState
-                    // (from the Firestore onSnapshot listener) hasn't necessarily caught
-                    // up yet. If we hide the lobby now, there's a render in between
-                    // where showLobby=false AND partyState.status is still 'waiting',
-                    // which falls into the "Waiting for host" screen by mistake.
-                    // Instead, just wait — the listener will update partyState to 'live'
-                    // within ~1s, and a separate effect (below) hides the lobby once
-                    // partyState actually confirms it.
-                    return;
-                }
-                // API responded but declined (e.g. window expired) — this is final,
-                // an admin needs to manually start it. Don't attempt a client write.
-                console.warn('[AUTO-START] API declined to start the party:', result.error);
-                return;
-            } catch (err) {
-                console.warn('[AUTO-START] Network error reaching API, will attempt direct write:', err);
-                networkFailure = true;
-            }
-            if (!networkFailure) return;
-            // Fallback: write directly to Firestore (only reached on network failure)
-            const db = getDbInstance();
-            if (db) {
-                db.collection('watch_parties').doc(movieKey).set({
-                    status: 'live',
-                    actualStartTime: movie.watchPartyStartTime,
-                    filmStartTime: movie.watchPartyStartTime,
-                    isPlaying: true,
-                    currentTime: 0,
-                    activeMovieIndex: 0,
-                    type: 'block',
-                }, { merge: true });
-            }
-            setShowLobby(false);
-        };
-
-        if (delay <= 0) {
-            goLive();
-            return;
-        }
-
-        const timer = setTimeout(goLive, delay);
-        return () => clearTimeout(timer);
-    }, [movie?.watchPartyStartTime, movieKey, partyState?.status]);
+    // ── AUTO-START: removed ──────────────────────────────────────────────────
+    // Every viewer's browser used to independently run a timer and race to
+    // call /api/auto-start-watch-party at the scheduled time — multiple
+    // browsers competing to write the same Firestore document at once. The
+    // admin now starts the party manually from the Control Room
+    // (?mode=controller), which calls the same API exactly once. The lobby
+    // still shows the countdown for viewers; it just waits for the admin's
+    // click instead of trying to trigger itself.
 
     // Determine if we should show lobby
     const shouldShowLobby = useMemo(() => {
@@ -692,19 +539,135 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     if (hasAccess === null) return <LoadingSpinner />;
 
     if (isControllerMode) {
+        const blockKeys: string[] = (movie as any)?._blockMovieKeys || [];
+        const lineup: any[] = (movie as any)?._blockLineup || [];
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const isBlockEvent = blockKeys.length > 1;
+        const partyStatus = partyState?.status || 'waiting';
+
+        const startPartyNow = async () => {
+            if (!window.confirm('Start this watch party right now? All waiting viewers will see it begin.')) return;
+            try {
+                const res = await fetch('/api/auto-start-watch-party', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieKey, startTime: new Date().toISOString() }),
+                });
+                const result = await res.json();
+                console.log('[CONTROL ROOM] Start result:', result);
+                if (!result.success && !result.alreadyLive) {
+                    alert('Could not start: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error — could not start the party.');
+            }
+        };
+
+        const advanceNow = async () => {
+            const label = currentIdx + 1 >= blockKeys.length ? 'end the watch party' : 'move to the next film';
+            if (!window.confirm(`This will ${label} for everyone watching. Continue?`)) return;
+            try {
+                const res = await fetch('/api/advance-block-film', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partyId: movieKey, currentIndex: currentIdx, totalFilms: blockKeys.length }),
+                });
+                const result = await res.json();
+                console.log('[CONTROL ROOM] Advance result:', result);
+                if (!result.success) alert('Advance failed: ' + (result.message || result.error || 'Unknown'));
+            } catch (err) {
+                alert('Network error — could not advance.');
+            }
+        };
+
+        const endPartyNow = async () => {
+            if (!window.confirm('End this watch party for everyone right now?')) return;
+            const db = getDbInstance();
+            if (db) await db.collection('watch_parties').doc(movieKey).set({ status: 'ended', endedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        };
+
         return (
-            <div className="fixed inset-0 bg-black flex flex-col z-[500]">
-                <div className="p-4 bg-red-600 flex justify-between items-center">
-                    <h1 className="font-black uppercase tracking-widest text-xs">Crate Remote</h1>
-                    <button onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-bold">EXIT</button>
+            <div className="fixed inset-0 bg-black flex flex-col z-[500] overflow-y-auto">
+                {/* Header */}
+                <div className="p-5 bg-gradient-to-r from-red-700 to-red-900 flex justify-between items-center sticky top-0 z-10 shadow-xl">
+                    <div>
+                        <h1 className="font-black uppercase tracking-widest text-sm text-white">Control Room</h1>
+                        <p className="text-[10px] text-red-200 uppercase tracking-widest mt-0.5">{(movie as any)?._blockTitle || movie?.title}</p>
+                    </div>
+                    <button onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-bold text-white/80 hover:text-white border border-white/30 rounded-lg px-3 py-1.5">EXIT</button>
                 </div>
-                <div className="flex-grow flex flex-col overflow-hidden">
-                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
+
+                <div className="flex-grow p-6 space-y-6 max-w-2xl mx-auto w-full">
+
+                    {/* Current status */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500 mb-2">Party Status</p>
+                        <div className="flex items-center gap-3">
+                            <span className={`w-3 h-3 rounded-full ${partyStatus === 'live' ? 'bg-green-500 animate-pulse' : partyStatus === 'ended' ? 'bg-gray-600' : 'bg-amber-500'}`} />
+                            <span className="text-xl font-black uppercase text-white">{partyStatus}</span>
+                        </div>
+                        {partyStatus === 'live' && (
+                            <p className="text-gray-500 text-xs mt-2">
+                                {isBlockEvent ? `Playing film ${currentIdx + 1} of ${blockKeys.length}` : 'Now playing'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Primary action — context aware */}
+                    {partyStatus !== 'live' && partyStatus !== 'ended' && (
+                        <button onClick={startPartyNow} className="w-full bg-green-600 hover:bg-green-500 text-white font-black uppercase tracking-widest text-sm py-5 rounded-2xl shadow-2xl active:scale-95 transition-all">
+                            ▶ Start Watch Party Now
+                        </button>
+                    )}
+
+                    {partyStatus === 'live' && isBlockEvent && (
+                        <button onClick={advanceNow} className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest text-sm py-5 rounded-2xl shadow-2xl active:scale-95 transition-all">
+                            {currentIdx + 1 >= blockKeys.length ? '🏁 End Watch Party' : `⏭ Advance to Film ${currentIdx + 2} of ${blockKeys.length}`}
+                        </button>
+                    )}
+
+                    {partyStatus === 'live' && (
+                        <button onClick={endPartyNow} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white font-black uppercase tracking-widest text-xs py-3.5 rounded-xl transition-all">
+                            End Party Early
+                        </button>
+                    )}
+
+                    {/* Lineup with progress */}
+                    {isBlockEvent && (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500 mb-4">Block Lineup</p>
+                            <div className="space-y-2">
+                                {lineup.map((film, i) => {
+                                    const isPast = i < currentIdx;
+                                    const isCurrent = i === currentIdx;
+                                    return (
+                                        <div key={film.key} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isCurrent ? 'bg-green-500/10 border border-green-500/30' : isPast ? 'opacity-40' : 'bg-white/[0.02]'}`}>
+                                            <span className="text-xs font-black text-gray-500 min-w-[16px]">{i + 1}</span>
+                                            <span className={`text-sm flex-1 ${isCurrent ? 'text-white font-bold' : 'text-gray-400'}`}>{film.title}</span>
+                                            {isCurrent && <span className="text-[9px] font-black uppercase text-green-400 bg-green-500/15 px-2 py-1 rounded-full">Now Playing</span>}
+                                            {isPast && <span className="text-[9px] text-gray-600">✓ Played</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Live viewer count */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between">
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500">Viewers Now</p>
+                        <p className="text-2xl font-black text-white">{viewerCount}</p>
+                    </div>
                 </div>
-                <div className="p-4 bg-white/5 grid grid-cols-5 gap-2 border-t border-white/10">
-                    {REACTION_TYPES.map(emoji => (
-                        <button key={emoji} onClick={() => logSentiment(emoji)} className="text-3xl py-4 hover:scale-125 transition-transform">{emoji}</button>
-                    ))}
+
+                {/* Chat moderation — collapsed below main controls */}
+                <div className="border-t border-white/10 flex flex-col" style={{ height: '40vh' }}>
+                    <div className="px-5 py-3 bg-white/[0.02]">
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Live Chat</p>
+                    </div>
+                    <div className="flex-grow overflow-hidden">
+                        <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
+                    </div>
                 </div>
             </div>
         );
@@ -1019,43 +982,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         }}
                                     />
 
-                                    {/* ── ADMIN MANUAL ADVANCE CONTROL ──────────────────────────────────
-                                        Visible ONLY to the admin account, ONLY during a multi-film block.
-                                        Safety net in case auto-advance doesn't fire — click to move to the
-                                        next film without waiting on the automatic system. */}
-                                    {user?.email === 'salomerebadenoon@gmail.com' && (movie as any)?._blockMovieKeys?.length > 1 && (
-                                        <div className="absolute bottom-6 right-6 z-[170]">
-                                            <button
-                                                onClick={async () => {
-                                                    const blockKeys: string[] = (movie as any)._blockMovieKeys;
-                                                    const currentIdx = partyState?.activeMovieIndex ?? 0;
-                                                    if (!window.confirm(`Advance from film ${currentIdx + 1} of ${blockKeys.length} to the next film now?`)) return;
-                                                    try {
-                                                        const res = await fetch('/api/advance-block-film', {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({
-                                                                partyId: movieKey,
-                                                                currentIndex: currentIdx,
-                                                                totalFilms: blockKeys.length,
-                                                            }),
-                                                        });
-                                                        const result = await res.json();
-                                                        console.log('[MANUAL ADVANCE] Result:', result);
-                                                        if (!result.success) {
-                                                            alert('Advance failed: ' + (result.message || result.error || 'Unknown error'));
-                                                        }
-                                                    } catch (err) {
-                                                        console.error('[MANUAL ADVANCE] Failed:', err);
-                                                        alert('Network error — could not advance the film. Check your connection and try again.');
-                                                    }
-                                                }}
-                                                className="bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl shadow-2xl border-2 border-black/20 active:scale-95 transition-all"
-                                            >
-                                                ⏭ Next Film (Admin)
-                                            </button>
-                                        </div>
-                                    )}
+                                    {/* Manual advance now lives ONLY in the Control Room (?mode=controller) —
+                                        removed from here to keep one single authoritative control surface
+                                        and avoid confusion between two different advance buttons. */}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
                                             <div className="max-w-2xl space-y-10">
