@@ -6,19 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
 
-// ── HLS.js for non-Safari browsers ───────────────────────────────────────────
-// Safari natively handles .m3u8 via MediaSource. Chrome/Firefox need HLS.js.
-// We load it dynamically only when needed (HLS stream detected) to avoid
-// adding weight for regular .mp4 playback.
-async function loadHlsJs(): Promise<any> {
-    return new Promise((resolve) => {
-        if ((window as any).Hls) { resolve((window as any).Hls); return; }
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
-        script.onload = () => resolve((window as any).Hls);
-        document.head.appendChild(script);
-    });
-}
+
 import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
@@ -255,12 +243,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const preloadCurrentRef = useRef<HTMLVideoElement>(null);
-    const preloadNextRef = useRef<HTMLVideoElement>(null);
-    const hlsInstanceRef = useRef<any>(null);
-    const [hlsReady, setHlsReady] = useState(false);
-    const [currentFilmBuffered, setCurrentFilmBuffered] = useState(false);
-    const [nextFilmBuffered, setNextFilmBuffered] = useState(false);
+
+
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -316,18 +300,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
 
-    // URL for whichever film comes right after the currently active one in this
-    // block, so it can start preloading in the background BEFORE the admin
-    // advances to it — eliminating the cold-start that film 1 always has.
-    const nextFilmUrl = useMemo(() => {
-        const m = movie as any;
-        const blockKeys: string[] | undefined = m?._blockMovieKeys;
-        if (!blockKeys || blockKeys.length === 0) return null;
-        const currentIdx = partyState?.activeMovieIndex ?? 0;
-        const nextKey = blockKeys[currentIdx + 1];
-        if (!nextKey) return null;
-        return allMovies[nextKey]?.fullMovie || null;
-    }, [movie, partyState?.activeMovieIndex, allMovies]);
+
 
     // ── HLS.js INITIALIZATION ────────────────────────────────────────────────
     // When the video URL is a .m3u8 HLS stream, we can't just set src= on
@@ -335,92 +308,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // HLS.js intercepts the load, fetches the manifest and segments itself,
     // and feeds them to the video element via MediaSource API.
     // Safari handles .m3u8 natively so we skip HLS.js there.
-    // ── HLS INIT ─────────────────────────────────────────────────────────────
-    // Problem: the video element only mounts AFTER the lobby hides (showLobby=false),
-    // so videoRef.current is null when this effect first runs on movie load.
-    // Solution: depend on showLobby too, so we re-run once the video is in the DOM.
-    useEffect(() => {
-        const videoUrl = movie?.fullMovie;
-        // Small delay to ensure the video element has mounted after lobby hides
-        const timer = setTimeout(() => {
-            const video = videoRef.current;
-            if (!video || !videoUrl) return;
 
-            const isHls = videoUrl.includes('.m3u8');
-            if (!isHls) {
-                setHlsReady(false);
-                return;
-            }
-
-            let cancelled = false;
-
-            const initHls = async () => {
-                const Hls = await loadHlsJs();
-
-                if (cancelled || !videoRef.current) return;
-                const video = videoRef.current;
-
-                // Safari supports HLS natively — just set the src directly
-                if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = videoUrl;
-                    setHlsReady(true);
-                    video.play().catch(() => {});
-                    return;
-                }
-
-                if (!Hls.isSupported()) {
-                    console.warn('[HLS] HLS.js not supported in this browser');
-                    // Fallback: try setting src directly anyway
-                    video.src = videoUrl;
-                    video.play().catch(() => {});
-                    return;
-                }
-
-                // Destroy any previous HLS instance before creating a new one
-                if (hlsInstanceRef.current) {
-                    hlsInstanceRef.current.destroy();
-                    hlsInstanceRef.current = null;
-                }
-
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: false,
-                    backBufferLength: 90,
-                    xhrSetup: (xhr: any) => {
-                        xhr.withCredentials = true; // send CloudFront cookies
-                    },
-                });
-
-                hls.loadSource(videoUrl);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    console.log('[HLS] Manifest parsed — ready to play');
-                    setHlsReady(true);
-                    video.play().catch(() => {});
-                });
-                hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-                    if (data.fatal) {
-                        console.error('[HLS] Fatal error:', data.type, data.details);
-                        hls.destroy();
-                    }
-                });
-
-                hlsInstanceRef.current = hls;
-            };
-
-            initHls();
-            return () => { cancelled = true; };
-        }, 150); // wait for video element to mount after lobby hides
-
-        return () => {
-            clearTimeout(timer);
-            if (hlsInstanceRef.current) {
-                hlsInstanceRef.current.destroy();
-                hlsInstanceRef.current = null;
-            }
-        };
-    // showLobby in deps so we re-run once lobby unmounts and videoRef is available
-    }, [movie?.fullMovie, showLobby]);
 
     // Reset buffered-confirmation flags whenever the active film changes —
     // "current" becomes whatever was "next", "next" needs to start fresh
@@ -802,39 +690,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <p className="text-2xl font-black text-white">{viewerCount}</p>
                     </div>
 
-                    {/* Buffering status — preloads happen silently in THIS tab too,
-                        so the admin can see "ready" before clicking Start/Advance */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500">Buffering Status</p>
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-400">Current film</span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${currentFilmBuffered ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400 animate-pulse'}`}>
-                                {currentFilmBuffered ? '✓ Ready' : 'Buffering…'}
-                            </span>
-                        </div>
-                        {nextFilmUrl && (
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-400">Next film</span>
-                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${nextFilmBuffered ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400 animate-pulse'}`}>
-                                    {nextFilmBuffered ? '✓ Ready' : 'Buffering…'}
-                                </span>
-                            </div>
-                        )}
-                    </div>
+
                 </div>
 
-                {/* Hidden preload videos for the controller's own tab — gives the admin
-                    a direct, accurate buffering signal right where they click Start/Advance */}
-                {movie?.fullMovie && (
-                    <video src={movie.fullMovie} preload="auto" muted playsInline
-                        onCanPlayThrough={() => setCurrentFilmBuffered(true)}
-                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} aria-hidden="true" />
-                )}
-                {nextFilmUrl && (
-                    <video src={nextFilmUrl} preload="auto" muted playsInline
-                        onCanPlayThrough={() => setNextFilmBuffered(true)}
-                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} aria-hidden="true" />
-                )}
+
 
                 {/* Chat moderation — collapsed below main controls */}
                 <div className="border-t border-white/10 flex flex-col" style={{ height: '40vh' }}>
@@ -906,35 +765,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     hasAccess={hasAccess}
                     onBuyTicket={() => setShowPaywall(true)}
                 />
-                {/* ── PRELOAD: current AND next film in the block ──────────────────────
-                    Silently buffers the active film (so there's no blank screen when the
-                    party starts) AND the NEXT film in the block (so the moment the admin
-                    clicks "Advance" in the Control Room, it's already buffered and ready
-                    instead of cold-starting from zero like the first film did). */}
-                {hasAccess && movie.fullMovie && (
-                    <video
-                        ref={preloadCurrentRef}
-                        src={movie.fullMovie}
-                        preload="auto"
-                        muted
-                        playsInline
-                        onCanPlayThrough={() => setCurrentFilmBuffered(true)}
-                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
-                        aria-hidden="true"
-                    />
-                )}
-                {hasAccess && nextFilmUrl && (
-                    <video
-                        ref={preloadNextRef}
-                        src={nextFilmUrl}
-                        preload="auto"
-                        muted
-                        playsInline
-                        onCanPlayThrough={() => setNextFilmBuffered(true)}
-                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
-                        aria-hidden="true"
-                    />
-                )}
+
                 {showPaywall && (
                     <SquarePaymentModal 
                         movie={movie} 
@@ -1154,10 +985,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     />
                                     <video 
                                         ref={videoRef}
-                                        // For HLS streams (.m3u8), HLS.js sets the src via MediaSource API —
-                                        // we must NOT set src= here or it conflicts with HLS.js attachment.
-                                        // For regular .mp4 files, src= works as normal.
-                                        {...(!movie.fullMovie?.includes('.m3u8') ? { src: movie.fullMovie } : {})}
+                                        src={movie.fullMovie}
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 
