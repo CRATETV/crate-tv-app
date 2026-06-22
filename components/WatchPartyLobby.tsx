@@ -43,27 +43,28 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
     // Register viewer presence
     useEffect(() => {
-        if (!user) return;
+        if (!user || !user.uid) return;
         const db = getDbInstance();
         if (!db) return;
-        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.email || 'anon');
+        // Use uid as document ID so Firestore rules can verify ownership
+        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.uid);
         viewerRef.set({
+            uid: user.uid,
             name: user.name || 'Film Lover',
             avatar: user.avatar || 'fox',
             joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        const logRef = db.collection('festival_viewers').doc(`${movie.key}_${user.email || 'anon'}`);
-        // userId is REQUIRED to match Firestore security rules (request.resource.data.userId == request.auth.uid)
+        }).catch(() => {}); // Silently ignore if rules block this (non-critical)
+        const logRef = db.collection('festival_viewers').doc(`${movie.key}_${user.uid}`);
         logRef.set({
-            userId: user.uid || null,
+            userId: user.uid,
             movieKey: movie.key,
             movieTitle: movie.title,
             email: user.email || null,
             name: user.name || 'Film Lover',
             firstJoinedAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        return () => { viewerRef.delete(); };
+        }, { merge: true }).catch(() => {}); // Silently ignore if rules block this (non-critical)
+        return () => { viewerRef.delete().catch(() => {}); };
     }, [user, movie.key]);
 
     // Listen to lobby viewers

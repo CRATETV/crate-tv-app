@@ -37,32 +37,12 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     // Hide only if: not live AND not upcoming AND more than 2hrs past start time
     if (!isExplicitlyLive && !isUpcoming && !isStartingSoon) return null;
     
-    // Auto-start when countdown reaches zero
+    // Auto-start removed — party is now started manually from the Control Room.
+    // This banner no longer tries to auto-start; it just shows the countdown
+    // and waits for the admin to click Start in the Control Room.
     const attemptAutoStart = useCallback(async () => {
-        if (isAutoStarting || autoStartAttempted || isExplicitlyLive) return;
-        
-        setIsAutoStarting(true);
-        setAutoStartAttempted(true);
-        
-        try {
-            const response = await fetch('/api/auto-start-watch-party', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: movie.key })
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok && data.success) {
-                // Refresh data to pick up the new live state
-                if (refreshData) refreshData();
-            } else {
-            }
-        } catch (error) {
-            console.error('[AUTO-START] Error:', error);
-        } finally {
-            setIsAutoStarting(false);
-        }
+        // No-op — manual Control Room flow only
+        return;
     }, [movie.key, isAutoStarting, autoStartAttempted, isExplicitlyLive, refreshData]);
 
     // Trigger auto-start when countdown reaches zero (within 5 second window)
