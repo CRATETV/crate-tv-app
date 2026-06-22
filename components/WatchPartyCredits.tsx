@@ -85,16 +85,16 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
         const db = getDbInstance();
         if (!db) return;
 
-        // Increment applause count
-        await db.collection('watch_parties').doc(movie.key).update({
+        // Increment applause count (best-effort — may fail if rules block client writes)
+        db.collection('watch_parties').doc(movie.key).update({
             applauseCount: firebase.firestore.FieldValue.increment(1)
-        });
+        }).catch(() => {});
 
-        // Add live reaction
-        await db.collection('watch_parties').doc(movie.key).collection('live_reactions').add({
+        // Add live reaction (best-effort)
+        db.collection('watch_parties').doc(movie.key).collection('live_reactions').add({
             emoji: '👏',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }).catch(() => {});
 
         // Show thank you after a moment
         setTimeout(() => setShowThankYou(true), 500);

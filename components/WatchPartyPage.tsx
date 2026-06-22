@@ -635,7 +635,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
-        if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({ emoji, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({ emoji, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
     };
 
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
