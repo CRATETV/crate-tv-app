@@ -5,6 +5,20 @@ import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
+
+// ── HLS.js for non-Safari browsers ───────────────────────────────────────────
+// Safari natively handles .m3u8 via MediaSource. Chrome/Firefox need HLS.js.
+// We load it dynamically only when needed (HLS stream detected) to avoid
+// adding weight for regular .mp4 playback.
+async function loadHlsJs(): Promise<any> {
+    return new Promise((resolve) => {
+        if ((window as any).Hls) { resolve((window as any).Hls); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
+        script.onload = () => resolve((window as any).Hls);
+        document.head.appendChild(script);
+    });
+}
 import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
@@ -243,6 +257,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const preloadCurrentRef = useRef<HTMLVideoElement>(null);
     const preloadNextRef = useRef<HTMLVideoElement>(null);
+    const hlsInstanceRef = useRef<any>(null);
+    const [hlsReady, setHlsReady] = useState(false);
     const [currentFilmBuffered, setCurrentFilmBuffered] = useState(false);
     const [nextFilmBuffered, setNextFilmBuffered] = useState(false);
 
@@ -312,6 +328,81 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!nextKey) return null;
         return allMovies[nextKey]?.fullMovie || null;
     }, [movie, partyState?.activeMovieIndex, allMovies]);
+
+    // ── HLS.js INITIALIZATION ────────────────────────────────────────────────
+    // When the video URL is a .m3u8 HLS stream, we can't just set src= on
+    // a <video> element in Chrome/Firefox — they don't support HLS natively.
+    // HLS.js intercepts the load, fetches the manifest and segments itself,
+    // and feeds them to the video element via MediaSource API.
+    // Safari handles .m3u8 natively so we skip HLS.js there.
+    useEffect(() => {
+        const videoUrl = movie?.fullMovie;
+        const video = videoRef.current;
+        if (!video || !videoUrl) return;
+
+        const isHls = videoUrl.includes('.m3u8');
+        if (!isHls) {
+            setHlsReady(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const initHls = async () => {
+            const Hls = await loadHlsJs();
+
+            if (cancelled) return;
+
+            // Safari supports HLS natively — just set the src directly
+            if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoUrl;
+                setHlsReady(true);
+                return;
+            }
+
+            if (!Hls.isSupported()) {
+                console.warn('[HLS] HLS.js not supported in this browser');
+                return;
+            }
+
+            // Destroy any previous HLS instance before creating a new one
+            if (hlsInstanceRef.current) {
+                hlsInstanceRef.current.destroy();
+                hlsInstanceRef.current = null;
+            }
+
+            const hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: false,
+                backBufferLength: 90,
+            });
+
+            hls.loadSource(videoUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                console.log('[HLS] Manifest parsed — ready to play');
+                setHlsReady(true);
+            });
+            hls.on(Hls.Events.ERROR, (_: any, data: any) => {
+                if (data.fatal) {
+                    console.error('[HLS] Fatal error:', data);
+                    hls.destroy();
+                }
+            });
+
+            hlsInstanceRef.current = hls;
+        };
+
+        initHls();
+
+        return () => {
+            cancelled = true;
+            if (hlsInstanceRef.current) {
+                hlsInstanceRef.current.destroy();
+                hlsInstanceRef.current = null;
+            }
+        };
+    }, [movie?.fullMovie]);
 
     // Reset buffered-confirmation flags whenever the active film changes —
     // "current" becomes whatever was "next", "next" needs to start fresh
@@ -1023,8 +1114,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         muted playsInline aria-hidden="true"
                                     />
                                     <video 
-                                        ref={videoRef} 
-                                        src={movie.fullMovie} 
+                                        ref={videoRef}
+                                        // For HLS streams (.m3u8), HLS.js sets the src via MediaSource API —
+                                        // we must NOT set src= here or it conflicts with HLS.js attachment.
+                                        // For regular .mp4 files, src= works as normal.
+                                        {...(!movie.fullMovie?.includes('.m3u8') ? { src: movie.fullMovie } : {})}
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 
