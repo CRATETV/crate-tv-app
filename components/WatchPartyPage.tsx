@@ -241,7 +241,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const lastSeekTimeRef = useRef<number>(0);
+    const preloadCurrentRef = useRef<HTMLVideoElement>(null);
+    const preloadNextRef = useRef<HTMLVideoElement>(null);
+    const [currentFilmBuffered, setCurrentFilmBuffered] = useState(false);
+    const [nextFilmBuffered, setNextFilmBuffered] = useState(false);
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -297,6 +300,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
 
+    // URL for whichever film comes right after the currently active one in this
+    // block, so it can start preloading in the background BEFORE the admin
+    // advances to it — eliminating the cold-start that film 1 always has.
+    const nextFilmUrl = useMemo(() => {
+        const m = movie as any;
+        const blockKeys: string[] | undefined = m?._blockMovieKeys;
+        if (!blockKeys || blockKeys.length === 0) return null;
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const nextKey = blockKeys[currentIdx + 1];
+        if (!nextKey) return null;
+        return allMovies[nextKey]?.fullMovie || null;
+    }, [movie, partyState?.activeMovieIndex, allMovies]);
+
+    // Reset buffered-confirmation flags whenever the active film changes —
+    // "current" becomes whatever was "next", "next" needs to start fresh
+    useEffect(() => {
+        setCurrentFilmBuffered(false);
+        setNextFilmBuffered(false);
+    }, [partyState?.activeMovieIndex]);
+
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
@@ -315,99 +338,89 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
 
+    // ── ONE-TIME CATCH-UP, THEN PLAY NORMALLY ────────────────────────────────
+    // Previously this ran every second, continuously hard-seeking and adjusting
+    // playback rate (1.06x/0.94x) to keep every viewer locked to the exact same
+    // timestamp. In practice that fought against the video as it was naturally
+    // starting up (still buffering, lobby->player handoff, etc.), causing the
+    // stutter/restart pattern. Since late joiners can always catch up properly
+    // via the on-demand catalog after the block airs, live sync no longer needs
+    // to be perfect — just close enough. Now: when the video is ready to play,
+    // jump ONCE to where it should be (in case the viewer arrived a bit late),
+    // then let it play through uninterrupted like a normal movie.
+    const hasDoneInitialSyncRef = useRef(false);
+    useEffect(() => {
+        hasDoneInitialSyncRef.current = false; // reset whenever the active film changes
+    }, [partyState?.activeMovieIndex, partyState?.filmStartTime]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
 
-        // If party has been terminated, stop playback immediately
         if (partyState.status === 'ended') {
             video.pause();
             return;
         }
+        if (partyState.status !== 'live') return;
 
-        const syncClock = () => {
-            // Double-check party is still live
-            if (partyState.status === 'ended' || partyState.status !== 'live') {
-                video.pause();
-                return;
-            }
-
-            const now = Date.now();
-            if (now - lastSeekTimeRef.current < 2000) return;
+        const doInitialSync = () => {
+            if (hasDoneInitialSyncRef.current) return;
+            if (video.readyState < 2) return; // wait until the video can report a real position
             try {
-                // For blocks, use filmStartTime (when current film started) for accurate sync
-                // For single movies, fall back to actualStartTime
-                // startRef can be a Firestore Timestamp (.toDate()), an ISO string, or a number —
-                // handle all three since our API writes plain strings while client writes Timestamps
                 const startRef: any = partyState.filmStartTime || partyState.actualStartTime;
                 let serverStart: number;
-                if (!startRef) {
-                    return; // No start time yet — skip this sync tick
-                } else if (typeof startRef.toDate === 'function') {
+                if (!startRef) return;
+                if (typeof startRef.toDate === 'function') {
                     serverStart = startRef.toDate().getTime();
                 } else if (typeof startRef === 'string') {
                     serverStart = new Date(startRef).getTime();
                 } else if (typeof startRef === 'number') {
                     serverStart = startRef;
                 } else {
-                    return; // Unrecognized format — skip rather than crash
-                }
-                if (!isFinite(serverStart)) return;
-                const elapsedSinceStart = (now - serverStart) / 1000;
-                
-                // Calculate target position based on elapsed time since THIS FILM started
-                const targetPosition = Math.max(0, elapsedSinceStart);
-                
-                // Use actual video duration first, fall back to durationInMinutes, then 1hr default
-                const movieDuration = (video.duration > 0 && isFinite(video.duration))
-                    ? video.duration
-                    : movie?.durationInMinutes
-                        ? movie.durationInMinutes * 60
-                        : 3600;
-                
-                if (targetPosition >= movieDuration) {
-                    if (!isEnded) {
-                        setIsEnded(true);
-                        video.pause();
-                        video.currentTime = movieDuration;
-                    }
                     return;
                 }
+                if (!isFinite(serverStart)) return;
 
-                const drift = targetPosition - video.currentTime;
-                const absDrift = Math.abs(drift);
+                const elapsedSinceStart = Math.max(0, (Date.now() - serverStart) / 1000);
+                const movieDuration = (video.duration > 0 && isFinite(video.duration))
+                    ? video.duration
+                    : movie?.durationInMinutes ? movie.durationInMinutes * 60 : 3600;
 
-                // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
-                if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
-                    lastSeekTimeRef.current = now;
-                    video.currentTime = targetPosition;
-                    video.playbackRate = 1.0; // Reset rate on jump
-                } 
-                // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
-                else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
-                    // If behind, speed up slightly. If ahead, slow down slightly.
-                    video.playbackRate = drift > 0 ? 1.06 : 0.94;
-                } 
-                // 3. IN SYNC: Reset to normal speed
-                else {
-                    video.playbackRate = 1.0;
+                // Only catch up if genuinely behind by more than a couple seconds —
+                // small gaps aren't worth a seek (seeking itself causes a stutter).
+                if (elapsedSinceStart > 2 && elapsedSinceStart < movieDuration) {
+                    video.currentTime = elapsedSinceStart;
                 }
-
-                // Handle play/pause state from server
-                if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                    video.play().catch(() => {});
-                } else if (!partyState.isPlaying && !video.paused) {
-                    video.pause();
-                }
-            } catch (e) { console.error("Sync heartbeat failure:", e); }
+                hasDoneInitialSyncRef.current = true;
+            } catch (e) {
+                console.error('Initial sync failed:', e);
+                hasDoneInitialSyncRef.current = true; // don't retry forever on error
+            }
         };
 
-        const interval = setInterval(syncClock, 1000);
-        syncClock(); 
+        // Try immediately, and also whenever the video reports it's ready,
+        // since readyState may not be sufficient on the very first render
+        doInitialSync();
+        video.addEventListener('loadedmetadata', doInitialSync);
+        video.addEventListener('canplay', doInitialSync);
+
+        // Lightweight ongoing check — just keep play/pause in sync with the
+        // server (e.g. controller pausing for everyone), no seeking/rate changes
+        const playPauseInterval = setInterval(() => {
+            if (partyState.status !== 'live') return;
+            if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
+                video.play().catch(() => {});
+            } else if (!partyState.isPlaying && !video.paused) {
+                video.pause();
+            }
+        }, 2000);
+
         return () => {
-            clearInterval(interval);
+            video.removeEventListener('loadedmetadata', doInitialSync);
+            video.removeEventListener('canplay', doInitialSync);
+            clearInterval(playPauseInterval);
         };
-    }, [partyState, movie, isEnded, isControllerMode]);
+    }, [partyState?.status, partyState?.isPlaying, partyState?.activeMovieIndex, movie, isControllerMode]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -658,7 +671,40 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500">Viewers Now</p>
                         <p className="text-2xl font-black text-white">{viewerCount}</p>
                     </div>
+
+                    {/* Buffering status — preloads happen silently in THIS tab too,
+                        so the admin can see "ready" before clicking Start/Advance */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500">Buffering Status</p>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">Current film</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${currentFilmBuffered ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400 animate-pulse'}`}>
+                                {currentFilmBuffered ? '✓ Ready' : 'Buffering…'}
+                            </span>
+                        </div>
+                        {nextFilmUrl && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-400">Next film</span>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${nextFilmBuffered ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400 animate-pulse'}`}>
+                                    {nextFilmBuffered ? '✓ Ready' : 'Buffering…'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Hidden preload videos for the controller's own tab — gives the admin
+                    a direct, accurate buffering signal right where they click Start/Advance */}
+                {movie?.fullMovie && (
+                    <video src={movie.fullMovie} preload="auto" muted playsInline
+                        onCanPlayThrough={() => setCurrentFilmBuffered(true)}
+                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} aria-hidden="true" />
+                )}
+                {nextFilmUrl && (
+                    <video src={nextFilmUrl} preload="auto" muted playsInline
+                        onCanPlayThrough={() => setNextFilmBuffered(true)}
+                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} aria-hidden="true" />
+                )}
 
                 {/* Chat moderation — collapsed below main controls */}
                 <div className="border-t border-white/10 flex flex-col" style={{ height: '40vh' }}>
@@ -730,14 +776,31 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     hasAccess={hasAccess}
                     onBuyTicket={() => setShowPaywall(true)}
                 />
-                {/* Hidden preload video — silently buffers the film while lobby is showing
-                    so there's no blank screen when the party starts */}
+                {/* ── PRELOAD: current AND next film in the block ──────────────────────
+                    Silently buffers the active film (so there's no blank screen when the
+                    party starts) AND the NEXT film in the block (so the moment the admin
+                    clicks "Advance" in the Control Room, it's already buffered and ready
+                    instead of cold-starting from zero like the first film did). */}
                 {hasAccess && movie.fullMovie && (
                     <video
+                        ref={preloadCurrentRef}
                         src={movie.fullMovie}
                         preload="auto"
                         muted
                         playsInline
+                        onCanPlayThrough={() => setCurrentFilmBuffered(true)}
+                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
+                        aria-hidden="true"
+                    />
+                )}
+                {hasAccess && nextFilmUrl && (
+                    <video
+                        ref={preloadNextRef}
+                        src={nextFilmUrl}
+                        preload="auto"
+                        muted
+                        playsInline
+                        onCanPlayThrough={() => setNextFilmBuffered(true)}
                         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
                         aria-hidden="true"
                     />
