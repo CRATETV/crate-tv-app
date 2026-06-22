@@ -310,12 +310,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // Safari handles .m3u8 natively so we skip HLS.js there.
 
 
-    // Reset buffered-confirmation flags whenever the active film changes —
-    // "current" becomes whatever was "next", "next" needs to start fresh
-    useEffect(() => {
-        setCurrentFilmBuffered(false);
-        setNextFilmBuffered(false);
-    }, [partyState?.activeMovieIndex]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
