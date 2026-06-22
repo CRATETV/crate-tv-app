@@ -109,7 +109,10 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       const syncedData = data.map((day: any) => ({
           ...day,
           blocks: (day.blocks || []).map((block: any) => {
-              if (block.screeningStartTime && !block.watchPartyStartTime) {
+              // ALWAYS sync watchPartyStartTime to match screeningStartTime on every save.
+              // Previously only synced when watchPartyStartTime was missing — but if a
+              // stale value existed from a previous save, it would never update.
+              if (block.screeningStartTime) {
                   return {
                       ...block,
                       watchPartyStartTime: block.screeningStartTime,

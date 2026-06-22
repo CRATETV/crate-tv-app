@@ -495,9 +495,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     ? video.duration
                     : movie?.durationInMinutes ? movie.durationInMinutes * 60 : 3600;
 
-                // Only catch up if genuinely behind by more than a couple seconds —
-                // small gaps aren't worth a seek (seeking itself causes a stutter).
-                if (elapsedSinceStart > 2 && elapsedSinceStart < movieDuration) {
+                // Only catch up if genuinely behind — and use a higher threshold
+                // for HLS streams since early seeks cause the stream to restart
+                // from the beginning (HLS has to reload segments from that position).
+                const isHls = movie?.fullMovie?.includes('.m3u8');
+                const seekThreshold = isHls ? 10 : 2;
+                if (elapsedSinceStart > seekThreshold && elapsedSinceStart < movieDuration) {
                     video.currentTime = elapsedSinceStart;
                 }
                 hasDoneInitialSyncRef.current = true;
@@ -513,14 +516,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         video.addEventListener('loadedmetadata', doInitialSync);
         video.addEventListener('canplay', doInitialSync);
 
-        // Lightweight ongoing check — just keep play/pause in sync with the
-        // server (e.g. controller pausing for everyone), no seeking/rate changes
+        // Lightweight ongoing check — keep play/pause in sync with the server.
+        // For HLS streams, the browser naturally pauses while buffering segments —
+        // we must NOT call play() during those natural pauses or it restarts the stream.
+        // Only call play() if the video has been paused for a meaningful duration
+        // (tracked via pausedSince), which distinguishes a real stall from a buffer pause.
+        let pausedSince: number | null = null;
         const playPauseInterval = setInterval(() => {
             if (partyState.status !== 'live') return;
-            if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                video.play().catch(() => {});
-            } else if (!partyState.isPlaying && !video.paused) {
-                video.pause();
+            const isHls = movie?.fullMovie?.includes('.m3u8');
+            if (partyState.isPlaying && video.paused && !video.ended) {
+                if (isHls) {
+                    // For HLS: only intervene if paused for more than 4 seconds
+                    // (natural buffer pauses are usually under 2s)
+                    if (pausedSince === null) pausedSince = Date.now();
+                    else if (Date.now() - pausedSince > 4000 && video.readyState >= 2) {
+                        video.play().catch(() => {});
+                        pausedSince = null;
+                    }
+                } else if (video.readyState >= 2) {
+                    video.play().catch(() => {});
+                }
+            } else {
+                pausedSince = null;
+                if (!partyState.isPlaying && !video.paused) {
+                    video.pause();
+                }
             }
         }, 2000);
 
