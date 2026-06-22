@@ -335,74 +335,92 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // HLS.js intercepts the load, fetches the manifest and segments itself,
     // and feeds them to the video element via MediaSource API.
     // Safari handles .m3u8 natively so we skip HLS.js there.
+    // ── HLS INIT ─────────────────────────────────────────────────────────────
+    // Problem: the video element only mounts AFTER the lobby hides (showLobby=false),
+    // so videoRef.current is null when this effect first runs on movie load.
+    // Solution: depend on showLobby too, so we re-run once the video is in the DOM.
     useEffect(() => {
         const videoUrl = movie?.fullMovie;
-        const video = videoRef.current;
-        if (!video || !videoUrl) return;
+        // Small delay to ensure the video element has mounted after lobby hides
+        const timer = setTimeout(() => {
+            const video = videoRef.current;
+            if (!video || !videoUrl) return;
 
-        const isHls = videoUrl.includes('.m3u8');
-        if (!isHls) {
-            setHlsReady(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        const initHls = async () => {
-            const Hls = await loadHlsJs();
-
-            if (cancelled) return;
-
-            // Safari supports HLS natively — just set the src directly
-            if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = videoUrl;
-                setHlsReady(true);
+            const isHls = videoUrl.includes('.m3u8');
+            if (!isHls) {
+                setHlsReady(false);
                 return;
             }
 
-            if (!Hls.isSupported()) {
-                console.warn('[HLS] HLS.js not supported in this browser');
-                return;
-            }
+            let cancelled = false;
 
-            // Destroy any previous HLS instance before creating a new one
-            if (hlsInstanceRef.current) {
-                hlsInstanceRef.current.destroy();
-                hlsInstanceRef.current = null;
-            }
+            const initHls = async () => {
+                const Hls = await loadHlsJs();
 
-            const hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: false,
-                backBufferLength: 90,
-            });
+                if (cancelled || !videoRef.current) return;
+                const video = videoRef.current;
 
-            hls.loadSource(videoUrl);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                console.log('[HLS] Manifest parsed — ready to play');
-                setHlsReady(true);
-            });
-            hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-                if (data.fatal) {
-                    console.error('[HLS] Fatal error:', data);
-                    hls.destroy();
+                // Safari supports HLS natively — just set the src directly
+                if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    setHlsReady(true);
+                    video.play().catch(() => {});
+                    return;
                 }
-            });
 
-            hlsInstanceRef.current = hls;
-        };
+                if (!Hls.isSupported()) {
+                    console.warn('[HLS] HLS.js not supported in this browser');
+                    // Fallback: try setting src directly anyway
+                    video.src = videoUrl;
+                    video.play().catch(() => {});
+                    return;
+                }
 
-        initHls();
+                // Destroy any previous HLS instance before creating a new one
+                if (hlsInstanceRef.current) {
+                    hlsInstanceRef.current.destroy();
+                    hlsInstanceRef.current = null;
+                }
+
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: false,
+                    backBufferLength: 90,
+                    xhrSetup: (xhr: any) => {
+                        xhr.withCredentials = true; // send CloudFront cookies
+                    },
+                });
+
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    console.log('[HLS] Manifest parsed — ready to play');
+                    setHlsReady(true);
+                    video.play().catch(() => {});
+                });
+                hls.on(Hls.Events.ERROR, (_: any, data: any) => {
+                    if (data.fatal) {
+                        console.error('[HLS] Fatal error:', data.type, data.details);
+                        hls.destroy();
+                    }
+                });
+
+                hlsInstanceRef.current = hls;
+            };
+
+            initHls();
+            return () => { cancelled = true; };
+        }, 150); // wait for video element to mount after lobby hides
 
         return () => {
-            cancelled = true;
+            clearTimeout(timer);
             if (hlsInstanceRef.current) {
                 hlsInstanceRef.current.destroy();
                 hlsInstanceRef.current = null;
             }
         };
-    }, [movie?.fullMovie]);
+    // showLobby in deps so we re-run once lobby unmounts and videoRef is available
+    }, [movie?.fullMovie, showLobby]);
 
     // Reset buffered-confirmation flags whenever the active film changes —
     // "current" becomes whatever was "next", "next" needs to start fresh
