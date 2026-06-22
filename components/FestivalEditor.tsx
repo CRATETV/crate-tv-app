@@ -101,9 +101,28 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const [isDirty, setIsDirty] = useState(false);
 
   const handleSaveManifest = () => {
+      // CRITICAL: before saving, ensure every block that has a screeningStartTime
+      // also has watchPartyStartTime set to the same value. This runs on every save
+      // so it self-heals even if onChange didn't fire (e.g. user clicked Save without
+      // actually changing the field value — React's onChange won't fire in that case).
+      // Sync watchPartyStartTime for any block that has screeningStartTime but not watchPartyStartTime
+      const syncedData = data.map((day: any) => ({
+          ...day,
+          blocks: (day.blocks || []).map((block: any) => {
+              if (block.screeningStartTime && !block.watchPartyStartTime) {
+                  return {
+                      ...block,
+                      watchPartyStartTime: block.screeningStartTime,
+                      isWatchPartyEnabled: true,
+                  };
+              }
+              return block;
+          }),
+      }));
+      // Push synced data up to parent state first so the save picks up the fix
+      onDataChange(syncedData);
       onSave(config);
       setIsDirty(false);
-
   };
 
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: any) => {
