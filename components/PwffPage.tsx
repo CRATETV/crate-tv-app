@@ -4,9 +4,9 @@ import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
-import Header from './Header';
 import LiveWatchPartyBanner from './LiveWatchPartyBanner';
 import BottomNavBar from './BottomNavBar';
+import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
 
 const trackPageView = async () => {
@@ -154,7 +154,7 @@ const DirectorCard: React.FC<{ movie: Movie }> = ({ movie }) => {
 };
 
 // ─── FILM ROW ─────────────────────────────────────────────────────────────────
-const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWatch: () => void; isAired?: boolean }> = ({ movie, index, isUnlocked, onWatch, isAired }) => {
+const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWatch: () => void }> = ({ movie, index, isUnlocked, onWatch }) => {
     const [expanded, setExpanded] = useState(false);
     return (
         <div className="flex gap-4 py-5 border-b border-white/5 last:border-0">
@@ -167,11 +167,11 @@ const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWa
             <div className="flex-grow min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-0.5">
                     <h4 className="text-sm font-black text-white uppercase tracking-tight">{movie.title}</h4>
-                    {isUnlocked && <button onClick={onWatch} className="text-[9px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded-full flex-shrink-0">{isAired ? 'Watch' : 'Join Party'}</button>}
+                    {isUnlocked && <button onClick={onWatch} className="text-[9px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded-full flex-shrink-0">Watch</button>}
                 </div>
                 <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Directed by {movie.director}</p>
                 <div className="flex flex-wrap gap-2 mb-1">
-                    {!!movie.durationInMinutes && movie.durationInMinutes > 0 && <span className="text-[10px] text-gray-600">{movie.durationInMinutes} min</span>}
+                    {(movie.durationInMinutes ?? 0) > 0 && <span className="text-[10px] text-gray-600">{movie.durationInMinutes} min</span>}
                     {movie.genres?.map(g => <span key={g} className="text-[10px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">{g}</span>)}
                     {movie.festivalAwards && <span className="text-[10px] text-amber-400 font-bold">{movie.festivalAwards}</span>}
                 </div>
@@ -191,15 +191,10 @@ const BlockCard: React.FC<{
     block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean;
     isBeforeScreening?: boolean; screeningStartTime?: string;
     dayLabel: string; onBuyTicket: () => void; onEnterLobby: () => void; onWatch: (key: string) => void;
-    onRewatch: (key: string) => void;
-}> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch, onRewatch }) => {
+}> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
-    const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null; // 7 days — matches cron cleanup window
-    // A block has "aired" once its screening time has passed AND it's not currently
-    // live. At that point it switches from "join the party" to "watch on demand" —
-    // individual films open the normal player instead of the synced watch party.
-    const isAired = !!screenStart && new Date() >= screenStart && !isLive;
+    const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
     return (
         <div className={`rounded-2xl border overflow-hidden ${isLive ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.12)]' : 'border-white/8'}`}>
             <div className="bg-white/[0.02] border-b border-white/5 p-5 md:p-7">
@@ -232,32 +227,17 @@ const BlockCard: React.FC<{
                             ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Join Live</button>
                             : isBeforeScreening && isUnlocked
                                 ? <div className="inline-flex items-center gap-1.5 bg-amber-900/20 border border-amber-500/20 text-amber-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Ticket Confirmed</div>
-                            : isBeforeScreening
-                                ? (block.price && block.price > 0
+                            : isUnlocked
+                                ? <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>
+                                : block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
-                                    : <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>)
-                            : isAired && isUnlocked
-                                ? <button onClick={() => films[0] && onRewatch(films[0].key)} className="bg-white/10 hover:bg-white/20 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">▶ Rewatch</button>
-                            : isAired
-                                ? (block.price && block.price > 0
-                                    ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Unlock · ${block.price.toFixed(2)}</button>
-                                    : <button onClick={() => films[0] && onRewatch(films[0].key)} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">▶ Watch</button>)
-                            : <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>}
+                                    : <span className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Free</span>}
                     </div>
                 </div>
             </div>
             <div className="px-5 md:px-7">
                 {films.length > 0
-                    ? films.map((f, i) => (
-                        <FilmRow
-                            key={f.key}
-                            movie={f}
-                            index={i}
-                            isUnlocked={isUnlocked}
-                            isAired={isAired}
-                            onWatch={() => isAired ? onRewatch(f.key) : onWatch(f.key)}
-                        />
-                    ))
+                    ? films.map((f, i) => <FilmRow key={f.key} movie={f} index={i} isUnlocked={isUnlocked} onWatch={() => onWatch(f.key)} />)
                     : <p className="py-8 text-center text-gray-700 text-xs uppercase tracking-widest font-black">Programme coming soon</p>}
             </div>
         </div>
@@ -307,6 +287,7 @@ const ProgrammeMode: React.FC = () => {
 
     const [activeDay, setActiveDay] = useState(1);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
+    const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<'programme' | 'directors'>('programme');
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
@@ -315,6 +296,14 @@ const ProgrammeMode: React.FC = () => {
     const filmsWithNotes = useMemo(() => allFestivalFilms.filter(m => m.festivalDirectorNote || m.festivalFilmmakerBio || m.festivalQuote), [allFestivalFilms]);
 
     const navigate = (path: string) => { window.history.pushState({}, '', path); window.dispatchEvent(new Event('pushstate')); };
+
+    const lobbyMovie = useMemo(() => {
+        if (!showLobbyFor) return null;
+        const block = allBlocks.find(b => b.id === showLobbyFor);
+        if (!block) return null;
+        const first = movies[block.movieKeys?.[0]];
+        return { key: block.id, title: block.title, isWatchPartyEnabled: true, isWatchPartyPaid: (block.price || 0) > 0, watchPartyPrice: block.price, poster: first?.poster || '', director: 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 } as Movie;
+    }, [showLobbyFor, allBlocks, movies]);
 
     const openingNightDate = useMemo(() => {
         const first = allBlocks.find(b => b.watchPartyStartTime);
@@ -409,12 +398,10 @@ const ProgrammeMode: React.FC = () => {
                                 const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                                 const partyState = activeParties[block.id];
+                                const isLive = partyState?.status === 'live';
                                 const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
                                 const isBeforeScreening = screenStart ? new Date() < screenStart : false;
                                 const isInWindow = screenStart ? new Date() >= screenStart : true;
-                                // Only show "Live Now" if Firebase says live AND screening time has actually passed
-                                // This prevents stale Firestore state from showing "Live Now" prematurely
-                                const isLive = partyState?.status === 'live' && isInWindow;
                                 return (
                                     <BlockCard key={block.id} block={block} films={films}
                                         isUnlocked={isUnlocked && isInWindow}
@@ -423,9 +410,8 @@ const ProgrammeMode: React.FC = () => {
                                         screeningStartTime={block.screeningStartTime}
                                         dayLabel={`Day ${activeDay}`}
                                         onBuyTicket={() => setTicketFlowBlock(block)}
-                                        onEnterLobby={() => navigate(`/watchparty/${block.id}`)}
+                                        onEnterLobby={() => setShowLobbyFor(block.id)}
                                         onWatch={key => navigate(`/watchparty/${key}`)}
-                                        onRewatch={key => { window.history.pushState({}, '', `/movie/${key}?play=true`); window.dispatchEvent(new Event('pushstate')); }}
                                     />
                                 );
                             }) : (
@@ -455,13 +441,23 @@ const ProgrammeMode: React.FC = () => {
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    // After payment, go straight to the proven watch party page —
-                    // it handles its own lobby/countdown. No embedded lobby here,
-                    // which was adding PwffPage's full data-loading weight on top
-                    // of the watch party itself and causing the slow start.
-                    onSuccess={() => { const blockId = ticketFlowBlock.id; setTicketFlowBlock(null); navigate(`/watchparty/${blockId}`); }}
+                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
                 />;
             })()}
+
+            {lobbyMovie && showLobbyFor && (
+                <div className="fixed inset-0 z-[200] overflow-y-auto">
+                    <WatchPartyLobby
+                        movie={lobbyMovie}
+                        partyState={activeParties[showLobbyFor]}
+                        onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}`); }}
+                        user={user}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) setTicketFlowBlock(b); }}
+                        onClose={() => setShowLobbyFor(null)}
+                    />
+                </div>
+            )}
         </div>
     );
 };
@@ -497,9 +493,8 @@ const PwffPage: React.FC = () => {
     const { settings, isLoading, livePartyMovie, activeParties, festivalData, movies } = useFestival();
     const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user } = useAuth();
     const [bannerDismissed, setBannerDismissed] = useState(false);
+    const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
-
-    const navigate = (path: string) => { window.history.pushState({}, '', path); window.dispatchEvent(new Event('pushstate')); };
 
     useEffect(() => { trackPageView(); }, []);
 
@@ -519,18 +514,22 @@ const PwffPage: React.FC = () => {
         return false;
     }, [livePartyMovie, hasFestivalAllAccess, unlockedWatchPartyKeys, unlockedFestivalBlockIds, liveBlock]);
 
-    // Banner click: if they have access → go straight to the watch party page
-    // (lobby/countdown handled there, not embedded here); if not → open ticket flow
+    // Banner click: if they have access → open lobby; if not → open ticket flow
     const handleBannerClick = () => {
         if (!livePartyMovie) return;
         if (hasAccessToLive) {
-            navigate(`/watchparty/${livePartyMovie.key}`);
+            setShowLobbyFor(livePartyMovie.key);
         } else if (liveBlock) {
             setTicketFlowBlock(liveBlock);
         } else {
-            navigate(`/watchparty/${livePartyMovie.key}`);
+            setShowLobbyFor(livePartyMovie.key);
         }
     };
+
+    const lobbyMovie = useMemo(() => {
+        if (!showLobbyFor || !livePartyMovie) return null;
+        return livePartyMovie;
+    }, [showLobbyFor, livePartyMovie]);
 
     if (isLoading) return (
         <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -547,7 +546,6 @@ const PwffPage: React.FC = () => {
                     onClose={() => setBannerDismissed(true)}
                 />
             )}
-            <Header searchQuery="" onSearch={() => {}} isScrolled={false} onMobileSearchClick={() => {}} showSearch={false} topOffset={showBanner ? '3rem' : '0px'} />
             <TeaserMode
                 date={settings?.pwffFestivalDate}
                 name={settings?.pwffFestivalName}
@@ -559,12 +557,22 @@ const PwffPage: React.FC = () => {
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    // Go straight to the proven watch party page after payment —
-                    // no embedded lobby here, it was adding load on top of an
-                    // already-loaded PwffPage and slowing the start way down.
-                    onSuccess={() => { const blockId = ticketFlowBlock.id; setTicketFlowBlock(null); window.history.pushState({}, '', `/watchparty/${blockId}`); window.dispatchEvent(new Event('pushstate')); }}
+                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
                 />;
             })()}
+            {lobbyMovie && showLobbyFor && (
+                <div className="fixed inset-0 z-[200] overflow-y-auto">
+                    <WatchPartyLobby
+                        movie={lobbyMovie}
+                        partyState={activeParties[showLobbyFor]}
+                        onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
+                        user={user}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        onBuyTicket={() => { if (liveBlock) setTicketFlowBlock(liveBlock); }}
+                        onClose={() => setShowLobbyFor(null)}
+                    />
+                </div>
+            )}
             <BottomNavBar onSearchClick={() => {}} />
         </>
     );
@@ -578,19 +586,29 @@ const PwffPage: React.FC = () => {
                     onClose={() => setBannerDismissed(true)}
                 />
             )}
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} topOffset={showBanner ? '3rem' : '0px'} />
+
             <ProgrammeMode />
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    // Go straight to the proven watch party page after payment —
-                    // no embedded lobby here, it was adding load on top of an
-                    // already-loaded PwffPage and slowing the start way down.
-                    onSuccess={() => { const blockId = ticketFlowBlock.id; setTicketFlowBlock(null); window.history.pushState({}, '', `/watchparty/${blockId}`); window.dispatchEvent(new Event('pushstate')); }}
+                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
                 />;
             })()}
+            {lobbyMovie && showLobbyFor && (
+                <div className="fixed inset-0 z-[200] overflow-y-auto">
+                    <WatchPartyLobby
+                        movie={lobbyMovie}
+                        partyState={activeParties[showLobbyFor]}
+                        onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
+                        user={user}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        onBuyTicket={() => { if (liveBlock) setTicketFlowBlock(liveBlock); }}
+                        onClose={() => setShowLobbyFor(null)}
+                    />
+                </div>
+            )}
             <BottomNavBar onSearchClick={() => {}} />
         </div>
     );
