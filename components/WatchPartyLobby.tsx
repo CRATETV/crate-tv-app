@@ -17,7 +17,7 @@ interface WatchPartyLobbyProps {
     movie: Movie;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
-    user: { name?: string; email: string | null; avatar?: string; } | null;
+    user: { name?: string; email: string | null; avatar?: string; uid?: string; } | null;
     movieKey?: string;
     blockPrice?: number;
     hasAccess?: boolean;
