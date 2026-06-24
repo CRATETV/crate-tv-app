@@ -468,7 +468,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!showLobby) return false;
         // Show lobby for watch-party-enabled movies OR festival blocks
         if (movie?.isWatchPartyEnabled) return true;
-        if (movie?.isFestival || movieKey.startsWith('block_')) return true;
+        if (movieKey.startsWith('block_')) return true;
         return false;
     }, [partyState, showLobby, movie]);
 
