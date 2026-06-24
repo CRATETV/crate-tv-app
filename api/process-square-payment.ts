@@ -16,7 +16,7 @@ const staticPriceMap: Record<string, number> = {
 
 export async function POST(request: Request) {
   try {
-    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, promoCode } = await request.json();
+    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, uid, promoCode } = await request.json();
     
     const isProduction = process.env.VERCEL_ENV === 'production';
     const accessToken = isProduction
@@ -256,9 +256,54 @@ export async function POST(request: Request) {
                 purchasedAt: FieldValue.serverTimestamp(),
                 isWatchParty: paymentType === 'watchPartyTicket',
                 isFestivalBlock: paymentType === 'block',
+                uid: uid || null,
             });
         } catch (e) {
             console.error('[Payment API] Failed to log ticket sale:', e);
+        }
+    }
+
+    // --- SERVER-SIDE UNLOCK — write access to user's Firestore doc ---
+    // This is done server-side (Admin SDK) because Firestore security rules
+    // block clients from writing payment/access fields directly.
+    if (db && uid && paymentType === 'block' && itemId) {
+        try {
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks access
+            const userRef = db.collection('users').doc(uid);
+            await userRef.set({
+                unlockedBlocks: { [itemId]: expirationDate.toISOString() }
+            }, { merge: true });
+            console.log(`[Payment API] Unlocked block ${itemId} for user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to unlock block for user:', e);
+        }
+    }
+
+    // All-access pass — unlock all blocks
+    if (db && uid && itemId === 'full-festival-pass') {
+        try {
+            await db.collection('users').doc(uid).set({
+                hasFestivalAllAccess: true,
+                festivalAllAccessGrantedAt: new Date().toISOString(),
+            }, { merge: true });
+            console.log(`[Payment API] Granted festival all-access to user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to grant all-access:', e);
+        }
+    }
+
+    // VOD rental — unlock individual film
+    if (db && uid && paymentType === 'movie' && itemId) {
+        try {
+            const rentalExpiry = new Date();
+            rentalExpiry.setDate(rentalExpiry.getDate() + 7); // 7 days
+            await db.collection('users').doc(uid).set({
+                rentals: { [itemId]: rentalExpiry.toISOString() }
+            }, { merge: true });
+            console.log(`[Payment API] Unlocked rental ${itemId} for user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to unlock rental:', e);
         }
     }
 
