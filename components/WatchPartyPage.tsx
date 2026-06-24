@@ -225,6 +225,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showLobby, setShowLobby] = useState(true);
     const [secureStreamUrl, setSecureStreamUrl] = useState<string | null>(null);
     const secureUrlRef = useRef<{ url: string; expiresAt: number } | null>(null);
+    const [secureStreamUrl, setSecureStreamUrl] = useState<string | null>(null);
+    const secureUrlRef = useRef<{ url: string; expiresAt: number } | null>(null);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
@@ -495,6 +497,50 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
+    // Fetch secure stream URL after hasAccess is confirmed
+    useEffect(() => {
+        if (!hasAccess || !user || !movie) return;
+        if (secureUrlRef.current && secureUrlRef.current.expiresAt > Date.now() + 300_000) {
+            setSecureStreamUrl(secureUrlRef.current.url);
+            return;
+        }
+        let cancelled = false;
+        let retries = 0;
+        const fetch_url = async () => {
+            try {
+                const { getAuthInstance } = await import('../services/firebaseClient');
+                const auth = getAuthInstance();
+                const currentUser = auth?.currentUser;
+                if (!currentUser) {
+                    if (retries < 5 && !cancelled) { retries++; setTimeout(fetch_url, 1000 * retries); }
+                    return;
+                }
+                const idToken = await currentUser.getIdToken();
+                const parentBlock = festivalData.flatMap((d: any) => d.blocks).find((b: any) => b.movieKeys?.includes(movieKey) || b.id === movieKey);
+                const blockId = parentBlock?.id;
+                const res = await fetch('/api/get-stream-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieKey, blockId, idToken }),
+                });
+                const data = await res.json();
+                if (!cancelled && data.url) {
+                    const exp = data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 14400_000;
+                    secureUrlRef.current = { url: data.url, expiresAt: exp };
+                    setSecureStreamUrl(data.url);
+                } else if (!cancelled) {
+                    console.error('[stream-url]', data.error);
+                    if (movie?.fullMovie) setSecureStreamUrl(movie.fullMovie);
+                }
+            } catch (err) {
+                console.error('[stream-url] error:', err);
+                if (!cancelled && movie?.fullMovie) setSecureStreamUrl(movie.fullMovie);
+            }
+        };
+        fetch_url();
+        return () => { cancelled = true; };
+    }, [hasAccess, user, movieKey, movie, festivalData]);
+
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
 
     // ── SECURE STREAM URL — fetch from server when user has access ──────────
