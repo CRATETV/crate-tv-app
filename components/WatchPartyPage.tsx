@@ -466,8 +466,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (partyState?.status === 'ended') return false;
         // Never show if user dismissed it
         if (!showLobby) return false;
-        // Show lobby any time watch party is enabled and party hasn't started
+        // Show lobby for watch-party-enabled movies OR festival blocks
         if (movie?.isWatchPartyEnabled) return true;
+        if (movie?.isFestival || movieKey.startsWith('block_')) return true;
         return false;
     }, [partyState, showLobby, movie]);
 
@@ -515,11 +516,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 }
                 const idToken = await currentUser.getIdToken();
                 const parentBlock = festivalData.flatMap((d: any) => d.blocks).find((b: any) => b.movieKeys?.includes(movieKey) || b.id === movieKey);
-                const blockId = parentBlock?.id;
+                const blockId = parentBlock?.id || (movieKey.startsWith('block_') ? movieKey : undefined);
+                // For festival blocks, use the first active film's key for URL lookup
+                const activeFilmKey = parentBlock?.movieKeys?.[partyState?.activeMovieIndex || 0] || movieKey;
                 const res = await fetch('/api/get-stream-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey, blockId, idToken }),
+                    body: JSON.stringify({ movieKey: activeFilmKey, blockId, idToken }),
                 });
                 const data = await res.json();
                 if (!cancelled && data.url) {
