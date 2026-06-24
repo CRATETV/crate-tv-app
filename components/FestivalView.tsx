@@ -184,7 +184,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
               <div className="space-y-12">
                   {currentDayData.blocks.map(block => {
                       const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
-                      const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                      const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id) || (!block.price || block.price === 0);
                       const blockScreenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
                       const blockScreeningPassed = blockScreenStart ? new Date() >= blockScreenStart : true;
                       // Only show live if Firebase says live AND time has actually passed — prevents stale state

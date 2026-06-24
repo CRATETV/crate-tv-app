@@ -66,6 +66,22 @@ export async function POST(request: Request) {
                 }
             }
         }
+        // If not found in S3 data, try Firestore festival schedule directly
+        if (!rawUrl && blockId) {
+            try {
+                const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+                outer2: for (const dayDoc of daysSnap.docs) {
+                    const block = dayDoc.data().blocks?.find((b: any) => b.id === blockId);
+                    if (block) {
+                        for (const key of (block.movieKeys || [])) {
+                            const movieData = data.movies?.[key];
+                            if (movieData?.fullMovie) { rawUrl = movieData.fullMovie; break outer2; }
+                        }
+                    }
+                }
+            } catch (e) { console.error('[get-stream-url] Firestore fallback error:', e); }
+        }
+
         if (!rawUrl) return new Response(JSON.stringify({ error: 'Film not found.' }), { status: 404, headers: {'Content-Type':'application/json'} });
         return new Response(JSON.stringify({ url: getSignedUrl(rawUrl), expiresAt: new Date(Date.now()+14400000).toISOString() }), {
             status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
