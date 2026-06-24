@@ -10,10 +10,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Fields that ONLY the server (Admin SDK) can write.
-    // unlockedBlocks is intentionally NOT in this list — free blocks
-    // need client-side writes, and paid blocks are validated server-side
-    // before the client's unlockFestivalBlock() call is made.
     function isWritingProtectedFields() {
       let protectedFields = [
         'hasFestivalAllAccess',
@@ -25,6 +21,7 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedFields);
     }
 
+    // ── Users ──────────────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow update: if isOwner(uid) && !isWritingProtectedFields();
@@ -32,14 +29,10 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /festival_tickets/{ticketId} {
-      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
-      allow write: if false;
-    }
-
+    // ── Watch parties — all subcollections allowed for signed-in users ─
     match /watch_parties/{partyId} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow write: if false; // server only
 
       match /messages/{messageId} {
         allow read: if isSignedIn();
@@ -55,25 +48,42 @@ service cloud.firestore {
         allow create: if isSignedIn();
         allow update, delete: if false;
       }
+
+      // Lobby viewers tracking — who is in the lobby waiting
+      match /lobby_viewers/{viewerId} {
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn();
+        allow delete: if isSignedIn();
+      }
     }
 
+    // ── Festival viewers log ───────────────────────────────────────────
     match /festival_viewers/{viewerId} {
-      allow read: if false;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if false; // admin only
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
       allow delete: if false;
     }
 
+    // ── Festival tickets ───────────────────────────────────────────────
+    match /festival_tickets/{ticketId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow write: if false; // server only
+    }
+
+    // ── Promo codes ────────────────────────────────────────────────────
     match /promo_codes/{codeId} {
       allow read: if isSignedIn();
       allow write: if false;
     }
 
+    // ── PWFF invites ───────────────────────────────────────────────────
     match /pwff_invites/{email} {
       allow read: if isSignedIn() && request.auth.token.email == email;
       allow write: if false;
     }
 
+    // ── Public content ─────────────────────────────────────────────────
     match /movies/{movieId} {
       allow read: if true;
       allow write: if false;
@@ -97,7 +107,6 @@ service cloud.firestore {
     match /festival/{docId} {
       allow read: if true;
       allow write: if false;
-
       match /{subcollection}/{subDocId} {
         allow read: if true;
         allow write: if false;
@@ -109,19 +118,29 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── View counts ────────────────────────────────────────────────────
     match /view_counts/{docId} {
       allow read: if true;
       allow create, update: if isSignedIn();
       allow delete: if false;
     }
 
-    match /movie_pipeline/{submissionId} {
-      allow read: if isSignedIn() && (resource == null || resource.data.submitterUid == request.auth.uid);
-      allow create: if isSignedIn() && request.resource.data.submitterUid == request.auth.uid;
-      allow update: if false;
-      allow delete: if false;
+    // ── Watch party schedule (public) ──────────────────────────────────
+    match /watch_party_schedule/{docId} {
+      allow read: if true;
+      allow write: if false;
     }
 
+    // ── Film submissions ────────────────────────────────────────────────
+    match /movie_pipeline/{submissionId} {
+      allow read: if isSignedIn()
+        && (resource == null || resource.data.submitterUid == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.submitterUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── Deny everything else ───────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
