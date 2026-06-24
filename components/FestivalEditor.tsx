@@ -80,7 +80,7 @@ interface FestivalEditorProps {
     allMovies: Record<string, Movie>;
     onDataChange: (data: FestivalDay[]) => void;
     onConfigChange: (config: FestivalConfig) => void;
-    onSave: (config: FestivalConfig) => void;
+    onSave: (config: FestivalConfig, data?: FestivalDay[]) => void;
     isSaving: boolean;
 }
 
@@ -101,17 +101,12 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const [isDirty, setIsDirty] = useState(false);
 
   const handleSaveManifest = () => {
-      // CRITICAL: before saving, ensure every block that has a screeningStartTime
-      // also has watchPartyStartTime set to the same value. This runs on every save
-      // so it self-heals even if onChange didn't fire (e.g. user clicked Save without
-      // actually changing the field value — React's onChange won't fire in that case).
-      // Sync watchPartyStartTime for any block that has screeningStartTime but not watchPartyStartTime
+      // On every save, force-sync watchPartyStartTime to match screeningStartTime
+      // for any block that has a screening time set. This self-heals even if
+      // onChange didn't fire (e.g. user hit Save without changing the field).
       const syncedData = data.map((day: any) => ({
           ...day,
           blocks: (day.blocks || []).map((block: any) => {
-              // ALWAYS sync watchPartyStartTime to match screeningStartTime on every save.
-              // Previously only synced when watchPartyStartTime was missing — but if a
-              // stale value existed from a previous save, it would never update.
               if (block.screeningStartTime) {
                   return {
                       ...block,
@@ -122,7 +117,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
               return block;
           }),
       }));
-      // Push synced data up to parent state first so the save picks up the fix
       onDataChange(syncedData);
       onSave(config);
       setIsDirty(false);
@@ -132,10 +126,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     setIsDirty(true);
     const newData = [...data];
     let update: any = { [field]: value };
-    // CRITICAL: keep watchPartyStartTime in sync with screeningStartTime.
-    // The lobby/auto-start code reads watchPartyStartTime (falling back to
-    // screeningStartTime), so without this sync the countdown can show
-    // "screening time not set" even though the admin clearly set a time.
+    // When screeningStartTime changes, keep watchPartyStartTime in sync
     if (field === 'screeningStartTime') {
         update.watchPartyStartTime = value;
         update.isWatchPartyEnabled = !!value;
@@ -325,21 +316,13 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         {/* ── VIRTUAL SCREENING WINDOW ── */}
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                             <label className="text-[8px] text-amber-500 font-black tracking-widest uppercase">Virtual Screening Window</label>
-                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 2 weeks automatically.</p>
+                            <p className="text-[8px] text-gray-700">When this block goes live for virtual ticket holders — mirrors the physical screening time. After the event, the block stays available for 1 week automatically.</p>
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-1">
                                     <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Screening Starts At</label>
                                     <input
                                         type="datetime-local"
-                                        // CRITICAL: datetime-local inputs work in LOCAL time, but we store UTC ISO strings.
-                                        // Naively slicing the ISO string shows UTC time labeled as local — causing the
-                                        // displayed value to drift from what the admin actually typed (e.g. typing 9:55 AM
-                                        // shows back as 1:55 PM). We must convert UTC -> local before displaying.
-                                        value={block.screeningStartTime ? (() => {
-                                            const d = new Date(block.screeningStartTime);
-                                            const tzOffsetMs = d.getTimezoneOffset() * 60000;
-                                            return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
-                                        })() : ''}
+                                        value={formatISOForInput(block.screeningStartTime)}
                                         onChange={e => handleBlockChange(dayIndex, blockIndex, 'screeningStartTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
                                         className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-amber-500"
                                     />

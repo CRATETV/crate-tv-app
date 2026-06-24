@@ -445,19 +445,25 @@ const ProgrammeMode: React.FC = () => {
                 />;
             })()}
 
-            {lobbyMovie && showLobbyFor && (
+            {lobbyMovie && showLobbyFor && (() => {
+                const lobbyBlock = allBlocks.find(b => b.id === showLobbyFor);
+                const lobbyBlockFilms = lobbyBlock ? lobbyBlock.movieKeys.map((k: string) => movies[k]).filter(Boolean) : [];
+                return (
                 <div className="fixed inset-0 z-[200] overflow-y-auto">
                     <WatchPartyLobby
                         movie={lobbyMovie}
+                        movieKey={showLobbyFor}
                         partyState={activeParties[showLobbyFor]}
                         onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}`); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
                         onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) setTicketFlowBlock(b); }}
                         onClose={() => setShowLobbyFor(null)}
+                        blockFilms={lobbyBlockFilms}
                     />
                 </div>
-            )}
+                );
+            })()}
         </div>
     );
 };

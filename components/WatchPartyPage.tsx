@@ -303,6 +303,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
 
+    // Tracks whether we've done the one-time catch-up seek for this film.
+    // Must be a ref (not state or local var) so it persists across effect
+    // re-runs without triggering another render or resetting to false.
+    const hasSyncedRef = useRef(false);
+
+    // Reset sync flag when the active film changes (block advancing to next film)
+    useEffect(() => {
+        hasSyncedRef.current = false;
+    }, [partyState?.filmStartTime, partyState?.activeMovieIndex]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
@@ -313,12 +323,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
         if (partyState.status !== 'live') return;
 
-        // ONE-TIME CATCH-UP: when the video is ready, check if we joined late
-        // and seek once to the right position. Then leave it alone — no more
-        // continuous seeking or playback rate changes that cause restarts.
-        let hasSynced = false;
+        // ONE-TIME CATCH-UP: seek to correct position if joined late.
+        // hasSyncedRef persists across re-runs so this only fires once per film,
+        // even when Firestore sends multiple updates (isPlaying, reactions, etc.)
         const doSync = () => {
-            if (hasSynced || !video || video.readyState < 2) return;
+            if (hasSyncedRef.current || !video || video.readyState < 2) return;
             try {
                 const startRef = partyState.filmStartTime || partyState.actualStartTime;
                 let serverStart: number;
@@ -331,20 +340,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const duration = video.duration > 0 && isFinite(video.duration)
                     ? video.duration
                     : movie?.durationInMinutes ? movie.durationInMinutes * 60 : 3600;
-                // Only seek if more than 5 seconds behind — small gaps aren't
-                // worth the disruption of a seek on a freshly-loaded video
+                // Only seek if genuinely behind — seeking too early causes restarts
                 if (elapsed > 5 && elapsed < duration) {
                     video.currentTime = elapsed;
                 }
-                hasSynced = true;
-            } catch (e) {}
+                hasSyncedRef.current = true;
+            } catch (e) {
+                hasSyncedRef.current = true; // don't retry on error
+            }
         };
 
         video.addEventListener('canplay', doSync);
         video.addEventListener('loadedmetadata', doSync);
-        doSync(); // try immediately in case video is already ready
+        doSync();
 
-        // Keep play/pause in sync with the server (e.g. admin pauses for everyone)
+        // Keep play/pause in sync with server (e.g. admin pauses for everyone)
         const interval = setInterval(() => {
             if (!video) return;
             if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
@@ -359,7 +369,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             video.removeEventListener('loadedmetadata', doSync);
             clearInterval(interval);
         };
-    }, [partyState?.status, partyState?.isPlaying, partyState?.filmStartTime, movie, isControllerMode]);
+    // Note: 'movie' intentionally excluded from deps — including it causes
+    // the effect to re-run when activeMovieIndex changes, resetting the sync
+    // exactly when the video just started playing. hasSyncedRef persists
+    // across runs so the catch-up still works correctly without it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [partyState?.status, partyState?.isPlaying, partyState?.filmStartTime, isControllerMode]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -593,6 +608,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     user={user}
                     hasAccess={hasAccess}
                     onBuyTicket={() => setShowPaywall(true)}
+                    blockFilms={(movie as any)?._blockMovieKeys?.map((key: string) => allMovies[key]).filter(Boolean) || []}
                 />
                 {/* Hidden preload video — silently buffers the film while lobby is showing
                     so there's no blank screen when the party starts */}
