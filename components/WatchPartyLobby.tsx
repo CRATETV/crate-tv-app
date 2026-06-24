@@ -40,7 +40,17 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     const [showFinalCountdown, setShowFinalCountdown] = useState(false);
     const [ambientPhase, setAmbientPhase] = useState(0);
 
-    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
+    // For festival blocks, startTime comes from partyState.filmStartTime or movie.screeningStartTime
+    // For regular watch parties, it comes from movie.watchPartyStartTime
+    const startTime = (() => {
+        const t = movie.watchPartyStartTime || (movie as any).screeningStartTime;
+        if (t) return new Date(t);
+        if (partyState?.filmStartTime) {
+            const ft = partyState.filmStartTime;
+            return new Date(typeof ft === 'object' && ft?.toDate ? ft.toDate() : ft);
+        }
+        return null;
+    })();
 
     // Register viewer presence in lobby
     useEffect(() => {
