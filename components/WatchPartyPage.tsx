@@ -225,8 +225,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showLobby, setShowLobby] = useState(true);
     const [secureStreamUrl, setSecureStreamUrl] = useState<string | null>(null);
     const secureUrlRef = useRef<{ url: string; expiresAt: number } | null>(null);
-    const [secureStreamUrl, setSecureStreamUrl] = useState<string | null>(null);
-    const secureUrlRef = useRef<{ url: string; expiresAt: number } | null>(null);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
