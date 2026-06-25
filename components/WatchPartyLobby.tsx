@@ -18,12 +18,12 @@ interface WatchPartyLobbyProps {
     partyState?: WatchPartyState;
     onPartyStart: () => void;
     user: { name?: string; email: string | null; avatar?: string; } | null;
-    hasAccess?: boolean;
-    onBuyTicket?: () => void;
-    onClose?: () => void;
     movieKey?: string;
     blockPrice?: number;
     blockFilms?: any[];
+    hasAccess?: boolean;
+    onBuyTicket?: () => void;
+    onClose?: () => void;
 }
 
 interface LobbyViewer {
@@ -45,7 +45,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     // Register viewer presence in lobby
     useEffect(() => {
         if (!user) return;
-        if (!movie?.key) return; // guard: don't write if movie.key isn't resolved yet
+        if (!movie?.key) return;
         const db = getDbInstance();
         if (!db) return;
 

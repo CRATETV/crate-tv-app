@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
@@ -125,11 +125,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         const liveKey = liveKeys.find(key => {
             const m = movies[key];
-            // Allow festival blocks (which aren't in the movies catalog) to trigger the banner
-            const isFestivalBlock = festivalData.flatMap(d => d.blocks).some(b => b.id === key);
-            if (!m && !isFestivalBlock) return false; // Skip stale/deleted entries
-            if (m?.isUnlisted) return false;
-            return true;
+            // Only trigger banner if the movie actually exists in the catalog
+            // Stale watch_parties documents for deleted/missing movies should be ignored
+            if (!m) return false;
+            return !m.isUnlisted;
         });
 
         if (liveKey && movies[liveKey]) {
@@ -148,7 +147,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 return {
                     key: block.id,
                     title: block.title,
-                    watchPartyStartTime: block.screeningStartTime || block.watchPartyStartTime,
+                    watchPartyStartTime: block.watchPartyStartTime,
                     isWatchPartyEnabled: true,
                     isWatchPartyPaid: (block.price || 0) > 0,
                     watchPartyPrice: block.price,
@@ -293,27 +292,55 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (!db) return;
 
             // Movies — watch party fields
+            // Full movies collection listener — silent background update
+            unsubs.push(db.collection('movies').onSnapshot(snapshot => {
+                if (snapshot.empty) return;
+                startTransition(() => {
+                    setMovies(prev => {
+                        const updated = { ...prev };
+                        snapshot.docChanges().forEach(change => {
+                            if (change.type === 'removed') delete updated[change.doc.id];
+                            else updated[change.doc.id] = { ...updated[change.doc.id], key: change.doc.id, ...change.doc.data() } as Movie; // merge — preserve S3 fields
+                        });
+                        return updated;
+                    });
+                });
+            }, () => {}));
+
+            // data/movies — watch party fields
             unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
                 if (!doc.exists) return;
-                const firebaseMovies = doc.data() as Record<string, Movie>;
-                setMovies(prev => {
-                    const merged = { ...prev };
-                    Object.entries(firebaseMovies).forEach(([key, fbMovie]) => {
-                        if (merged[key]) {
-                            merged[key] = {
-                                ...merged[key],
-                                isWatchPartyEnabled: fbMovie.isWatchPartyEnabled ?? merged[key].isWatchPartyEnabled,
-                                watchPartyStartTime: fbMovie.watchPartyStartTime ?? merged[key].watchPartyStartTime,
-                                isWatchPartyPaid: fbMovie.isWatchPartyPaid ?? merged[key].isWatchPartyPaid,
-                                watchPartyPrice: fbMovie.watchPartyPrice ?? merged[key].watchPartyPrice,
+                const wpData = doc.data() as Record<string, any>;
+                startTransition(() => {
+                    setMovies(prev => {
+                        const updated = { ...prev };
+                        Object.entries(wpData).forEach(([key, m]) => {
+                            if (updated[key]) updated[key] = { ...updated[key],
+                                isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
+                                watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
+                                isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
+                                watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
                             };
-                        } else {
-                            merged[key] = fbMovie;
-                        }
+                        });
+                        return updated;
                     });
-                    return merged;
                 });
-            }));
+            }, () => {}));
+
+            // Categories collection — silent background update
+            unsubs.push(db.collection('categories').onSnapshot(snapshot => {
+                if (snapshot.empty) return;
+                startTransition(() => {
+                    setCategories(prev => {
+                        const updated = { ...prev };
+                        snapshot.docChanges().forEach(change => {
+                            if (change.type === 'removed') delete updated[change.doc.id];
+                            else updated[change.doc.id] = change.doc.data() as Category;
+                        });
+                        return updated;
+                    });
+                });
+            }, () => {}));
 
             // View counts
             unsubs.push(db.collection('view_counts').onSnapshot(snapshot => {

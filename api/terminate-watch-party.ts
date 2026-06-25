@@ -55,6 +55,35 @@ export async function POST(request: Request) {
       [`${movieKey}.isWatchPartyEnabled`]: false
     }).catch(() => {});
 
+    // Release films to catalog + stamp festivalEndTime for 7-day cleanup cron
+    try {
+      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+      let blockMovieKeys: string[] = [];
+      let releaseAfterScreening = false; // opt-in — default is NOT to release
+      for (const dayDoc of daysSnap.docs) {
+        const day = dayDoc.data();
+        const blocks = day.blocks || [];
+        const matched = blocks.find((b: any) => b.id === movieKey);
+        if (matched) {
+          blockMovieKeys = matched.movieKeys || [];
+          releaseAfterScreening = !!matched.releaseAfterScreening;
+          // Stamp festivalEndTime so cron can auto-hide after 7 days
+          const idx = blocks.findIndex((b: any) => b.id === movieKey);
+          if (idx >= 0) {
+            blocks[idx] = { ...blocks[idx], festivalEndTime: new Date().toISOString() };
+            await dayDoc.ref.update({ blocks });
+          }
+          break;
+        }
+      }
+      if (releaseAfterScreening && blockMovieKeys.length > 0) {
+        const updates: Record<string, any> = {};
+        for (const key of blockMovieKeys) updates[`${key}.isUnlisted`] = false;
+        await db.collection('data').doc('movies').update(updates);
+        console.log(`[Festival] Released ${blockMovieKeys.length} films to catalog`);
+      }
+    } catch (e) { console.error('[Festival] Catalog release error:', e); }
+
     return new Response(JSON.stringify({ success: true }), { status: 200 });
 
   } catch (error) {

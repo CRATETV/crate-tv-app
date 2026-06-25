@@ -217,6 +217,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
+
+    // Detect if this watch party is for a festival block (movieKey === block.id)
+    const parentBlock = useMemo(() =>
+        festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
+        [festivalData, movieKey]
+    );
+
+    // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
+    const handlePaymentSuccess = useCallback(() => {
+        if (parentBlock) unlockFestivalBlock(parentBlock.id);
+        else unlockWatchParty(movieKey);
+        setShowPaywall(false);
+    }, [parentBlock, movieKey, unlockFestivalBlock, unlockWatchParty]);
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
@@ -271,19 +284,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
-
-    // Detect if this watch party is for a festival block (movieKey === block.id)
-    const parentBlock = useMemo(() =>
-        festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
-        [festivalData, movieKey]
-    );
-
-    // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
-    const handlePaymentSuccess = useCallback(() => {
-        if (parentBlock) unlockFestivalBlock(parentBlock.id);
-        else unlockWatchParty(movieKey);
-        setShowPaywall(false);
-    }, [parentBlock, movieKey, unlockFestivalBlock, unlockWatchParty]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -437,7 +437,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         const partyRef = db.collection('watch_parties').doc(movieKey);
         const intermissionEnd = Date.now() + 60000; // 60 second intermission
-
         const targetIdx = currentIdx + 1;
 
         // TRANSACTION GUARD: multiple viewers detect "ended" within the same
@@ -604,13 +603,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             <>
                 <WatchPartyLobby 
                     movie={movie}
+                    movieKey={movieKey}
+                    blockPrice={parentBlock?.price}
                     partyState={partyState}
                     onPartyStart={() => setShowLobby(false)}
                     user={user}
                     hasAccess={hasAccess}
                     onBuyTicket={() => setShowPaywall(true)}
-                    movieKey={movieKey}
-                    blockPrice={parentBlock?.price}
                 />
                 {/* Hidden preload video — silently buffers the film while lobby is showing
                     so there's no blank screen when the party starts */}
@@ -626,10 +625,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 )}
                 {showPaywall && (
                     <SquarePaymentModal 
-                        movie={movie}
+                        movie={movie} 
                         paymentType={parentBlock ? "block" : "watchPartyTicket"}
                         block={parentBlock || undefined}
-                        priceOverride={parentBlock?.price}
                         onClose={() => setShowPaywall(false)}
                         onPaymentSuccess={handlePaymentSuccess} 
                     />
@@ -936,7 +934,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
             {showPaywall && (
                 <SquarePaymentModal 
-                    movie={movie}
+                    movie={movie} 
                     paymentType={parentBlock ? "block" : "watchPartyTicket"}
                     block={parentBlock || undefined}
                     onClose={() => setShowPaywall(false)}
