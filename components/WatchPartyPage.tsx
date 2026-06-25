@@ -627,10 +627,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 {showPaywall && (
                     <SquarePaymentModal 
                         movie={movie}
-                        movieKey={movieKey}
-                        blockPrice={parentBlock?.price}
                         paymentType={parentBlock ? "block" : "watchPartyTicket"}
                         block={parentBlock || undefined}
+                        priceOverride={parentBlock?.price}
                         onClose={() => setShowPaywall(false)}
                         onPaymentSuccess={handlePaymentSuccess} 
                     />

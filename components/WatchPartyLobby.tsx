@@ -23,6 +23,7 @@ interface WatchPartyLobbyProps {
     onClose?: () => void;
     movieKey?: string;
     blockPrice?: number;
+    blockFilms?: any[];
 }
 
 interface LobbyViewer {
@@ -32,7 +33,7 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice, blockFilms }) => {
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
