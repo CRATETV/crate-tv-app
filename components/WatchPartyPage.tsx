@@ -14,6 +14,7 @@ import WatchPartyCredits from './WatchPartyCredits';
 import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
+import Hls from 'hls.js';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -238,11 +239,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+    const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
+    const hlsRef = useRef<Hls | null>(null);
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -297,6 +300,66 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setTimeout(() => setBackstageError(false), 2000);
         }
     };
+
+
+    // ── HLS SETUP: attach hls.js when video src is an m3u8 ──────────────
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !movie?.fullMovie) return;
+
+        const src = movie.fullMovie;
+        const isHls = src.includes('.m3u8');
+
+        // Destroy any existing HLS instance
+        if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
+        }
+
+        if (isHls) {
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: false,
+                    backBufferLength: 90,
+                });
+                hlsRef.current = hls;
+                hls.loadSource(src);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    setIsVideoBuffering(false);
+                    video.muted = true;
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            // Playing muted — now try to unmute
+                            video.muted = false;
+                        }).catch(() => {
+                            // Autoplay blocked — show tap to unmute
+                            video.muted = true;
+                            setShowUnmutePrompt(true);
+                        });
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support (Safari/iOS) — set src, HLS plays natively
+                video.src = src;
+                video.load();
+                // Don't force play here — let the onCanPlay handler do it
+                // This prevents the iOS native play button overlay
+            }
+        } else {
+            // Regular mp4 — just set src directly
+            video.src = src;
+        }
+
+        return () => {
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+                hlsRef.current = null;
+            }
+        };
+    }, [movie?.fullMovie]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -737,25 +800,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </button>
                         <div className="text-center flex flex-col items-center">
                             <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Transmission Active</span>
-                            {(() => {
-                                const m = movie as any;
-                                const blockKeys: string[] | undefined = m?._blockMovieKeys;
-                                if (blockKeys && blockKeys.length > 1) {
-                                    const idx = (partyState?.activeMovieIndex ?? 0);
-                                    return (
-                                        <>
-                                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{m._activeFilmTitle || movie.title}</h2>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                {blockKeys.map((_: string, i: number) => (
-                                                    <div key={i} className={`h-0.5 w-4 rounded-full transition-all ${i === idx ? 'bg-red-500 w-6' : i < idx ? 'bg-red-500/40' : 'bg-white/20'}`} />
-                                                ))}
-                                                <span className="text-[8px] text-gray-500 ml-1">Film {idx + 1}/{blockKeys.length}</span>
-                                            </div>
-                                        </>
-                                    );
-                                }
-                                return <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>;
-                            })()}
+                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>
                             {isBackstageVerified && (
                                 <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>
                             )}
@@ -843,19 +888,53 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     />
                                     <video 
                                         ref={videoRef} 
-                                        src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
-                                        autoPlay 
-                                        muted={false} 
+                                        muted={true}
                                         playsInline
                                         webkit-playsinline="true"
+                                        x5-playsinline="true"
                                         preload="auto"
                                         controls={false}
-                                        onCanPlay={() => setIsVideoBuffering(false)}
-                                        onPlaying={() => setIsVideoBuffering(false)}
+                                        onCanPlay={() => {
+                                            setIsVideoBuffering(false);
+                                            // For Safari/iOS native HLS — trigger play here
+                                            const v = videoRef.current;
+                                            if (v && v.paused && v.src && v.src.includes('.m3u8') && !Hls.isSupported()) {
+                                                v.muted = true;
+                                                v.play().then(() => {
+                                                    v.muted = false;
+                                                }).catch(() => {
+                                                    setShowUnmutePrompt(true);
+                                                });
+                                            }
+                                        }}
+                                        onPlaying={() => {
+                                            setIsVideoBuffering(false);
+                                            setShowUnmutePrompt(false);
+                                        }}
                                         onWaiting={() => setIsVideoBuffering(true)}
                                         onStalled={() => setIsVideoBuffering(true)}
+                                        onError={() => setIsVideoBuffering(false)}
                                     />
+                                    {/* Tap to unmute — shown on iOS/browsers that block unmuted autoplay */}
+                                    {showUnmutePrompt && !isVideoBuffering && (
+                                        <button
+                                            onClick={() => {
+                                                const v = videoRef.current;
+                                                if (v) {
+                                                    v.muted = false;
+                                                    v.play().catch(() => {});
+                                                    setShowUnmutePrompt(false);
+                                                }
+                                            }}
+                                            className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/20 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white/10 transition-all animate-[fadeIn_0.5s_ease-out]"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M9 9a3 3 0 000 6" />
+                                            </svg>
+                                            Tap to enable sound
+                                        </button>
+                                    )}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
                                             <div className="max-w-2xl space-y-10">

@@ -331,7 +331,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 <div className="absolute bottom-8 left-0 right-0 flex justify-center z-10">
                     <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 px-5 py-2.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Playhouse West Film Festival</span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">PWFF-PHILLY</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                         <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Crate TV</span>
                     </div>
