@@ -591,7 +591,7 @@ const WatchPartyControlRoom: React.FC<{
                                         </button>
                                     )}
                                     
-                                    {canStart && !countdown && (
+                                    {canStart && (
                                         <button 
                                             onClick={handleStartWithLoading} 
                                             disabled={isStarting}
