@@ -17,13 +17,12 @@ interface WatchPartyLobbyProps {
     movie: Movie;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
-    user: { name?: string; email: string | null; avatar?: string; uid?: string; } | null;
-    movieKey?: string;
-    blockPrice?: number;
+    user: { name?: string; email: string | null; avatar?: string; } | null;
     hasAccess?: boolean;
     onBuyTicket?: () => void;
     onClose?: () => void;
-    blockFilms?: any[]; // array of Movie objects for the block lineup
+    movieKey?: string;
+    blockPrice?: number;
 }
 
 interface LobbyViewer {
@@ -33,53 +32,45 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice, blockFilms = [] }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice }) => {
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
     const [showFinalCountdown, setShowFinalCountdown] = useState(false);
     const [ambientPhase, setAmbientPhase] = useState(0);
 
-    // For festival blocks, startTime comes from partyState.filmStartTime or movie.screeningStartTime
-    // For regular watch parties, it comes from movie.watchPartyStartTime
-    const startTime = (() => {
-        const t = movie.watchPartyStartTime || (movie as any).screeningStartTime;
-        if (t) return new Date(t);
-        if (partyState?.filmStartTime) {
-            const ft = partyState.filmStartTime;
-            return new Date(typeof ft === 'object' && ft?.toDate ? ft.toDate() : ft);
-        }
-        return null;
-    })();
+    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
 
     // Register viewer presence in lobby
     useEffect(() => {
-        if (!user?.uid) return;
+        if (!user) return;
         const db = getDbInstance();
         if (!db) return;
 
-        // Use uid as doc ID so Firestore rules can verify ownership
-        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.uid);
+        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.email || 'anon');
+        
+        // Set viewer presence (temporary — deleted on disconnect)
         viewerRef.set({
-            uid: user.uid,
             name: user.name || 'Film Lover',
             avatar: user.avatar || 'fox',
             joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).catch(() => {});
+        });
 
-        const logRef = db.collection('festival_viewers').doc(`${movie.key}_${user.uid}`);
+        // Permanently log this viewer to festival_viewers for reporting
+        // This is separate from lobby_viewers — it persists after the party ends
+        const logRef = db.collection('festival_viewers').doc(`${movie.key}_${user.email || 'anon'}`);
         logRef.set({
-            userId: user.uid,
             movieKey: movie.key,
             movieTitle: movie.title,
             email: user.email || null,
             name: user.name || 'Film Lover',
             firstJoinedAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }); // merge:true so repeat visits update lastSeenAt not duplicate
 
+        // Remove presence on disconnect (but log persists)
         return () => {
-            viewerRef.delete().catch(() => {});
+            viewerRef.delete();
         };
     }, [user, movie.key]);
 
@@ -129,12 +120,6 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     useEffect(() => {
         if (!startTime) return;
 
-        // CRITICAL: this flag prevents the auto-start and onPartyStart from
-        // firing on every tick after the countdown ends. Without it the lobby
-        // calls auto-start-watch-party repeatedly every second, which causes
-        // the watch party to loop/restart on the viewer side.
-        let hasStarted = false;
-
         const updateCountdown = () => {
             const now = new Date().getTime();
             const target = startTime.getTime();
@@ -142,8 +127,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
             if (diff <= 0) {
                 setCountdown(null);
-                if (!hasStarted && diff < -1000) {
-                    hasStarted = true; // ensure this only fires ONCE
+                if (diff < -1000) {
                     const keyToStart = partyKey || movie.key;
                     if (!partyState || partyState.status !== 'live') {
                         fetch('/api/auto-start-watch-party', {
@@ -493,35 +477,6 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                 Admission Confirmed
                             </span>
-                        </div>
-                    )}
-
-                    {/* Block film lineup — shows all films in this screening block */}
-                    {blockFilms.length > 1 && (
-                        <div className="w-full pt-6">
-                            <div className="max-w-2xl mx-auto px-4 md:px-0">
-                                <div className="text-center space-y-4">
-                                    <div className="flex items-center justify-center gap-2 text-gray-500 text-xs">
-                                        <span className="w-8 h-px bg-white/10" />
-                                        <span className="uppercase tracking-widest">Tonight's Programme</span>
-                                        <span className="w-8 h-px bg-white/10" />
-                                    </div>
-                                    <div className="flex flex-wrap justify-center gap-3">
-                                        {blockFilms.map((film: any, i: number) => (
-                                            <div key={film.key || i} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-                                                {film.poster && (
-                                                    <img src={film.poster} alt={film.title} className="w-8 h-11 object-cover rounded-md flex-shrink-0" />
-                                                )}
-                                                <div className="text-left">
-                                                    <p className="text-xs font-black text-white uppercase tracking-wide leading-tight">{film.title}</p>
-                                                    {film.director && <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">{film.director}</p>}
-                                                    {film.durationInMinutes && <p className="text-[10px] text-gray-600 mt-0.5">{film.durationInMinutes} min</p>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     )}
 

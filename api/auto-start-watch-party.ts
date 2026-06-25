@@ -15,7 +15,7 @@ import { FieldValue } from 'firebase-admin/firestore';
  */
 export async function POST(request: Request) {
   try {
-    const { movieKey, startTime: clientStartTime } = await request.json();
+    const { movieKey } = await request.json();
 
     if (!movieKey) {
       return new Response(JSON.stringify({ error: 'Movie key required.' }), { status: 400 });
@@ -26,49 +26,30 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // Get the movie/block data to verify scheduled time
-    // Check movies collection first, then festival blocks
+    // Get the movie data to verify scheduled time
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
-    let movie = movies[movieKey];
-    let scheduledTimeStr: string | null = null;
+    const movie = movies[movieKey];
+    let scheduledTime: number;
 
     if (movie) {
-        scheduledTimeStr = movie.watchPartyStartTime || null;
+      if (!movie.isWatchPartyEnabled) return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
+      if (!movie.watchPartyStartTime) return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
+      scheduledTime = new Date(movie.watchPartyStartTime).getTime();
     } else {
-        // Not a standalone movie — check festival blocks
-        const festivalDaysSnapshot = await db.collection('festival').doc('schedule').collection('days').get();
-        let foundBlock: any = null;
-        festivalDaysSnapshot.forEach(doc => {
-            const day = doc.data();
-            if (day.blocks) {
-                day.blocks.forEach((block: any) => {
-                    if (block.id === movieKey) foundBlock = block;
-                });
-            }
-        });
-        if (foundBlock) {
-            movie = foundBlock;
-            // Festival blocks use screeningStartTime OR watchPartyStartTime
-            scheduledTimeStr = foundBlock.watchPartyStartTime || foundBlock.screeningStartTime || null;
-        }
+      // movieKey is a festival block.id — look up screeningStartTime
+      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+      let blockData: any = null;
+      for (const dayDoc of daysSnap.docs) {
+        const found = (dayDoc.data().blocks || []).find((b: any) => b.id === movieKey);
+        if (found) { blockData = found; break; }
+      }
+      if (!blockData) return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
+      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening time for this block.' }), { status: 400 });
+      scheduledTime = new Date(blockData.screeningStartTime).getTime();
     }
 
-    if (!movie) {
-      return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
-    }
-
-    // Fall back to startTime passed from the client if we can't find it in the DB
-    if (!scheduledTimeStr && clientStartTime) {
-      scheduledTimeStr = clientStartTime;
-    }
-    if (!scheduledTimeStr) {
-      return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
-    }
-
-    // Check if we're within the valid auto-start window
-    // Allow starting up to 5 minutes before or 30 minutes after the scheduled time
-    const scheduledTime = new Date(scheduledTimeStr).getTime();
+    // Check if we're within the valid auto-start window (5 min before → 30 min after)
     const now = Date.now();
     const fiveMinutesBefore = scheduledTime - (5 * 60 * 1000);
     const thirtyMinutesAfter = scheduledTime + (30 * 60 * 1000);
@@ -84,7 +65,7 @@ export async function POST(request: Request) {
     if (now > thirtyMinutesAfter) {
       return new Response(JSON.stringify({ 
         error: 'Auto-start window has expired. An admin must manually start the party.',
-        scheduledTime: scheduledTimeStr
+        scheduledTime: movie.watchPartyStartTime
       }), { status: 400 });
     }
 
@@ -120,20 +101,15 @@ export async function POST(request: Request) {
     }
 
     // Start the party!
-    // IMPORTANT: explicitly reset activeMovieIndex to 0. Without this, a leftover
-    // value from a PREVIOUS test/screening (e.g. activeMovieIndex: 2, left over
-    // after the block finished all its films last time) silently survives because
-    // we use { merge: true }. That made fresh test runs start already pointing at
-    // the LAST film in the block, which immediately triggered "show credits"
-    // instead of playing from the beginning.
     await partyRef.set({
       status: 'live',
-      activeMovieIndex: 0,
       lastStartedAt: new Date().toISOString(),
       actualStartTime: FieldValue.serverTimestamp(),
-      filmStartTime: scheduledTimeStr,
       isPlaying: true,
       currentTime: 0,
+      activeMovieIndex: 0,
+      filmStartTime: FieldValue.serverTimestamp(),
+      intermissionUntil: null,
       isQALive: false,
       lastUpdated: FieldValue.serverTimestamp(),
       backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase(),

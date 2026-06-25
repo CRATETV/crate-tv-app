@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
-import { getDbInstance, getAuthInstance } from '../services/firebaseClient';
+import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
@@ -212,7 +212,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
@@ -223,8 +223,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
-    const [secureStreamUrl, setSecureStreamUrl] = useState<string | null>(null);
-    const secureUrlRef = useRef<{ url: string; expiresAt: number } | null>(null);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
@@ -254,7 +252,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return {
                 key: block.id,
                 title: block.title,
-                watchPartyStartTime: block.watchPartyStartTime,
+                watchPartyStartTime: block.screeningStartTime, // ← critical: blocks use screeningStartTime, not watchPartyStartTime
                 isWatchPartyEnabled: true,
                 isWatchPartyPaid: (block.price || 0) > 0,
                 watchPartyPrice: block.price,
@@ -273,6 +271,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
+
+    // Detect if this watch party is for a festival block (movieKey === block.id)
+    const parentBlock = useMemo(() =>
+        festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
+        [festivalData, movieKey]
+    );
+
+    // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
+    const handlePaymentSuccess = useCallback(() => {
+        if (parentBlock) unlockFestivalBlock(parentBlock.id);
+        else unlockWatchParty(movieKey);
+        setShowPaywall(false);
+    }, [parentBlock, movieKey, unlockFestivalBlock, unlockWatchParty]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -427,13 +438,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const partyRef = db.collection('watch_parties').doc(movieKey);
         const intermissionEnd = Date.now() + 60000; // 60 second intermission
 
-        partyRef.update({
-            activeMovieIndex: currentIdx + 1,
-            intermissionUntil: intermissionEnd,
-            filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-            isPlaying: true,
-            currentTime: 0,
-        }).catch(() => {}); // If another client beat us here, ignore
+        const targetIdx = currentIdx + 1;
+
+        // TRANSACTION GUARD: multiple viewers detect "ended" within the same
+        // ~1s sync window. Without a transaction, each would re-write
+        // activeMovieIndex + a NEW serverTimestamp, repeatedly resetting
+        // filmStartTime and causing the next film to keep restarting from 0.
+        // The transaction ensures only the FIRST detection actually advances —
+        // every subsequent attempt sees activeMovieIndex already changed and no-ops.
+        db.runTransaction(async (tx) => {
+            const snap = await tx.get(partyRef);
+            const current = snap.data();
+            if ((current?.activeMovieIndex ?? 0) !== currentIdx) return; // already advanced by another client
+            tx.update(partyRef, {
+                activeMovieIndex: targetIdx,
+                intermissionUntil: intermissionEnd,
+                filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+                isPlaying: true,
+                currentTime: 0,
+            });
+        }).catch(() => {});
 
         // Reset local ended state
         setIsEnded(false);
@@ -466,9 +490,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (partyState?.status === 'ended') return false;
         // Never show if user dismissed it
         if (!showLobby) return false;
-        // Show lobby for watch-party-enabled movies OR festival blocks
+        // Show lobby any time watch party is enabled and party hasn't started
         if (movie?.isWatchPartyEnabled) return true;
-        if (movieKey.startsWith('block_')) return true;
         return false;
     }, [partyState, showLobby, movie]);
 
@@ -486,8 +509,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // SECURITY: if block price is not set, default to PAID (not free)
             // Admin must explicitly set price to 0 to make a block free
             // This prevents accidental free access from missing price config
-            if (parentBlock.price === 0) return true; // explicitly free block
-            return false; // paid block — not unlocked
+            if (parentBlock.price === 0) return true;
+            const exp = rentals[movieKey];
+            if (exp && new Date(exp) > new Date()) return true;
+            return false;
         }
 
         if (!movie.isWatchPartyPaid) return true;
@@ -496,115 +521,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
-    // Fetch secure stream URL after hasAccess is confirmed
-    useEffect(() => {
-        if (!hasAccess || !user || !movie) return;
-        if (secureUrlRef.current && secureUrlRef.current.expiresAt > Date.now() + 300_000) {
-            setSecureStreamUrl(secureUrlRef.current.url);
-            return;
-        }
-        let cancelled = false;
-        let retries = 0;
-        const fetch_url = async () => {
-            try {
-                const { getAuthInstance } = await import('../services/firebaseClient');
-                const auth = getAuthInstance();
-                const currentUser = auth?.currentUser;
-                if (!currentUser) {
-                    if (retries < 5 && !cancelled) { retries++; setTimeout(fetch_url, 1000 * retries); }
-                    return;
-                }
-                const idToken = await currentUser.getIdToken();
-                const parentBlock = festivalData.flatMap((d: any) => d.blocks).find((b: any) => b.movieKeys?.includes(movieKey) || b.id === movieKey);
-                const blockId = parentBlock?.id || (movieKey.startsWith('block_') ? movieKey : undefined);
-                // For festival blocks, use the first active film's key for URL lookup
-                const activeFilmKey = parentBlock?.movieKeys?.[partyState?.activeMovieIndex || 0] || movieKey;
-                const res = await fetch('/api/get-stream-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey: activeFilmKey, blockId, idToken }),
-                });
-                const data = await res.json();
-                if (!cancelled && data.url) {
-                    const exp = data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 14400_000;
-                    secureUrlRef.current = { url: data.url, expiresAt: exp };
-                    setSecureStreamUrl(data.url);
-                } else if (!cancelled) {
-                    console.error('[stream-url]', data.error);
-                    if (movie?.fullMovie) setSecureStreamUrl(movie.fullMovie);
-                }
-            } catch (err) {
-                console.error('[stream-url] error:', err);
-                if (!cancelled && movie?.fullMovie) setSecureStreamUrl(movie.fullMovie);
-            }
-        };
-        fetch_url();
-        return () => { cancelled = true; };
-    }, [hasAccess, user, movieKey, movie, festivalData]);
-
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
-
-    // ── SECURE STREAM URL — fetch from server when user has access ──────────
-    // Handles Firebase initialization timing: retries until auth is ready
-    useEffect(() => {
-        if (!hasAccess || !user) return;
-
-        if (secureUrlRef.current && secureUrlRef.current.expiresAt > Date.now() + 300_000) {
-            setSecureStreamUrl(secureUrlRef.current.url);
-            return;
-        }
-
-        let cancelled = false;
-        let retryCount = 0;
-        const MAX_RETRIES = 5;
-
-        const fetchUrl = async () => {
-            try {
-                const auth = getAuthInstance();
-                const currentUser = auth?.currentUser;
-                if (!currentUser) {
-                    if (retryCount < MAX_RETRIES && !cancelled) {
-                        retryCount++;
-                        setTimeout(fetchUrl, 1000 * retryCount);
-                    }
-                    return;
-                }
-                const idToken = await currentUser.getIdToken();
-                const parentBlock = festivalData.flatMap((d: any) => d.blocks)
-                    .find((b: any) => b.movieKeys?.includes(movieKey) || b.id === movieKey);
-                const blockId = parentBlock?.id || (movieKey.includes('block') ? movieKey : undefined);
-                const res = await fetch('/api/get-stream-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey, blockId, idToken }),
-                });
-                const data = await res.json();
-                if (!cancelled && data.url) {
-                    const expiresAt = data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 14400_000;
-                    secureUrlRef.current = { url: data.url, expiresAt };
-                    setSecureStreamUrl(data.url);
-                } else if (!cancelled) {
-                    console.error('[get-stream-url]', data.error);
-                    if (movie?.fullMovie) setSecureStreamUrl(movie.fullMovie);
-                }
-            } catch (err) {
-                console.error('[get-stream-url] fetch error:', err);
-                if (!cancelled && movie?.fullMovie) setSecureStreamUrl(movie.fullMovie);
-            }
-        };
-
-        fetchUrl();
-        return () => { cancelled = true; };
-    }, [hasAccess, user, movieKey, festivalData, movie]);
-
-    useEffect(() => {
-        if (!hasAccess) return;
-        const interval = setInterval(() => {
-            secureUrlRef.current = null;
-            setSecureStreamUrl(null);
-        }, 3.5 * 60 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [hasAccess]);
     const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
@@ -653,8 +570,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                 )}
                 {/* Hidden preload — buffers film while waiting */}
-                {secureStreamUrl && (
-                    <video src={secureStreamUrl} preload="auto" muted playsInline
+                {movie.fullMovie && (
+                    <video src={movie.fullMovie} preload="auto" muted playsInline
                         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
                         aria-hidden="true"
                     />
@@ -692,12 +609,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     user={user}
                     hasAccess={hasAccess}
                     onBuyTicket={() => setShowPaywall(true)}
+                    movieKey={movieKey}
+                    blockPrice={parentBlock?.price}
                 />
                 {/* Hidden preload video — silently buffers the film while lobby is showing
                     so there's no blank screen when the party starts */}
-                {hasAccess && secureStreamUrl && (
+                {hasAccess && movie.fullMovie && (
                     <video
-                        src={secureStreamUrl ?? ''}
+                        src={movie.fullMovie}
                         preload="auto"
                         muted
                         playsInline
@@ -707,10 +626,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 )}
                 {showPaywall && (
                     <SquarePaymentModal 
-                        movie={movie} 
-                        paymentType="watchPartyTicket" 
-                        onClose={() => setShowPaywall(false)} 
-                        onPaymentSuccess={() => { unlockWatchParty(movieKey); setShowPaywall(false); }} 
+                        movie={movie}
+                        movieKey={movieKey}
+                        blockPrice={parentBlock?.price}
+                        paymentType={parentBlock ? "block" : "watchPartyTicket"}
+                        block={parentBlock || undefined}
+                        onClose={() => setShowPaywall(false)}
+                        onPaymentSuccess={handlePaymentSuccess} 
                     />
                 )}
             </>
@@ -918,13 +840,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     )}
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
-                                        src={secureStreamUrl ?? ''}
+                                        src={movie.fullMovie}
                                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
                                         muted playsInline aria-hidden="true"
                                     />
                                     <video 
                                         ref={videoRef} 
-                                        src={secureStreamUrl ?? ''} 
+                                        src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 
@@ -1015,10 +937,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
             {showPaywall && (
                 <SquarePaymentModal 
-                    movie={movie} 
-                    paymentType="watchPartyTicket" 
-                    onClose={() => setShowPaywall(false)} 
-                    onPaymentSuccess={() => { unlockWatchParty(movieKey); setShowPaywall(false); }} 
+                    movie={movie}
+                    paymentType={parentBlock ? "block" : "watchPartyTicket"}
+                    block={parentBlock || undefined}
+                    onClose={() => setShowPaywall(false)}
+                    onPaymentSuccess={handlePaymentSuccess} 
                 />
             )}
         </div>
