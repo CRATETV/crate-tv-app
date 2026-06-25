@@ -246,6 +246,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
     const hlsRef = useRef<any>(null);
+    const bufferingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -343,6 +344,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     hls.loadSource(src);
                     hls.attachMedia(video);
                     hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
+                        if (bufferingTimerRef.current) { clearTimeout(bufferingTimerRef.current); bufferingTimerRef.current = null; }
                         setIsVideoBuffering(false);
                         video.muted = true;
                         const playPromise = video.play();
@@ -905,6 +907,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         preload="auto"
                                         controls={false}
                                         onCanPlay={() => {
+                                            if (bufferingTimerRef.current) { clearTimeout(bufferingTimerRef.current); bufferingTimerRef.current = null; }
                                             setIsVideoBuffering(false);
                                             // For Safari/iOS native HLS — trigger play on canPlay
                                             const v = videoRef.current;
@@ -918,11 +921,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             }
                                         }}
                                         onPlaying={() => {
+                                            if (bufferingTimerRef.current) { clearTimeout(bufferingTimerRef.current); bufferingTimerRef.current = null; }
                                             setIsVideoBuffering(false);
                                             setShowUnmutePrompt(false);
                                         }}
-                                        onWaiting={() => setIsVideoBuffering(true)}
-                                        onStalled={() => setIsVideoBuffering(true)}
+                                        onWaiting={() => {
+                                            // Only show "Loading Transmission" after 2s of waiting — ignore brief HLS chunk gaps
+                                            bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 2000);
+                                        }}
+                                        onStalled={() => {
+                                            bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 2000);
+                                        }}
                                         onError={() => setIsVideoBuffering(false)}
                                     />
                                     {/* Tap to unmute — shown on iOS/browsers that block unmuted autoplay */}
