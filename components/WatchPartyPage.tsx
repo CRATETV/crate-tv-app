@@ -14,7 +14,7 @@ import WatchPartyCredits from './WatchPartyCredits';
 import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
-import Hls from 'hls.js';
+// hls.js loaded dynamically at runtime to avoid TypeScript module resolution issues
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -302,7 +302,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     };
 
 
-    // ── HLS SETUP: attach hls.js when video src is an m3u8 ──────────────
+    // ── HLS SETUP: attach hls.js dynamically when video src is an m3u8 ──
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !movie?.fullMovie) return;
@@ -312,50 +312,55 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         // Destroy any existing HLS instance
         if (hlsRef.current) {
-            hlsRef.current.destroy();
+            (hlsRef.current as any).destroy();
             hlsRef.current = null;
         }
 
         if (isHls) {
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: false,
-                    backBufferLength: 90,
-                });
-                hlsRef.current = hls;
-                hls.loadSource(src);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    setIsVideoBuffering(false);
-                    video.muted = true;
-                    const playPromise = video.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                            // Playing muted — now try to unmute
-                            video.muted = false;
-                        }).catch(() => {
-                            // Autoplay blocked — show tap to unmute
-                            video.muted = true;
-                            setShowUnmutePrompt(true);
-                        });
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Native HLS support (Safari/iOS) — set src, HLS plays natively
+            // Check native HLS support first (Safari/iOS)
+            if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = src;
                 video.load();
-                // Don't force play here — let the onCanPlay handler do it
-                // This prevents the iOS native play button overlay
+                // onCanPlay handler will trigger play for Safari/iOS
+            } else {
+                // Load hls.js dynamically for Chrome/Firefox/desktop
+                import('hls.js').then((module) => {
+                    const HlsLib = module.default;
+                    if (!HlsLib.isSupported()) return;
+                    const hls = new HlsLib({
+                        enableWorker: true,
+                        lowLatencyMode: false,
+                        backBufferLength: 90,
+                    });
+                    hlsRef.current = hls as any;
+                    hls.loadSource(src);
+                    hls.attachMedia(video);
+                    hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
+                        setIsVideoBuffering(false);
+                        video.muted = true;
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                video.muted = false;
+                            }).catch(() => {
+                                video.muted = true;
+                                setShowUnmutePrompt(true);
+                            });
+                        }
+                    });
+                }).catch(() => {
+                    // hls.js failed to load — fall back to direct src
+                    video.src = src;
+                });
             }
         } else {
-            // Regular mp4 — just set src directly
+            // Regular mp4 — set src directly
             video.src = src;
         }
 
         return () => {
             if (hlsRef.current) {
-                hlsRef.current.destroy();
+                (hlsRef.current as any).destroy();
                 hlsRef.current = null;
             }
         };
@@ -897,9 +902,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         controls={false}
                                         onCanPlay={() => {
                                             setIsVideoBuffering(false);
-                                            // For Safari/iOS native HLS — trigger play here
+                                            // For Safari/iOS native HLS — trigger play on canPlay
                                             const v = videoRef.current;
-                                            if (v && v.paused && v.src && v.src.includes('.m3u8') && !Hls.isSupported()) {
+                                            if (v && v.paused && v.src && v.src.includes('.m3u8')) {
                                                 v.muted = true;
                                                 v.play().then(() => {
                                                     v.muted = false;
@@ -935,24 +940,108 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             Tap to enable sound
                                         </button>
                                     )}
-                                    {isEnded && (
-                                        <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
-                                            <div className="max-w-2xl space-y-10">
-                                                <div>
-                                                    <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Transmission Complete</p>
-                                                    <h3 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Thank You.</h3>
-                                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-6 max-w-lg mx-auto leading-relaxed">
-                                                        "{movie.title}" produced by <span className="text-white">{movie.director}</span>. Thank you for supporting the distribution afterlife of independent cinema.
-                                                    </p>
+                                    {isEnded && (() => {
+                                        const m = movie as any;
+                                        const isBlock = !!(m?._blockMovieKeys || (movieKey && movieKey.startsWith('block_') || movieKey?.startsWith('day')));
+                                        return (
+                                        <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black animate-[fadeIn_1.2s_ease-out] text-center px-6 py-12 overflow-y-auto">
+                                            {/* Poster blur background */}
+                                            {movie.poster && (
+                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.05] blur-3xl scale-110 pointer-events-none" />
+                                            )}
+                                            <div className="relative z-10 max-w-2xl mx-auto space-y-8 w-full">
+                                                {/* Red line */}
+                                                <div className="w-12 h-0.5 bg-red-600 mx-auto" />
+
+                                                <div className="space-y-4">
+                                                    <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px]">Transmission Complete</p>
+                                                    <h3 className="text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">
+                                                        Thank You.
+                                                    </h3>
                                                 </div>
-                                                <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-10">
-                                                    <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
-                                                    <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
-                                                    <button onClick={() => { window.history.pushState({}, '', '/public-square'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 hover:text-white transition-colors">The Public Square</button>
-                                                </div>
+
+                                                {isBlock ? (
+                                                    hasFestivalAllAccess ? (
+                                                        // ── FULL PASS HOLDER ──────────────────────────────────
+                                                        <div className="space-y-6">
+                                                            <p className="text-gray-300 text-sm leading-relaxed max-w-lg mx-auto">
+                                                                That's a wrap on this block. As a full festival pass holder, your next block is ready and waiting — head back to the festival hub to join the next screening.
+                                                            </p>
+                                                            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 text-left space-y-3 max-w-md mx-auto">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-green-400">Full Festival Pass Active</p>
+                                                                </div>
+                                                                <p className="text-white font-black text-base uppercase tracking-tight leading-snug">
+                                                                    PWFF-Philly 2026 · August 21–23
+                                                                </p>
+                                                                <p className="text-gray-400 text-xs leading-relaxed">
+                                                                    41 films · 12 blocks · 3 days of independent cinema streaming exclusively on Crate TV. Your pass gives you access to every block this weekend.
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-2">
+                                                                <button
+                                                                    onClick={() => { window.history.pushState({}, '', '/pwff-philly2026'); window.dispatchEvent(new Event('pushstate')); }}
+                                                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                                                                >
+                                                                    Back to Festival Hub
+                                                                </button>
+                                                                <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">
+                                                                    Return to Library
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        // ── SINGLE BLOCK TICKET HOLDER ────────────────────────
+                                                        <div className="space-y-6">
+                                                            <p className="text-gray-300 text-sm leading-relaxed max-w-lg mx-auto">
+                                                                That's a wrap on this block. Thank you for watching — your support means the world to every filmmaker on that screen.
+                                                            </p>
+                                                            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 text-left space-y-4 max-w-md mx-auto">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-400">PWFF-Philly 2026</p>
+                                                                </div>
+                                                                <p className="text-white font-black text-base uppercase tracking-tight leading-snug">
+                                                                    There's more — 11 blocks still to go.
+                                                                </p>
+                                                                <p className="text-gray-400 text-xs leading-relaxed">
+                                                                    August 21–23, 2026 · Streaming exclusively on Crate TV.<br />
+                                                                    41 films. 12 blocks. 3 days of independent cinema.
+                                                                </p>
+                                                                <div className="pt-2 border-t border-white/10 space-y-2">
+                                                                    <p className="text-gray-400 text-xs">Grab a ticket to the next block, or upgrade to a full festival pass and catch everything this weekend.</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                                                                <button
+                                                                    onClick={() => { window.history.pushState({}, '', '/pwff-philly2026'); window.dispatchEvent(new Event('pushstate')); }}
+                                                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                                                                >
+                                                                    Get Tickets — Festival Hub
+                                                                </button>
+                                                                <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">
+                                                                    Return to Library
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    <div className="space-y-6">
+                                                        <p className="text-gray-400 text-sm max-w-lg mx-auto leading-relaxed">
+                                                            "{movie.title}" — thank you for supporting the distribution afterlife of independent cinema.
+                                                        </p>
+                                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
+                                                            <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">
+                                                                Return to Library
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
                             )
                         )}
