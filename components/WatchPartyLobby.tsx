@@ -45,6 +45,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     // Register viewer presence in lobby
     useEffect(() => {
         if (!user) return;
+        if (!movie?.key) return; // guard: don't write if movie.key isn't resolved yet
         const db = getDbInstance();
         if (!db) return;
 
@@ -77,6 +78,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
     // Listen to lobby viewers
     useEffect(() => {
+        if (!movie?.key) return;
         const db = getDbInstance();
         if (!db) return;
 
@@ -102,6 +104,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
     // Listen for director welcome message
     useEffect(() => {
+        if (!movie?.key) return;
         const db = getDbInstance();
         if (!db) return;
 
