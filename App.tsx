@@ -531,7 +531,7 @@ const App: React.FC = () => {
                 const dismissKey = isPreFestival ? 'pwff-promo' : 'festival';
                 const label = isPreFestival ? 'Coming Aug 21–23' : 'Now Streaming';
                 const ctaText = isPreFestival ? 'Get Tickets →' : 'Watch Now →';
-                const festName = settings?.pwffFestivalName || 'Playhouse West Film Festival 2026';
+                const festName = settings?.pwffFestivalName || 'Playhouse West Film Festival - Philadelphia 2026';
                 // Single URL throughout — the page itself adapts per block
                 // (upcoming / live / rewatchable) so there's only ever one
                 // link to share, print on posters, etc.

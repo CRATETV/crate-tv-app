@@ -44,17 +44,7 @@ export async function POST(request: Request) {
     const partyRef = db.collection('watch_parties').doc(movieKey);
     
     // Check if party is already live - don't reset actualStartTime
-    const existingParty = await partyRef.get();
-    const existingData = existingParty.data();
-    
-    if (existingData?.status === 'live' && existingData?.actualStartTime) {
-      // Party already live - just return success, don't reset anything
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Party already live',
-        alreadyLive: true 
-      }), { status: 200 });
-    }
+    // Always reset to a clean live state — this allows restarting stuck parties
     
     // Set canonical initial state. 
     // actualStartTime is the "T-Zero" for global synchronization.
