@@ -245,7 +245,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
-    const hlsRef = useRef<Hls | null>(null);
+    const hlsRef = useRef<any>(null);
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -323,16 +323,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 video.load();
                 // onCanPlay handler will trigger play for Safari/iOS
             } else {
-                // Load hls.js dynamically for Chrome/Firefox/desktop
-                import('hls.js').then((module) => {
-                    const HlsLib = module.default;
-                    if (!HlsLib.isSupported()) return;
+                // Load hls.js via CDN script tag — avoids TypeScript module issues
+                const loadHls = (cb: (HlsLib: any) => void) => {
+                    if ((window as any).Hls) { cb((window as any).Hls); return; }
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
+                    script.onload = () => cb((window as any).Hls);
+                    script.onerror = () => { video.src = src; }; // fallback
+                    document.head.appendChild(script);
+                };
+                loadHls((HlsLib: any) => {
+                    if (!HlsLib || !HlsLib.isSupported()) { video.src = src; return; }
                     const hls = new HlsLib({
                         enableWorker: true,
                         lowLatencyMode: false,
                         backBufferLength: 90,
                     });
-                    hlsRef.current = hls as any;
+                    hlsRef.current = hls;
                     hls.loadSource(src);
                     hls.attachMedia(video);
                     hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
@@ -348,9 +355,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             });
                         }
                     });
-                }).catch(() => {
-                    // hls.js failed to load — fall back to direct src
-                    video.src = src;
                 });
             }
         } else {
