@@ -237,12 +237,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
-    const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+    const [isVideoBuffering, setIsVideoBuffering] = useState(false); // start false — show player immediately
+    const bufferingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleVideoWaiting = useCallback(() => {
+        // Only show buffering overlay after 1.5s of sustained stall — avoids flashing on seeks
+        bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 1500);
+    }, []);
+    const handleVideoCanPlay = useCallback(() => {
+        if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current);
+        setIsVideoBuffering(false);
+    }, []);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
+    // Stable refs so the sync interval never needs to be torn down on Firestore updates
+    const partyStateRef = useRef<WatchPartyState | undefined>(undefined);
+    const movieRef = useRef<typeof movie>(undefined);
+    const isEndedRef = useRef<boolean>(false);
+    const hasUserInteractedRef = useRef<boolean>(false); // mobile autoplay gate
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -303,39 +318,42 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
 
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
+    // Keep movieRef and isEndedRef current without restarting the sync interval
+    useEffect(() => { movieRef.current = movie; }, [movie]);
+    useEffect(() => { isEndedRef.current = isEnded; }, [isEnded]);
 
-        // If party has been terminated, stop playback immediately
-        if (partyState.status === 'ended') {
-            video.pause();
-            return;
-        }
+    // ── SYNC ENGINE — runs once, reads state via refs so Firestore updates
+    //    never tear down and restart the interval (which caused repeated seeks) ──
+    useEffect(() => {
+        if (isControllerMode) return;
 
         const syncClock = () => {
-            // Double-check party is still live
-            if (partyState.status === 'ended' || partyState.status !== 'live') {
+            const video = videoRef.current;
+            const ps = partyStateRef.current;
+            const mv = movieRef.current;
+
+            if (!video || !ps?.actualStartTime || mv?.isLiveStream) return;
+
+            if (ps.status === 'ended' || ps.status !== 'live') {
                 video.pause();
                 return;
             }
 
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
+
             try {
-                // For blocks, use filmStartTime (when current film started) for accurate sync
-                // For single movies, fall back to actualStartTime
-                const startRef = partyState.filmStartTime || partyState.actualStartTime;
+                const startRef = ps.filmStartTime || ps.actualStartTime;
                 const serverStart = (startRef as any).toDate().getTime();
                 const elapsedSinceStart = (now - serverStart) / 1000;
-                
-                // Calculate target position based on elapsed time since THIS FILM started
                 const targetPosition = Math.max(0, elapsedSinceStart);
-                
-                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
-                
+
+                const movieDuration = mv?.durationInMinutes
+                    ? mv.durationInMinutes * 60
+                    : (video.duration > 0 ? video.duration : 3600);
+
                 if (targetPosition >= movieDuration) {
-                    if (!isEnded) {
+                    if (!isEndedRef.current) {
                         setIsEnded(true);
                         video.pause();
                         video.currentTime = movieDuration;
@@ -346,37 +364,40 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const drift = targetPosition - video.currentTime;
                 const absDrift = Math.abs(drift);
 
-                // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
-                if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
+                // Only hard-seek if drift is large AND video has enough data
+                // Use a longer debounce (3s) to avoid repeated seeks on mobile
+                if (absDrift > 8 && !video.seeking && video.readyState >= 3) {
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
-                    video.playbackRate = 1.0; // Reset rate on jump
-                } 
-                // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
-                else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
-                    // If behind, speed up slightly. If ahead, slow down slightly.
+                    video.playbackRate = 1.0;
+                } else if (absDrift > 0.5 && absDrift <= 8 && video.readyState >= 3) {
                     video.playbackRate = drift > 0 ? 1.06 : 0.94;
-                } 
-                // 3. IN SYNC: Reset to normal speed
-                else {
+                } else {
                     video.playbackRate = 1.0;
                 }
 
-                // Handle play/pause state from server
-                if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                    video.play().catch(() => {});
-                } else if (!partyState.isPlaying && !video.paused) {
+                // Play/pause — on mobile we need a user gesture first; skip
+                // autoplay attempts if user hasn't interacted yet (avoids console
+                // errors and the seek-then-pause reset loop on iOS/Android)
+                if (ps.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
+                    if (hasUserInteractedRef.current) {
+                        video.play().catch(() => {});
+                    }
+                } else if (!ps.isPlaying && !video.paused) {
                     video.pause();
                 }
-            } catch (e) { console.error("Sync heartbeat failure:", e); }
+            } catch (e) { console.error('Sync heartbeat failure:', e); }
         };
 
-        const interval = setInterval(syncClock, 1000);
-        syncClock(); 
+        const interval = setInterval(syncClock, 1500); // 1.5s — gentler cadence
+        // Don't call syncClock() immediately on mount; let the video settle first
+        const initialDelay = setTimeout(syncClock, 3000);
         return () => {
             clearInterval(interval);
+            clearTimeout(initialDelay);
         };
-    }, [partyState, movie, isEnded, isControllerMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isControllerMode]); // ← intentionally omit partyState/movie — we use refs
 
     useEffect(() => {
         // Retry until Firebase is ready — it initializes async so first call may return null
@@ -397,6 +418,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 if (doc.exists) {
                     const state = doc.data() as WatchPartyState;
                     setPartyState(state);
+                    partyStateRef.current = state; // keep stable ref in sync
                     if (state.status === 'live') {
                         setShowLobby(false);
                     }
@@ -858,20 +880,43 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
                                         muted playsInline aria-hidden="true"
                                     />
+                                    {/* Mobile tap-to-play overlay — shown until user has interacted */}
+                                    {!hasUserInteractedRef.current && (
+                                        <div
+                                            className="absolute inset-0 z-40 flex items-center justify-center cursor-pointer"
+                                            onClick={() => {
+                                                hasUserInteractedRef.current = true;
+                                                const video = videoRef.current;
+                                                if (video) {
+                                                    video.play().catch(() => {});
+                                                    // Force the ref to re-render by nudging state
+                                                    setIsVideoBuffering(false);
+                                                }
+                                            }}
+                                        >
+                                            <div className="bg-white/10 backdrop-blur-sm rounded-full p-5 border border-white/20">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M8 5v14l11-7z"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
                                     <video 
                                         ref={videoRef} 
                                         src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
-                                        autoPlay 
                                         muted={false} 
                                         playsInline
                                         webkit-playsinline="true"
                                         preload="auto"
                                         controls={false}
-                                        onCanPlay={() => setIsVideoBuffering(false)}
-                                        onPlaying={() => setIsVideoBuffering(false)}
-                                        onWaiting={() => setIsVideoBuffering(true)}
-                                        onStalled={() => setIsVideoBuffering(true)}
+                                        onCanPlay={handleVideoCanPlay}
+                                        onPlaying={() => {
+                                            hasUserInteractedRef.current = true;
+                                            handleVideoCanPlay();
+                                        }}
+                                        onWaiting={handleVideoWaiting}
+                                        onStalled={handleVideoWaiting}
                                     />
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">

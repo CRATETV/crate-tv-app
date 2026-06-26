@@ -140,17 +140,18 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
             if (diff <= 0) {
                 setCountdown(null);
-                if (diff < -1000) {
-                    const keyToStart = partyKey || movie.key;
-                    if (!partyState || partyState.status !== 'live') {
-                        fetch('/api/auto-start-watch-party', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ movieKey: keyToStart })
-                        }).catch(() => {});
-                    }
-                    onPartyStart();
+                const keyToStart = partyKey || movie.key;
+                if (!partyState || partyState.status !== 'live') {
+                    fetch('/api/auto-start-watch-party', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ movieKey: keyToStart })
+                    })
+                    .then(r => r.json())
+                    .then(d => console.log('[auto-start] response:', d))
+                    .catch(err => console.error('[auto-start] failed:', err));
                 }
+                onPartyStart();
                 return;
             }
 
