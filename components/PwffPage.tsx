@@ -302,7 +302,24 @@ const ProgrammeMode: React.FC = () => {
         const block = allBlocks.find(b => b.id === showLobbyFor);
         if (!block) return null;
         const first = movies[block.movieKeys?.[0]];
-        return { key: block.id, title: block.title, isWatchPartyEnabled: true, isWatchPartyPaid: (block.price || 0) > 0, watchPartyPrice: block.price, poster: first?.poster || '', director: 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 } as Movie;
+        // Use screeningStartTime as watchPartyStartTime so the lobby countdown works
+        const startTime = block.screeningStartTime || block.watchPartyStartTime || '';
+        return { 
+            key: block.id, 
+            title: block.title, 
+            isWatchPartyEnabled: true, 
+            isWatchPartyPaid: (block.price || 0) > 0, 
+            watchPartyPrice: block.price, 
+            poster: first?.poster || '', 
+            director: 'Festival Event', 
+            synopsis: '', 
+            cast: [], 
+            trailer: '', 
+            fullMovie: first?.fullMovie || '', 
+            tvPoster: '', 
+            likes: 0,
+            watchPartyStartTime: startTime,
+        } as Movie;
     }, [showLobbyFor, allBlocks, movies]);
 
     const openingNightDate = useMemo(() => {
