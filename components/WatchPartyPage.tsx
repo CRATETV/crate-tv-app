@@ -239,7 +239,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const skipLobby = new URLSearchParams(window.location.search).get('skipLobby') === '1';
     const [showLobby, setShowLobby] = useState(!skipLobby);
     const [showCredits, setShowCredits] = useState(false);
-    const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
@@ -808,21 +807,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
-                                    {/* Buffering spinner — shows until video has enough data to play */}
-                                    {isVideoBuffering && (
-                                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
-                                            {movie.poster && (
-                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
-                                            )}
-                                            <div className="relative z-10 text-center space-y-4">
-                                                <div className="relative w-14 h-14 mx-auto">
-                                                    <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
-                                                    <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                                                </div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Loading transmission</p>
-                                            </div>
-                                        </div>
-                                    )}
+
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
                                         src={movie.fullMovie}
@@ -839,10 +824,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         webkit-playsinline="true"
                                         preload="auto"
                                         controls={false}
-                                        onCanPlay={() => setIsVideoBuffering(false)}
-                                        onPlaying={() => setIsVideoBuffering(false)}
-                                        onWaiting={() => setTimeout(() => setIsVideoBuffering(true), 3000)}
-                                        onStalled={() => setTimeout(() => setIsVideoBuffering(true), 3000)}
+
                                     />
                                                                         {isEnded && (() => {
                                         const m = movie as any;
