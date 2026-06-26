@@ -819,12 +819,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
-                                        muted={false} 
+                                        muted={true}
                                         playsInline
                                         webkit-playsinline="true"
+                                        x5-playsinline="true"
                                         preload="auto"
                                         controls={false}
-
+                                        onCanPlay={(e) => {
+                                            const v = e.currentTarget;
+                                            // On re-entry, immediately seek to correct sync position
+                                            if (partyState?.filmStartTime || partyState?.actualStartTime) {
+                                                const startRef = partyState.filmStartTime || partyState.actualStartTime;
+                                                try {
+                                                    const serverStart = (startRef as any).toDate().getTime();
+                                                    const targetPos = Math.max(0, (Date.now() - serverStart) / 1000);
+                                                    if (Math.abs(v.currentTime - targetPos) > 2) {
+                                                        v.currentTime = targetPos;
+                                                    }
+                                                } catch {}
+                                            }
+                                            // Unmute as soon as video is ready — works on iOS/Android/desktop
+                                            v.muted = false;
+                                            v.play().catch(() => {
+                                                // Browser blocked unmuted play — keep playing muted
+                                                v.muted = true;
+                                            });
+                                        }}
                                     />
                                                                         {isEnded && (() => {
                                         const m = movie as any;
