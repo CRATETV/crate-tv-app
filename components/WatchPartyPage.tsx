@@ -860,47 +860,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ) : (
                                 <div className="relative w-full h-full">
                                     {/* Buffering spinner — shows until video has enough data to play */}
-                                    {isVideoBuffering && (
-                                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
-                                            {movie.poster && (
-                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
-                                            )}
-                                            <div className="relative z-10 text-center space-y-4">
-                                                <div className="relative w-14 h-14 mx-auto">
-                                                    <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
-                                                    <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                                                </div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Loading transmission</p>
-                                            </div>
-                                        </div>
-                                    )}
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
                                         src={movie.fullMovie}
                                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
                                         muted playsInline aria-hidden="true"
                                     />
-                                    {/* Mobile tap-to-play overlay — shown until user has interacted */}
-                                    {!hasUserInteractedRef.current && (
-                                        <div
-                                            className="absolute inset-0 z-40 flex items-center justify-center cursor-pointer"
-                                            onClick={() => {
-                                                hasUserInteractedRef.current = true;
-                                                const video = videoRef.current;
-                                                if (video) {
-                                                    video.play().catch(() => {});
-                                                    // Force the ref to re-render by nudging state
-                                                    setIsVideoBuffering(false);
-                                                }
-                                            }}
-                                        >
-                                            <div className="bg-white/10 backdrop-blur-sm rounded-full p-5 border border-white/20">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M8 5v14l11-7z"/>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    )}
                                     <video 
                                         ref={videoRef} 
                                         src={movie.fullMovie} 

@@ -274,7 +274,13 @@ const WatchPartyControlRoom: React.FC<{
 
     const handlePlay = () => onSyncState({ isPlaying: true });
     const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
-    const handleSeeked = () => videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+    const handleSeeked = () => {
+        if (isProgrammaticSeekRef.current) {
+            isProgrammaticSeekRef.current = false;
+            return; // don't write back — this was our own seek, not the admin's
+        }
+        videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+    };
     
     // Periodically sync time while playing to keep viewers in check
     const handleTimeUpdate = () => {
@@ -317,6 +323,8 @@ const WatchPartyControlRoom: React.FC<{
         });
     };
     
+    const isProgrammaticSeekRef = useRef(false);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState) return;
@@ -327,7 +335,11 @@ const WatchPartyControlRoom: React.FC<{
             video.pause();
         }
 
-        if (Math.abs(video.currentTime - partyState.currentTime) > 3) {
+        // Only hard-seek if drift is very large (10s) to avoid the reset loop:
+        // small drifts from network latency were causing seek → timeupdate write
+        // → Firestore update → seek → repeat endlessly.
+        if (Math.abs(video.currentTime - partyState.currentTime) > 10) {
+            isProgrammaticSeekRef.current = true;
             video.currentTime = partyState.currentTime;
         }
     }, [partyState]);
