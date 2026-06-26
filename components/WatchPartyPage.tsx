@@ -841,8 +841,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         controls={false}
                                         onCanPlay={() => setIsVideoBuffering(false)}
                                         onPlaying={() => setIsVideoBuffering(false)}
-                                        onWaiting={() => setIsVideoBuffering(true)}
-                                        onStalled={() => setIsVideoBuffering(true)}
+                                        onWaiting={() => setTimeout(() => setIsVideoBuffering(true), 3000)}
+                                        onStalled={() => setTimeout(() => setIsVideoBuffering(true), 3000)}
                                     />
                                                                         {isEnded && (() => {
                                         const m = movie as any;
