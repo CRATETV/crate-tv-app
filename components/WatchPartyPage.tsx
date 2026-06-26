@@ -234,18 +234,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
-    const isEndedRef = useRef(false); // prevents flicker on rapid re-renders
     const [isControllerMode, setIsControllerMode] = useState(false);
-    // Skip the in-page lobby if viewer came from the festival page lobby (skipLobby=1)
-    const skipLobby = new URLSearchParams(window.location.search).get('skipLobby') === '1';
-    const [showLobby, setShowLobby] = useState(!skipLobby);
+    const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
+    const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
-
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -301,34 +298,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     };
 
-
-
-
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
-
-    // ── iOS/MOBILE AUTOPLAY FIX ──────────────────────────────────────────
-    // iOS blocks autoplay with sound. Strategy: play muted first,
-    // then unmute immediately after playback starts.
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !movie?.fullMovie) return;
-        if (partyState?.status !== 'live') return;
-
-        video.muted = true;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                // Playing — now unmute
-                video.muted = false;
-            }).catch(() => {
-                // Still blocked — keep muted, rely on user tap
-                video.muted = true;
-            });
-        }
-    }, [partyState?.status, movie?.fullMovie]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -362,8 +335,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
                 
                 if (targetPosition >= movieDuration) {
-                    if (!isEndedRef.current) {
-                        isEndedRef.current = true;
+                    if (!isEnded) {
                         setIsEnded(true);
                         video.pause();
                         video.currentTime = movieDuration;
@@ -407,32 +379,49 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [partyState, movie, isEnded, isControllerMode]);
 
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        const partyRef = db.collection('watch_parties').doc(movieKey);
-        const unsubscribe = partyRef.onSnapshot(doc => { 
-            if (doc.exists) {
-                const state = doc.data() as WatchPartyState;
-                setPartyState(state);
-                // Hide lobby when party goes live
-                if (state.status === 'live') {
-                    setShowLobby(false);
-                }
-            }
-        });
-        const reactionsRef = partyRef.collection('live_reactions').where('timestamp', '>=', new Date(Date.now() - 5000))
-            .onSnapshot(snapshot => {
-                snapshot.docChanges().forEach(change => {
-                    if (change.type === 'added') setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
-                });
-            });
-        
-        // Track viewer count from lobby
-        const viewerCountRef = partyRef.collection('lobby_viewers').onSnapshot(snapshot => {
-            setViewerCount(snapshot.size);
-        });
+        // Retry until Firebase is ready — it initializes async so first call may return null
+        let unsubscribe: (() => void) | null = null;
+        let reactionsUnsub: (() => void) | null = null;
+        let viewerUnsub: (() => void) | null = null;
+        let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-        return () => { unsubscribe(); reactionsRef(); viewerCountRef(); };
+        const setup = () => {
+            const db = getDbInstance();
+            if (!db) {
+                // Firebase not ready yet — retry in 500ms
+                retryTimer = setTimeout(setup, 500);
+                return;
+            }
+            const partyRef = db.collection('watch_parties').doc(movieKey);
+            unsubscribe = partyRef.onSnapshot(doc => { 
+                if (doc.exists) {
+                    const state = doc.data() as WatchPartyState;
+                    setPartyState(state);
+                    if (state.status === 'live') {
+                        setShowLobby(false);
+                    }
+                }
+            });
+            reactionsUnsub = partyRef.collection('live_reactions')
+                .where('timestamp', '>=', new Date(Date.now() - 5000))
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
+                    });
+                });
+            viewerUnsub = partyRef.collection('lobby_viewers').onSnapshot(snapshot => {
+                setViewerCount(snapshot.size);
+            });
+        };
+
+        setup();
+
+        return () => {
+            if (retryTimer) clearTimeout(retryTimer);
+            if (unsubscribe) unsubscribe();
+            if (reactionsUnsub) reactionsUnsub();
+            if (viewerUnsub) viewerUnsub();
+        };
     }, [movieKey]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
@@ -765,7 +754,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </button>
                         <div className="text-center flex flex-col items-center">
                             <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Transmission Active</span>
-                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>
+                            {(() => {
+                                const m = movie as any;
+                                const blockKeys: string[] | undefined = m?._blockMovieKeys;
+                                if (blockKeys && blockKeys.length > 1) {
+                                    const idx = (partyState?.activeMovieIndex ?? 0);
+                                    return (
+                                        <>
+                                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{m._activeFilmTitle || movie.title}</h2>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {blockKeys.map((_: string, i: number) => (
+                                                    <div key={i} className={`h-0.5 w-4 rounded-full transition-all ${i === idx ? 'bg-red-500 w-6' : i < idx ? 'bg-red-500/40' : 'bg-white/20'}`} />
+                                                ))}
+                                                <span className="text-[8px] text-gray-500 ml-1">Film {idx + 1}/{blockKeys.length}</span>
+                                            </div>
+                                        </>
+                                    );
+                                }
+                                return <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>;
+                            })()}
                             {isBackstageVerified && (
                                 <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>
                             )}
@@ -830,7 +837,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
-
+                                    {/* Buffering spinner — shows until video has enough data to play */}
+                                    {isVideoBuffering && (
+                                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
+                                            {movie.poster && (
+                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
+                                            )}
+                                            <div className="relative z-10 text-center space-y-4">
+                                                <div className="relative w-14 h-14 mx-auto">
+                                                    <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                                    <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                                                </div>
+                                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Loading transmission</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     {/* Blurred backdrop for non-16:9 films */}
                                     <video
                                         src={movie.fullMovie}
@@ -842,136 +863,34 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
-                                        muted={true}
+                                        muted={false} 
                                         playsInline
                                         webkit-playsinline="true"
-                                        x5-playsinline="true"
                                         preload="auto"
-                                        crossOrigin="anonymous"
                                         controls={false}
-                                        onCanPlay={(e) => {
-                                            const v = e.currentTarget;
-                                            // On re-entry, immediately seek to correct sync position
-                                            if (partyState?.filmStartTime || partyState?.actualStartTime) {
-                                                const startRef = partyState.filmStartTime || partyState.actualStartTime;
-                                                try {
-                                                    const serverStart = (startRef as any).toDate().getTime();
-                                                    const targetPos = Math.max(0, (Date.now() - serverStart) / 1000);
-                                                    if (Math.abs(v.currentTime - targetPos) > 2) {
-                                                        v.currentTime = targetPos;
-                                                    }
-                                                } catch {}
-                                            }
-                                        }}
-                                        onEnded={() => {
-                                            if (!isEndedRef.current) {
-                                                isEndedRef.current = true;
-                                                setIsEnded(true);
-                                            }
-                                        }}
+                                        onCanPlay={() => setIsVideoBuffering(false)}
+                                        onPlaying={() => setIsVideoBuffering(false)}
+                                        onWaiting={() => setIsVideoBuffering(true)}
+                                        onStalled={() => setIsVideoBuffering(true)}
                                     />
-                                                                        {isEnded && (() => {
-                                        const m = movie as any;
-                                        const isBlock = !!(m?._blockMovieKeys || (movieKey && movieKey.startsWith('block_') || movieKey?.startsWith('day')));
-                                        return (
-                                        <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black animate-[fadeIn_1.2s_ease-out] text-center px-6 py-12 overflow-y-auto">
-                                            {/* Poster blur background */}
-                                            {movie.poster && (
-                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.05] blur-3xl scale-110 pointer-events-none" />
-                                            )}
-                                            <div className="relative z-10 max-w-2xl mx-auto space-y-8 w-full">
-                                                {/* Red line */}
-                                                <div className="w-12 h-0.5 bg-red-600 mx-auto" />
-
-                                                <div className="space-y-4">
-                                                    <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px]">Transmission Complete</p>
-                                                    <h3 className="text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">
-                                                        Thank You.
-                                                    </h3>
+                                    {isEnded && (
+                                        <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
+                                            <div className="max-w-2xl space-y-10">
+                                                <div>
+                                                    <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Transmission Complete</p>
+                                                    <h3 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Thank You.</h3>
+                                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-6 max-w-lg mx-auto leading-relaxed">
+                                                        "{movie.title}" produced by <span className="text-white">{movie.director}</span>. Thank you for supporting the distribution afterlife of independent cinema.
+                                                    </p>
                                                 </div>
-
-                                                {isBlock ? (
-                                                    hasFestivalAllAccess ? (
-                                                        // ── FULL PASS HOLDER ──────────────────────────────────
-                                                        <div className="space-y-6">
-                                                            <p className="text-gray-300 text-sm leading-relaxed max-w-lg mx-auto">
-                                                                That's a wrap on this block. As a full festival pass holder, your next block is ready and waiting — head back to the festival hub to join the next screening.
-                                                            </p>
-                                                            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 text-left space-y-3 max-w-md mx-auto">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                                                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-green-400">Full Festival Pass Active</p>
-                                                                </div>
-                                                                <p className="text-white font-black text-base uppercase tracking-tight leading-snug">
-                                                                    PWFF-Philly 2026 · August 21–23
-                                                                </p>
-                                                                <p className="text-gray-400 text-xs leading-relaxed">
-                                                                    41 films · 12 blocks · 3 days of independent cinema streaming exclusively on Crate TV. Your pass gives you access to every block this weekend.
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-2">
-                                                                <button
-                                                                    onClick={() => { window.history.pushState({}, '', '/pwff-philly2026'); window.dispatchEvent(new Event('pushstate')); }}
-                                                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
-                                                                >
-                                                                    Back to Festival Hub
-                                                                </button>
-                                                                <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">
-                                                                    Return to Library
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        // ── SINGLE BLOCK TICKET HOLDER ────────────────────────
-                                                        <div className="space-y-6">
-                                                            <p className="text-gray-300 text-sm leading-relaxed max-w-lg mx-auto">
-                                                                That's a wrap on this block. Thank you for watching — your support means the world to every filmmaker on that screen.
-                                                            </p>
-                                                            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 text-left space-y-4 max-w-md mx-auto">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                                                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-400">PWFF-Philly 2026</p>
-                                                                </div>
-                                                                <p className="text-white font-black text-base uppercase tracking-tight leading-snug">
-                                                                    There's more — 11 blocks still to go.
-                                                                </p>
-                                                                <p className="text-gray-400 text-xs leading-relaxed">
-                                                                    August 21–23, 2026 · Streaming exclusively on Crate TV.<br />
-                                                                    41 films. 12 blocks. 3 days of independent cinema.
-                                                                </p>
-                                                                <div className="pt-2 border-t border-white/10 space-y-2">
-                                                                    <p className="text-gray-400 text-xs">Grab a ticket to the next block, or upgrade to a full festival pass and catch everything this weekend.</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                                                                <button
-                                                                    onClick={() => { window.history.pushState({}, '', '/pwff-philly2026'); window.dispatchEvent(new Event('pushstate')); }}
-                                                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
-                                                                >
-                                                                    Get Tickets — Festival Hub
-                                                                </button>
-                                                                <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">
-                                                                    Return to Library
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                ) : (
-                                                    <div className="space-y-6">
-                                                        <p className="text-gray-400 text-sm max-w-lg mx-auto leading-relaxed">
-                                                            "{movie.title}" — thank you for supporting the distribution afterlife of independent cinema.
-                                                        </p>
-                                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
-                                                            <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">
-                                                                Return to Library
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-10">
+                                                    <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
+                                                    <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
+                                                    <button onClick={() => { window.history.pushState({}, '', '/public-square'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 hover:text-white transition-colors">The Public Square</button>
+                                                </div>
                                             </div>
                                         </div>
-                                        );
-                                    })()}
+                                    )}
                                 </div>
                             )
                         )}

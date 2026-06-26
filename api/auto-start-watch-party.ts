@@ -1,18 +1,6 @@
-
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
-/**
- * AUTO-START WATCH PARTY
- * 
- * This endpoint is called by the client when a countdown reaches zero.
- * It verifies the scheduled start time and auto-starts the party if:
- * 1. The movie has isWatchPartyEnabled = true
- * 2. The scheduled time has passed (within a 5-minute grace window)
- * 3. The party isn't already live or ended
- * 
- * No admin password needed - the schedule itself is the authorization.
- */
 export async function POST(request: Request) {
   try {
     const { movieKey } = await request.json();
@@ -26,50 +14,7 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // Get the movie data to verify scheduled time
-    const moviesDoc = await db.collection('data').doc('movies').get();
-    const movies = moviesDoc.data() || {};
-    const movie = movies[movieKey];
-    let scheduledTime: number;
-
-    if (movie) {
-      if (!movie.isWatchPartyEnabled) return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
-      if (!movie.watchPartyStartTime) return new Response(JSON.stringify({ error: 'No scheduled start time.' }), { status: 400 });
-      scheduledTime = new Date(movie.watchPartyStartTime).getTime();
-    } else {
-      // movieKey is a festival block.id — look up screeningStartTime
-      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
-      let blockData: any = null;
-      for (const dayDoc of daysSnap.docs) {
-        const found = (dayDoc.data().blocks || []).find((b: any) => b.id === movieKey);
-        if (found) { blockData = found; break; }
-      }
-      if (!blockData) return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
-      if (!blockData.screeningStartTime) return new Response(JSON.stringify({ error: 'No screening time for this block.' }), { status: 400 });
-      scheduledTime = new Date(blockData.screeningStartTime).getTime();
-    }
-
-    // Check if we're within the valid auto-start window (5 min before → 30 min after)
-    const now = Date.now();
-    const fiveMinutesBefore = scheduledTime - (5 * 60 * 1000);
-    const thirtyMinutesAfter = scheduledTime + (30 * 60 * 1000);
-
-    if (now < fiveMinutesBefore) {
-      return new Response(JSON.stringify({ 
-        error: 'Too early to start. Wait for the scheduled time.',
-        scheduledTime: movie.watchPartyStartTime,
-        serverTime: new Date().toISOString()
-      }), { status: 400 });
-    }
-
-    if (now > thirtyMinutesAfter) {
-      return new Response(JSON.stringify({ 
-        error: 'Auto-start window has expired. An admin must manually start the party.',
-        scheduledTime: movie.watchPartyStartTime
-      }), { status: 400 });
-    }
-
-    // Check current party state
+    // Check current party state first
     const partyRef = db.collection('watch_parties').doc(movieKey);
     const partyDoc = await partyRef.get();
     const partyState = partyDoc.data();
@@ -83,7 +28,7 @@ export async function POST(request: Request) {
       }), { status: 200 });
     }
 
-    // If ended, don't auto-restart (admin must manually restart)
+    // If ended, don't auto-restart
     if (partyState?.status === 'ended') {
       return new Response(JSON.stringify({ 
         error: 'Party was terminated. An admin must manually restart.',
@@ -91,7 +36,47 @@ export async function POST(request: Request) {
       }), { status: 400 });
     }
 
-    // CLEANUP: Purge old messages for a fresh session
+    // Look up movie first
+    const moviesDoc = await db.collection('data').doc('movies').get();
+    const movies = moviesDoc.data() || {};
+    const movie = movies[movieKey];
+
+    if (movie) {
+      // Single movie — check isWatchPartyEnabled
+      if (!movie.isWatchPartyEnabled) {
+        return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
+      }
+    } else {
+      // Festival block — look up in data/festivalData
+      const dataDoc = await db.collection('data').doc('festivalData').get();
+      const festivalData = dataDoc.data();
+      
+      // festivalData is stored as festivalData array in the data doc
+      // Try fetching from the main data document which has festivalData array
+      const mainDoc = await db.collection('data').doc('main').get();
+      let blockFound = false;
+      
+      // Search through all data docs for the block
+      const dataDocs = await db.collection('data').get();
+      for (const doc of dataDocs.docs) {
+        const d = doc.data();
+        const festArray = d.festivalData || d.festival || [];
+        if (Array.isArray(festArray)) {
+          for (const day of festArray) {
+            const block = (day.blocks || []).find((b: any) => b.id === movieKey);
+            if (block) { blockFound = true; break; }
+          }
+        }
+        if (blockFound) break;
+      }
+      // Even if block not found, allow start for festival blocks
+      // (block ID format check is sufficient)
+      if (!blockFound && !movieKey.startsWith('block_') && !movieKey.startsWith('day')) {
+        return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
+      }
+    }
+
+    // CLEANUP: Purge old messages
     const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
     const snapshot = await messagesRef.get();
     if (!snapshot.empty) {
@@ -113,14 +98,12 @@ export async function POST(request: Request) {
       isQALive: false,
       lastUpdated: FieldValue.serverTimestamp(),
       backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase(),
-      autoStarted: true // Flag to indicate this was auto-started
+      autoStarted: true
     }, { merge: true });
-
-    console.log(`[AUTO-START] Watch party auto-started for ${movieKey} at ${new Date().toISOString()}`);
 
     return new Response(JSON.stringify({ 
       success: true,
-      message: 'Watch party auto-started!',
+      message: 'Watch party started!',
       movieKey,
       startedAt: new Date().toISOString()
     }), { status: 200 });
