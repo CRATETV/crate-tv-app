@@ -14,7 +14,6 @@ import WatchPartyCredits from './WatchPartyCredits';
 import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
-// hls.js loaded dynamically at runtime to avoid TypeScript module resolution issues
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -241,14 +240,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showLobby, setShowLobby] = useState(!skipLobby);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
-    const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
-    const hlsRef = useRef<any>(null);
-    const bufferingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -305,74 +302,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     };
 
 
-    // ── HLS SETUP: attach hls.js dynamically when video src is an m3u8 ──
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !movie?.fullMovie) return;
 
-        const src = movie.fullMovie;
-        const isHls = src.includes('.m3u8');
-
-        // Destroy any existing HLS instance
-        if (hlsRef.current) {
-            (hlsRef.current as any).destroy();
-            hlsRef.current = null;
-        }
-
-        if (isHls) {
-            // Check native HLS support first (Safari/iOS)
-            if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = src;
-                video.load();
-                // onCanPlay handler will trigger play for Safari/iOS
-            } else {
-                // Load hls.js via CDN script tag — avoids TypeScript module issues
-                const loadHls = (cb: (HlsLib: any) => void) => {
-                    if ((window as any).Hls) { cb((window as any).Hls); return; }
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
-                    script.onload = () => cb((window as any).Hls);
-                    script.onerror = () => { video.src = src; }; // fallback
-                    document.head.appendChild(script);
-                };
-                loadHls((HlsLib: any) => {
-                    if (!HlsLib || !HlsLib.isSupported()) { video.src = src; return; }
-                    const hls = new HlsLib({
-                        enableWorker: true,
-                        lowLatencyMode: false,
-                        backBufferLength: 90,
-                    });
-                    hlsRef.current = hls;
-                    hls.loadSource(src);
-                    hls.attachMedia(video);
-                    hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
-                        if (bufferingTimerRef.current) { clearTimeout(bufferingTimerRef.current); bufferingTimerRef.current = null; }
-                        setIsVideoBuffering(false);
-                        video.muted = true;
-                        const playPromise = video.play();
-                        if (playPromise !== undefined) {
-                            playPromise.then(() => {
-                                video.muted = false;
-                            }).catch(() => {
-                                video.muted = true;
-                                setShowUnmutePrompt(true);
-                            });
-                        }
-                    });
-                });
-            }
-        } else {
-            // Regular mp4 — set src directly
-            video.src = src;
-        }
-
-        return () => {
-            if (hlsRef.current) {
-                (hlsRef.current as any).destroy();
-                hlsRef.current = null;
-            }
-        };
-    }, [movie?.fullMovie]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -901,61 +831,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     />
                                     <video 
                                         ref={videoRef} 
+                                        src={movie.fullMovie} 
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
-                                        muted={true}
+                                        autoPlay 
+                                        muted={false} 
                                         playsInline
                                         webkit-playsinline="true"
-                                        x5-playsinline="true"
                                         preload="auto"
                                         controls={false}
-                                        onCanPlay={() => {
-                                            if (bufferingTimerRef.current) { clearTimeout(bufferingTimerRef.current); bufferingTimerRef.current = null; }
-                                            setIsVideoBuffering(false);
-                                            // For Safari/iOS native HLS — trigger play on canPlay
-                                            const v = videoRef.current;
-                                            if (v && v.paused && v.src && v.src.includes('.m3u8')) {
-                                                v.muted = true;
-                                                v.play().then(() => {
-                                                    v.muted = false;
-                                                }).catch(() => {
-                                                    setShowUnmutePrompt(true);
-                                                });
-                                            }
-                                        }}
-                                        onPlaying={() => {
-                                            if (bufferingTimerRef.current) { clearTimeout(bufferingTimerRef.current); bufferingTimerRef.current = null; }
-                                            setIsVideoBuffering(false);
-                                            setShowUnmutePrompt(false);
-                                        }}
-                                        onWaiting={() => {
-                                            // Only show "Loading Transmission" after 2s of waiting — ignore brief HLS chunk gaps
-                                            bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 2000);
-                                        }}
-                                        onStalled={() => {
-                                            bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 2000);
-                                        }}
-                                        onError={() => setIsVideoBuffering(false)}
+                                        onCanPlay={() => setIsVideoBuffering(false)}
+                                        onPlaying={() => setIsVideoBuffering(false)}
+                                        onWaiting={() => setIsVideoBuffering(true)}
+                                        onStalled={() => setIsVideoBuffering(true)}
                                     />
-                                    {/* Tap to unmute — shown on iOS/browsers that block unmuted autoplay */}
-                                    {showUnmutePrompt && !isVideoBuffering && (
-                                        <button
-                                            onClick={() => {
-                                                const v = videoRef.current;
-                                                if (v) {
-                                                    v.muted = false;
-                                                    v.play().catch(() => {});
-                                                    setShowUnmutePrompt(false);
-                                                }
-                                            }}
-                                            className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/20 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white/10 transition-all animate-[fadeIn_0.5s_ease-out]"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M9 9a3 3 0 000 6" />
-                                            </svg>
-                                            Tap to enable sound
-                                        </button>
-                                    )}
-                                    {isEnded && (() => {
+                                                                        {isEnded && (() => {
                                         const m = movie as any;
                                         const isBlock = !!(m?._blockMovieKeys || (movieKey && movieKey.startsWith('block_') || movieKey?.startsWith('day')));
                                         return (
