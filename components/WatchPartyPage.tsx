@@ -377,13 +377,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     video.playbackRate = 1.0;
                 }
 
-                // Play/pause — on mobile we need a user gesture first; skip
-                // autoplay attempts if user hasn't interacted yet (avoids console
-                // errors and the seek-then-pause reset loop on iOS/Android)
+                // Play/pause — always try to play muted first (works without user gesture).
+                // If user has interacted, unmute is handled by the unmute button.
                 if (ps.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                    if (hasUserInteractedRef.current) {
-                        video.play().catch(() => {});
+                    if (!hasUserInteractedRef.current) {
+                        video.muted = true; // ensure muted for autoplay
                     }
+                    video.play().catch(() => {});
                 } else if (!ps.isPlaying && !video.paused) {
                     video.pause();
                 }
@@ -884,10 +884,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         onWaiting={handleVideoWaiting}
                                         onStalled={handleVideoWaiting}
                                     />
-                                    {/* Tap to watch overlay — required for autoplay on mobile/desktop */}
+                                    {/* Small unmute button — video autoplays muted, tap to unmute */}
                                     {needsUserGesture && partyState?.status === 'live' && !isEnded && (
-                                        <div
-                                            className="absolute inset-0 z-[170] flex items-center justify-center cursor-pointer"
+                                        <button
+                                            className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2 text-white hover:bg-black/90 transition-all active:scale-95"
                                             onClick={() => {
                                                 const video = videoRef.current;
                                                 if (video) {
@@ -898,13 +898,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 setNeedsUserGesture(false);
                                             }}
                                         >
-                                            <div className="bg-black/60 backdrop-blur-xl rounded-full p-8 border border-white/20 hover:bg-black/80 transition-all hover:scale-110 active:scale-95">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M8 5v14l11-7z"/>
-                                                </svg>
-                                            </div>
-                                            <p className="absolute bottom-1/3 text-[10px] font-black uppercase tracking-widest text-gray-400">Tap to Watch</p>
-                                        </div>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                            </svg>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Tap to Unmute</span>
+                                        </button>
                                     )}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
