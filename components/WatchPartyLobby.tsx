@@ -42,6 +42,15 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
 
+    // Preload hls.js from CDN during lobby so it's ready when film starts
+    useEffect(() => {
+        if ((window as any).Hls) return; // already loaded
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
+        script.async = true;
+        document.head.appendChild(script);
+    }, []);
+
     // Register viewer presence in lobby
     useEffect(() => {
         if (!user) return;
@@ -171,10 +180,12 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         return () => clearInterval(interval);
     }, []);
 
-    // If party is live — paid users transition in, unpaid see paywall
-    if (partyState?.status === 'live') {
+    // If party is live AND viewer has access — transition directly in
+    // We only do this when there's no countdown to show (startTime is null or already passed)
+    const countdownFinished = !startTime || new Date() >= startTime;
+    
+    if (partyState?.status === 'live' && countdownFinished) {
         if (!hasAccess) {
-            // Don't call onPartyStart — keep them on this screen showing paywall
             return (
                 <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-8">
                     <div className="text-center space-y-6 max-w-sm w-full animate-[fadeIn_0.5s_ease-out]">
@@ -198,7 +209,6 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 </div>
             );
         }
-        // Paid users — smooth loading transition into party
         return (
             <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-[fadeIn_0.5s_ease-out]">
                 <div className="text-center space-y-6">

@@ -224,14 +224,16 @@ const BlockCard: React.FC<{
                     </div>
                     <div className="flex-shrink-0">
                         {isLive
-                            ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Join Live</button>
-                            : isBeforeScreening && isUnlocked
-                                ? <div className="inline-flex items-center gap-1.5 bg-amber-900/20 border border-amber-500/20 text-amber-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Ticket Confirmed</div>
+                            ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all animate-pulse">▶ Join Live</button>
+                            : isBeforeScreening && (isUnlocked || !block.price || block.price === 0)
+                                ? <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Enter Lobby</button>
+                            : isBeforeScreening && !isUnlocked && block.price && block.price > 0
+                                ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
                             : isUnlocked
-                                ? <div className="inline-flex items-center gap-1.5 bg-green-900/20 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full"><div className="w-1.5 h-1.5 rounded-full bg-green-400" />Confirmed</div>
+                                ? <button onClick={onEnterLobby} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Now</button>
                                 : block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
-                                    : <span className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Free</span>}
+                                    : <button onClick={onEnterLobby} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>}
                     </div>
                 </div>
             </div>
@@ -302,7 +304,8 @@ const ProgrammeMode: React.FC = () => {
         const block = allBlocks.find(b => b.id === showLobbyFor);
         if (!block) return null;
         const first = movies[block.movieKeys?.[0]];
-        // Use screeningStartTime as watchPartyStartTime so the lobby countdown works
+        // screeningStartTime drives the lobby countdown
+        // fullMovie from first film is the merged .m3u8 block stream
         const startTime = block.screeningStartTime || block.watchPartyStartTime || '';
         return { 
             key: block.id, 
@@ -311,12 +314,12 @@ const ProgrammeMode: React.FC = () => {
             isWatchPartyPaid: (block.price || 0) > 0, 
             watchPartyPrice: block.price, 
             poster: first?.poster || '', 
-            director: 'Festival Event', 
-            synopsis: '', 
+            director: block.title || 'PWFF-Philly 2026', 
+            synopsis: `${block.movieKeys?.length || 0} films screening ${block.time ? 'at ' + block.time : ''}`, 
             cast: [], 
             trailer: '', 
-            fullMovie: first?.fullMovie || '', 
-            tvPoster: '', 
+            fullMovie: first?.fullMovie || '',
+            tvPoster: first?.poster || '', 
             likes: 0,
             watchPartyStartTime: startTime,
         } as Movie;
@@ -416,12 +419,13 @@ const ProgrammeMode: React.FC = () => {
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                                 const partyState = activeParties[block.id];
                                 const isLive = partyState?.status === 'live';
+                                const isWaiting = !partyState || partyState?.status === 'waiting';
                                 const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
-                                const isBeforeScreening = screenStart ? new Date() < screenStart : false;
+                                const isBeforeScreening = (screenStart ? new Date() < screenStart : false) || isWaiting;
                                 const isInWindow = screenStart ? new Date() >= screenStart : true;
                                 return (
                                     <BlockCard key={block.id} block={block} films={films}
-                                        isUnlocked={isUnlocked && isInWindow}
+                                        isUnlocked={isUnlocked && (isInWindow || isBeforeScreening)}
                                         isLive={isLive}
                                         isBeforeScreening={isBeforeScreening}
                                         screeningStartTime={block.screeningStartTime}
@@ -471,7 +475,7 @@ const ProgrammeMode: React.FC = () => {
                         movie={lobbyMovie}
                         movieKey={showLobbyFor}
                         partyState={activeParties[showLobbyFor]}
-                        onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}`); }}
+                        onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}?skipLobby=1`); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
                         onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) setTicketFlowBlock(b); }}

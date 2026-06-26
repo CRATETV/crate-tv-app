@@ -236,7 +236,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
-    const [showLobby, setShowLobby] = useState(true);
+    // Skip the in-page lobby if viewer came from the festival page lobby (skipLobby=1)
+    const skipLobby = new URLSearchParams(window.location.search).get('skipLobby') === '1';
+    const [showLobby, setShowLobby] = useState(!skipLobby);
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(true);
     const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
