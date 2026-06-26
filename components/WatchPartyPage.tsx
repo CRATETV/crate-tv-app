@@ -234,6 +234,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
+    const isEndedRef = useRef(false); // prevents flicker on rapid re-renders
     const [isControllerMode, setIsControllerMode] = useState(false);
     // Skip the in-page lobby if viewer came from the festival page lobby (skipLobby=1)
     const skipLobby = new URLSearchParams(window.location.search).get('skipLobby') === '1';
@@ -308,6 +309,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
 
+    // ── iOS/MOBILE AUTOPLAY FIX ──────────────────────────────────────────
+    // iOS blocks autoplay with sound. Strategy: play muted first,
+    // then unmute immediately after playback starts.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !movie?.fullMovie) return;
+        if (partyState?.status !== 'live') return;
+
+        video.muted = true;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                // Playing — now unmute
+                video.muted = false;
+            }).catch(() => {
+                // Still blocked — keep muted, rely on user tap
+                video.muted = true;
+            });
+        }
+    }, [partyState?.status, movie?.fullMovie]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
@@ -340,7 +362,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
                 
                 if (targetPosition >= movieDuration) {
-                    if (!isEnded) {
+                    if (!isEndedRef.current) {
+                        isEndedRef.current = true;
                         setIsEnded(true);
                         video.pause();
                         video.currentTime = movieDuration;
@@ -824,6 +847,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         webkit-playsinline="true"
                                         x5-playsinline="true"
                                         preload="auto"
+                                        crossOrigin="anonymous"
                                         controls={false}
                                         onCanPlay={(e) => {
                                             const v = e.currentTarget;
@@ -838,12 +862,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                     }
                                                 } catch {}
                                             }
-                                            // Unmute as soon as video is ready — works on iOS/Android/desktop
-                                            v.muted = false;
-                                            v.play().catch(() => {
-                                                // Browser blocked unmuted play — keep playing muted
-                                                v.muted = true;
-                                            });
+                                        }}
+                                        onEnded={() => {
+                                            if (!isEndedRef.current) {
+                                                isEndedRef.current = true;
+                                                setIsEnded(true);
+                                            }
                                         }}
                                     />
                                                                         {isEnded && (() => {
