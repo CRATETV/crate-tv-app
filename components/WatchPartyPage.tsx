@@ -253,6 +253,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const hlsRef = useRef<any>(null);
     const lastSeekTimeRef = useRef<number>(0);
     // Stable refs so the sync interval never needs to be torn down on Firestore updates
     const partyStateRef = useRef<WatchPartyState | undefined>(undefined);
@@ -399,6 +400,39 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isControllerMode]); // ← intentionally omit partyState/movie — we use refs
+
+    // ── HLS.JS ATTACHMENT — Android Chrome doesn't support HLS natively ──────
+    useEffect(() => {
+        const video = videoRef.current;
+        const src = movie?.fullMovie;
+        if (!video || !src || !src.includes('.m3u8')) return;
+
+        // iOS Safari supports HLS natively — skip hls.js
+        if (video.canPlayType('application/vnd.apple.mpegurl')) return;
+
+        const attachHls = () => {
+            const Hls = (window as any).Hls;
+            if (!Hls || !Hls.isSupported()) return;
+            if (hlsRef.current) hlsRef.current.destroy();
+            const hls = new Hls({ maxBufferLength: 30, enableWorker: true });
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            hlsRef.current = hls;
+        };
+
+        if ((window as any).Hls) {
+            attachHls();
+        } else {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+            script.onload = attachHls;
+            document.head.appendChild(script);
+        }
+
+        return () => {
+            if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+        };
+    }, [movie?.fullMovie]);
 
     useEffect(() => {
         // Retry until Firebase is ready — it initializes async so first call may return null
