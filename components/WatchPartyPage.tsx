@@ -248,6 +248,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current);
         setIsVideoBuffering(false);
     }, []);
+    const [needsUserGesture, setNeedsUserGesture] = useState(true);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
@@ -866,11 +867,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
                                         muted playsInline aria-hidden="true"
                                     />
-                                    <video 
-                                        ref={videoRef} 
-                                        src={movie.fullMovie} 
-                                        className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
-                                        muted={false} 
+                                    <video
+                                        ref={videoRef}
+                                        src={movie.fullMovie}
+                                        className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`}
+                                        muted={needsUserGesture}
                                         playsInline
                                         webkit-playsinline="true"
                                         preload="auto"
@@ -883,6 +884,28 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         onWaiting={handleVideoWaiting}
                                         onStalled={handleVideoWaiting}
                                     />
+                                    {/* Tap to watch overlay — required for autoplay on mobile/desktop */}
+                                    {needsUserGesture && partyState?.status === 'live' && !isEnded && (
+                                        <div
+                                            className="absolute inset-0 z-[170] flex items-center justify-center cursor-pointer"
+                                            onClick={() => {
+                                                const video = videoRef.current;
+                                                if (video) {
+                                                    video.muted = false;
+                                                    video.play().catch(() => {});
+                                                }
+                                                hasUserInteractedRef.current = true;
+                                                setNeedsUserGesture(false);
+                                            }}
+                                        >
+                                            <div className="bg-black/60 backdrop-blur-xl rounded-full p-8 border border-white/20 hover:bg-black/80 transition-all hover:scale-110 active:scale-95">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M8 5v14l11-7z"/>
+                                                </svg>
+                                            </div>
+                                            <p className="absolute bottom-1/3 text-[10px] font-black uppercase tracking-widest text-gray-400">Tap to Watch</p>
+                                        </div>
+                                    )}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
                                             <div className="max-w-2xl space-y-10">

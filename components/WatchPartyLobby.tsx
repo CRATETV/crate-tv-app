@@ -39,6 +39,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
     const [showFinalCountdown, setShowFinalCountdown] = useState(false);
     const [ambientPhase, setAmbientPhase] = useState(0);
+    const [autoStartTriggered, setAutoStartTriggered] = useState(false);
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
 
@@ -142,6 +143,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 setCountdown(null);
                 const keyToStart = partyKey || movie.key;
                 if (!partyState || partyState.status !== 'live') {
+                    setAutoStartTriggered(true);
                     fetch('/api/auto-start-watch-party', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -150,8 +152,10 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                     .then(r => r.json())
                     .then(d => console.log('[auto-start] response:', d))
                     .catch(err => console.error('[auto-start] failed:', err));
+                } else {
+                    // Already live — transition immediately
+                    onPartyStart();
                 }
-                onPartyStart();
                 return;
             }
 
@@ -172,6 +176,25 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         const interval = setInterval(updateCountdown, 1000);
         return () => clearInterval(interval);
     }, [startTime, onPartyStart]);
+
+    // Retry auto-start every 3s if countdown fired but Firebase hasn't updated yet
+    useEffect(() => {
+        if (!autoStartTriggered) return;
+        if (partyState?.status === 'live') return;
+        const keyToStart = partyKey || movie.key;
+        const retry = () => {
+            fetch('/api/auto-start-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: keyToStart })
+            })
+            .then(r => r.json())
+            .then(d => console.log('[auto-start retry]', d))
+            .catch(err => console.error('[auto-start retry failed]', err));
+        };
+        const interval = setInterval(retry, 3000);
+        return () => clearInterval(interval);
+    }, [autoStartTriggered, partyState?.status, partyKey, movie.key]);
 
     // Ambient animation phase
     useEffect(() => {
@@ -219,6 +242,27 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">Entering watch party</p>
                     <StartingNowTransition onPartyStart={onPartyStart} />
+                </div>
+            </div>
+        );
+    }
+
+    // Countdown hit 0 — show spinner while Firebase propagates the 'live' status
+    if (autoStartTriggered && partyState?.status !== 'live') {
+        return (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-[fadeIn_0.3s_ease-out]">
+                {movie.poster && (
+                    <div className="absolute inset-0">
+                        <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
+                        <div className="absolute inset-0 bg-black/80" />
+                    </div>
+                )}
+                <div className="relative z-10 text-center space-y-6">
+                    <div className="relative w-16 h-16 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                        <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Starting transmission</p>
                 </div>
             </div>
         );
