@@ -80,6 +80,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [showQABanner, setShowQABanner] = useState(false);
 
     // Show Q&A banner animation when Q&A goes live
@@ -103,7 +104,18 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
         return () => unsubscribe();
     }, [partyKey]);
 
-    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+    // Auto-scroll to the newest message. This used to call
+    // messagesEndRef.current.scrollIntoView(), which asks the browser to
+    // bring that element into view by scrolling whatever ancestor chain it
+    // takes to do so — on desktop that could nudge the outer page/layout by
+    // a few pixels on every single incoming message, which is very visible
+    // when chat is active. Scrolling the chat's own container directly
+    // instead stays fully contained inside that one div.
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }, [messages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -145,7 +157,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                     <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
                 </div>
             )}
-            <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
+            <div ref={messagesContainerRef} className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
                 {/* Director Backstage Verification */}
                 {!isBackstageVerified && (
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
@@ -447,12 +459,29 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const handleForegroundReturn = () => {
             if (document.visibilityState !== 'visible') return;
             const video = videoRef.current;
-            // If the element lost its buffered data while backgrounded, kick
-            // it to reload before forcing the seek below.
-            if (video && video.readyState < 2) {
+            if (!video) return;
+
+            // readyState === 0 (HAVE_NOTHING) means iOS fully tore down the
+            // decoder while backgrounded — there's genuinely nothing to seek
+            // within yet, so a reload is unavoidable. Anything above that
+            // (even stale/paused data) can be seeked directly; the browser
+            // fetches whatever byte range the new position needs on its own.
+            // Calling load() in that common case was the actual cause of the
+            // slow resume: it wipes the element, and setting currentTime
+            // immediately afterward (before 'loadedmetadata' fires) gets
+            // silently dropped, so the seek didn't stick until a *later*
+            // sync tick retried it — several extra seconds of buffering
+            // from position 0 before the real resume even started.
+            if (video.readyState === 0) {
+                const onLoadedMetadata = () => {
+                    video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                    syncClock({ force: true });
+                };
+                video.addEventListener('loadedmetadata', onLoadedMetadata);
                 video.load();
+            } else {
+                syncClock({ force: true });
             }
-            syncClock({ force: true });
         };
         document.addEventListener('visibilitychange', handleForegroundReturn);
         window.addEventListener('pageshow', handleForegroundReturn);

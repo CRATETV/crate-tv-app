@@ -156,6 +156,13 @@ const App: React.FC = () => {
             .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies, categories.vault]);
 
+    // ── TEMPORARY: "Enter Lobby" ribbon disabled by request — it was
+    // appearing/disappearing in a way that wasn't worth chasing further right
+    // now. This only hides that one ribbon; the watch party pages, ticket
+    // purchases, and the general PWFF promo banner are all untouched — flip
+    // back to false whenever it's worth revisiting. ──
+    const SUPPRESS_WATCH_PARTY_RIBBON = true;
+
     const activeBannerType = useMemo(() => {
         // ── KILL SWITCH: admin can suppress all banners instantly ──
         if (settings.suppressAllBanners) return 'NONE';
@@ -175,18 +182,18 @@ const App: React.FC = () => {
         // 3. Upcoming Watch Party (If not dismissed AND not ended)
         // 4. General Festival (If not dismissed)
         
-        if (isWatchPartyActuallyLive) {
+        if (!SUPPRESS_WATCH_PARTY_RIBBON && isWatchPartyActuallyLive) {
             const liveKey = `live-${livePartyMovie.key}`;
             if (!dismissedBannerKeys.has(liveKey)) return 'WATCH_PARTY';
         }
 
         if (isCrateFestWindow && !dismissedBannerKeys.has('cratefest')) return 'CRATE_FEST';
-        
+
         // Don't show upcoming banner if party was terminated
         // Only show upcoming banner if movie has a valid future start time
         const hasValidStartTime = livePartyMovie?.watchPartyStartTime && new Date(livePartyMovie.watchPartyStartTime).getTime() > Date.now() - (24 * 60 * 60 * 1000);
-        if (livePartyMovie && !isWatchPartyEnded && hasValidStartTime && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
-        
+        if (!SUPPRESS_WATCH_PARTY_RIBBON && livePartyMovie && !isWatchPartyEnded && hasValidStartTime && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
+
         if (isFestivalLive && !dismissedBannerKeys.has('festival')) return 'GENERAL_FESTIVAL';
 
         // ── PWFF PHILLY 2026 PROMO BANNER ──────────────────────────────────────

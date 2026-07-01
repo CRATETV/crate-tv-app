@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -17,6 +18,18 @@ const staticPriceMap: Record<string, number> = {
 
 export async function POST(request: Request) {
   try {
+    // No throttling existed on the endpoint that actually charges a card —
+    // a script could otherwise hammer this with rapid repeated attempts
+    // (e.g. testing many stolen card numbers). 6 attempts per 5 minutes per
+    // IP comfortably covers a real customer retrying a declined card.
+    const ip = getIP(request);
+    if (!rateLimit(`process-payment:${ip}`, 6, 5 * 60_000)) {
+      return new Response(JSON.stringify({ error: 'Too many payment attempts. Please wait a few minutes and try again.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, uid, promoCode } = await request.json();
     
     const isProduction = process.env.VERCEL_ENV === 'production';

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import LiveWatchPartyBanner from './LiveWatchPartyBanner';
+import Header from './Header';
 import BottomNavBar from './BottomNavBar';
 import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
@@ -336,8 +337,11 @@ const ProgrammeMode: React.FC = () => {
             {/* ZONE 1: THE HOOK */}
             <div className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(229,9,20,0.12)_0%,transparent_65%)] pointer-events-none" />
-                <div className="relative max-w-2xl mx-auto px-4 pt-20 pb-16 text-center">
-
+                <div className="relative max-w-2xl mx-auto px-4 pt-32 pb-16 text-center">
+                    {/* pt-32 (was pt-20) — this section had no top clearance built in because
+                        the page never had a fixed header before; now that it does, the old
+                        80px wasn't reliably enough room to avoid the header overlapping this
+                        badge/title on some devices. */}
                     <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-500/20 rounded-full px-4 py-1.5 mb-8">
                         <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400">
@@ -600,6 +604,11 @@ const PwffPage: React.FC = () => {
                     />
                 </div>
             )}
+            {/* This page renders standalone (outside <App>), so it never got the
+                shared site header — meaning tablet/desktop visitors (768px+,
+                where the mobile bottom nav hides) had literally no navigation
+                at all: no logo, no way back to the main site, nothing. */}
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             <BottomNavBar onSearchClick={() => {}} />
         </>
     );
@@ -636,6 +645,11 @@ const PwffPage: React.FC = () => {
                     />
                 </div>
             )}
+            {/* This page renders standalone (outside <App>), so it never got the
+                shared site header — meaning tablet/desktop visitors (768px+,
+                where the mobile bottom nav hides) had literally no navigation
+                at all: no logo, no way back to the main site, nothing. */}
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             <BottomNavBar onSearchClick={() => {}} />
         </div>
     );
