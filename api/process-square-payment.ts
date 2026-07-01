@@ -103,8 +103,27 @@ export async function POST(request: Request) {
         }
     }
     else if (paymentType === 'block') {
-        amountInCents = 1000; // Fixed $10 for blocks currently
-        note = `Unlock Block: ${blockTitle || itemId}`;
+        // Look up the block's actual admin-configured price — this used to be
+        // hardcoded to a flat $10 for every block regardless of what was set
+        // in the Festival Hub, which either overcharged or undercharged
+        // customers depending on the block's real price. Same lookup pattern
+        // as the 'movie'/'watchPartyTicket' branch above.
+        if (!db) throw new Error("Database offline.");
+        let blockData: any = null;
+        const festSnap = await db.collection('festival').doc('schedule').collection('days').get();
+        festSnap.forEach(doc => {
+            const day = doc.data();
+            const found = day.blocks?.find((b: any) => b.id === itemId);
+            if (found) blockData = found;
+        });
+        if (!blockData) {
+            const settingsDoc = await db.collection('settings').doc('site').get();
+            const crateFestBlocks = settingsDoc.data()?.crateFestConfig?.movieBlocks || [];
+            blockData = crateFestBlocks.find((b: any) => b.id === itemId);
+        }
+
+        amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
+        note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
     }
     else if (staticPriceMap[paymentType]) {
         amountInCents = staticPriceMap[paymentType];
