@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logServerError } from './_lib/logError.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -314,6 +315,8 @@ export async function POST(request: Request) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    // Payment failures are the highest-priority thing to know about immediately.
+    logServerError('api/process-square-payment', error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

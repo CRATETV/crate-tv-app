@@ -215,6 +215,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
+    // True once we've received a real Firestore snapshot for this party. Used to
+    // avoid mounting the block's <video> at the wrong film (index 0) for the brief
+    // window after a remount — e.g. iOS reloading the tab after backgrounding —
+    // before we know which film is actually active.
+    const [partyStateReady, setPartyStateReady] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
 
@@ -223,6 +228,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
         [festivalData, movieKey]
     );
+
+    // ── NEXT BLOCK LOOKUP — for the "thank you" screen at the end of a block ──
+    // Finds the next chronologically-scheduled block so we can tell full-pass
+    // holders when it starts, and prompt everyone else to buy a ticket for it.
+    const nextBlockInfo = useMemo(() => {
+        if (!parentBlock) return null;
+        const currentStart = parentBlock.screeningStartTime || (parentBlock as any).watchPartyStartTime;
+        if (!currentStart) return null;
+        const currentTime = new Date(currentStart).getTime();
+        if (isNaN(currentTime)) return null;
+
+        const allBlocks = festivalData.flatMap((d: any) => d.blocks || []);
+        const upcoming = allBlocks
+            .filter((b: any) => b.id !== parentBlock.id)
+            .map((b: any) => ({ block: b, start: new Date(b.screeningStartTime || b.watchPartyStartTime || 0).getTime() }))
+            .filter((b: any) => !isNaN(b.start) && b.start > currentTime)
+            .sort((a: any, b: any) => a.start - b.start);
+
+        return upcoming.length > 0 ? upcoming[0].block : null;
+    }, [parentBlock, festivalData]);
+
+    const handleBuyNextBlock = useCallback(() => {
+        if (!nextBlockInfo) return;
+        window.history.pushState({}, '', `/watchparty/${nextBlockInfo.id}`);
+        window.dispatchEvent(new Event('pushstate'));
+    }, [nextBlockInfo]);
 
     // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
     const handlePaymentSuccess = useCallback(() => {
@@ -329,7 +360,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         if (isControllerMode) return;
 
-        const syncClock = () => {
+        const syncClock = (opts?: { force?: boolean }) => {
             const video = videoRef.current;
             const ps = partyStateRef.current;
             const mv = movieRef.current;
@@ -342,7 +373,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             }
 
             const now = Date.now();
-            if (now - lastSeekTimeRef.current < 2000) return;
+            if (!opts?.force && now - lastSeekTimeRef.current < 2000) return;
 
             try {
                 const startRef = ps.filmStartTime || ps.actualStartTime;
@@ -366,9 +397,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const drift = targetPosition - video.currentTime;
                 const absDrift = Math.abs(drift);
 
-                // Only hard-seek if drift is large AND video has enough data
-                // Use a longer debounce (3s) to avoid repeated seeks on mobile
-                if (absDrift > 8 && !video.seeking && video.readyState >= 3) {
+                // Forced resync (tab just came back to the foreground): seek
+                // immediately regardless of buffered readyState. A backgrounded
+                // video can report a stale/zeroed currentTime on iOS, and waiting
+                // for the readyState>=3 gate below made it look like playback had
+                // silently reset to the start instead of catching back up.
+                if (opts?.force && absDrift > 1.5 && !video.seeking) {
+                    lastSeekTimeRef.current = now;
+                    video.currentTime = targetPosition;
+                    video.playbackRate = 1.0;
+                } else if (absDrift > 8 && !video.seeking && video.readyState >= 3) {
+                    // Only hard-seek if drift is large AND video has enough data
+                    // Use a longer debounce (3s) to avoid repeated seeks on mobile
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
                     video.playbackRate = 1.0;
@@ -380,7 +420,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                 // Play/pause — always try to play muted first (works without user gesture).
                 // If user has interacted, unmute is handled by the unmute button.
-                if (ps.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
+                if (ps.isPlaying && video.paused && !video.ended && (video.readyState >= 2 || opts?.force)) {
                     if (!hasUserInteractedRef.current) {
                         video.muted = true; // ensure muted for autoplay
                     }
@@ -391,12 +431,39 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             } catch (e) { console.error('Sync heartbeat failure:', e); }
         };
 
-        const interval = setInterval(syncClock, 1500); // 1.5s — gentler cadence
+        const interval = setInterval(() => syncClock(), 1500); // 1.5s — gentler cadence
         // Don't call syncClock() immediately on mount; let the video settle first
-        const initialDelay = setTimeout(syncClock, 3000);
+        const initialDelay = setTimeout(() => syncClock(), 3000);
+
+        // ── FOREGROUND RESYNC ─────────────────────────────────────────────
+        // iOS Safari throttles (or fully suspends) timers and video decoding
+        // while a tab is backgrounded/screen is locked. When the user comes
+        // back — e.g. after leaving the lobby tab and returning mid-film —
+        // the interval above can take up to 1.5s to fire again, and by then
+        // the video element may be sitting on a stale frame from whenever it
+        // got suspended. This forces an immediate hard seek + resume instead
+        // of waiting, so viewers land back on the live position rather than
+        // appearing stuck (or looking like playback reset to frame one).
+        const handleForegroundReturn = () => {
+            if (document.visibilityState !== 'visible') return;
+            const video = videoRef.current;
+            // If the element lost its buffered data while backgrounded, kick
+            // it to reload before forcing the seek below.
+            if (video && video.readyState < 2) {
+                video.load();
+            }
+            syncClock({ force: true });
+        };
+        document.addEventListener('visibilitychange', handleForegroundReturn);
+        window.addEventListener('pageshow', handleForegroundReturn);
+        window.addEventListener('focus', handleForegroundReturn);
+
         return () => {
             clearInterval(interval);
             clearTimeout(initialDelay);
+            document.removeEventListener('visibilitychange', handleForegroundReturn);
+            window.removeEventListener('pageshow', handleForegroundReturn);
+            window.removeEventListener('focus', handleForegroundReturn);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isControllerMode]); // ← intentionally omit partyState/movie — we use refs
@@ -434,12 +501,44 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         };
     }, [movie?.fullMovie]);
 
+    // ── HARD STOP WHEN ADMIN ENDS THE PARTY ───────────────────────────────
+    // Ending the party swaps the JSX to the "Session Ended" screen, which
+    // un-renders the <video> tag — but WatchPartyPage itself never unmounts
+    // (it's one component conditionally returning different views), so the
+    // hls.js instance attached above never runs its cleanup. On Android
+    // Chrome (the only place hls.js is used — iOS/Safari play HLS natively)
+    // hls.js keeps feeding the MediaSource and the detached video element
+    // keeps playing/decoding even though it's no longer visible. Explicitly
+    // pause + detach the source and destroy hls.js the moment the party ends.
+    useEffect(() => {
+        if (partyState?.status !== 'ended') return;
+        const video = videoRef.current;
+        if (video) {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+        }
+        if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
+        }
+    }, [partyState?.status]);
+
     useEffect(() => {
         // Retry until Firebase is ready — it initializes async so first call may return null
         let unsubscribe: (() => void) | null = null;
         let reactionsUnsub: (() => void) | null = null;
         let viewerUnsub: (() => void) | null = null;
         let retryTimer: ReturnType<typeof setTimeout> | null = null;
+        let partyRefForVisibility: any = null;
+
+        const applyPartyDoc = (doc: any) => {
+            if (!doc.exists) return;
+            const state = doc.data() as WatchPartyState;
+            setPartyState(state);
+            partyStateRef.current = state; // keep stable ref in sync
+            if (state.status === 'live') setShowLobby(false);
+        };
 
         const setup = () => {
             const db = getDbInstance();
@@ -449,15 +548,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 return;
             }
             const partyRef = db.collection('watch_parties').doc(movieKey);
-            unsubscribe = partyRef.onSnapshot(doc => { 
-                if (doc.exists) {
-                    const state = doc.data() as WatchPartyState;
-                    setPartyState(state);
-                    partyStateRef.current = state; // keep stable ref in sync
-                    if (state.status === 'live') {
-                        setShowLobby(false);
-                    }
-                }
+            partyRefForVisibility = partyRef;
+            unsubscribe = partyRef.onSnapshot(doc => {
+                applyPartyDoc(doc);
+                setPartyStateReady(true);
             });
             reactionsUnsub = partyRef.collection('live_reactions')
                 .where('timestamp', '>=', new Date(Date.now() - 5000))
@@ -473,11 +567,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         setup();
 
+        // ── FORCE A FRESH FETCH ON FOREGROUND RETURN ─────────────────────────
+        // Backgrounding a tab on mobile can suspend the Firestore socket (no
+        // reconnect until the SDK notices), so activeMovieIndex can go stale
+        // while the party advances to a later film. Rather than wait for
+        // onSnapshot to reconnect on its own, explicitly re-fetch the party
+        // doc the moment the tab is visible again so the block index (and
+        // therefore which film's <video src> we render) catches up right away
+        // instead of briefly showing/playing a film that's already over.
+        const handleVisible = () => {
+            if (document.visibilityState !== 'visible' || !partyRefForVisibility) return;
+            partyRefForVisibility.get().then(applyPartyDoc).catch(() => {});
+        };
+        document.addEventListener('visibilitychange', handleVisible);
+
         return () => {
             if (retryTimer) clearTimeout(retryTimer);
             if (unsubscribe) unsubscribe();
             if (reactionsUnsub) reactionsUnsub();
             if (viewerUnsub) viewerUnsub();
+            document.removeEventListener('visibilitychange', handleVisible);
         };
     }, [movieKey]);
 
@@ -797,8 +906,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 onToggleLike={handleToggleLike}
                 hasFestivalAllAccess={hasFestivalAllAccess}
                 onUpgradeToFullPass={() => setShowPaywall(true)}
+                nextBlock={nextBlockInfo}
+                onBuyNextBlock={handleBuyNextBlock}
             />
         );
+    }
+
+    // ── AVOID FLASHING THE WRONG FILM ─────────────────────────────────────
+    // For a block, `movie` falls back to film index 0 until partyState has
+    // loaded. If we mount the <video> during that window it briefly loads
+    // (and can start playing) the FIRST film in the block instead of the one
+    // actually airing — this is what showed up on iPhone as "it goes back to
+    // the first frame of the first movie" after returning from the background,
+    // since a remount briefly recreates exactly that window before the fresh
+    // Firestore snapshot arrives.
+    const isBlockContext = !!(((movie as any)?._blockMovieKeys?.length) > 1);
+    if (isBlockContext && !partyStateReady) {
+        return <LoadingSpinner />;
     }
 
     return (
@@ -813,22 +937,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Transmission Active</span>
                             {(() => {
                                 const m = movie as any;
-                                const blockKeys: string[] | undefined = m?._blockMovieKeys;
-                                if (blockKeys && blockKeys.length > 1) {
-                                    const idx = (partyState?.activeMovieIndex ?? 0);
-                                    return (
-                                        <>
-                                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{m._activeFilmTitle || movie.title}</h2>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                {blockKeys.map((_: string, i: number) => (
-                                                    <div key={i} className={`h-0.5 w-4 rounded-full transition-all ${i === idx ? 'bg-red-500 w-6' : i < idx ? 'bg-red-500/40' : 'bg-white/20'}`} />
-                                                ))}
-                                                <span className="text-[8px] text-gray-500 ml-1">Film {idx + 1}/{blockKeys.length}</span>
-                                            </div>
-                                        </>
-                                    );
-                                }
-                                return <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>;
+                                // NOTE: the old "Film X/Y" progress dots were removed — they read
+                                // partyState.activeMovieIndex on first render only in some cached
+                                // paths and visibly lagged behind the actual film advancing, so we
+                                // just show the currently-playing title instead of a counter that
+                                // can drift out of sync.
+                                return <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{m?._activeFilmTitle || movie.title}</h2>;
                             })()}
                             {isBackstageVerified && (
                                 <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>

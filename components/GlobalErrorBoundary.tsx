@@ -1,5 +1,6 @@
 
 import React, { ErrorInfo, ReactNode } from 'react';
+import { reportClientError } from '../services/errorLogger';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -28,6 +29,9 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
   // Method to log error information.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
+    // This is what makes "Our automated engineering core has been notified"
+    // (below) actually true instead of just reassuring copy.
+    reportClientError('GlobalErrorBoundary', error, { componentStack: errorInfo.componentStack });
   }
 
   public render(): ReactNode {

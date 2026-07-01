@@ -48,7 +48,7 @@ const MaintenanceScreen: React.FC = () => (
 );
 
 const App: React.FC = () => {
-    const { user, hasCrateFestPass, unlockedWatchPartyKeys, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { user, hasCrateFestPass, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
@@ -226,6 +226,18 @@ const App: React.FC = () => {
         if (isFestivalLive) return festivalConfig;
         return null;
     }, [isFestivalLive, settings.crateFestConfig, festivalConfig, livePartyMovie, activeParties, dismissedBannerKeys]);
+
+    // The ribbon/lobby-overlay flow can point at either an individual movie OR a
+    // festival block (livePartyMovie.key === block.id in that case). Ticketing
+    // and entitlements work differently for blocks — resolve which one this is
+    // once here so the lobby overlay below can gate access and route purchases
+    // correctly instead of always treating it as a single-movie ticket.
+    const livePartyParentBlock = useMemo(() => {
+        if (!livePartyMovie) return null;
+        const fromFestival = festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === livePartyMovie.key);
+        if (fromFestival) return fromFestival;
+        return settings.crateFestConfig?.movieBlocks?.find((b: any) => b.id === livePartyMovie.key) || null;
+    }, [livePartyMovie, festivalData, settings.crateFestConfig]);
 
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
@@ -474,11 +486,16 @@ const App: React.FC = () => {
                 />
             )}
 
-            {/* Watch Party Lobby Overlay — opens on banner or notification CTA click */}
+            {/* Watch Party Lobby Overlay — opens on banner or notification CTA click.
+                livePartyMovie can be a real movie OR a synthesized stand-in for a
+                festival block (see livePartyParentBlock above) — access and
+                purchases have to be checked/routed differently for each. */}
             {showLobbyOverlay && livePartyMovie && (
                 <div className="fixed inset-0 z-[200] overflow-y-auto">
                     <WatchPartyLobby
                         movie={livePartyMovie}
+                        movieKey={livePartyMovie.key}
+                        blockPrice={livePartyParentBlock?.price}
                         partyState={activeParties[livePartyMovie.key]}
                         onPartyStart={() => {
                             setShowLobbyOverlay(false);
@@ -488,7 +505,10 @@ const App: React.FC = () => {
                         user={user}
                         hasAccess={
                             !livePartyMovie.isWatchPartyPaid ||
-                            unlockedWatchPartyKeys.has(livePartyMovie.key) ||
+                            hasFestivalAllAccess ||
+                            (livePartyParentBlock
+                                ? unlockedFestivalBlockIds.has(livePartyMovie.key)
+                                : unlockedWatchPartyKeys.has(livePartyMovie.key)) ||
                             hasCrateFestPass
                         }
                         onBuyTicket={() => setLobbyPaywallOpen(true)}
@@ -497,9 +517,15 @@ const App: React.FC = () => {
                     {lobbyPaywallOpen && (
                         <SquarePaymentModal
                             movie={livePartyMovie}
+                            block={livePartyParentBlock || undefined}
+                            paymentType={livePartyParentBlock ? "block" : "watchPartyTicket"}
+                            priceOverride={livePartyParentBlock ? livePartyParentBlock.price : undefined}
                             onClose={() => setLobbyPaywallOpen(false)}
-                            onPaymentSuccess={() => setLobbyPaywallOpen(false)}
-                            paymentType="watchPartyTicket"
+                            onPaymentSuccess={() => {
+                                if (livePartyParentBlock) unlockFestivalBlock(livePartyParentBlock.id);
+                                else unlockWatchParty(livePartyMovie.key);
+                                setLobbyPaywallOpen(false);
+                            }}
                         />
                     )}
                 </div>
