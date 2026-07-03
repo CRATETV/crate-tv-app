@@ -90,43 +90,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys]);
 
-  // ── SIGNED STREAM URL ────────────────────────────────────────────────
-  // Same fix as WatchPartyPage.tsx — see the longer note there. The player
-  // used to bind straight to the permanent public movie.fullMovie URL;
-  // this fetches a 4-hour signed CloudFront URL (server-verified access)
-  // and uses that instead, falling back to the raw URL if the request
-  // fails so an outage here can't stop someone from watching what they
-  // already paid for. NOTE: this is only half the fix — see the note in
-  // WatchPartyPage.tsx about CloudFront also needing to reject unsigned
-  // requests for this to actually be enforced.
-  const [signedStreamUrl, setSignedStreamUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!movie?.key || !hasAccess) { setSignedStreamUrl(null); return; }
-    let cancelled = false;
-    setSignedStreamUrl(null);
-
-    const fetchSignedUrl = async () => {
-      try {
-        const idToken = await getUserIdToken();
-        if (!idToken) return;
-        const res = await fetch('/api/get-stream-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ movieKey: movie.key, blockId: parentFestivalBlock?.id, idToken }),
-        });
-        const data = await res.json();
-        if (!cancelled && data.url) setSignedStreamUrl(data.url);
-      } catch (e) {
-        console.error('[get-stream-url] Failed, falling back to direct URL:', e);
-      }
-    };
-    fetchSignedUrl();
-
-    const refreshTimer = setInterval(fetchSignedUrl, 3.5 * 60 * 60 * 1000);
-    return () => { cancelled = true; clearInterval(refreshTimer); };
-  }, [movie?.key, hasAccess, parentFestivalBlock?.id, getUserIdToken]);
-
-  const playableUrl = signedStreamUrl || movie?.fullMovie;
+  // ── SIGNED STREAM URL — DISABLED FOR NOW ──────────────────────────────
+  // See the long note in WatchPartyPage.tsx: api/get-stream-url.ts rewrites
+  // video URLs onto the wrong CloudFront distribution (the one serving
+  // posters/images, not the S3 bucket that actually hosts movie files), so
+  // every request through it was broken — that's what was causing videos
+  // not to start / get stuck / need a refresh. Reverted to the direct URL
+  // until that endpoint is pointed at the correct origin.
+  const playableUrl = movie?.fullMovie;
 
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked

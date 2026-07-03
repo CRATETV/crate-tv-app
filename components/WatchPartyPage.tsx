@@ -812,95 +812,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return !!(exp && new Date(exp) > new Date());
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
-    // ── SIGNED STREAM URL ─────────────────────────────────────────────────
-    // The player used to bind straight to movie.fullMovie — a permanent,
-    // unauthenticated, public URL. Anyone could pull it from the network tab
-    // (or the public catalog feed itself, which includes it for every movie
-    // regardless of who's asking) and it would play forever for anyone,
-    // paid or not. api/get-stream-url.ts already existed to fix this — it
-    // verifies the viewer's login and access server-side and hands back a
-    // CloudFront URL signed to expire in 4 hours — it just was never wired
-    // up to an actual player. This does that.
-    //
-    // IMPORTANT CAVEAT: this alone doesn't fully close the hole. The raw
-    // fullMovie URL is still present in the public catalog data, and unless
-    // CloudFront itself is configured to reject unsigned requests
-    // ("Restrict Viewer Access" with a trusted key group matching
-    // CLOUDFRONT_KEY_PAIR_ID), that raw URL still works fine on its own.
-    // This is the client-side half of the fix; the CDN needs the matching
-    // server-side restriction to actually be enforced.
-    const [signedStreamUrl, setSignedStreamUrl] = useState<string | null>(null);
-    // Tracks which film `signedStreamUrl` was actually fetched for. Resetting
-    // signedStreamUrl inside a useEffect (as this used to do) runs one render
-    // AFTER activeFilmKey changes — so on the very first render of a new
-    // film, signedStreamUrl still held the PREVIOUS film's signed URL, and
-    // the video would briefly try to load with the wrong film's (or an
-    // already-invalid) signed link. Resetting it synchronously during render
-    // — the standard React pattern for "derive state from a changing key" —
-    // means there's never a render where a stale value leaks through.
-    const [signedForKey, setSignedForKey] = useState<string | undefined>(undefined);
-    const activeFilmKey = useMemo(() => {
-        const m = movie as any;
-        if (m?._blockMovieKeys && m._blockMovieKeys.length > 0) {
-            const idx = Math.min(partyState?.activeMovieIndex ?? 0, m._blockMovieKeys.length - 1);
-            return m._blockMovieKeys[idx];
-        }
-        return movie?.key;
-    }, [movie, partyState?.activeMovieIndex]);
-
-    if (signedForKey !== activeFilmKey) {
-        setSignedForKey(activeFilmKey);
-        setSignedStreamUrl(null);
-    }
-
-    useEffect(() => {
-        if (!activeFilmKey || !hasAccess || movie?.isLiveStream) return;
-        let cancelled = false;
-
-        const fetchSignedUrl = async () => {
-            try {
-                const idToken = await getUserIdToken();
-                if (!idToken) return;
-                const res = await fetch('/api/get-stream-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey: activeFilmKey, blockId: parentBlock?.id, idToken }),
-                });
-                const data = await res.json();
-                if (cancelled || !data.url) return;
-
-                // Never swap the <video src> out from under playback that's
-                // already underway — changing src forces the browser to
-                // throw away whatever it had buffered and reload from
-                // scratch, which is exactly what was leaving the video
-                // "stuck" after a block advanced to the next film (this
-                // fetch would resolve a moment after the fresh raw-URL
-                // playback had already started, and the resulting swap
-                // hung instead of resuming). Only apply it if the video
-                // hasn't started loading yet, or is already paused/idle —
-                // both safe times to change the source.
-                const video = videoRef.current;
-                if (!video || video.readyState === 0 || video.paused) {
-                    setSignedStreamUrl(data.url);
-                }
-            } catch (e) {
-                // Falls back to movie.fullMovie below — an outage here shouldn't
-                // stop a paying customer from watching.
-                console.error('[get-stream-url] Failed, falling back to direct URL:', e);
-            }
-        };
-        fetchSignedUrl();
-
-        // Signed URLs expire after 4 hours — refresh before that in case a
-        // long block marathon runs longer than one film. (Same mid-playback
-        // guard above applies, so this won't interrupt an actively-playing
-        // film either — it'll just catch on the next natural pause/idle
-        // moment, e.g. the next film's intermission.)
-        const refreshTimer = setInterval(fetchSignedUrl, 3.5 * 60 * 60 * 1000);
-        return () => { cancelled = true; clearInterval(refreshTimer); };
-    }, [activeFilmKey, hasAccess, parentBlock?.id, movie?.isLiveStream, getUserIdToken]);
-
-    const playableUrl = (signedForKey === activeFilmKey ? signedStreamUrl : null) || movie?.fullMovie;
+    // ── SIGNED STREAM URL — DISABLED FOR NOW ────────────────────────────────
+    // This briefly routed playback through api/get-stream-url.ts (a
+    // time-limited signed CloudFront URL instead of the permanent public
+    // movie.fullMovie link) as part of closing a piracy/paywall-bypass gap.
+    // Turned out that endpoint was never actually finished being configured:
+    // it rewrites every video URL onto the CloudFront distribution that
+    // serves posters/logos/photos, not the one (if any) in front of the S3
+    // bucket that actually hosts movie files (cratetelevision.s3...). Every
+    // request through it was breaking — that's what was causing videos to
+    // not start, get stuck, and need a refresh, worst on Android. Reverted
+    // to the direct URL (the reliable, previously-working path) until
+    // get-stream-url.ts is pointed at the right origin and this can be
+    // safely turned back on.
+    const playableUrl = movie?.fullMovie;
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);

@@ -135,36 +135,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
+    // Auto-grants festival access if this user's email is on the PWFF invite
+    // list — used right after sign-in/sign-up. This used to write
+    // `unlockedBlocks` / `hasFestivalAllAccess` directly to Firestore from
+    // the browser on every login, which firestore.rules blocks (that's the
+    // "Missing or insufficient permissions" error showing up in the
+    // console) — moved server-side into api/grant-invite-access.ts, same
+    // pattern as every other access grant. Best-effort: if it fails, login
+    // itself still succeeds, it just doesn't unlock the invite that time.
+    const grantInviteAccessIfEligible = async (firebaseUser: { getIdToken: (forceRefresh?: boolean) => Promise<string> }) => {
+        try {
+            const idToken = await firebaseUser.getIdToken();
+            await fetch('/api/grant-invite-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+            });
+        } catch (e) {
+            console.error('Failed to check/grant invite access:', e);
+        }
+    };
+
     const signIn = async (email: string, password: string) => {
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         const result = await auth.signInWithEmailAndPassword(email, password);
         if (result.user) {
             await writeSessionToken(result.user.uid);
-
-            // Auto-grant festival access if this email is on the invite list
-            const db = getDbInstance();
-            if (db) {
-                const invite = await db.collection('pwff_invites').doc(email.toLowerCase().trim()).get().catch(() => null);
-                if (invite?.exists && !invite.data()?.accessGranted) {
-                    const inviteData = invite.data();
-                    if (inviteData?.accessType === 'block' && inviteData?.blockId) {
-                        const expiry = new Date();
-                        expiry.setFullYear(expiry.getFullYear() + 1);
-                        await updateUserProfile(result.user.uid, {
-                            unlockedBlocks: { [inviteData.blockId]: expiry.toISOString() }
-                        });
-                    } else {
-                        await updateUserProfile(result.user.uid, { hasFestivalAllAccess: true });
-                    }
-                    await db.collection('pwff_invites').doc(email.toLowerCase().trim()).update({
-                        accessGranted: true,
-                        accessGrantedAt: new Date().toISOString(),
-                        uid: result.user.uid,
-                        status: 'signed_in',
-                    }).catch(() => {});
-                }
-            }
+            await grantInviteAccessIfEligible(result.user);
         }
     };
 
@@ -198,30 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (result.user) {
             await createUserProfile(result.user.uid, email, name);
             await writeSessionToken(result.user.uid);
-
-            // Auto-grant festival access if this email is on the invite list
-            const db = getDbInstance();
-            if (db) {
-                const invite = await db.collection('pwff_invites').doc(email.toLowerCase().trim()).get().catch(() => null);
-                if (invite?.exists && !invite.data()?.accessGranted) {
-                    const inviteData = invite.data();
-                    if (inviteData?.accessType === 'block' && inviteData?.blockId) {
-                        const expiry = new Date();
-                        expiry.setFullYear(expiry.getFullYear() + 1);
-                        await updateUserProfile(result.user.uid, {
-                            unlockedBlocks: { [inviteData.blockId]: expiry.toISOString() }
-                        });
-                    } else {
-                        await updateUserProfile(result.user.uid, { hasFestivalAllAccess: true });
-                    }
-                    await db.collection('pwff_invites').doc(email.toLowerCase().trim()).update({
-                        accessGranted: true,
-                        accessGrantedAt: new Date().toISOString(),
-                        uid: result.user.uid,
-                        status: 'signed_up',
-                    }).catch(() => {});
-                }
-            }
+            await grantInviteAccessIfEligible(result.user);
         }
     };
     
