@@ -238,7 +238,7 @@ const FestivalProgramPage: React.FC = () => {
 
     const lobbyMovie = showLobbyFor
         ? (movies[showLobbyFor] || (() => {
-            const block = festivalData.flatMap(d => d.blocks).find(b => b.id === showLobbyFor);
+            const block = festivalData.flatMap(d => d.blocks || []).find(b => b.id === showLobbyFor);
             if (!block) return null;
             return { key: block.id, title: block.title, isWatchPartyEnabled: true, isWatchPartyPaid: (block.price || 0) > 0, watchPartyPrice: block.price, poster: movies[block.movieKeys?.[0]]?.poster || '', director: 'Festival Event' } as Movie;
         })())
@@ -344,8 +344,8 @@ const FestivalProgramPage: React.FC = () => {
 
                         {/* Blocks */}
                         <div className="space-y-6">
-                            {currentDayData.blocks.map(block => {
-                                const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
+                            {(currentDayData.blocks || []).map(block => {
+                                const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                                 const isLive = activeParties[block.id]?.status === 'live';
                                 const hasWatchParty = !!block.isWatchPartyEnabled;
@@ -399,8 +399,8 @@ const FestivalProgramPage: React.FC = () => {
             {paymentItem && (
                 <SquarePaymentModal
                     paymentType={paymentItem.type as any}
-                    block={paymentItem.blockId ? festivalData.flatMap(d => d.blocks).find(b => b.id === paymentItem.blockId) : undefined}
-                    priceOverride={paymentItem.type === 'pass' ? 50 : (paymentItem.blockId ? festivalData.flatMap(d => d.blocks).find(b => b.id === paymentItem.blockId)?.price : undefined)}
+                    block={paymentItem.blockId ? festivalData.flatMap(d => d.blocks || []).find(b => b.id === paymentItem.blockId) : undefined}
+                    priceOverride={paymentItem.type === 'pass' ? 50 : (paymentItem.blockId ? festivalData.flatMap(d => d.blocks || []).find(b => b.id === paymentItem.blockId)?.price : undefined)}
                     onClose={() => setPaymentItem(null)}
                     onPaymentSuccess={handlePaymentSuccess as any}
                 />

@@ -12,7 +12,7 @@ interface LiveWatchPartyBannerProps {
 
 const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose, onEnterLobby }) => {
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
-    const { festivalData, activeParties, refreshData } = useFestival();
+    const { festivalData, allPartyStates, refreshData } = useFestival();
     const [now, setNow] = useState(new Date());
     const [isAutoStarting, setIsAutoStarting] = useState(false);
     const [autoStartAttempted, setAutoStartAttempted] = useState(false);
@@ -22,7 +22,13 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
         return () => clearInterval(timer);
     }, []);
 
-    const partyState = activeParties[movie.key];
+    // `activeParties` is filtered server-side to status==='live' docs only, so
+    // once a party ends its doc simply isn't in there anymore — reading status
+    // off of it meant `isEnded` could never actually become true (an ended
+    // party looks identical to one that never started: partyState undefined).
+    // `allPartyStates` includes every status, so it's the only reliable source
+    // for "has this specific party actually ended."
+    const partyState = allPartyStates[movie.key];
     const isExplicitlyLive = partyState?.status === 'live';
     // This used to be entirely absent — every check here was purely time-based
     // (elapsed time since the scheduled start), so once a party actually ended
@@ -68,7 +74,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
         if (unlockedWatchPartyKeys.has(movie.key)) return true;
         
         // Check if this movie belongs to any unlocked block
-        const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movie.key));
+        const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.movieKeys.includes(movie.key));
         if (parentBlock && unlockedFestivalBlockIds.has(parentBlock.id)) return true;
         
         return false;
@@ -158,7 +164,11 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                         </span>
                         <Countdown targetDate={movie.watchPartyStartTime!} className="text-[9px] md:text-[11px] font-mono font-black text-white" prefix="" />
                     </div>
-                ) : isStartingSoon ? (
+                ) : isStartingSoon && !isLive ? (
+                    // isStartingSoon is purely time-based (within the post-start window),
+                    // so without the `!isLive` guard a party that actually went live right
+                    // on schedule would sit here showing "Starting Any Moment" instead of
+                    // "Live Transmission Active" for its first two hours.
                     <div className="bg-amber-500/20 px-3 md:px-4 py-1 rounded-full border border-amber-400/30 flex items-center gap-2 animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                         <span className="text-[9px] md:text-[10px] font-black text-amber-200 uppercase tracking-widest">Starting Any Moment</span>

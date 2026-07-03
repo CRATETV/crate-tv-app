@@ -91,7 +91,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
   // Find the currently active session for the "Live Now" feature
   const activePartyKey = Object.keys(activeParties).find(key => activeParties[key].status === 'live');
   const activePartyData = activePartyKey ? activeParties[activePartyKey] : null;
-  const activePartyEntity = activePartyKey ? (allMovies[activePartyKey] || festivalData.flatMap(d => d.blocks).find(b => b.id === activePartyKey)) : null;
+  const activePartyEntity = activePartyKey ? (allMovies[activePartyKey] || festivalData.flatMap(d => d.blocks || []).find(b => b.id === activePartyKey)) : null;
 
   return (
     <div className="font-sans bg-transparent pb-32 relative">
@@ -182,8 +182,8 @@ const FestivalView: React.FC<FestivalViewProps> = ({
               </div>
 
               <div className="space-y-12">
-                  {currentDayData.blocks.map(block => {
-                      const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
+                  {(currentDayData.blocks || []).map(block => {
+                      const blockMovies = (block.movieKeys || []).map(key => allMovies[key]).filter(Boolean);
                       const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id) || (!block.price || block.price === 0);
                       const blockScreenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
                       const blockScreeningPassed = blockScreenStart ? new Date() >= blockScreenStart : true;

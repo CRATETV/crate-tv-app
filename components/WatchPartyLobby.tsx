@@ -258,11 +258,14 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         return () => clearInterval(interval);
     }, []);
 
-    // If party is live AND viewer has access — transition directly in
-    // We only do this when there's no countdown to show (startTime is null or already passed)
-    const countdownFinished = !startTime || new Date() >= startTime;
-    
-    if (partyState?.status === 'live' && countdownFinished) {
+    // If party is live — transition directly in. This used to also require
+    // countdownFinished (now < scheduled start time), which meant if an
+    // admin manually started a party a bit EARLY (before its own scheduled
+    // time), this component would never notice on its own — it only worked
+    // because the parent (WatchPartyPage) independently unmounts the lobby
+    // the moment status flips to 'live', papering over it. Status alone is
+    // the actual source of truth for "is it live," so check only that.
+    if (partyState?.status === 'live') {
         if (!hasAccess) {
             return (
                 <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-8">

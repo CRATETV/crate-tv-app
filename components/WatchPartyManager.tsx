@@ -91,12 +91,13 @@ const EmbeddedChat: React.FC<{
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    movieKey, 
-                    userName: 'CRATETV', 
-                    userAvatar: 'crate', 
+                body: JSON.stringify({
+                    movieKey,
+                    userName: 'CRATETV',
+                    userAvatar: 'crate',
                     text: newMessage,
-                    isAdmin: true
+                    isAdmin: true,
+                    adminPassword: sessionStorage.getItem('adminPassword') || '',
                 }),
             });
             setNewMessage('');
@@ -133,24 +134,26 @@ const EmbeddedChat: React.FC<{
                 await fetch('/api/send-chat-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        movieKey, 
-                        userName: '🎬 SYSTEM', 
-                        userAvatar: 'fox', 
+                    body: JSON.stringify({
+                        movieKey,
+                        userName: '🎬 SYSTEM',
+                        userAvatar: 'fox',
                         text: '🎤 Director Q&A is starting! Ask your questions now!',
-                        isSystemMessage: true
+                        isSystemMessage: true,
+                        adminPassword: sessionStorage.getItem('adminPassword') || '',
                     }),
                 });
             } else {
                 await fetch('/api/send-chat-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        movieKey, 
-                        userName: '🎬 SYSTEM', 
-                        userAvatar: 'fox', 
+                    body: JSON.stringify({
+                        movieKey,
+                        userName: '🎬 SYSTEM',
+                        userAvatar: 'fox',
                         text: 'Director Q&A has ended. Thank you for joining!',
-                        isSystemMessage: true
+                        isSystemMessage: true,
+                        adminPassword: sessionStorage.getItem('adminPassword') || '',
                     }),
                 });
             }
@@ -788,33 +791,39 @@ const WatchPartyControlRoom: React.FC<{
                                         </button>
                                     )}
 
-                                    {/* Send 24hr reminder to all ticket holders */}
-                                    {(item.movieKeys?.length === 1 || item.type !== 'block') && (
-                                        <button
-                                            onClick={async () => {
-                                                const pwd = sessionStorage.getItem('adminPassword') || '';
-                                                try {
-                                                    const res = await fetch('/api/send-watchparty-reminder', {
-                                                        method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ movieKey: (item.movieKeys && item.movieKeys.length === 1 ? item.movieKeys[0] : item.id), adminPassword: pwd }),
-                                                    });
-                                                    const data = await res.json();
-                                                    if (data.success) {
-                                                        alert(`Reminder sent to ${data.sent} ticket holder${data.sent !== 1 ? 's' : ''}.`);
-                                                    } else {
-                                                        alert('Error: ' + (data.error || 'Send failed'));
-                                                    }
-                                                } catch (e) {
-                                                    alert('Network error — try again');
+                                    {/* Send reminder to all ticket holders (direct buyers for this
+                                        item plus full-festival-pass holders) — works for both single
+                                        movies and blocks now; itemId matches festival_tickets.itemId
+                                        exactly as written at purchase time for either. */}
+                                    <button
+                                        onClick={async () => {
+                                            const pwd = sessionStorage.getItem('adminPassword') || '';
+                                            try {
+                                                const res = await fetch('/api/send-watchparty-reminder', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        itemId: item.id,
+                                                        title: item.title,
+                                                        watchPartyStartTime: item.watchPartyStartTime,
+                                                        adminPassword: pwd,
+                                                    }),
+                                                });
+                                                const data = await res.json();
+                                                if (data.success) {
+                                                    alert(`Reminder sent to ${data.sent} ticket holder${data.sent !== 1 ? 's' : ''}.`);
+                                                } else {
+                                                    alert('Error: ' + (data.error || 'Send failed'));
                                                 }
-                                            }}
-                                            className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-blue-500/30 transition-all flex items-center gap-2"
-                                        >
-                                            <span>📧</span>
-                                            Send Reminder
-                                        </button>
-                                    )}
+                                            } catch (e) {
+                                                alert('Network error — try again');
+                                            }
+                                        }}
+                                        className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-blue-500/30 transition-all flex items-center gap-2"
+                                    >
+                                        <span>📧</span>
+                                        Send Reminder
+                                    </button>
                                     
                                     {/* Director welcome message button */}
                                     {countdown && (

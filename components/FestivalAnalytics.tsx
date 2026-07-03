@@ -12,7 +12,7 @@ const formatCurrency = (val: number) => `$${(val / 100).toFixed(2)}`;
 const FestivalAnalytics: React.FC<FestivalAnalyticsProps> = ({ analytics, festivalData, config }) => {
     if (!analytics || !config) return null;
 
-    const allFestivalBlocks = festivalData.flatMap(day => day.blocks);
+    const allFestivalBlocks = festivalData.flatMap(day => day.blocks || []);
 
     const handleDownloadLedger = () => {
         const headers = ["Block Title", "Time", "Units Sold", "Revenue (USD)"];

@@ -76,7 +76,8 @@ const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>((
     );
 });
 
-const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; onBackstageVerify?: (key: string) => void }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, onBackstageVerify }) => {
+const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; verifiedBackstageKey?: string; onBackstageVerify?: (key: string) => void }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, verifiedBackstageKey, onBackstageVerify }) => {
+    const { getUserIdToken } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -123,15 +124,22 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
         if (!newMessage.trim() || !user) return;
         setIsSending(true);
         try {
+            // The server now verifies both of these independently — an ID
+            // token to confirm this is a real signed-in account, and (when
+            // claiming director status) the actual backstage key, not just
+            // a client-side boolean. See api/send-chat-message.ts.
+            const idToken = await getUserIdToken();
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    movieKey: partyKey, 
-                    userName: user.name || user.email, 
-                    userAvatar: user.avatar || 'fox', 
+                body: JSON.stringify({
+                    movieKey: partyKey,
+                    userName: user.name || user.email,
+                    userAvatar: user.avatar || 'fox',
                     text: newMessage,
-                    isVerifiedDirector: isBackstageVerified
+                    isVerifiedDirector: isBackstageVerified,
+                    backstageKey: isBackstageVerified ? verifiedBackstageKey : undefined,
+                    idToken,
                 }),
             });
             setNewMessage('');
@@ -140,7 +148,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 
     return (
         <div 
-            className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800'} overflow-hidden min-h-0`}
+            className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900'} overflow-hidden min-h-0`}
             onClick={(e) => e.stopPropagation()}
         >
             {/* Q&A Live Banner */}
@@ -292,6 +300,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
+    // The actual key value, kept alongside the boolean so chat messages can
+    // send it to the server for independent re-verification — see
+    // api/send-chat-message.ts, which no longer trusts isVerifiedDirector
+    // as a bare claim.
+    const [verifiedBackstageKey, setVerifiedBackstageKey] = useState('');
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
@@ -363,7 +376,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (allMovies[movieKey]) return allMovies[movieKey];
         
         // Check if it's a festival block
-        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        // (|| [] guard — a festival day doc without a blocks array made this
+        // throw a TypeError, which crashed the whole page render via the
+        // error boundary right at the moment a party went live: that's the
+        // instant activeMovieIndex first appears on the party doc, which is
+        // in this hook's own dependency array, forcing a recompute exactly
+        // then. From the viewer's side that looked like "the video just
+        // never showed up" — the only way back was a full page reload,
+        // which loads unaffected by whatever had crashed the live render.)
+        const block = festivalData.flatMap(d => d.blocks || []).find(b => b.id === movieKey);
         if (block) {
             // Use activeMovieIndex from partyState to determine which film in the block is playing
             const idx = partyState?.activeMovieIndex ?? 0;
@@ -398,6 +419,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
             unlockWatchParty(movieKey);
             setIsBackstageVerified(true);
+            setVerifiedBackstageKey(backstageInput);
             setBackstageError(false);
             setBackstageInput('');
         } else {
@@ -843,7 +865,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (unlockedFestivalBlockIds.has(movieKey)) return true;
 
         // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's
-        const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movieKey));
+        // (same || [] guard as the movie useMemo above — see that comment)
+        const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.movieKeys.includes(movieKey));
         if (parentBlock) {
             if (unlockedFestivalBlockIds.has(parentBlock.id)) return true;
             // SECURITY: if block price is not set, default to PAID (not free)
@@ -1125,7 +1148,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         <div className="fixed inset-0 flex flex-col bg-black text-white overflow-hidden">
                 <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
                 <div className="flex-grow flex flex-col relative h-full pb-80 md:pb-0">
-                    <div className="p-3 bg-black/90 flex items-center justify-between border-b border-white/5">
+                    <div className="p-3 bg-black/90 flex items-center justify-between">
                         <button onClick={() => window.history.back()} className="text-gray-400 hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                         </button>
@@ -1151,6 +1174,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         const key = window.prompt("Enter Backstage Key:");
                                         if (key && partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                             setIsBackstageVerified(true);
+                                            setVerifiedBackstageKey(key);
                                             unlockWatchParty(movieKey);
                                         } else if (key) {
                                             toast.error("Invalid access key.");
@@ -1205,7 +1229,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ) : (
                             movie.isLiveStream ? (
                                 <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black">
-                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!) }} />
+                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!) }} />
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
@@ -1316,7 +1340,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
 
                     <div 
-                        className="p-4 bg-black/40 border-y border-white/5 flex justify-center gap-6 md:gap-12 backdrop-blur-xl"
+                        className="p-4 bg-black/40 flex justify-center gap-6 md:gap-12 backdrop-blur-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {REACTION_TYPES.map(emoji => (
@@ -1336,7 +1360,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         translateY when the keyboard opens, sliding up above the keyboard —
                         the video itself never resizes or shifts. */}
                     <div
-                        className="md:hidden fixed left-0 right-0 bottom-0 z-40 h-80 flex flex-col overflow-hidden bg-[#0a0a0a] border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
+                        className="md:hidden fixed left-0 right-0 bottom-0 z-40 h-80 flex flex-col overflow-hidden bg-[#0a0a0a] shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
                         style={{
                             transform: `translateY(-${keyboardOffset}px)`,
                             paddingBottom: keyboardOffset > 0 ? 0 : 'env(safe-area-inset-bottom)',
@@ -1344,14 +1368,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         }}
                     >
                         <EmbeddedChat
-                            partyKey={movieKey} 
-                            directors={[]} 
-                            isQALive={partyState?.isQALive} 
-                            user={user} 
-                            isBackstageVerified={isBackstageVerified} 
+                            partyKey={movieKey}
+                            directors={[]}
+                            isQALive={partyState?.isQALive}
+                            user={user}
+                            isBackstageVerified={isBackstageVerified}
+                            verifiedBackstageKey={verifiedBackstageKey}
                             onBackstageVerify={(key) => {
                                 if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                     setIsBackstageVerified(true);
+                                    setVerifiedBackstageKey(key);
                                     unlockWatchParty(movieKey);
                                 } else {
                                     toast.error("Invalid access key.");
@@ -1361,16 +1387,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                 </div>
 
-                <div className="hidden md:flex w-96 flex-shrink-0 h-full border-l border-white/5">
-                    <EmbeddedChat 
-                        partyKey={movieKey} 
-                        directors={[]} 
-                        isQALive={partyState?.isQALive} 
-                        user={user} 
-                        isBackstageVerified={isBackstageVerified} 
+                <div className="hidden md:flex w-96 flex-shrink-0 h-full">
+                    <EmbeddedChat
+                        partyKey={movieKey}
+                        directors={[]}
+                        isQALive={partyState?.isQALive}
+                        user={user}
+                        isBackstageVerified={isBackstageVerified}
+                        verifiedBackstageKey={verifiedBackstageKey}
                         onBackstageVerify={(key) => {
                             if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                 setIsBackstageVerified(true);
+                                setVerifiedBackstageKey(key);
                                 unlockWatchParty(movieKey);
                             } else {
                                 toast.error("Invalid access key.");

@@ -15,28 +15,6 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // Check current party state first
-    const partyRef = db.collection('watch_parties').doc(movieKey);
-    const partyDoc = await partyRef.get();
-    const partyState = partyDoc.data();
-
-    // If already live, just return success
-    if (partyState?.status === 'live') {
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Party is already live.',
-        alreadyLive: true 
-      }), { status: 200 });
-    }
-
-    // If ended, don't auto-restart
-    if (partyState?.status === 'ended') {
-      return new Response(JSON.stringify({ 
-        error: 'Party was terminated. An admin must manually restart.',
-        status: 'ended'
-      }), { status: 400 });
-    }
-
     // Validate the movie/block exists — but don't block auto-start if lookup fails.
     // The countdown timer is sufficient proof this is a legitimate start request.
     // We only hard-block if it's a single movie with isWatchPartyEnabled explicitly false.
@@ -47,7 +25,69 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
     }
 
-    // CLEANUP: Purge old messages
+    // Every viewer's lobby independently calls this the moment its local
+    // countdown hits 0 (and retries every few seconds until it sees
+    // status==='live'), so this route can receive many near-simultaneous
+    // calls for the same party. The check-then-write used to be two
+    // separate steps — a plain read, then an unconditional `.set()` a
+    // moment later — so multiple concurrent callers could all read
+    // "not live yet," and all proceed to write, each generating a *new*
+    // random backstageKey and clobbering whichever one a director/press
+    // contact may already have been given. Doing the check-and-set inside
+    // one transaction makes Firestore itself pick exactly one winner;
+    // everyone else gets back `alreadyLive: true` with no write at all.
+    const partyRef = db.collection('watch_parties').doc(movieKey);
+    const txResult = await db.runTransaction(async (tx) => {
+      const partyDoc = await tx.get(partyRef);
+      const partyState = partyDoc.data();
+
+      if (partyState?.status === 'live') {
+        return { outcome: 'already-live' as const };
+      }
+      if (partyState?.status === 'ended') {
+        return { outcome: 'ended' as const };
+      }
+
+      tx.set(partyRef, {
+        status: 'live',
+        lastStartedAt: new Date().toISOString(),
+        actualStartTime: FieldValue.serverTimestamp(),
+        isPlaying: true,
+        currentTime: 0,
+        activeMovieIndex: 0,
+        filmStartTime: FieldValue.serverTimestamp(),
+        intermissionUntil: null,
+        isQALive: false,
+        lastUpdated: FieldValue.serverTimestamp(),
+        // Only mint a new key if this party doesn't already have one —
+        // otherwise a party that somehow cycles through this path twice
+        // (e.g. a prior partial/aborted start) would silently invalidate
+        // a key that may already have been shared with a director.
+        backstageKey: partyState?.backstageKey || Math.random().toString(36).substring(2, 8).toUpperCase(),
+        autoStarted: true
+      }, { merge: true });
+
+      return { outcome: 'started' as const };
+    });
+
+    if (txResult.outcome === 'already-live') {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Party is already live.',
+        alreadyLive: true
+      }), { status: 200 });
+    }
+
+    if (txResult.outcome === 'ended') {
+      return new Response(JSON.stringify({
+        error: 'Party was terminated. An admin must manually restart.',
+        status: 'ended'
+      }), { status: 400 });
+    }
+
+    // Only the single winning caller (the one whose transaction actually
+    // flipped status to 'live') reaches here, so this purge can never run
+    // more than once per start.
     const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
     const snapshot = await messagesRef.get();
     if (!snapshot.empty) {
@@ -56,23 +96,7 @@ export async function POST(request: Request) {
       await batch.commit();
     }
 
-    // Start the party!
-    await partyRef.set({
-      status: 'live',
-      lastStartedAt: new Date().toISOString(),
-      actualStartTime: FieldValue.serverTimestamp(),
-      isPlaying: true,
-      currentTime: 0,
-      activeMovieIndex: 0,
-      filmStartTime: FieldValue.serverTimestamp(),
-      intermissionUntil: null,
-      isQALive: false,
-      lastUpdated: FieldValue.serverTimestamp(),
-      backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase(),
-      autoStarted: true
-    }, { merge: true });
-
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: true,
       message: 'Watch party started!',
       movieKey,

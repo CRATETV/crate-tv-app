@@ -7,7 +7,12 @@ import { ActorProfile } from '../types.js';
  * Exact Path: /api/search-actors
  * Query Param: ?q=[name]
  */
-export default async function handler(request: Request) {
+// Was `export default async function handler`, which this codebase's Vercel
+// functions don't route to unless paired with `export const config = {
+// runtime: 'nodejs' }` — this had neither, so Vercel never routed to it at
+// all and the Roku app's actor search (see roku/components/ActorSearchTask.brs)
+// has been silently broken in production.
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.toLowerCase().trim() || '';

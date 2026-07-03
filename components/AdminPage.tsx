@@ -564,7 +564,7 @@ const AdminPage: React.FC = () => {
                             pwffDescription={pwffDescription}
                             pwffTagline={pwffTagline}
                             pwffYear={pwffYear}
-                            pwffBlocks={festivalData.flatMap(d => d.blocks)}
+                            pwffBlocks={festivalData.flatMap(d => d.blocks || [])}
                             onToggleVisible={(val) => { setPwffVisible(val); }}
                             onChangeDate={(val) => { setPwffDate(val); }}
                             onChangeName={(val) => { setPwffName(val); }}
@@ -586,7 +586,7 @@ const AdminPage: React.FC = () => {
                         <PromoCodeManager 
                             isAdmin={true} 
                             targetFilms={Object.values(movies) as Movie[]} 
-                            targetBlocks={festivalData.flatMap(d => d.blocks)}
+                            targetBlocks={festivalData.flatMap(d => d.blocks || [])}
                         />
                     )}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}

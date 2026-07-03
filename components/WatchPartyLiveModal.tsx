@@ -36,9 +36,12 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
 
         for (const day of festivalData) {
             for (const block of day.blocks) {
-                // Check if this block has an active watch party
-                const blockPartyKey = `block_${block.id}`;
-                const partyState = activeParties[blockPartyKey];
+                // Check if this block has an active watch party — every write
+                // path (update-watch-parties.ts, auto-start-watch-party.ts,
+                // WatchPartyPage.tsx) stores a block's live party doc under
+                // the plain block id, never a `block_`-prefixed key, so this
+                // must match that or it never finds anything.
+                const partyState = activeParties[block.id];
                 
                 if (partyState && partyState.status === 'live') {
                     const blockMovies = block.movieKeys
@@ -70,7 +73,7 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
 
             // Find the block this movie belongs to
             const parentBlock = festivalData
-                .flatMap(d => d.blocks)
+                .flatMap(d => d.blocks || [])
                 .find(b => b.movieKeys.includes(movieKey));
 
             if (parentBlock) {

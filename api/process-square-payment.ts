@@ -16,7 +16,94 @@ const staticPriceMap: Record<string, number> = {
   juryPass: 2500,
 };
 
+// Atomically reserves one capacity slot for a block, if the block has a
+// capacity set. This used to be a plain read ("is ticketsSold >= capacity?")
+// followed, much later, by a separate non-transactional read-modify-write on
+// the same array field — two buyers racing for the last seat could both pass
+// the check and both get charged, overselling. Doing the check-and-increment
+// inside a single Firestore transaction means Firestore itself serializes
+// concurrent attempts: only as many callers as there are remaining seats can
+// ever succeed, everyone else gets a clean "sold out" error before their
+// card is charged. Blocks can live in either the festival day docs or the
+// CrateFest settings doc, so both are checked. Returns null if itemId isn't
+// a known block at all (nothing to reserve — e.g. a plain movie/VOD).
+async function reserveBlockCapacity(db: FirebaseFirestore.Firestore, itemId: string) {
+  const daysColRef = db.collection('festival').doc('schedule').collection('days');
+  const settingsRef = db.collection('settings').doc('site');
+
+  return db.runTransaction(async (tx) => {
+    const daysSnap = await tx.get(daysColRef);
+    for (const dayDoc of daysSnap.docs) {
+      const day = dayDoc.data();
+      const blocks: any[] = day.blocks || [];
+      const idx = blocks.findIndex((b: any) => b.id === itemId);
+      if (idx === -1) continue;
+
+      const block = blocks[idx];
+      if (!block.capacity) return { blockData: block, release: null as (() => Promise<void>) | null };
+      if ((block.ticketsSold || 0) >= block.capacity) throw new Error('This block is sold out.');
+
+      const updated = [...blocks];
+      updated[idx] = { ...block, ticketsSold: (block.ticketsSold || 0) + 1 };
+      tx.update(dayDoc.ref, { blocks: updated });
+
+      return {
+        blockData: block,
+        release: async () => {
+          try {
+            await db.runTransaction(async (tx2) => {
+              const snap = await tx2.get(dayDoc.ref);
+              const bs: any[] = snap.data()?.blocks || [];
+              const i2 = bs.findIndex((b: any) => b.id === itemId);
+              if (i2 === -1) return;
+              const upd = [...bs];
+              upd[i2] = { ...upd[i2], ticketsSold: Math.max(0, (upd[i2].ticketsSold || 0) - 1) };
+              tx2.update(dayDoc.ref, { blocks: upd });
+            });
+          } catch (e) { console.error(`[Payment API] Failed to release capacity for ${itemId}:`, e); }
+        },
+      };
+    }
+
+    // Not a PWFF block — check the CrateFest config, which stores its
+    // blocks as an array field on a single settings doc instead.
+    const settingsSnap = await tx.get(settingsRef);
+    const crateFestBlocks: any[] = settingsSnap.data()?.crateFestConfig?.movieBlocks || [];
+    const cIdx = crateFestBlocks.findIndex((b: any) => b.id === itemId);
+    if (cIdx === -1) return null;
+
+    const block = crateFestBlocks[cIdx];
+    if (!block.capacity) return { blockData: block, release: null as (() => Promise<void>) | null };
+    if ((block.ticketsSold || 0) >= block.capacity) throw new Error('This block is sold out.');
+
+    const updated = [...crateFestBlocks];
+    updated[cIdx] = { ...block, ticketsSold: (block.ticketsSold || 0) + 1 };
+    tx.update(settingsRef, { 'crateFestConfig.movieBlocks': updated });
+
+    return {
+      blockData: block,
+      release: async () => {
+        try {
+          await db.runTransaction(async (tx2) => {
+            const snap = await tx2.get(settingsRef);
+            const bs: any[] = snap.data()?.crateFestConfig?.movieBlocks || [];
+            const i2 = bs.findIndex((b: any) => b.id === itemId);
+            if (i2 === -1) return;
+            const upd = [...bs];
+            upd[i2] = { ...upd[i2], ticketsSold: Math.max(0, (upd[i2].ticketsSold || 0) - 1) };
+            tx2.update(settingsRef, { 'crateFestConfig.movieBlocks': upd });
+          });
+        } catch (e) { console.error(`[Payment API] Failed to release capacity for ${itemId}:`, e); }
+      },
+    };
+  });
+}
+
 export async function POST(request: Request) {
+  // Set only if a capacity reservation was actually made below — released
+  // in the catch block if the payment ends up failing after the reservation
+  // succeeded, so a failed charge never permanently occupies a seat.
+  let releaseCapacityReservation: (() => Promise<void>) | null = null;
   try {
     // No throttling existed on the endpoint that actually charges a card —
     // a script could otherwise hammer this with rapid repeated attempts
@@ -122,27 +209,18 @@ export async function POST(request: Request) {
         // customers depending on the block's real price. Same lookup pattern
         // as the 'movie'/'watchPartyTicket' branch above.
         if (!db) throw new Error("Database offline.");
-        let blockData: any = null;
-        const festSnap = await db.collection('festival').doc('schedule').collection('days').get();
-        festSnap.forEach(doc => {
-            const day = doc.data();
-            const found = day.blocks?.find((b: any) => b.id === itemId);
-            if (found) blockData = found;
-        });
-        if (!blockData) {
-            const settingsDoc = await db.collection('settings').doc('site').get();
-            const crateFestBlocks = settingsDoc.data()?.crateFestConfig?.movieBlocks || [];
-            blockData = crateFestBlocks.find((b: any) => b.id === itemId);
-        }
+        if (!itemId) throw new Error("Missing block id.");
 
         // Capacity is optional — most blocks have none set, meaning
         // unlimited (the original, unchanged behavior). Only enforced when
-        // an admin has explicitly set a cap on this specific block. Checked
-        // here, before the card is ever charged, so a sold-out block never
-        // takes anyone's money.
-        if (blockData?.capacity && (blockData.ticketsSold || 0) >= blockData.capacity) {
-            throw new Error('This block is sold out.');
-        }
+        // an admin has explicitly set a cap on this specific block. This
+        // check-and-reserve happens atomically, before the card is ever
+        // charged, so a sold-out block never takes anyone's money AND two
+        // simultaneous buyers can never both claim the last seat.
+        const reservation = await reserveBlockCapacity(db, itemId);
+        if (!reservation) throw new Error("Item record not found.");
+        const blockData = reservation.blockData;
+        releaseCapacityReservation = reservation.release;
 
         amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
         note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
@@ -320,27 +398,8 @@ export async function POST(request: Request) {
         } catch (e) {
             console.error('[Payment API] Failed to unlock block for user:', e);
         }
-
-        // Increment the block's sold-ticket counter, if it has a capacity set.
-        // Blocks live as entries inside an array field on their day document
-        // (not their own documents), so this reads the whole day, patches
-        // just this block's ticketsSold, and writes the array back — same
-        // pattern already used elsewhere in this file for block field updates.
-        try {
-            const festSnap = await db.collection('festival').doc('schedule').collection('days').get();
-            for (const dayDoc of festSnap.docs) {
-                const day = dayDoc.data();
-                const blocks = day.blocks || [];
-                const idx = blocks.findIndex((b: any) => b.id === itemId);
-                if (idx >= 0 && blocks[idx].capacity) {
-                    blocks[idx] = { ...blocks[idx], ticketsSold: (blocks[idx].ticketsSold || 0) + 1 };
-                    await dayDoc.ref.update({ blocks });
-                    break;
-                }
-            }
-        } catch (e) {
-            console.error('[Payment API] Failed to increment ticketsSold:', e);
-        }
+        // ticketsSold is already incremented atomically by reserveBlockCapacity
+        // above, before the card was charged — nothing further to do here.
     }
 
     // All-access pass — unlock all blocks
@@ -398,6 +457,12 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
+    // If a capacity slot was reserved but something failed afterward (card
+    // declined, network error, etc.), give the seat back — otherwise a
+    // failed payment would permanently count against capacity.
+    if (releaseCapacityReservation) {
+      await releaseCapacityReservation();
+    }
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     // Payment failures are the highest-priority thing to know about immediately.
     logServerError('api/process-square-payment', error);

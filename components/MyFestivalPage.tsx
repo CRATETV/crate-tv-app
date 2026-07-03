@@ -22,7 +22,7 @@ const formatTime = (d: Date | null): string | null => {
 
 const MyFestivalPage: React.FC = () => {
     const { user, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
-    const { festivalData, movies, activeParties, isLoading } = useFestival();
+    const { festivalData, movies, allPartyStates, isLoading } = useFestival();
 
     const myBlocks = useMemo(() => {
         const allBlocks = festivalData.flatMap(day =>
@@ -34,7 +34,12 @@ const MyFestivalPage: React.FC = () => {
 
         return accessible
             .map(({ block, dayLabel }) => {
-                const partyState = activeParties[block.id];
+                // `activeParties` only ever contains status==='live' docs, so an ended
+                // party's doc simply isn't in it — reading status from there meant
+                // `isEnded` could never actually be true. `allPartyStates` has every
+                // status, so it's the reliable source here (same fix as the PWFF
+                // programme page and the site-wide live banner).
+                const partyState = allPartyStates[block.id];
                 const isLive = partyState?.status === 'live';
                 const isEnded = partyState?.status === 'ended';
                 const startStr = block.screeningStartTime || (block as any).watchPartyStartTime;
@@ -44,7 +49,7 @@ const MyFestivalPage: React.FC = () => {
                 return { block, dayLabel, isLive, isEnded, isUpcoming, start, films };
             })
             .sort((a, b) => (a.start?.getTime() ?? Infinity) - (b.start?.getTime() ?? Infinity));
-    }, [festivalData, hasFestivalAllAccess, unlockedFestivalBlockIds, activeParties, movies]);
+    }, [festivalData, hasFestivalAllAccess, unlockedFestivalBlockIds, allPartyStates, movies]);
 
     const liveNow = myBlocks.filter(b => b.isLive);
     const upNext = myBlocks.find(b => b.isUpcoming);

@@ -234,10 +234,10 @@ const WaitlistButton: React.FC<{ blockId: string }> = ({ blockId }) => {
 
 // ─── BLOCK CARD ───────────────────────────────────────────────────────────────
 const BlockCard: React.FC<{
-    block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean;
+    block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean; isEnded?: boolean;
     isBeforeScreening?: boolean; screeningStartTime?: string;
     dayLabel: string; onBuyTicket: () => void; onEnterLobby: () => void; onWatch: (key: string) => void;
-}> = ({ block, films, isUnlocked, isLive, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
+}> = ({ block, films, isUnlocked, isLive, isEnded, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
     const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
@@ -254,6 +254,12 @@ const BlockCard: React.FC<{
                             <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-3 py-1 mb-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                                 <span className="text-[9px] font-black uppercase tracking-widest text-red-400">Live Now</span>
+                            </div>
+                        )}
+                        {isEnded && (
+                            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-400/30 rounded-full px-3 py-1 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-300">Screening Ended · Now in Catalog</span>
                             </div>
                         )}
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -353,7 +359,7 @@ const ProgrammeMode: React.FC = () => {
     const [activeSection, setActiveSection] = useState<'programme' | 'directors'>('programme');
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
-    const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks), [festivalData]);
+    const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks || []), [festivalData]);
     const allFestivalFilms = useMemo(() => allBlocks.flatMap(b => b.movieKeys.map(k => movies[k]).filter(Boolean)) as Movie[], [allBlocks, movies]);
     const filmsWithNotes = useMemo(() => allFestivalFilms.filter(m => m.festivalDirectorNote || m.festivalFilmmakerBio || m.festivalQuote), [allFestivalFilms]);
 
@@ -549,19 +555,29 @@ const ProgrammeMode: React.FC = () => {
                             </div>
                         )}
                         <div className="space-y-4">
-                            {currentDay?.blocks.length > 0 ? currentDay.blocks.map(block => {
-                                const films = block.movieKeys.map(k => movies[k]).filter(Boolean) as Movie[];
+                            {(currentDay?.blocks || []).length > 0 ? (currentDay?.blocks || []).map(block => {
+                                const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
-                                const partyState = activeParties[block.id];
+                                // `activeParties` only ever contains docs with status==='live' (it's
+                                // filtered server-side), so once a party ends its doc simply disappears
+                                // from `activeParties` — leaving `partyState` undefined here, same as a
+                                // party that never started. That falsely tripped `isWaiting` (which
+                                // treats "no doc" as "hasn't started yet"), which in turn made
+                                // `isBeforeScreening` true again after the party had already ended,
+                                // which let a viewer click straight into the dead lobby. `allPartyStates`
+                                // includes 'ended' docs too, so use that as the source of truth for status.
+                                const partyState = allPartyStates[block.id];
                                 const isLive = partyState?.status === 'live';
+                                const isEnded = partyState?.status === 'ended';
                                 const isWaiting = !partyState || partyState?.status === 'waiting';
                                 const screenStart = block.screeningStartTime ? new Date(block.screeningStartTime) : null;
-                                const isBeforeScreening = (screenStart ? new Date() < screenStart : false) || isWaiting;
+                                const isBeforeScreening = !isEnded && ((screenStart ? new Date() < screenStart : false) || isWaiting);
                                 const isInWindow = screenStart ? new Date() >= screenStart : true;
                                 return (
                                     <BlockCard key={block.id} block={block} films={films}
-                                        isUnlocked={isUnlocked && (isInWindow || isBeforeScreening)}
+                                        isUnlocked={isUnlocked && (isInWindow || isBeforeScreening || isEnded)}
                                         isLive={isLive}
+                                        isEnded={isEnded}
                                         isBeforeScreening={isBeforeScreening}
                                         screeningStartTime={block.screeningStartTime}
                                         dayLabel={`Day ${activeDay}`}
@@ -658,7 +674,7 @@ function ordinal(n: number): string {
 }
 
 const PwffPage: React.FC = () => {
-    const { settings, isLoading, livePartyMovie, activeParties, festivalData, movies } = useFestival();
+    const { settings, isLoading, livePartyMovie, activeParties, allPartyStates, festivalData, movies } = useFestival();
     const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user } = useAuth();
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
@@ -671,7 +687,7 @@ const PwffPage: React.FC = () => {
     // Find the block associated with the live party movie
     const liveBlock = useMemo(() => {
         if (!livePartyMovie) return null;
-        return festivalData.flatMap(d => d.blocks).find(b => b.id === livePartyMovie.key || b.movieKeys.includes(livePartyMovie.key)) || null;
+        return festivalData.flatMap(d => d.blocks || []).find(b => b.id === livePartyMovie.key || b.movieKeys.includes(livePartyMovie.key)) || null;
     }, [livePartyMovie, festivalData]);
 
     const hasAccessToLive = useMemo(() => {

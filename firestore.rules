@@ -63,19 +63,26 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Lobby viewers tracking — who is in the lobby waiting
+      // Lobby viewers tracking — who is in the lobby waiting. Doc id is the
+      // viewer's own email (see WatchPartyLobby.tsx), so ownership is
+      // checked against that instead of just "any signed-in user" — that
+      // used to let any signed-in visitor overwrite or delete someone
+      // else's presence doc.
       match /lobby_viewers/{viewerId} {
         allow read: if isSignedIn();
-        allow create, update: if isSignedIn();
-        allow delete: if isSignedIn();
+        allow create, update: if isSignedIn() && request.auth.token.email == viewerId;
+        allow delete: if isSignedIn() && request.auth.token.email == viewerId;
       }
     }
 
     // ── Festival viewers log ───────────────────────────────────────────
+    // Doc id is `${movieKey}_${email}`, and the doc itself also stores an
+    // `email` field (see WatchPartyLobby.tsx) — checked against that field
+    // rather than any signed-in user being able to write an arbitrary
+    // viewer-log entry (or overwrite someone else's).
     match /festival_viewers/{viewerId} {
       allow read: if false; // admin only
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
+      allow create, update: if isSignedIn() && request.resource.data.email == request.auth.token.email;
       allow delete: if false;
     }
 
