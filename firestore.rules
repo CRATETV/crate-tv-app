@@ -17,6 +17,20 @@ service cloud.firestore {
         'hasJuryPass',
         'isPremiumSubscriber',
         'purchasedMovieKeys',
+        // These four grant access to paid content (movie rentals, watch party
+        // tickets, festival block unlocks, and legacy block-unlock formats)
+        // and were previously writable by clients directly — meaning anyone
+        // with browser devtools could grant themselves any paid movie or
+        // watch party for free by writing straight to their own user doc.
+        // Access to these is now only ever granted server-side (Admin SDK,
+        // which bypasses these rules) after a verified payment or a verified
+        // ticket-code redemption — see api/process-square-payment.ts and
+        // api/redeem-ticket-code.ts.
+        'rentals',
+        'unlockedWatchPartyKeys',
+        'unlockedBlocks',
+        'unlockedBlockIds',
+        'unlockedFestivalDays',
       ];
       return request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedFields);
     }

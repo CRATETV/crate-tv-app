@@ -60,14 +60,26 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     // in the OS's eyes, so it was going dark on the normal inactivity timer). ──
     useEffect(() => {
         const nav = navigator as any;
-        if (!nav.wakeLock) return; // unsupported browser — no-op
+        if (!nav.wakeLock) return; // unsupported browser (older iOS/Safari pre-16.4) — no client-side fix exists for this case
         let wakeLock: any = null;
+        let cancelled = false;
 
         const requestWakeLock = async () => {
             try {
-                wakeLock = await nav.wakeLock.request('screen');
+                const lock = await nav.wakeLock.request('screen');
+                if (cancelled) { lock.release().catch(() => {}); return; }
+                wakeLock = lock;
+                // The sentinel can be released by the OS/browser on its own —
+                // not just when the tab is backgrounded (some iOS versions drop
+                // it after their own internal timeout even while active). Listen
+                // for that directly instead of relying solely on visibilitychange,
+                // and re-acquire immediately if we're still on screen.
+                wakeLock.addEventListener('release', () => {
+                    wakeLock = null;
+                    if (document.visibilityState === 'visible') requestWakeLock();
+                });
             } catch (e) {
-                // Can be refused (low battery, backgrounded, unsupported) — lobby still works either way
+                // Can be refused (low battery, unsupported context) — lobby still works either way
             }
         };
         requestWakeLock();
@@ -76,9 +88,20 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
         };
         document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('focus', handleVisibility);
+
+        // Belt-and-suspenders: periodically confirm the lock is still held while
+        // the lobby is open, in case a release slips through without either of
+        // the events above firing. Cheap no-op when wakeLock is already set.
+        const safetyNet = setInterval(() => {
+            if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+        }, 20000);
 
         return () => {
+            cancelled = true;
             document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('focus', handleVisibility);
+            clearInterval(safetyNet);
             wakeLock?.release?.().catch(() => {});
         };
     }, []);
@@ -361,8 +384,11 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                     </div>
                 </div>
 
-                {/* Main content */}
-                <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center overflow-y-auto py-24">
+                {/* Main content — pb-28 reserves space for the fixed PWFF/Crate TV
+                    badge pinned to the bottom of the outer container below. Without
+                    it, the ticket button here could scroll down into the same
+                    screen space the badge occupies and visually collide with it. */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center overflow-y-auto pt-24 pb-28">
                     {/* Film poster */}
                     <div className="relative mx-auto w-32 md:w-44 mb-6">
                         <div className="absolute -inset-3 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />

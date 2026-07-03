@@ -224,7 +224,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     // True once we've received a real Firestore snapshot for this party. Used to
@@ -812,6 +812,65 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return !!(exp && new Date(exp) > new Date());
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
+    // ── SIGNED STREAM URL ─────────────────────────────────────────────────
+    // The player used to bind straight to movie.fullMovie — a permanent,
+    // unauthenticated, public URL. Anyone could pull it from the network tab
+    // (or the public catalog feed itself, which includes it for every movie
+    // regardless of who's asking) and it would play forever for anyone,
+    // paid or not. api/get-stream-url.ts already existed to fix this — it
+    // verifies the viewer's login and access server-side and hands back a
+    // CloudFront URL signed to expire in 4 hours — it just was never wired
+    // up to an actual player. This does that.
+    //
+    // IMPORTANT CAVEAT: this alone doesn't fully close the hole. The raw
+    // fullMovie URL is still present in the public catalog data, and unless
+    // CloudFront itself is configured to reject unsigned requests
+    // ("Restrict Viewer Access" with a trusted key group matching
+    // CLOUDFRONT_KEY_PAIR_ID), that raw URL still works fine on its own.
+    // This is the client-side half of the fix; the CDN needs the matching
+    // server-side restriction to actually be enforced.
+    const [signedStreamUrl, setSignedStreamUrl] = useState<string | null>(null);
+    const activeFilmKey = useMemo(() => {
+        const m = movie as any;
+        if (m?._blockMovieKeys && m._blockMovieKeys.length > 0) {
+            const idx = Math.min(partyState?.activeMovieIndex ?? 0, m._blockMovieKeys.length - 1);
+            return m._blockMovieKeys[idx];
+        }
+        return movie?.key;
+    }, [movie, partyState?.activeMovieIndex]);
+
+    useEffect(() => {
+        if (!activeFilmKey || !hasAccess || movie?.isLiveStream) { setSignedStreamUrl(null); return; }
+        let cancelled = false;
+        setSignedStreamUrl(null); // don't show the previous film's signed URL while the new one loads
+
+        const fetchSignedUrl = async () => {
+            try {
+                const idToken = await getUserIdToken();
+                if (!idToken) return;
+                const res = await fetch('/api/get-stream-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieKey: activeFilmKey, blockId: parentBlock?.id, idToken }),
+                });
+                const data = await res.json();
+                if (!cancelled && data.url) setSignedStreamUrl(data.url);
+            } catch (e) {
+                // Falls back to movie.fullMovie below — an outage here shouldn't
+                // stop a paying customer from watching.
+                console.error('[get-stream-url] Failed, falling back to direct URL:', e);
+            }
+        };
+        fetchSignedUrl();
+
+        // Signed URLs expire after 4 hours — refresh before that in case a
+        // long block marathon runs longer than one film.
+        const refreshTimer = setInterval(fetchSignedUrl, 3.5 * 60 * 60 * 1000);
+        return () => { cancelled = true; clearInterval(refreshTimer); };
+    }, [activeFilmKey, hasAccess, parentBlock?.id, movie?.isLiveStream, getUserIdToken]);
+
+    const playableUrl = signedStreamUrl || movie?.fullMovie;
+
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
     const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
@@ -910,9 +969,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 />
                 {/* Hidden preload video — silently buffers the film while lobby is showing
                     so there's no blank screen when the party starts */}
-                {hasAccess && movie.fullMovie && (
+                {hasAccess && playableUrl && (
                     <video
-                        src={movie.fullMovie}
+                        src={playableUrl}
                         preload="auto"
                         muted
                         playsInline
@@ -1141,7 +1200,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     )}
                                     <video
                                         ref={videoRef}
-                                        src={movie.fullMovie}
+                                        src={playableUrl}
                                         className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`}
                                         muted={needsUserGesture}
                                         playsInline
@@ -1162,6 +1221,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             if (!isEndedRef.current) setIsEnded(true);
                                         }}
                                     />
+                                    {/* Buffering overlay — isVideoBuffering was already tracked (onWaiting/
+                                        onStalled/onCanPlay above) but never actually shown to the viewer, so
+                                        someone on a slow connection just saw a frozen frame with no explanation
+                                        of what was happening or that anything was happening at all. */}
+                                    {isVideoBuffering && !isEnded && (
+                                        <div className="absolute inset-0 z-[165] flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
+                                            <div className="relative w-10 h-10 mb-4">
+                                                <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                                <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                                            </div>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-300">Buffering — hang tight</p>
+                                        </div>
+                                    )}
                                     {/* Small unmute button — video autoplays muted, tap to unmute */}
                                     {needsUserGesture && partyState?.status === 'live' && !isEnded && (
                                         <button

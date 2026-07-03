@@ -366,12 +366,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const rentals = user?.rentals || {};
     const unlockedWatchPartyKeys = useMemo(() => new Set(user?.unlockedWatchPartyKeys || []), [user]);
 
+    // unlockFestivalBlock / purchaseMovie / unlockWatchParty used to write
+    // directly to Firestore from the browser — which meant anyone with
+    // devtools open could grant themselves any paid movie or festival block
+    // for free by just calling these functions (or replicating the write)
+    // without ever paying. firestore.rules now blocks client writes to these
+    // fields entirely (rentals / unlockedWatchPartyKeys / unlockedBlocks);
+    // the real grant happens server-side, with the Admin SDK, only after a
+    // verified Square payment (api/process-square-payment.ts) or a verified
+    // ticket-code redemption (api/redeem-ticket-code.ts). These functions now
+    // only update local state so the UI reflects the unlock immediately
+    // instead of waiting on the next profile fetch — they're called right
+    // after those server calls already succeeded, not instead of them.
     const unlockFestivalBlock = async (blockId: string) => {
         if (!user || unlockedFestivalBlockIds.has(blockId)) return;
         const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks
+        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks — mirrors the server-side grant's window
         const newUnlockedBlocks = { ...(user.unlockedBlocks || {}), [blockId]: expirationDate.toISOString() };
-        await updateUserProfile(user.uid, { unlockedBlocks: newUnlockedBlocks });
         setUser(currentUser => currentUser ? ({ ...currentUser, unlockedBlocks: newUnlockedBlocks }) : null);
     };
     
@@ -407,18 +418,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const purchaseMovie = async (movieKey: string) => {
         if (!user) return;
+        // Local-only optimistic update — see note above unlockFestivalBlock.
         const expirationDate = new Date();
         // Updated to 48 hours as requested
         expirationDate.setHours(expirationDate.getHours() + 48);
         const newRentals = { ...(user.rentals || {}), [movieKey]: expirationDate.toISOString() };
-        await updateUserProfile(user.uid, { rentals: newRentals });
         setUser(currentUser => currentUser ? ({ ...currentUser, rentals: newRentals }) : null);
     };
 
     const unlockWatchParty = async (movieKey: string) => {
         if (!user || unlockedWatchPartyKeys.has(movieKey)) return;
+        // Local-only optimistic update — see note above unlockFestivalBlock.
         const newUnlocked = [...(user.unlockedWatchPartyKeys || []), movieKey];
-        await updateUserProfile(user.uid, { unlockedWatchPartyKeys: newUnlocked });
         setUser(currentUser => currentUser ? ({ ...currentUser, unlockedWatchPartyKeys: newUnlocked }) : null);
     };
 

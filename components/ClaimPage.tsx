@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getDbInstance } from '../services/firebaseClient';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import Header from './Header';
 import Footer from './Footer';
 import AuthModal from './AuthModal';
 
 /**
  * CLAIM PAGE
- * 
+ *
  * Where users redeem their ticket codes for digital festival access.
- * 
+ *
  * Flow:
  * 1. User enters code (e.g., CRATE-FULL-X7K9AB)
- * 2. System validates code exists and isn't redeemed
- * 3. If user not logged in → prompt login/signup
- * 4. System unlocks appropriate access (full pass, day, or block)
- * 5. Code marked as redeemed
+ * 2. If not logged in → prompt login/signup, then redeem
+ * 3. Code + validation + granting the access + marking it redeemed all
+ *    happen together, atomically, server-side in api/redeem-ticket-code.ts
+ *    (this used to be done directly from the browser — reading the code,
+ *    checking isRedeemed, and writing access fields straight to Firestore —
+ *    which both raced on double-redemption and wrote to fields the client
+ *    isn't allowed to touch anymore; see firestore.rules for why)
  */
 const ClaimPage: React.FC = () => {
-    const { user, hasFestivalAllAccess, unlockFestivalBlock, unlockWatchParty } = useAuth();
+    const { user, hasFestivalAllAccess, getUserIdToken } = useAuth();
     
     const [code, setCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -79,70 +80,36 @@ const ClaimPage: React.FC = () => {
         setSuccess(null);
 
         try {
-            const db = getDbInstance();
-            if (!db) {
-                setError('Database not available. Please try again.');
-                setIsLoading(false);
-                return;
-            }
-            
-            const codesRef = collection(db, 'ticket_codes');
-            
-            // Find the code
-            const q = query(codesRef, where('code', '==', codeToRedeem.toUpperCase()));
-            const snapshot = await getDocs(q);
-
-            if (snapshot.empty) {
-                setError('Invalid code. Please check and try again.');
+            const idToken = await getUserIdToken();
+            if (!idToken) {
+                setError('Please sign in again and retry.');
                 setIsLoading(false);
                 return;
             }
 
-            const codeDoc = snapshot.docs[0];
-            const codeData = codeDoc.data();
-
-            // Check if already redeemed
-            if (codeData.isRedeemed) {
-                setError('This code has already been redeemed.');
-                setIsLoading(false);
-                return;
-            }
-
-            // Redeem based on type
-            let successMessage = '';
-            
-            if (codeData.type === 'full_pass') {
-                // Grant full festival access
-                await grantFullFestivalAccess();
-                successMessage = '🎉 Full Festival Pass activated! You now have access to all festival films.';
-            } else if (codeData.type === 'day_pass') {
-                // Grant access to all blocks for that day
-                await grantDayAccess(codeData.dayNumber);
-                successMessage = `🎬 Day ${codeData.dayNumber} Pass activated! You now have access to all Day ${codeData.dayNumber} films.`;
-            } else if (codeData.type === 'block') {
-                // Grant access to specific block
-                await unlockFestivalBlock(codeData.blockId);
-                // Also unlock watch party for movies in this block
-                if (codeData.movieKeys) {
-                    for (const movieKey of codeData.movieKeys) {
-                        await unlockWatchParty(movieKey);
-                    }
-                }
-                successMessage = `🎟️ Block access activated: ${codeData.blockTitle || 'Festival Block'}! You can now watch these films.`;
-            }
-
-            // Mark code as redeemed
-            await updateDoc(doc(db, 'ticket_codes', codeDoc.id), {
-                isRedeemed: true,
-                redeemedBy: user?.email || user?.uid,
-                redeemedAt: new Date().toISOString()
+            const res = await fetch('/api/redeem-ticket-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: codeToRedeem, idToken }),
             });
+            const data = await res.json();
 
-            setSuccess({
-                type: codeData.type,
-                message: successMessage
-            });
+            if (!res.ok || !data.success) {
+                setError(data.error || 'Something went wrong. Please try again or contact support.');
+                setIsLoading(false);
+                return;
+            }
+
+            const successMessage =
+                data.type === 'full_pass' ? '🎉 Full Festival Pass activated! You now have access to all festival films.'
+                : data.type === 'day_pass' ? `🎬 Day ${data.dayNumber} Pass activated! You now have access to all Day ${data.dayNumber} films.`
+                : `🎟️ Block access activated: ${data.blockTitle || 'Festival Block'}! You can now watch these films.`;
+
+            setSuccess({ type: data.type, message: successMessage });
             setCode('');
+            // Reload so the rest of the app picks up the newly-granted access
+            // (mirrors the reload the old client-side grant functions did).
+            setTimeout(() => window.location.reload(), 1500);
 
         } catch (err) {
             console.error('Error redeeming code:', err);
@@ -150,43 +117,6 @@ const ClaimPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const grantFullFestivalAccess = async () => {
-        if (!user) return;
-        
-        const db = getDbInstance();
-        if (!db) return;
-        
-        const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, {
-            hasFestivalAllAccess: true,
-            festivalAccessGrantedAt: new Date().toISOString(),
-            festivalAccessSource: 'ticket_code'
-        });
-        
-        // Reload user data
-        window.location.reload();
-    };
-
-    const grantDayAccess = async (dayNumber: number) => {
-        if (!user) return;
-        
-        const db = getDbInstance();
-        if (!db) return;
-        
-        const userRef = doc(db, 'users', user.uid);
-        
-        // Get current unlocked days
-        const currentDays = (user as any).unlockedFestivalDays || [];
-        if (!currentDays.includes(dayNumber)) {
-            await updateDoc(userRef, {
-                unlockedFestivalDays: [...currentDays, dayNumber]
-            });
-        }
-        
-        // Reload to reflect changes
-        window.location.reload();
     };
 
     const handleAuthSuccess = () => {

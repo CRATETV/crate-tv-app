@@ -90,6 +90,44 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys]);
 
+  // ── SIGNED STREAM URL ────────────────────────────────────────────────
+  // Same fix as WatchPartyPage.tsx — see the longer note there. The player
+  // used to bind straight to the permanent public movie.fullMovie URL;
+  // this fetches a 4-hour signed CloudFront URL (server-verified access)
+  // and uses that instead, falling back to the raw URL if the request
+  // fails so an outage here can't stop someone from watching what they
+  // already paid for. NOTE: this is only half the fix — see the note in
+  // WatchPartyPage.tsx about CloudFront also needing to reject unsigned
+  // requests for this to actually be enforced.
+  const [signedStreamUrl, setSignedStreamUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!movie?.key || !hasAccess) { setSignedStreamUrl(null); return; }
+    let cancelled = false;
+    setSignedStreamUrl(null);
+
+    const fetchSignedUrl = async () => {
+      try {
+        const idToken = await getUserIdToken();
+        if (!idToken) return;
+        const res = await fetch('/api/get-stream-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movieKey: movie.key, blockId: parentFestivalBlock?.id, idToken }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.url) setSignedStreamUrl(data.url);
+      } catch (e) {
+        console.error('[get-stream-url] Failed, falling back to direct URL:', e);
+      }
+    };
+    fetchSignedUrl();
+
+    const refreshTimer = setInterval(fetchSignedUrl, 3.5 * 60 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(refreshTimer); };
+  }, [movie?.key, hasAccess, parentFestivalBlock?.id, getUserIdToken]);
+
+  const playableUrl = signedStreamUrl || movie?.fullMovie;
+
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked
   // (meaning they bought a ticket — so we need to make sure only they watch)
@@ -97,7 +135,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return !!parentFestivalBlock && (parentFestivalBlock.price || 0) > 0;
   }, [parentFestivalBlock]);
 
-  const needsSessionGuard = isFestivalFilm && hasAccess;
+  // This used to only cover festival films (isFestivalFilm && hasAccess),
+  // which left ordinary paid VOD rentals (movie.isForSale, not tied to a
+  // festival block) with no password-sharing protection at all — those could
+  // be streamed on unlimited simultaneous devices from one paid rental.
+  // Guard any content that's actually paid, regardless of which gate it
+  // came through.
+  const needsSessionGuard = hasAccess && (isFestivalFilm || !!movie?.isForSale);
   const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, needsSessionGuard);
 
   useEffect(() => {
@@ -218,7 +262,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 {/* Blurred backdrop — fills black bars when film isn't 16:9 */}
                 {hasAccess && !embedUrl && (
                     <video
-                        src={movie.fullMovie}
+                        src={playableUrl}
                         className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none ${playerMode === 'full' && !isEnded ? 'opacity-40' : 'opacity-0'} transition-opacity duration-300`}
                         muted playsInline aria-hidden="true"
                         ref={el => { if (el && videoRef.current) { el.currentTime = videoRef.current.currentTime; }}}
@@ -226,9 +270,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 )}
                 {/* Video element always rendered (hidden when not in full mode) for instant playback */}
                 {hasAccess && !embedUrl && (
-                    <video 
-                        ref={videoRef} 
-                        src={movie.fullMovie} 
+                    <video
+                        ref={videoRef}
+                        src={playableUrl}
                         preload="auto"
                         className={`absolute inset-0 w-full h-full object-contain ${playerMode === 'full' && !isEnded ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}
                         controls={false} 

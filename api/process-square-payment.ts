@@ -340,6 +340,28 @@ export async function POST(request: Request) {
         }
     }
 
+    // Watch party ticket — this was the one payment type that got charged
+    // correctly above but never actually granted anything server-side. The
+    // only place that ever unlocked it was a direct client-side Firestore
+    // write (AuthContext's unlockWatchParty), which is exactly the kind of
+    // write firestore.rules now blocks — so this grant has to happen here,
+    // the same way the block/movie grants already do.
+    if (db && uid && paymentType === 'watchPartyTicket' && itemId) {
+        try {
+            const userRef = db.collection('users').doc(uid);
+            const userDoc = await userRef.get();
+            const existing: string[] = userDoc.data()?.unlockedWatchPartyKeys || [];
+            if (!existing.includes(itemId)) {
+                await userRef.set({
+                    unlockedWatchPartyKeys: [...existing, itemId]
+                }, { merge: true });
+            }
+            console.log(`[Payment API] Unlocked watch party ${itemId} for user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to unlock watch party:', e);
+        }
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

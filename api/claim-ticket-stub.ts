@@ -1,11 +1,11 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, userId, movieTitle, posterUrl } = await request.json();
+    const { movieKey, idToken, movieTitle, posterUrl } = await request.json();
 
-    if (!movieKey || !userId || !movieTitle || !posterUrl) {
+    if (!movieKey || !idToken || !movieTitle || !posterUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -14,9 +14,24 @@ export async function POST(request: Request) {
 
     const initError = getInitializationError();
     if (initError) throw new Error(initError);
-    
+
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    const auth = getAdminAuth();
+    if (!db || !auth) throw new Error("Database connection failed.");
+
+    // This used to take `userId` straight from the request body and write to
+    // that user's document with no verification at all — anyone could claim a
+    // stub onto an arbitrary account just by passing a different uid. Verify
+    // the caller's own ID token and use ONLY the uid it resolves to.
+    let userId: string;
+    try {
+      userId = (await auth.verifyIdToken(idToken)).uid;
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid session.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
