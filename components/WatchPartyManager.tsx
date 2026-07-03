@@ -362,19 +362,15 @@ const WatchPartyControlRoom: React.FC<{
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState) return;
-        
+
+        // Admin is the source of truth for currentTime — only sync play/pause state.
+        // Reading currentTime back from Firestore caused a restart loop:
+        // video writes currentTime → Firestore updates → useEffect seeks video
+        // → video fires onPlay/onSeeked → writes again → loop.
         if (partyState.isPlaying && video.paused) {
             video.play().catch(e => console.warn("Admin autoplay was prevented", e));
         } else if (!partyState.isPlaying && !video.paused) {
             video.pause();
-        }
-
-        // Only hard-seek if drift is very large (10s) to avoid the reset loop:
-        // small drifts from network latency were causing seek → timeupdate write
-        // → Firestore update → seek → repeat endlessly.
-        if (Math.abs(video.currentTime - partyState.currentTime) > 10) {
-            isProgrammaticSeekRef.current = true;
-            video.currentTime = partyState.currentTime;
         }
     }, [partyState]);
     

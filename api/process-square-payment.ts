@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logServerError } from './_lib/logError.js';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -16,6 +18,18 @@ const staticPriceMap: Record<string, number> = {
 
 export async function POST(request: Request) {
   try {
+    // No throttling existed on the endpoint that actually charges a card —
+    // a script could otherwise hammer this with rapid repeated attempts
+    // (e.g. testing many stolen card numbers). 6 attempts per 5 minutes per
+    // IP comfortably covers a real customer retrying a declined card.
+    const ip = getIP(request);
+    if (!rateLimit(`process-payment:${ip}`, 6, 5 * 60_000)) {
+      return new Response(JSON.stringify({ error: 'Too many payment attempts. Please wait a few minutes and try again.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, uid, promoCode } = await request.json();
     
     const isProduction = process.env.VERCEL_ENV === 'production';
@@ -102,8 +116,27 @@ export async function POST(request: Request) {
         }
     }
     else if (paymentType === 'block') {
-        amountInCents = 1000; // Fixed $10 for blocks currently
-        note = `Unlock Block: ${blockTitle || itemId}`;
+        // Look up the block's actual admin-configured price — this used to be
+        // hardcoded to a flat $10 for every block regardless of what was set
+        // in the Festival Hub, which either overcharged or undercharged
+        // customers depending on the block's real price. Same lookup pattern
+        // as the 'movie'/'watchPartyTicket' branch above.
+        if (!db) throw new Error("Database offline.");
+        let blockData: any = null;
+        const festSnap = await db.collection('festival').doc('schedule').collection('days').get();
+        festSnap.forEach(doc => {
+            const day = doc.data();
+            const found = day.blocks?.find((b: any) => b.id === itemId);
+            if (found) blockData = found;
+        });
+        if (!blockData) {
+            const settingsDoc = await db.collection('settings').doc('site').get();
+            const crateFestBlocks = settingsDoc.data()?.crateFestConfig?.movieBlocks || [];
+            blockData = crateFestBlocks.find((b: any) => b.id === itemId);
+        }
+
+        amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
+        note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
     }
     else if (staticPriceMap[paymentType]) {
         amountInCents = staticPriceMap[paymentType];
@@ -314,6 +347,8 @@ export async function POST(request: Request) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    // Payment failures are the highest-priority thing to know about immediately.
+    logServerError('api/process-square-payment', error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

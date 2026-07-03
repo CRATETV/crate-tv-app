@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, WatchPartyState } from '../types';
+import { Movie, WatchPartyState, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
@@ -15,20 +15,35 @@ interface WatchPartyCreditsProps {
     onToggleLike: () => void;
     hasFestivalAllAccess?: boolean;
     onUpgradeToFullPass?: () => void;
+    /** Next chronologically-scheduled block, if this watch party was part of a festival block. */
+    nextBlock?: FilmBlock | null;
+    /** Sends the viewer to buy/watch the next block. */
+    onBuyNextBlock?: () => void;
 }
 
-const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({ 
-    movie, 
-    partyState, 
-    viewerCount, 
-    onClose, 
+const formatBlockTime = (block?: FilmBlock | null): string | null => {
+    const raw = block?.screeningStartTime || (block as any)?.watchPartyStartTime;
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
+    movie,
+    partyState,
+    viewerCount,
+    onClose,
     onRewatch,
     user,
     isLiked,
     onToggleLike,
     hasFestivalAllAccess,
     onUpgradeToFullPass,
+    nextBlock,
+    onBuyNextBlock,
 }) => {
+    const nextBlockTime = formatBlockTime(nextBlock);
     const [applauseCount, setApplauseCount] = useState(0);
     const [hasApplauded, setHasApplauded] = useState(false);
     const [showThankYou, setShowThankYou] = useState(false);
@@ -136,6 +151,7 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                         <p className="text-red-500 font-black uppercase tracking-[0.5em] text-xs animate-pulse">Transmission Complete</p>
                         <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">{movie.title}</h1>
                         <p className="text-gray-500 font-bold uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>
+                        <p className="text-white text-lg font-bold pt-2">Thank you for watching{nextBlock ? ' this block' : ''}!</p>
                     </div>
 
                     {/* Viewer stats */}
@@ -200,6 +216,34 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                     {showThankYou && (
                         <div className="animate-[fadeIn_0.5s_ease-out] bg-gradient-to-r from-red-900/20 via-transparent to-red-900/20 p-4 rounded-xl">
                             <p className="text-red-400 text-sm">Thank you for supporting independent film! 🎬</p>
+                        </div>
+                    )}
+
+                    {/* Next block info — tells full-pass holders when it starts, and
+                        prompts everyone else to grab a ticket for it. */}
+                    {nextBlock && (
+                        <div className="animate-[fadeIn_0.8s_ease-out] bg-white/5 border border-white/10 rounded-2xl p-6 text-center space-y-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500">
+                                {hasFestivalAllAccess ? "You're All Set" : 'Keep The Festival Going'}
+                            </p>
+                            <h3 className="text-xl font-black uppercase text-white">Next Up: {nextBlock.title}</h3>
+                            {nextBlockTime && (
+                                <p className="text-gray-400 text-sm">Starts {nextBlockTime}</p>
+                            )}
+                            {hasFestivalAllAccess ? (
+                                <p className="text-emerald-400 text-xs font-black uppercase tracking-widest pt-1">
+                                    Your All-Access Pass gets you in automatically — see you there!
+                                </p>
+                            ) : (
+                                onBuyNextBlock && (
+                                    <button
+                                        onClick={onBuyNextBlock}
+                                        className="w-full bg-white text-black hover:bg-gray-200 font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                                    >
+                                        Get Tickets{nextBlock.price ? ` — $${nextBlock.price.toFixed(2)}` : ''}
+                                    </button>
+                                )
+                            )}
                         </div>
                     )}
 

@@ -1,5 +1,6 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logServerError } from './_lib/logError.js';
 
 export async function POST(request: Request) {
   try {
@@ -36,44 +37,14 @@ export async function POST(request: Request) {
       }), { status: 400 });
     }
 
-    // Look up movie first
+    // Validate the movie/block exists — but don't block auto-start if lookup fails.
+    // The countdown timer is sufficient proof this is a legitimate start request.
+    // We only hard-block if it's a single movie with isWatchPartyEnabled explicitly false.
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
     const movie = movies[movieKey];
-
-    if (movie) {
-      // Single movie — check isWatchPartyEnabled
-      if (!movie.isWatchPartyEnabled) {
-        return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
-      }
-    } else {
-      // Festival block — look up in data/festivalData
-      const dataDoc = await db.collection('data').doc('festivalData').get();
-      const festivalData = dataDoc.data();
-      
-      // festivalData is stored as festivalData array in the data doc
-      // Try fetching from the main data document which has festivalData array
-      const mainDoc = await db.collection('data').doc('main').get();
-      let blockFound = false;
-      
-      // Search through all data docs for the block
-      const dataDocs = await db.collection('data').get();
-      for (const doc of dataDocs.docs) {
-        const d = doc.data();
-        const festArray = d.festivalData || d.festival || [];
-        if (Array.isArray(festArray)) {
-          for (const day of festArray) {
-            const block = (day.blocks || []).find((b: any) => b.id === movieKey);
-            if (block) { blockFound = true; break; }
-          }
-        }
-        if (blockFound) break;
-      }
-      // Even if block not found, allow start for festival blocks
-      // (block ID format check is sufficient)
-      if (!blockFound && !movieKey.startsWith('block_') && !movieKey.startsWith('day')) {
-        return new Response(JSON.stringify({ error: 'Movie or block not found.' }), { status: 404 });
-      }
+    if (movie && !movie.isWatchPartyEnabled) {
+      return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
     }
 
     // CLEANUP: Purge old messages
@@ -110,6 +81,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Auto-Start Watch Party Error:", error);
+    logServerError('api/auto-start-watch-party', error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

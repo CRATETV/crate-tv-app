@@ -26,6 +26,7 @@ import { POST as toggleLike } from './api/toggle-like.js';
 import { POST as rokuToggleWatchlist } from './api/roku-toggle-watchlist.js';
 import { POST as updatePlaybackProgress } from './api/update-playback-progress.js';
 import { POST as trackSubscription } from './api/track-subscription.js';
+import { POST as autoStartWatchParty } from './api/auto-start-watch-party.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,6 +88,7 @@ async function startServer() {
   app.post('/api/roku-toggle-watchlist', wrapHandler(rokuToggleWatchlist));
   app.post('/api/update-playback-progress', wrapHandler(updatePlaybackProgress));
   app.post('/api/track-subscription', wrapHandler(trackSubscription));
+  app.post('/api/auto-start-watch-party', wrapHandler(autoStartWatchParty));
 
   // Health check
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

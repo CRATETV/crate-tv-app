@@ -1,5 +1,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
+import { logServerError } from './_lib/logError.js';
 
 const getIp = (req: Request) => {
     const xff = req.headers.get('x-forwarded-for');
@@ -11,6 +13,19 @@ const getIp = (req: Request) => {
 export async function POST(request: Request) {
     const ip = getIp(request);
     try {
+        // This endpoint gates the entire admin panel — payouts, festival
+        // control, ticket pricing, everything — and had no throttling at
+        // all, meaning it could be brute-forced with unlimited password
+        // guesses. 8 attempts per 5 minutes per IP is generous for a real
+        // admin who mistypes, but shuts down a scripted guessing attempt.
+        const limitKey = getIP(request) || ip || 'unknown';
+        if (!rateLimit(`admin-login:${limitKey}`, 8, 5 * 60_000)) {
+            return new Response(JSON.stringify({ success: false, error: 'Too many attempts. Try again in a few minutes.' }), {
+                status: 429,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const { password, name } = await request.json();
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -95,12 +110,26 @@ export async function POST(request: Request) {
                 headers: { 'Content-Type': 'application/json' },
             });
         } else {
+            // Failed attempts were previously invisible — only successes got
+            // logged, so there was no way to notice a brute-force attempt
+            // even after the fact. Best-effort: never let a logging failure
+            // block the actual auth response.
+            db.collection('audit_logs').add({
+                role: 'UNKNOWN',
+                action: 'NODE_AUTH_FAILURE',
+                type: 'SECURITY',
+                details: `Failed login attempt from IP: ${ip || 'Unknown'}.`,
+                timestamp: FieldValue.serverTimestamp(),
+                ip
+            }).catch(() => {});
+
             return new Response(JSON.stringify({ success: false, error: 'Invalid access key' }), {
                 status: 401,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
     } catch (error) {
+        logServerError('api/admin-login', error);
         return new Response(JSON.stringify({ error: 'An unexpected error occurred.' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

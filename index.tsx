@@ -7,9 +7,14 @@ import { FestivalProvider, useFestival } from './contexts/FestivalContext';
 import { inject } from '@vercel/analytics';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
+import { installGlobalErrorLogging } from './services/errorLogger';
 
 // Inject Vercel Analytics
 inject();
+
+// Catch errors React's error boundary can't see (async code, event handlers,
+// promise rejections) and report them to Admin Panel → Error Log.
+installGlobalErrorLogging();
 
 // Import all page components
 import App from './App';

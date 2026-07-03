@@ -1,5 +1,6 @@
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logServerError } from './_lib/logError.js';
 
 export default async function handler(request: Request): Promise<Response> {
     if (request.method !== 'POST') {
@@ -63,6 +64,7 @@ export default async function handler(request: Request): Promise<Response> {
 
     } catch (error: any) {
         console.error('[ADVANCE] Error:', error);
+        logServerError('api/advance-block-film', error);
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 }

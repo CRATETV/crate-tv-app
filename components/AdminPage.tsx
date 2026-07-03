@@ -12,6 +12,7 @@ import CommunicationsTerminal from './CommunicationsTerminal';
 import SaveStatusToast from './SaveStatusToast';
 import LaurelManager from './LaurelManager';
 import AuditTerminal from './AuditTerminal';
+import ErrorLogTab from './ErrorLogTab';
 import { MoviePipelineTab } from './MoviePipelineTab';
 import CrateFestEditor from './CrateFestEditor';
 import FestivalEditor from './FestivalEditor';
@@ -57,6 +58,7 @@ const ALL_TABS: Record<string, string> = {
     outreach: '🎯 Outreach',
     festivalReport: '📋 Festival Report',
     audit: '📜 Audit Log',
+    errorLog: '🚨 Error Log',
     permissions: '🔑 Permissions',
     security: '🛡️ Security',
     pwff: '🎬 PWFF Festival'
@@ -469,7 +471,7 @@ const AdminPage: React.FC = () => {
                         </button>
                         {showMoreTools && (
                             <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['outreach','🎯 Outreach'],['festivalReport','📋 Festival Report'],['audit','📜 Audit Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['outreach','🎯 Outreach'],['festivalReport','📋 Festival Report'],['audit','📜 Audit Log'],['errorLog','🚨 Error Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                                 <button
                                     key={tabId}
                                     onClick={() => navigateTo(tabId as string)}
@@ -594,6 +596,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'outreach' && <FilmmakerOutreachTab />}
                     {activeTab === 'festivalReport' && <FestivalReportTab />}
                     {activeTab === 'audit' && <AuditTerminal />}
+                    {activeTab === 'errorLog' && <ErrorLogTab />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                     </>)}

@@ -114,8 +114,46 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
 
         const movieArray = Object.values(movies) as Movie[];
-        
-        // 1. Check for explicitly LIVE parties first (highest priority)
+
+        // Festival blocks live outside `movies` (festivalData + Crate Fest config).
+        // Index them once up front so both the "live" and "upcoming" checks below
+        // can look a party-doc id up as either an individual movie OR a block.
+        const allKnownBlocks = [
+            ...festivalData.flatMap(d => d.blocks || []),
+            ...(settings.crateFestConfig?.movieBlocks || []),
+        ];
+        const blockById = new Map(allKnownBlocks.map((b: any) => [b.id, b]));
+
+        // Blocks are scheduled via `screeningStartTime` (that's the field the
+        // admin panel and the watch party player actually use) — but older
+        // code paths here read `watchPartyStartTime`, which most blocks never
+        // set. Falling back covers both without silently missing one.
+        const blockScheduleTime = (b: any): string | undefined => b.screeningStartTime || b.watchPartyStartTime;
+
+        const buildBlockMovie = (block: any): Movie => {
+            const firstFilm = movies[block.movieKeys?.[0]];
+            return {
+                key: block.id,
+                title: block.title,
+                watchPartyStartTime: blockScheduleTime(block),
+                isWatchPartyEnabled: true,
+                isWatchPartyPaid: (block.price || 0) > 0,
+                watchPartyPrice: block.price,
+                poster: firstFilm?.poster || '',
+                director: firstFilm?.director || 'Festival Event',
+                synopsis: '',
+                cast: [],
+                trailer: '',
+                fullMovie: '',
+                tvPoster: '',
+                likes: 0,
+            } as Movie;
+        };
+
+        // 1. Check for explicitly LIVE parties first (highest priority) — this
+        // must catch BLOCKS too, not just individual movies. `activeParties` is
+        // already filtered server-side to status==='live' docs, so any key
+        // that isn't a movie but IS a known block is a block that's live now.
         // Sort by actualStartTime to ensure the most recently started party is picked
         const liveKeys = Object.keys(activeParties).sort((a, b) => {
             const timeA = activeParties[a].actualStartTime?.seconds || 0;
@@ -127,34 +165,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             const m = movies[key];
             // Only trigger banner if the movie actually exists in the catalog
             // Stale watch_parties documents for deleted/missing movies should be ignored
-            if (!m) return false;
-            return !m.isUnlisted;
+            if (m) return !m.isUnlisted;
+            return blockById.has(key);
         });
 
-        if (liveKey && movies[liveKey]) {
+        if (liveKey) {
             if (movies[liveKey]) return movies[liveKey];
-            
-            // Fallback: Check if it's a festival block
-            let block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
-            
-            // Check Crate Fest blocks if not found
-            if (!block && settings.crateFestConfig?.movieBlocks) {
-                block = settings.crateFestConfig.movieBlocks.find(b => b.id === liveKey);
-            }
-
-            if (block) {
-                // Synthesize a movie-like object for the banner to render
-                return {
-                    key: block.id,
-                    title: block.title,
-                    watchPartyStartTime: block.watchPartyStartTime,
-                    isWatchPartyEnabled: true,
-                    isWatchPartyPaid: (block.price || 0) > 0,
-                    watchPartyPrice: block.price,
-                    poster: '', // Blocks might not have posters, banner handles empty
-                    director: 'Festival Event'
-                } as Movie;
-            }
+            const block = blockById.get(liveKey);
+            if (block) return buildBlockMovie(block);
         }
 
         // 2. Fallback: any enabled watch party that is not ended
@@ -207,19 +225,20 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (upcomingParties[0]) return upcomingParties[0];
 
         // 3. Check festival BLOCKS for upcoming watch parties
-        // (blocks are NOT in movieArray — they live in festivalData)
-        const allBlocks = festivalData.flatMap(d => d.blocks);
-        const upcomingBlocks = allBlocks
-            .filter(block => {
+        // (blocks are NOT in movieArray — they live in festivalData + Crate Fest config;
+        // reuse the combined list indexed above so Crate Fest blocks are covered too)
+        const upcomingBlocks = allKnownBlocks
+            .filter((block: any) => {
                 if (!block.isWatchPartyEnabled) return false;
-                // Skip if already live
+                // Skip if already live — handled by the live-party check above
                 if (activeParties[block.id]?.status === 'live') return false;
                 // Skip if ended
                 if (allPartyStates[block.id]?.status === 'ended') return false;
                 // Must have a start time set
-                if (!block.watchPartyStartTime) return false;
+                const scheduleTime = blockScheduleTime(block);
+                if (!scheduleTime) return false;
 
-                const start = new Date(block.watchPartyStartTime);
+                const start = new Date(scheduleTime);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
                 const twoHoursInMs = 2 * 60 * 60 * 1000;
 
@@ -230,27 +249,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
                 return false;
             })
-            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+            .sort((a: any, b: any) => new Date(blockScheduleTime(a)!).getTime() - new Date(blockScheduleTime(b)!).getTime());
 
         if (upcomingBlocks.length > 0) {
-            const block = upcomingBlocks[0];
-            const firstFilm = movies[block.movieKeys?.[0]];
-            return {
-                key: block.id,
-                title: block.title,
-                watchPartyStartTime: block.watchPartyStartTime,
-                isWatchPartyEnabled: true,
-                isWatchPartyPaid: (block.price || 0) > 0,
-                watchPartyPrice: block.price,
-                poster: firstFilm?.poster || '',
-                director: firstFilm?.director || 'Festival Event',
-                synopsis: '',
-                cast: [],
-                trailer: '',
-                fullMovie: '',
-                tvPoster: '',
-                likes: 0,
-            } as Movie;
+            return buildBlockMovie(upcomingBlocks[0]);
         }
 
         return null;

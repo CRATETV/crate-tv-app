@@ -1,6 +1,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logServerError } from './_lib/logError.js';
 
 export async function POST(request: Request) {
   try {
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Watch Party Termination Error:", error);
+    logServerError('api/terminate-watch-party', error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

@@ -85,13 +85,16 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
             case 'juryPass': return 25.00;
             case 'subscription': return 4.99;
             case 'pass': return 50.00;
-            case 'block': return 10.00;
+            // Fall back to block.price when set — callers that pass `block` but
+            // forget `priceOverride` (e.g. an older call site) still charge the
+            // admin-configured price instead of silently defaulting to $10.
+            case 'block': return block?.price ?? 10.00;
             case 'movie': return movie?.salePrice ?? 5.00;
             case 'watchPartyTicket': return movie?.watchPartyPrice ?? 5.00;
             case 'crateFestPass': return 15.00;
             default: return 0;
         }
-    }, [paymentType, priceOverride, movie]);
+    }, [paymentType, priceOverride, movie, block]);
 
     const displayAmount = useMemo(() => {
         if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
