@@ -135,6 +135,15 @@ export async function POST(request: Request) {
             blockData = crateFestBlocks.find((b: any) => b.id === itemId);
         }
 
+        // Capacity is optional — most blocks have none set, meaning
+        // unlimited (the original, unchanged behavior). Only enforced when
+        // an admin has explicitly set a cap on this specific block. Checked
+        // here, before the card is ever charged, so a sold-out block never
+        // takes anyone's money.
+        if (blockData?.capacity && (blockData.ticketsSold || 0) >= blockData.capacity) {
+            throw new Error('This block is sold out.');
+        }
+
         amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
         note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
     }
@@ -310,6 +319,27 @@ export async function POST(request: Request) {
             console.log(`[Payment API] Unlocked block ${itemId} for user ${uid}`);
         } catch (e) {
             console.error('[Payment API] Failed to unlock block for user:', e);
+        }
+
+        // Increment the block's sold-ticket counter, if it has a capacity set.
+        // Blocks live as entries inside an array field on their day document
+        // (not their own documents), so this reads the whole day, patches
+        // just this block's ticketsSold, and writes the array back — same
+        // pattern already used elsewhere in this file for block field updates.
+        try {
+            const festSnap = await db.collection('festival').doc('schedule').collection('days').get();
+            for (const dayDoc of festSnap.docs) {
+                const day = dayDoc.data();
+                const blocks = day.blocks || [];
+                const idx = blocks.findIndex((b: any) => b.id === itemId);
+                if (idx >= 0 && blocks[idx].capacity) {
+                    blocks[idx] = { ...blocks[idx], ticketsSold: (blocks[idx].ticketsSold || 0) + 1 };
+                    await dayDoc.ref.update({ blocks });
+                    break;
+                }
+            }
+        } catch (e) {
+            console.error('[Payment API] Failed to increment ticketsSold:', e);
         }
     }
 

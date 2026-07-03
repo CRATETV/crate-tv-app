@@ -135,6 +135,19 @@ const AccountPage: React.FC = () => {
                                         </div>
                                     </div>
 
+                                    <div className="pt-8 border-t border-white/5">
+                                        <button
+                                            onClick={(e) => handleNavigate(e, '/my-festival')}
+                                            className="w-full flex items-center justify-between bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 rounded-xl px-5 py-4 transition-all"
+                                        >
+                                            <div className="text-left">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-1">Playhouse West Film Festival</p>
+                                                <p className="text-sm font-bold text-white">My Festival — screenings, tickets & what's live now</p>
+                                            </div>
+                                            <span className="text-red-400 text-lg flex-shrink-0">&rarr;</span>
+                                        </button>
+                                    </div>
+
                                     {user.ticketStubs && user.ticketStubs.length > 0 && (
                                         <div className="pt-8 border-t border-white/5">
                                             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Digital Ticket Stubs // NFT Collection</label>

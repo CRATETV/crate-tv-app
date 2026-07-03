@@ -230,6 +230,10 @@ export interface FilmBlock {
   screeningEndTime?: string;    // When virtual access closes
   watchPartyStartTime?: string;
   isWatchPartyEnabled?: boolean;
+  /** Optional ticket cap for this block. Unset/0 = unlimited (default behavior). */
+  capacity?: number;
+  /** Server-maintained count of tickets sold — only meaningful when capacity is set. */
+  ticketsSold?: number;
 }
 
 export interface FestivalDay {

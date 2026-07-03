@@ -187,6 +187,51 @@ const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWa
     );
 };
 
+// Registers interest in a sold-out block. Kept deliberately simple — no
+// auto-notify-when-a-spot-opens (there's no natural mechanism for a spot to
+// free up on a digital cap), just a way for the admin to see who wanted in.
+const WaitlistButton: React.FC<{ blockId: string }> = ({ blockId }) => {
+    const { user, getUserIdToken } = useAuth();
+    const [joined, setJoined] = useState(false);
+    const [isJoining, setIsJoining] = useState(false);
+
+    const handleJoin = async () => {
+        if (!user) {
+            window.history.pushState({}, '', `/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            window.dispatchEvent(new Event('pushstate'));
+            return;
+        }
+        setIsJoining(true);
+        try {
+            const idToken = await getUserIdToken();
+            if (!idToken) return;
+            const res = await fetch('/api/join-waitlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ blockId, idToken }),
+            });
+            if (res.ok) setJoined(true);
+        } catch (e) {
+            console.error('Failed to join waitlist:', e);
+        } finally {
+            setIsJoining(false);
+        }
+    };
+
+    if (joined) {
+        return <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 px-5 py-2.5">You're On The List</span>;
+    }
+    return (
+        <button
+            onClick={handleJoin}
+            disabled={isJoining}
+            className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all disabled:opacity-50"
+        >
+            {isJoining ? 'Joining…' : 'Join Waitlist'}
+        </button>
+    );
+};
+
 // ─── BLOCK CARD ───────────────────────────────────────────────────────────────
 const BlockCard: React.FC<{
     block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean;
@@ -196,6 +241,10 @@ const BlockCard: React.FC<{
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
     const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+    // Optional — most blocks have no capacity set, meaning unlimited
+    // (unchanged default behavior). Only relevant when an admin explicitly
+    // set a cap in the Festival Hub.
+    const isSoldOut = !isUnlocked && !!block.capacity && (block.ticketsSold || 0) >= block.capacity;
     return (
         <div className={`rounded-2xl border overflow-hidden ${isLive ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.12)]' : 'border-white/8'}`}>
             <div className="bg-white/[0.02] border-b border-white/5 p-5 md:p-7">
@@ -223,18 +272,28 @@ const BlockCard: React.FC<{
                             </p>
                         )}
                     </div>
-                    <div className="flex-shrink-0">
-                        {isLive
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                        {isSoldOut && isBeforeScreening ? (
+                            <>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-red-400">Sold Out</span>
+                                <WaitlistButton blockId={block.id} />
+                            </>
+                        ) : isLive
                             ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all animate-pulse">Join Party</button>
                             : isBeforeScreening && (isUnlocked || !block.price || block.price === 0)
                                 ? <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Enter Lobby</button>
                             : isBeforeScreening && !isUnlocked && block.price && block.price > 0
                                 ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
+                            // Screening's over and this is unlocked — the block's live watch
+                            // party has ended (WatchPartyPage explicitly dead-ends on "ended"
+                            // parties, it doesn't replay them), so "Watch Now" needs to go
+                            // straight to the actual on-demand catalog player for the first
+                            // film, not back into the (now pointless) lobby.
                             : isUnlocked
-                                ? <button onClick={onEnterLobby} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Now</button>
+                                ? <button onClick={() => films[0] && onWatch(films[0].key)} disabled={films.length === 0} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">Watch Now</button>
                                 : block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
-                                    : <button onClick={onEnterLobby} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>}
+                                    : <button onClick={() => films[0] && onWatch(films[0].key)} disabled={films.length === 0} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">Watch Free</button>}
                     </div>
                 </div>
             </div>
@@ -286,7 +345,7 @@ const TeaserMode: React.FC<{
 // ─── PROGRAMME MODE ───────────────────────────────────────────────────────────
 const ProgrammeMode: React.FC = () => {
     const { festivalData, festivalConfig, movies, activeParties, settings } = useFestival();
-    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, unlockedWatchPartyKeys, user } = useAuth();
+    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, unlockedWatchPartyKeys, user, getUserIdToken } = useAuth();
 
     const [activeDay, setActiveDay] = useState(1);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
@@ -349,6 +408,32 @@ const ProgrammeMode: React.FC = () => {
             .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
         return upcoming[0];
     }, [allBlocks]);
+
+    // ── LIVE / UP-NEXT STRIP ──────────────────────────────────────────────
+    // The opening-night countdown above only makes sense before the festival
+    // starts. Once it's underway, visitors landing on this page (including
+    // right after finishing a screening, since the credits screen sends
+    // people back here) had no persistent "what's happening right now"
+    // signal — they had to scroll/scan the full block list to figure out
+    // what's live or coming up next. This surfaces the single most relevant
+    // thing (live takes priority, else the soonest upcoming block) right
+    // under the header at all times during the festival.
+    const [liveOrNextTick, setLiveOrNextTick] = useState(Date.now());
+    useEffect(() => {
+        const t = setInterval(() => setLiveOrNextTick(Date.now()), 30000);
+        return () => clearInterval(t);
+    }, []);
+    const liveOrNextBlock = useMemo(() => {
+        const now = liveOrNextTick;
+        const live = allBlocks.find(b => activeParties[b.id]?.status === 'live');
+        if (live) return { block: live, isLive: true, start: null as Date | null };
+
+        const upcoming = allBlocks
+            .map(b => ({ block: b, start: new Date(b.screeningStartTime || b.watchPartyStartTime || 0) }))
+            .filter(x => !isNaN(x.start.getTime()) && x.start.getTime() > now)
+            .sort((a, b) => a.start.getTime() - b.start.getTime());
+        return upcoming[0] ? { block: upcoming[0].block, isLive: false, start: upcoming[0].start } : null;
+    }, [allBlocks, activeParties, liveOrNextTick]);
 
     return (
         <div className="min-h-screen bg-[#050505] text-white">
@@ -424,6 +509,33 @@ const ProgrammeMode: React.FC = () => {
                     ))}
                 </div>
 
+                {liveOrNextBlock && (
+                    <div className={`mb-6 rounded-2xl border p-5 flex items-center justify-between gap-4 flex-wrap ${liveOrNextBlock.isLive ? 'bg-red-600/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
+                        <div className="flex items-center gap-3">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${liveOrNextBlock.isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
+                            <div>
+                                <p className={`text-[9px] font-black uppercase tracking-[0.3em] ${liveOrNextBlock.isLive ? 'text-red-400' : 'text-gray-500'}`}>
+                                    {liveOrNextBlock.isLive ? 'Live Now' : 'Up Next'}
+                                </p>
+                                <p className="text-sm font-black text-white uppercase tracking-tight">
+                                    {liveOrNextBlock.block.title}
+                                    {!liveOrNextBlock.isLive && liveOrNextBlock.start && (
+                                        <span className="text-gray-500 font-medium normal-case tracking-normal ml-2">
+                                            starts {liveOrNextBlock.start.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowLobbyFor(liveOrNextBlock.block.id)}
+                            className={`flex-shrink-0 font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all ${liveOrNextBlock.isLive ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse' : 'bg-white hover:bg-gray-100 text-black'}`}
+                        >
+                            {liveOrNextBlock.isLive ? 'Join Party' : 'Enter Lobby'}
+                        </button>
+                    </div>
+                )}
+
                 {activeSection === 'programme' && (
                     <>
                         {festivalData.length > 1 && (
@@ -455,7 +567,13 @@ const ProgrammeMode: React.FC = () => {
                                         dayLabel={`Day ${activeDay}`}
                                         onBuyTicket={() => setTicketFlowBlock(block)}
                                         onEnterLobby={() => setShowLobbyFor(block.id)}
-                                        onWatch={key => navigate(`/watchparty/${key}`)}
+                                        // /watchparty/{key} is the LIVE synced-viewing page — it
+                                        // deliberately shows a dead-end "Session Ended" screen once
+                                        // that party's status is 'ended', it doesn't replay content.
+                                        // /movie/{key} is the actual on-demand catalog player, which
+                                        // is what "Watch Now"/individual film rows should open once
+                                        // the live event itself is over.
+                                        onWatch={key => navigate(`/movie/${key}?play=true`)}
                                     />
                                 );
                             }) : (

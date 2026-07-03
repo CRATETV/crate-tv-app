@@ -311,6 +311,21 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                     />
                                 </div>
                             </div>
+                            <div className="space-y-1">
+                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Capacity (optional)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={block.capacity ?? ''}
+                                    onChange={e => handleBlockChange(dayIndex, blockIndex, 'capacity', e.target.value ? parseInt(e.target.value, 10) : null)}
+                                    className="bg-transparent text-white font-black text-sm w-24 outline-none border-b border-white/10"
+                                    placeholder="Unlimited"
+                                />
+                                {!!block.capacity && (
+                                    <p className="text-[8px] text-gray-600">{block.ticketsSold || 0} / {block.capacity} sold</p>
+                                )}
+                            </div>
                         </div>
 
                         {/* ── VIRTUAL SCREENING WINDOW ── */}

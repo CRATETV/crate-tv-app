@@ -59,6 +59,7 @@ import JuryRoomPage from './components/JuryRoomPage';
 import InstitutionalGatewayPage from './components/InstitutionalGatewayPage';
 import LibraryPage from './components/LibraryPage';
 import ClaimPage from './components/ClaimPage';
+import MyFestivalPage from './components/MyFestivalPage';
 import NotFoundPage from './components/NotFoundPage';
 import ToastContainer from './components/Toast';
 import RedCarpetPage from './components/RedCarpetPage';
@@ -191,6 +192,8 @@ const AppRouter: React.FC = () => {
        return <PwffPage />;
     case '/claim':
        return <ClaimPage />;
+    case '/my-festival':
+       return user ? <MyFestivalPage /> : <RedirectToLogin />;
     case '/cratefest':
        return <CrateFestPage />;
     case '/watchlist':

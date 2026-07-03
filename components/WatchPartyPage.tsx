@@ -14,6 +14,7 @@ import WatchPartyCredits from './WatchPartyCredits';
 import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
+import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -261,11 +262,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return upcoming.length > 0 ? upcoming[0].block : null;
     }, [parentBlock, festivalData]);
 
+    // This used to just navigate straight to the next block's watch party
+    // URL — no payment modal, nothing actually charged, despite the button
+    // on the credits screen showing a real price ("Get Tickets — $10.00").
+    // Clicking it looked like a purchase but wasn't wired to one at all;
+    // whoever clicked it landed on the next block's page still without
+    // access. Now it opens an actual payment modal for that block, and only
+    // navigates + unlocks it once the charge really goes through.
+    const [showNextBlockPaywall, setShowNextBlockPaywall] = useState(false);
     const handleBuyNextBlock = useCallback(() => {
         if (!nextBlockInfo) return;
+        setShowNextBlockPaywall(true);
+    }, [nextBlockInfo]);
+
+    const handleNextBlockPaymentSuccess = useCallback(async () => {
+        if (!nextBlockInfo) return;
+        await unlockFestivalBlock(nextBlockInfo.id);
+        setShowNextBlockPaywall(false);
         window.history.pushState({}, '', `/watchparty/${nextBlockInfo.id}`);
         window.dispatchEvent(new Event('pushstate'));
-    }, [nextBlockInfo]);
+    }, [nextBlockInfo, unlockFestivalBlock]);
 
     // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
     const handlePaymentSuccess = useCallback(() => {
@@ -291,7 +307,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current);
         setIsVideoBuffering(false);
     }, []);
-    const [needsUserGesture, setNeedsUserGesture] = useState(true);
+    // Was always true, meaning EVERY viewer landed on a muted video and had
+    // to notice + tap a small corner button to hear anything — even though
+    // by the time someone reaches the actual video, they've almost always
+    // already tapped through several screens to get here (entering the
+    // lobby, etc.), which already satisfies the browser's "needs a user
+    // gesture" requirement for unmuted playback. Starting this based on
+    // whether that's already happened skips the unnecessary extra step for
+    // the vast majority of viewers. See services/userGesture.ts.
+    const [needsUserGesture, setNeedsUserGesture] = useState(() => !hasUserGestured());
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
@@ -303,6 +327,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const movieRef = useRef<typeof movie>(undefined);
     const isEndedRef = useRef<boolean>(false);
     const hasUserInteractedRef = useRef<boolean>(false); // mobile autoplay gate
+
+    // ── AUTO-UNMUTE ON FIRST INTERACTION ─────────────────────────────────
+    // Backs up the lazy needsUserGesture initializer above for the case
+    // where the video mounts before any interaction has happened yet (e.g.
+    // someone lands mid-countdown and the party goes live without them
+    // tapping anything first). The moment ANY interaction happens anywhere
+    // on the page after that — not necessarily the "Tap to Unmute" button
+    // itself — unmute automatically, so that button is a rarely-needed
+    // fallback rather than the only path to sound.
+    useEffect(() => {
+        if (!needsUserGesture) return;
+        return onFirstUserGesture(() => {
+            hasUserInteractedRef.current = true;
+            setNeedsUserGesture(false);
+            const video = videoRef.current;
+            if (!video) return;
+            video.muted = false;
+            const tryPlay = () => { video.play().catch(() => {}); };
+            tryPlay();
+            [400, 1000, 2000].forEach(delay => {
+                setTimeout(() => { if (video.paused) tryPlay(); }, delay);
+            });
+        });
+    }, [needsUserGesture]);
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -1017,27 +1065,46 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (showCredits) {
         return (
-            <WatchPartyCredits
-                movie={movie}
-                partyState={partyState}
-                viewerCount={viewerCount}
-                onClose={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
-                onRewatch={() => {
-                    setShowCredits(false);
-                    setIsEnded(false);
-                    if (videoRef.current) {
-                        videoRef.current.currentTime = 0;
-                        videoRef.current.play();
-                    }
-                }}
-                user={user}
-                isLiked={isLiked}
-                onToggleLike={handleToggleLike}
-                hasFestivalAllAccess={hasFestivalAllAccess}
-                onUpgradeToFullPass={() => setShowPaywall(true)}
-                nextBlock={nextBlockInfo}
-                onBuyNextBlock={handleBuyNextBlock}
-            />
+            <>
+                <WatchPartyCredits
+                    movie={movie}
+                    partyState={partyState}
+                    viewerCount={viewerCount}
+                    onClose={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
+                    onRewatch={() => {
+                        setShowCredits(false);
+                        setIsEnded(false);
+                        if (videoRef.current) {
+                            videoRef.current.currentTime = 0;
+                            videoRef.current.play();
+                        }
+                    }}
+                    user={user}
+                    isLiked={isLiked}
+                    onToggleLike={handleToggleLike}
+                    hasFestivalAllAccess={hasFestivalAllAccess}
+                    onUpgradeToFullPass={() => setShowPaywall(true)}
+                    nextBlock={nextBlockInfo}
+                    onBuyNextBlock={handleBuyNextBlock}
+                />
+                {showPaywall && (
+                    <SquarePaymentModal
+                        movie={movie}
+                        paymentType={parentBlock ? "block" : "watchPartyTicket"}
+                        block={parentBlock || undefined}
+                        onClose={() => setShowPaywall(false)}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                )}
+                {showNextBlockPaywall && nextBlockInfo && (
+                    <SquarePaymentModal
+                        paymentType="block"
+                        block={nextBlockInfo}
+                        onClose={() => setShowNextBlockPaywall(false)}
+                        onPaymentSuccess={handleNextBlockPaymentSuccess}
+                    />
+                )}
+            </>
         );
     }
 

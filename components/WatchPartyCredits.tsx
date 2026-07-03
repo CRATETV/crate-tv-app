@@ -138,9 +138,22 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                 </div>
             ))}
 
-            {/* Main content */}
-            <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 text-center">
-                
+            {/* Main content — this screen has a LOT stacked up (title, stats,
+                director message, applause/like buttons, next-up card,
+                all-access upsell, re-watch/return links), easily taller than
+                a phone screen. The outer shell is overflow-hidden with
+                nothing scrollable underneath it, so anything past the fold
+                used to just be permanently unreachable — including the
+                "Get Tickets" button reported as unclickable, which was
+                likely just cut off below the visible area, not actually
+                broken (that button also had a real separate bug — it was
+                never wired up to a payment flow at all — fixed alongside
+                this in WatchPartyPage.tsx).
+                overflow-y-auto here (plus giving up the h-full/justify-center
+                centering, which fights with scrolling when content overflows)
+                makes the whole thing scroll normally instead. */}
+            <div className="relative z-10 h-full flex flex-col items-center p-8 py-16 text-center overflow-y-auto">
+
                 {/* Film grain overlay for cinematic feel */}
                 <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
 

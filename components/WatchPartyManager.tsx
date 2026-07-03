@@ -302,6 +302,92 @@ const EmbeddedChat: React.FC<{
     );
 };
 
+// Live viewer count for one specific party — only subscribed for items that
+// are actually live right now (see FestivalLiveStatus below), so this stays
+// cheap even with many blocks in the schedule: most of them aren't live at
+// any given moment, so there's rarely more than a couple of these mounted.
+const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
+    const [count, setCount] = useState<number | null>(null);
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+        const unsub = db.collection('watch_parties').doc(itemId).collection('lobby_viewers')
+            .onSnapshot(snap => setCount(snap.size));
+        return () => unsub();
+    }, [itemId]);
+    if (count === null) return null;
+    return <span className="text-white font-black">{count} watching</span>;
+};
+
+// ── FESTIVAL LIVE STATUS ────────────────────────────────────────────────
+// Previously the only way to see what was live across the whole festival
+// was to open each block's own Control Room one at a time. This surfaces
+// everything currently live (with a live viewer count) and everything
+// starting soon in one glance, with a one-click jump into that item's
+// Control Room — useful on a night with several blocks running back to
+// back, so there's no need to hunt through the full schedule table below
+// just to check on things.
+const FestivalLiveStatus: React.FC<{
+    items: WatchableItem[];
+    partyStates: Record<string, WatchPartyState>;
+    onSelect: (id: string) => void;
+}> = ({ items, partyStates, onSelect }) => {
+    const now = Date.now();
+    const live = items.filter(i => partyStates[i.id]?.status === 'live');
+    const soon = items
+        .filter(i => {
+            if (partyStates[i.id]?.status === 'live') return false;
+            if (!i.watchPartyStartTime) return false;
+            const startsIn = new Date(i.watchPartyStartTime).getTime() - now;
+            return startsIn > 0 && startsIn < 2 * 60 * 60 * 1000; // within 2 hours
+        })
+        .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+
+    if (live.length === 0 && soon.length === 0) return null;
+
+    return (
+        <div className="bg-gray-950 border border-white/10 rounded-lg p-6 mb-6">
+            <h2 className="text-lg font-black uppercase tracking-widest text-white mb-4">Festival Live Status</h2>
+            <div className="space-y-4">
+                {live.length > 0 && (
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-red-500 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Live Now ({live.length})
+                        </p>
+                        {live.map(item => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 bg-red-600/10 border border-red-500/20 rounded-xl px-4 py-3 flex-wrap">
+                                <div>
+                                    <p className="font-bold text-white text-sm">{item.title}</p>
+                                    <p className="text-xs text-gray-500"><LiveViewerCount itemId={item.id} /></p>
+                                </div>
+                                <button onClick={() => onSelect(item.id)} className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all">
+                                    Manage
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {soon.length > 0 && (
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Starting Soon ({soon.length})</p>
+                        {soon.map(item => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 flex-wrap">
+                                <div>
+                                    <p className="font-bold text-white text-sm">{item.title}</p>
+                                    <p className="text-xs text-gray-500">{new Date(item.watchPartyStartTime!).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                                </div>
+                                <button onClick={() => onSelect(item.id)} className="bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all">
+                                    View
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const WatchPartyControlRoom: React.FC<{
     item: WatchableItem;
     partyState: WatchPartyState | undefined;
@@ -1178,6 +1264,8 @@ const WatchPartyManager: React.FC<{
 
     return (
         <>
+            <FestivalLiveStatus items={watchableItems} partyStates={partyStates} onSelect={setSelectedItemKey} />
+
             {currentSelectedItem && (
                 <WatchPartyControlRoom
                     item={currentSelectedItem}
