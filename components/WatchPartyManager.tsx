@@ -603,7 +603,23 @@ const WatchPartyControlRoom: React.FC<{
 
                         {/* Video Player */}
                         <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                            {currentMovie ? (
+                            {partyState?.status === 'ended' ? (
+                                // Once the party is ended, this used to just leave the live,
+                                // native-controls <video> sitting there fully playable — with
+                                // no visual sign the party had stopped. That's exactly why it
+                                // "kept playing" / "restarted" here: it was never actually
+                                // stopped, just no longer synced out to viewers. Unmounting the
+                                // <video> entirely (instead of just hiding it) guarantees
+                                // playback can't continue or get scrubbed accidentally — there's
+                                // no element left to click play on or drag the seek bar of.
+                                <div className="w-full h-full flex items-center justify-center text-gray-500 bg-gradient-to-br from-gray-900 to-black">
+                                    <div className="text-center space-y-2">
+                                        <div className="text-4xl mb-2">⏹</div>
+                                        <p className="text-sm font-black uppercase tracking-widest text-gray-400">Party Ended</p>
+                                        <p className="text-xs text-gray-600">Click "Restart Party" below to begin a new session.</p>
+                                    </div>
+                                </div>
+                            ) : currentMovie ? (
                                 <video
                                     ref={videoRef}
                                     src={currentMovie.fullMovie}
