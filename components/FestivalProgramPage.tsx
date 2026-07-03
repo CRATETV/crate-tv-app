@@ -161,14 +161,14 @@ const BlockSection: React.FC<{
                                 onClick={onEnterLobby}
                                 className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-6 py-3 rounded-xl transition-all"
                             >
-                                Join Live Now
+                                Join Party
                             </button>
                         ) : hasWatchParty && !isUnlocked ? (
                             <button
                                 onClick={onBuyTicket}
                                 className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-6 py-3 rounded-xl transition-all"
                             >
-                                Get Ticket {watchPartyPrice ? `· $${watchPartyPrice.toFixed(2)}` : ''}
+                                Get Ticket {watchPartyPrice ? `— $${watchPartyPrice.toFixed(2)}` : ''}
                             </button>
                         ) : isUnlocked ? (
                             <div className="inline-flex items-center gap-2 bg-green-900/20 border border-green-500/30 text-green-400 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full">

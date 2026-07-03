@@ -225,15 +225,15 @@ const BlockCard: React.FC<{
                     </div>
                     <div className="flex-shrink-0">
                         {isLive
-                            ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all animate-pulse">▶ Join Live</button>
+                            ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all animate-pulse">Join Party</button>
                             : isBeforeScreening && (isUnlocked || !block.price || block.price === 0)
                                 ? <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Enter Lobby</button>
                             : isBeforeScreening && !isUnlocked && block.price && block.price > 0
-                                ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
+                                ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
                             : isUnlocked
                                 ? <button onClick={onEnterLobby} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Now</button>
                                 : block.price && block.price > 0
-                                    ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket · ${block.price.toFixed(2)}</button>
+                                    ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
                                     : <button onClick={onEnterLobby} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Watch Free</button>}
                     </div>
                 </div>

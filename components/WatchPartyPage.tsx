@@ -215,7 +215,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
             </div>
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0">
                 <div className={`flex items-center gap-2 rounded-full px-4 py-1 border ${isBackstageVerified ? 'bg-red-900/30 border-red-500/30' : 'bg-gray-800/80 border-white/10'}`}>
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageVerified ? "Answer a question..." : (isQALive ? "Ask the director a question..." : "Type a message...")} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
+                    <input type="text" name="chat-message" autoComplete="off" autoCorrect="on" spellCheck="true" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageVerified ? "Answer a question..." : (isQALive ? "Ask the director a question..." : "Type a message...")} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
                     <button type="submit" className={isBackstageVerified ? "text-red-400" : "text-red-500"} disabled={!user || isSending || !newMessage.trim()}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                 </div>
             </form>
@@ -877,12 +877,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white">{movie.title}</h2>
                         {movie.director && <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Directed by {movie.director}</p>}
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-700">Waiting for host to start the party</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">The movie will start at its scheduled start time</p>
+                    {/* This used to be a small, low-contrast gray link — easy to miss, and
+                        with nothing else on screen (no countdown, no price) it read as a
+                        dead end. The lobby has the actual countdown/ticket info this screen
+                        is missing, so make going there the obvious, primary next step. */}
                     <button
                         onClick={() => setShowLobby(true)}
-                        className="text-[9px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors border border-white/5 hover:border-white/20 px-4 py-2 rounded-lg"
+                        className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                     >
-                        Back to lobby
+                        View Countdown &amp; Details
                     </button>
                 </div>
             </div>
@@ -1091,7 +1095,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission Required.</h2>
                                 <div className="space-y-6">
                                     <button onClick={() => setShowPaywall(true)} className="w-full bg-red-600 hover:bg-red-700 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-2xl hover:scale-105 active:scale-95 transition-all border border-red-500/50">
-                                        Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}
+                                        {/* For block-based watch parties, price lives on the block, not the
+                                            individual film — movie.watchPartyPrice is often unset there. This
+                                            used to render literally "$undefined" for anyone who skipped the
+                                            lobby (which already has this same fallback) and landed here
+                                            directly. Match the lobby's fallback so it's never blank/broken. */}
+                                        Get Ticket — ${(parentBlock?.price ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                                     </button>
                                     
                                     <div className="pt-10 border-t border-white/10">

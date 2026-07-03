@@ -84,9 +84,9 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     const topOffset = `${stagingOffset}px`;
 
     return (
-        <div 
+        <div
             className="fixed left-0 right-0 z-[110] flex items-center justify-between gap-2 md:gap-4 shadow-2xl border-b border-white/10 transition-all"
-            style={{ 
+            style={{
                 top: topOffset,
                 background: movie.isWatchPartyPaid && !alreadyHasAccess
                     ? 'linear-gradient(to right, #dc2626, #d97706, #312e81)'
@@ -96,6 +96,18 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                 paddingLeft: '8px',
                 paddingRight: '8px',
                 minHeight: 'calc(48px + env(safe-area-inset-top))',
+                // iOS Safari has a long-standing WebKit bug where `position: fixed`
+                // elements flicker, lag, or briefly vanish during scroll — most
+                // often on elements the compositor didn't promote to their own
+                // GPU layer. Forcing that promotion is the standard fix and is
+                // almost certainly why this ribbon was "appearing/disappearing"
+                // on iPhone specifically (this bug doesn't happen on Android/
+                // desktop Chrome, which don't have the same fixed-position quirk).
+                transform: 'translateZ(0)',
+                WebkitTransform: 'translateZ(0)',
+                willChange: 'transform',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
             }}
         >
             <div className="flex items-center gap-2 md:gap-4 ml-1 md:ml-8">

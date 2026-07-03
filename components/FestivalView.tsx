@@ -209,7 +209,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                             onClick={() => navigateToParty(block.id)}
                                             className="bg-red-600 text-white font-black px-10 py-5 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-red-500 active:scale-95 shadow-red-900/20"
                                         >
-                                            Join Live Session
+                                            Join Party
                                         </button>
                                     )}
                                     {!isBlockLive && isBlockUnlocked && (

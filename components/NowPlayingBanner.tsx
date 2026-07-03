@@ -82,7 +82,7 @@ const NowStreamingBanner: React.FC<NowStreamingBannerProps> = ({ movie, onSelect
                 {isLive ? (
                     <>
                         <span className="mr-2">●</span>
-                        Join Live Screening
+                        Join Party
                     </>
                 ) : (
                     <>

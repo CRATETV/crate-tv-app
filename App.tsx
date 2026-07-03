@@ -21,7 +21,6 @@ import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import WatchPartyLobby from './components/WatchPartyLobby';
 import SquarePaymentModal from './components/SquarePaymentModal';
-import WatchPartyNotificationModal from './components/WatchPartyNotificationModal';
 import CrateFestBanner from './components/CrateFestBanner';
 import CrateVaultRow from './components/CrateVaultRow';
 import CrateIntelligence from './components/CrateIntelligence';
@@ -58,8 +57,6 @@ const App: React.FC = () => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [dismissedBannerKeys, setDismissedBannerKeys] = useState<Set<string>>(new Set());
     const [preloadVideoUrl, setPreloadVideoUrl] = useState<string | null>(null);
-    const [showWatchPartyModal, setShowWatchPartyModal] = useState(false);
-    const [watchPartyModalShown, setWatchPartyModalShown] = useState(false);
     const [showLobbyOverlay, setShowLobbyOverlay] = useState(false);
     const [lobbyPaywallOpen, setLobbyPaywallOpen] = useState(false);
     
@@ -156,12 +153,13 @@ const App: React.FC = () => {
             .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies, categories.vault]);
 
-    // ── TEMPORARY: "Enter Lobby" ribbon disabled by request — it was
-    // appearing/disappearing in a way that wasn't worth chasing further right
-    // now. This only hides that one ribbon; the watch party pages, ticket
-    // purchases, and the general PWFF promo banner are all untouched — flip
-    // back to false whenever it's worth revisiting. ──
-    const SUPPRESS_WATCH_PARTY_RIBBON = true;
+    // ── Re-enabled: the "appearing/disappearing on iPhone" bug this was
+    // punting on is the well-known iOS Safari `position: fixed` compositing
+    // glitch — fixed in LiveWatchPartyBanner.tsx by forcing the banner onto
+    // its own GPU layer (transform: translateZ(0) + will-change). If it
+    // still misbehaves on a real device after that, flip this back to true
+    // as an instant kill switch while we dig further. ──
+    const SUPPRESS_WATCH_PARTY_RIBBON = false;
 
     const activeBannerType = useMemo(() => {
         // ── KILL SWITCH: admin can suppress all banners instantly ──
@@ -349,20 +347,6 @@ const App: React.FC = () => {
         return movieResult;
     }, [movies, allPartyStates, activeParties, festivalData, settings]);
 
-    // Show watch party notification once per session after user logs in
-    useEffect(() => {
-        if (user && upcomingWatchPartyMovie && !watchPartyModalShown && !isLoading) {
-            const isLiveNow = activeParties[upcomingWatchPartyMovie.key]?.status === 'live';
-            const sessionKey = `wp_notified_${upcomingWatchPartyMovie.key}_${isLiveNow ? 'live' : 'upcoming'}`;
-            if (!sessionStorage.getItem(sessionKey)) {
-                // Modal suppressed — banner handles notification
-                // setTimeout(() => setShowWatchPartyModal(true), 1500);
-                setWatchPartyModalShown(true);
-                sessionStorage.setItem(sessionKey, 'true');
-            }
-        }
-    }, [user, upcomingWatchPartyMovie, watchPartyModalShown, isLoading]);
-
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
@@ -480,18 +464,6 @@ const App: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
             <SEO title="Home" description="Stream the best independent cinema." />
             <SmartInstallPrompt />
-
-            {/* Watch Party Notification Modal — shows once per session on login */}
-            {showWatchPartyModal && upcomingWatchPartyMovie && (
-                <WatchPartyNotificationModal
-                    movie={upcomingWatchPartyMovie}
-                    onGetTicket={() => {
-                        setShowWatchPartyModal(false);
-                        setShowLobbyOverlay(true);
-                    }}
-                    onDismiss={() => setShowWatchPartyModal(false)}
-                />
-            )}
 
             {/* Watch Party Lobby Overlay — opens on banner or notification CTA click.
                 livePartyMovie can be a real movie OR a synthesized stand-in for a

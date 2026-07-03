@@ -52,6 +52,37 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         document.head.appendChild(script);
     }, []);
 
+    // ── SCREEN WAKE LOCK — keep the device awake for the entire time the
+    // lobby is on screen, not just once the film starts playing (the sync
+    // engine in WatchPartyPage.tsx already handles the wake lock during
+    // actual playback; this covers the countdown/waiting period beforehand,
+    // which can run for a while and has no video to keep the screen "busy"
+    // in the OS's eyes, so it was going dark on the normal inactivity timer). ──
+    useEffect(() => {
+        const nav = navigator as any;
+        if (!nav.wakeLock) return; // unsupported browser — no-op
+        let wakeLock: any = null;
+
+        const requestWakeLock = async () => {
+            try {
+                wakeLock = await nav.wakeLock.request('screen');
+            } catch (e) {
+                // Can be refused (low battery, backgrounded, unsupported) — lobby still works either way
+            }
+        };
+        requestWakeLock();
+
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            wakeLock?.release?.().catch(() => {});
+        };
+    }, []);
+
     // Register viewer presence in lobby
     useEffect(() => {
         if (!user) return;
@@ -226,7 +257,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                 onClick={onBuyTicket}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Unlock Admission // ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
+                                Get Ticket — ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                             </button>
                         )}
                     </div>
@@ -381,7 +412,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             onClick={onBuyTicket}
                             className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-95 shadow-2xl"
                         >
-                            Unlock Admission — ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
+                            Get Ticket — ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                         </button>
                     )}
 
@@ -545,7 +576,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                     onClick={onBuyTicket}
                                     className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                 >
-                                    Unlock Admission // ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
+                                    Get Ticket — ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
                                 </button>
                                 <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
                             </div>

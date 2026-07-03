@@ -294,7 +294,7 @@ const EmbeddedChat: React.FC<{
             </div>
             <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
+                    <input type="text" name="chat-message" autoComplete="off" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
                     <button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button>
                 </div>
             </form>

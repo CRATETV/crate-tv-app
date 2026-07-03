@@ -236,11 +236,11 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
                             >
                                 {primaryParty.hasAccess ? (
                                     <>
-                                        <span className="mr-2">▶</span> Join Watch Party
+                                        <span className="mr-2">▶</span> Join Party
                                     </>
                                 ) : (
                                     <>
-                                        <span className="mr-2">🎟️</span> Get Ticket & Join
+                                        <span className="mr-2">🎟️</span> Get Ticket — ${(primaryParty.block.price ?? 5).toFixed(2)}
                                     </>
                                 )}
                             </button>

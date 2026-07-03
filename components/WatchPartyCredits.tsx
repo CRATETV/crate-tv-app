@@ -240,7 +240,7 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                                         onClick={onBuyNextBlock}
                                         className="w-full bg-white text-black hover:bg-gray-200 font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                     >
-                                        Get Tickets{nextBlock.price ? ` — $${nextBlock.price.toFixed(2)}` : ''}
+                                        Get Ticket{nextBlock.price ? ` — $${nextBlock.price.toFixed(2)}` : ''}
                                     </button>
                                 )
                             )}
