@@ -304,8 +304,11 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         );
     }
 
-    // Countdown hit 0 — show spinner while Firebase propagates the 'live' status
-    if (autoStartTriggered && partyState?.status !== 'live') {
+    // Countdown hit 0 — show spinner while Firebase propagates the 'live' status.
+    // (The `status === 'live'` case is already fully handled and returned above,
+    // so by this point TypeScript correctly knows status can't be 'live' here —
+    // that redundant check used to be included too, which is what TS flagged.)
+    if (autoStartTriggered) {
         return (
             <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-[fadeIn_0.3s_ease-out]">
                 {movie.poster && (

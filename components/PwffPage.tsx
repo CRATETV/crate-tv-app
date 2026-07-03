@@ -350,7 +350,7 @@ const TeaserMode: React.FC<{
 
 // ─── PROGRAMME MODE ───────────────────────────────────────────────────────────
 const ProgrammeMode: React.FC = () => {
-    const { festivalData, festivalConfig, movies, activeParties, settings } = useFestival();
+    const { festivalData, festivalConfig, movies, activeParties, allPartyStates, settings } = useFestival();
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, unlockedWatchPartyKeys, user, getUserIdToken } = useAuth();
 
     const [activeDay, setActiveDay] = useState(1);
