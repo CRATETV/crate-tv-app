@@ -178,6 +178,30 @@ const EmbeddedChat: React.FC<{
         }
     };
 
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const handleDeleteMessage = async (messageId: string) => {
+        const adminPassword = sessionStorage.getItem('adminPassword');
+        if (!adminPassword) return;
+        setDeletingId(messageId);
+        try {
+            const res = await fetch('/api/delete-chat-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, messageId, adminPassword }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to delete message.');
+            }
+        } catch (error) {
+            console.error("Failed to delete message:", error);
+            alert(`Error: ${(error as Error).message}`);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const downloadChat = () => {
         if (messages.length === 0) return;
         
@@ -236,9 +260,9 @@ const EmbeddedChat: React.FC<{
             </div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4">
                 {messages.map(msg => (
-                    <div key={msg.id} className="flex items-start gap-3">
+                    <div key={msg.id} className="flex items-start gap-3 group">
                         <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                        <div>
+                        <div className="flex-grow min-w-0">
                             <div className="flex items-center gap-2">
                                 <p className={`font-bold text-sm ${msg.isAdmin ? 'text-pink-500' : 'text-white'}`}>{msg.userName}</p>
                                 {msg.isAdmin && <span className="bg-pink-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Admin</span>}
@@ -246,6 +270,16 @@ const EmbeddedChat: React.FC<{
                             </div>
                             <p className="text-sm text-gray-300 break-words">{msg.text}</p>
                         </div>
+                        <button
+                            onClick={() => {
+                                if (window.confirm('Delete this message for everyone?')) handleDeleteMessage(msg.id);
+                            }}
+                            disabled={deletingId === msg.id}
+                            title="Delete message"
+                            className="flex-shrink-0 opacity-40 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 text-gray-500 hover:text-red-500 transition-all p-1 disabled:opacity-50"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
@@ -274,7 +308,13 @@ const WatchPartyControlRoom: React.FC<{
 
     const handlePlay = () => onSyncState({ isPlaying: true });
     const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
-    const handleSeeked = () => videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+    const handleSeeked = () => {
+        if (isProgrammaticSeekRef.current) {
+            isProgrammaticSeekRef.current = false;
+            return; // don't write back — this was our own seek, not the admin's
+        }
+        videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+    };
     
     // Periodically sync time while playing to keep viewers in check
     const handleTimeUpdate = () => {
@@ -317,6 +357,8 @@ const WatchPartyControlRoom: React.FC<{
         });
     };
     
+    const isProgrammaticSeekRef = useRef(false);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState) return;
@@ -327,7 +369,11 @@ const WatchPartyControlRoom: React.FC<{
             video.pause();
         }
 
-        if (Math.abs(video.currentTime - partyState.currentTime) > 3) {
+        // Only hard-seek if drift is very large (10s) to avoid the reset loop:
+        // small drifts from network latency were causing seek → timeupdate write
+        // → Firestore update → seek → repeat endlessly.
+        if (Math.abs(video.currentTime - partyState.currentTime) > 10) {
+            isProgrammaticSeekRef.current = true;
             video.currentTime = partyState.currentTime;
         }
     }, [partyState]);

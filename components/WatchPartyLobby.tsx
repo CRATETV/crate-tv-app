@@ -140,17 +140,18 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
             if (diff <= 0) {
                 setCountdown(null);
-                if (diff < -1000) {
-                    const keyToStart = partyKey || movie.key;
-                    if (!partyState || partyState.status !== 'live') {
-                        fetch('/api/auto-start-watch-party', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ movieKey: keyToStart })
-                        }).catch(() => {});
-                    }
-                    onPartyStart();
+                const keyToStart = partyKey || movie.key;
+                if (!partyState || partyState.status !== 'live') {
+                    fetch('/api/auto-start-watch-party', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ movieKey: keyToStart })
+                    })
+                    .then(r => r.json())
+                    .then(d => console.log('[auto-start] response:', d))
+                    .catch(err => console.error('[auto-start] failed:', err));
                 }
+                onPartyStart();
                 return;
             }
 
@@ -286,7 +287,17 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 </div>
 
                 {/* Main content */}
-                <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center">
+                <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center overflow-y-auto py-24">
+                    {/* Film poster */}
+                    <div className="relative mx-auto w-32 md:w-44 mb-6">
+                        <div className="absolute -inset-3 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />
+                        <img
+                            src={movie.poster}
+                            alt={movie.title}
+                            className="relative w-full rounded-xl shadow-2xl border border-white/10"
+                        />
+                    </div>
+
                     <p className="text-[9px] font-black uppercase tracking-[0.5em] text-gray-600 mb-6">
                         {movie.director && `Directed by ${movie.director}`}
                     </p>
@@ -431,8 +442,11 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         <p className="text-red-500 font-black uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>
                     </div>
 
-                    {/* Countdown */}
-                    {countdown && (
+                    {/* Countdown — always shows something here so the page never goes quiet.
+                        If a start time is scheduled, show the live countdown. If not, show
+                        a clear "waiting" indicator so viewers know the page is alive and
+                        something is coming, instead of a silent poster. */}
+                    {countdown ? (
                         <div className="space-y-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">Screening Begins In</p>
                             <div className="flex justify-center gap-3 md:gap-6">
@@ -455,6 +469,16 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                     <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-gray-500 mt-1">Sec</div>
                                 </div>
                             </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 animate-[fadeIn_0.5s_ease-out]">
+                            <div className="relative w-10 h-10 mx-auto">
+                                <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
+                                Waiting for the host to schedule a start time
+                            </p>
                         </div>
                     )}
 

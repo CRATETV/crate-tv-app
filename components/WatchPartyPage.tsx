@@ -237,12 +237,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [showLobby, setShowLobby] = useState(true);
     const [showCredits, setShowCredits] = useState(false);
-    const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+    const [isVideoBuffering, setIsVideoBuffering] = useState(false); // start false — show player immediately
+    const bufferingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleVideoWaiting = useCallback(() => {
+        // Only show buffering overlay after 1.5s of sustained stall — avoids flashing on seeks
+        bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 1500);
+    }, []);
+    const handleVideoCanPlay = useCallback(() => {
+        if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current);
+        setIsVideoBuffering(false);
+    }, []);
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
+    // Stable refs so the sync interval never needs to be torn down on Firestore updates
+    const partyStateRef = useRef<WatchPartyState | undefined>(undefined);
+    const movieRef = useRef<typeof movie>(undefined);
+    const isEndedRef = useRef<boolean>(false);
+    const hasUserInteractedRef = useRef<boolean>(false); // mobile autoplay gate
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -303,39 +318,66 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
 
+    // ── MOBILE KEYBOARD STABILITY ─────────────────────────────────────────
+    // On mobile, focusing the chat input used to make the browser resize/scroll
+    // the whole page to reveal the keyboard, which shoved the video player
+    // around. We track how much the on-screen keyboard is covering via the
+    // visualViewport API and use that offset to slide just the chat drawer up
+    // above the keyboard — the video player itself is now a fixed-position
+    // element that this offset never touches, so it stays put.
+    const [keyboardOffset, setKeyboardOffset] = useState(0);
     useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
+        const vv = (window as any).visualViewport;
+        if (!vv) return;
+        const handleViewportChange = () => {
+            const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+            setKeyboardOffset(offset);
+        };
+        vv.addEventListener('resize', handleViewportChange);
+        vv.addEventListener('scroll', handleViewportChange);
+        handleViewportChange();
+        return () => {
+            vv.removeEventListener('resize', handleViewportChange);
+            vv.removeEventListener('scroll', handleViewportChange);
+        };
+    }, []);
 
-        // If party has been terminated, stop playback immediately
-        if (partyState.status === 'ended') {
-            video.pause();
-            return;
-        }
+    // Keep movieRef and isEndedRef current without restarting the sync interval
+    useEffect(() => { movieRef.current = movie; }, [movie]);
+    useEffect(() => { isEndedRef.current = isEnded; }, [isEnded]);
+
+    // ── SYNC ENGINE — runs once, reads state via refs so Firestore updates
+    //    never tear down and restart the interval (which caused repeated seeks) ──
+    useEffect(() => {
+        if (isControllerMode) return;
 
         const syncClock = () => {
-            // Double-check party is still live
-            if (partyState.status === 'ended' || partyState.status !== 'live') {
+            const video = videoRef.current;
+            const ps = partyStateRef.current;
+            const mv = movieRef.current;
+
+            if (!video || !ps?.actualStartTime || mv?.isLiveStream) return;
+
+            if (ps.status === 'ended' || ps.status !== 'live') {
                 video.pause();
                 return;
             }
 
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
+
             try {
-                // For blocks, use filmStartTime (when current film started) for accurate sync
-                // For single movies, fall back to actualStartTime
-                const startRef = partyState.filmStartTime || partyState.actualStartTime;
+                const startRef = ps.filmStartTime || ps.actualStartTime;
                 const serverStart = (startRef as any).toDate().getTime();
                 const elapsedSinceStart = (now - serverStart) / 1000;
-                
-                // Calculate target position based on elapsed time since THIS FILM started
                 const targetPosition = Math.max(0, elapsedSinceStart);
-                
-                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
-                
+
+                const movieDuration = mv?.durationInMinutes
+                    ? mv.durationInMinutes * 60
+                    : (video.duration > 0 ? video.duration : 3600);
+
                 if (targetPosition >= movieDuration) {
-                    if (!isEnded) {
+                    if (!isEndedRef.current) {
                         setIsEnded(true);
                         video.pause();
                         video.currentTime = movieDuration;
@@ -346,37 +388,43 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const drift = targetPosition - video.currentTime;
                 const absDrift = Math.abs(drift);
 
-                // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
-                if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
+                // Only hard-seek if drift is large AND video has enough data
+                // Use a longer debounce (3s) to avoid repeated seeks on mobile
+                if (absDrift > 8 && !video.seeking && video.readyState >= 3) {
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
-                    video.playbackRate = 1.0; // Reset rate on jump
-                } 
-                // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
-                else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
-                    // If behind, speed up slightly. If ahead, slow down slightly.
-                    video.playbackRate = drift > 0 ? 1.06 : 0.94;
-                } 
-                // 3. IN SYNC: Reset to normal speed
-                else {
+                    video.playbackRate = 1.0;
+                } else if (absDrift > 1.5 && absDrift <= 8 && video.readyState >= 3) {
+                    // Gentler catch-up rate (±3% instead of ±6%) — noticeably smoother,
+                    // and the wider 1.5s dead zone (was 0.5s) stops the constant tiny
+                    // rate flips that made playback feel like it was "sticking".
+                    video.playbackRate = drift > 0 ? 1.03 : 0.97;
+                } else if (video.playbackRate !== 1.0) {
                     video.playbackRate = 1.0;
                 }
 
-                // Handle play/pause state from server
-                if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                    video.play().catch(() => {});
-                } else if (!partyState.isPlaying && !video.paused) {
+                // Play/pause — on mobile we need a user gesture first; skip
+                // autoplay attempts if user hasn't interacted yet (avoids console
+                // errors and the seek-then-pause reset loop on iOS/Android)
+                if (ps.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
+                    if (hasUserInteractedRef.current) {
+                        video.play().catch(() => {});
+                    }
+                } else if (!ps.isPlaying && !video.paused) {
                     video.pause();
                 }
-            } catch (e) { console.error("Sync heartbeat failure:", e); }
+            } catch (e) { console.error('Sync heartbeat failure:', e); }
         };
 
-        const interval = setInterval(syncClock, 1000);
-        syncClock(); 
+        const interval = setInterval(syncClock, 1500); // 1.5s — gentler cadence
+        // Don't call syncClock() immediately on mount; let the video settle first
+        const initialDelay = setTimeout(syncClock, 3000);
         return () => {
             clearInterval(interval);
+            clearTimeout(initialDelay);
         };
-    }, [partyState, movie, isEnded, isControllerMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isControllerMode]); // ← intentionally omit partyState/movie — we use refs
 
     useEffect(() => {
         // Retry until Firebase is ready — it initializes async so first call may return null
@@ -397,6 +445,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 if (doc.exists) {
                     const state = doc.data() as WatchPartyState;
                     setPartyState(state);
+                    partyStateRef.current = state; // keep stable ref in sync
                     if (state.status === 'live') {
                         setShowLobby(false);
                     }
@@ -745,7 +794,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }
 
     return (
-        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
+        <div className="fixed inset-0 flex flex-col bg-black text-white overflow-hidden">
                 <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
                 <div className="flex-grow flex flex-col relative h-full">
                     <div className="p-3 bg-black/90 flex items-center justify-between border-b border-white/5">
@@ -838,40 +887,39 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ) : (
                                 <div className="relative w-full h-full">
                                     {/* Buffering spinner — shows until video has enough data to play */}
-                                    {isVideoBuffering && (
-                                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
-                                            {movie.poster && (
-                                                <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] blur-3xl scale-110" />
-                                            )}
-                                            <div className="relative z-10 text-center space-y-4">
-                                                <div className="relative w-14 h-14 mx-auto">
-                                                    <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
-                                                    <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                                                </div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Loading transmission</p>
-                                            </div>
-                                        </div>
+                                    {/* Blurred backdrop for non-16:9 films — uses the poster image, not a second
+                                        decoded video stream, so we don't double the decode/network load on the
+                                        real player (that duplicate <video> was a cause of playback stutter) */}
+                                    {movie.poster && (
+                                        <img
+                                            src={movie.poster}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
+                                        />
                                     )}
-                                    {/* Blurred backdrop for non-16:9 films */}
                                     <video
+                                        ref={videoRef}
                                         src={movie.fullMovie}
-                                        className={`absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none transition-opacity duration-1000 ${isEnded ? 'opacity-0' : 'opacity-40'}`}
-                                        muted playsInline aria-hidden="true"
-                                    />
-                                    <video 
-                                        ref={videoRef} 
-                                        src={movie.fullMovie} 
-                                        className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
-                                        autoPlay 
-                                        muted={false} 
+                                        className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`}
+                                        muted={false}
                                         playsInline
                                         webkit-playsinline="true"
                                         preload="auto"
                                         controls={false}
-                                        onCanPlay={() => setIsVideoBuffering(false)}
-                                        onPlaying={() => setIsVideoBuffering(false)}
-                                        onWaiting={() => setIsVideoBuffering(true)}
-                                        onStalled={() => setIsVideoBuffering(true)}
+                                        onCanPlay={handleVideoCanPlay}
+                                        onPlaying={() => {
+                                            hasUserInteractedRef.current = true;
+                                            handleVideoCanPlay();
+                                        }}
+                                        onWaiting={handleVideoWaiting}
+                                        onStalled={handleVideoWaiting}
+                                        onEnded={() => {
+                                            // Fire immediately on the real browser "ended" event so auto-advance
+                                            // doesn't depend solely on the server-clock drift check in the sync
+                                            // engine (which could miss the boundary if durationInMinutes was off).
+                                            if (!isEndedRef.current) setIsEnded(true);
+                                        }}
                                     />
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
@@ -911,8 +959,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ))}
                     </div>
 
-                    <div className="md:hidden h-80 flex flex-col overflow-hidden bg-[#0a0a0a]">
-                        <EmbeddedChat 
+                    {/* Mobile chat — a fixed overlay, not a flex sibling of the video, so the
+                        keyboard opening can never resize/push the video player. It just
+                        slides up above the keyboard via the visualViewport offset. */}
+                    <div
+                        className="md:hidden fixed left-0 right-0 z-40 h-80 flex flex-col overflow-hidden bg-[#0a0a0a] border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
+                        style={{
+                            bottom: 0,
+                            transform: `translateY(-${keyboardOffset}px)`,
+                            paddingBottom: keyboardOffset > 0 ? 0 : 'env(safe-area-inset-bottom)',
+                            transition: 'transform 0.15s ease-out',
+                        }}
+                    >
+                        <EmbeddedChat
                             partyKey={movieKey} 
                             directors={[]} 
                             isQALive={partyState?.isQALive} 
