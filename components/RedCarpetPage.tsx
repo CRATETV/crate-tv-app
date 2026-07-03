@@ -204,7 +204,7 @@ const RedCarpetPage: React.FC<RedCarpetPageProps> = ({ settings, onEnterWatchPar
                             <div className="text-center max-w-lg space-y-8">
                                 <div className="space-y-2">
                                     <p className="text-[9px] font-black uppercase tracking-[0.5em] text-red-500">Tonight's Opening Film</p>
-                                    <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none text-white">
+                                    <h1 className="text-fluid-title font-black uppercase tracking-tighter italic leading-none text-white break-words">
                                         {settings.pwffRedCarpetFilmTitle || 'Opening Night'}
                                     </h1>
                                     {settings.pwffRedCarpetFilmDirector && (

@@ -149,7 +149,7 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                     {/* "End" title card */}
                     <div className="space-y-4">
                         <p className="text-red-500 font-black uppercase tracking-[0.5em] text-xs animate-pulse">Transmission Complete</p>
-                        <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">{movie.title}</h1>
+                        <h1 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{movie.title}</h1>
                         <p className="text-gray-500 font-bold uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>
                         <p className="text-white text-lg font-bold pt-2">Thank you for watching{nextBlock ? ' this block' : ''}!</p>
                     </div>

@@ -277,8 +277,8 @@ const JuryRoomPage: React.FC = () => {
                                         />
                                     </div>
                                     <div className="bg-black/40 border border-emerald-900/10 p-12 rounded-[3.5rem] space-y-6 shadow-inner">
-                                        <div className="flex items-center gap-4">
-                                            <h2 className="text-4xl font-black text-emerald-400 uppercase tracking-tighter italic leading-none">{selectedFilm.title}</h2>
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <h2 className="text-4xl font-black text-emerald-400 uppercase tracking-tighter italic leading-none break-words min-w-0">{selectedFilm.title}</h2>
                                             <span className="bg-emerald-900/20 text-emerald-700 px-3 py-1 rounded text-[8px] font-black uppercase">Review Mode: 2026</span>
                                         </div>
                                         <p className="text-emerald-800 text-xl leading-relaxed font-medium">"{selectedFilm.synopsis}"</p>

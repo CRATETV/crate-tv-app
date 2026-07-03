@@ -252,6 +252,27 @@
       .text-fluid-sub {
         font-size: clamp(1.25rem, 4vw, 2.5rem);
       }
+      /* Scales continuously with viewport width instead of jumping between a
+         few fixed breakpoint sizes (e.g. text-4xl sm:text-5xl md:text-7xl).
+         This is the actual technique behind "looks right on every device" —
+         breakpoint-jump sizing is what caused the PWFF heading to clip on a
+         Samsung S20 FE (a width right in between two breakpoints, where the
+         larger fixed size no longer fit). A fluid clamp() has no such gap:
+         there's no width where the wrong size is picked, so there's nothing
+         to clip. Sized for section/movie/festival titles — noticeably smaller
+         than .text-fluid-hero, which is reserved for full-bleed marketing
+         headlines like the landing page's "Cinema Unbound."
+         Min 2rem (32px) keeps it legible on the narrowest phones; max 4.5rem
+         (72px) matches the old md:text-7xl ceiling so desktop is unchanged. */
+      .text-fluid-title {
+        font-size: clamp(2rem, 1.2rem + 5vw, 4.5rem);
+      }
+      /* Same idea, larger ceiling — for the handful of titles that were
+         scaling up to text-6xl/text-8xl (96px) at the md breakpoint rather
+         than text-7xl (72px). */
+      .text-fluid-title-lg {
+        font-size: clamp(2.25rem, 1rem + 7vw, 6rem);
+      }
 
       /* PRINTER MODEL SECTOR */
       @media print {

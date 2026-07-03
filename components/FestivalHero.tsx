@@ -67,7 +67,7 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
             {/* PRISMATIC HEADLINE */}
             <div className="relative">
                 <div className="absolute inset-0 blur-3xl bg-red-600/20 scale-110 opacity-50 -z-10 animate-pulse"></div>
-                <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black max-w-6xl drop-shadow-[0_15px_40px_rgba(0,0,0,0.8)] uppercase tracking-tighter italic leading-[0.85] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-400">
+                <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black max-w-6xl drop-shadow-[0_15px_40px_rgba(0,0,0,0.8)] uppercase tracking-tighter italic leading-[0.85] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-400 break-words">
                     {title}
                 </h1>
             </div>

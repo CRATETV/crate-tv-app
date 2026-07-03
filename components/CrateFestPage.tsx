@@ -109,7 +109,7 @@ const CrateFestPage: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black to-black"></div>
                     </div>
                     <div className="relative z-10 max-w-7xl space-y-10 animate-[fadeIn_1.2s_ease-out]">
-                        <h1 className="text-5xl md:text-[7rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">
+                        <h1 className="text-5xl md:text-[7rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl break-words">
                             {config.title.split(' ')[0]}<br/>
                             <span className="text-red-600 drop-shadow-[0_0_80px_rgba(239,68,68,0.3)]">{config.title.split(' ').slice(1).join(' ')}</span>
                         </h1>
@@ -130,7 +130,7 @@ const CrateFestPage: React.FC = () => {
                                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
                                     <div>
                                         <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mb-2">Block {idx + 1}</p>
-                                        <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-white">{block.title}</h2>
+                                        <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic text-white break-words">{block.title}</h2>
                                     </div>
                                     {!isBlockUnlocked && (
                                         <button onClick={() => handlePurchaseClick('block', block)} className="bg-white/5 hover:bg-white/10 text-white font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">

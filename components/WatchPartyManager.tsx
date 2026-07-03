@@ -356,16 +356,29 @@ const WatchPartyControlRoom: React.FC<{
         if (!window.confirm(`Skip to Film ${nextIdx + 1}: "${allMovies[item.movieKeys[nextIdx]]?.title || 'Unknown'}"?`)) return;
         setIsAdvancing(true);
         try {
-            const db = (await import('../services/firebaseClient')).getDbInstance();
-            if (!db) throw new Error('Database unavailable — could not connect to Firestore.');
-            const firebase = (await import('firebase/compat/app')).default;
-            await db.collection('watch_parties').doc(item.id).update({
-                activeMovieIndex: nextIdx,
-                intermissionUntil: Date.now() + 30000, // 30s intermission when manually advancing
-                filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-                isPlaying: true,
-                currentTime: 0,
+            // NOTE: this used to write straight to Firestore from the browser
+            // (db.collection('watch_parties').doc(item.id).update(...)), which
+            // firestore.rules explicitly blocks — `watch_parties` only allows
+            // writes from the server ("allow write: if false; // server only").
+            // That's why this silently failed before we added error handling —
+            // Firestore was correctly rejecting it as "Missing or insufficient
+            // permissions." Routing through the admin API (which uses the
+            // Firebase Admin SDK server-side, not subject to security rules)
+            // is the same pattern every other privileged action in this app
+            // already uses.
+            const res = await fetch('/api/advance-block-film', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    partyId: item.id,
+                    currentIndex: currentIdx,
+                    totalFilms: item.movieKeys.length,
+                }),
             });
+            const data = await res.json();
+            if (!res.ok || data.success === false) {
+                throw new Error(data.error || data.message || 'Server rejected the advance request.');
+            }
         } catch (error) {
             // This used to fail silently — if Firestore rejected the write (e.g.
             // a security rules permission error) admins would click "Next Film"

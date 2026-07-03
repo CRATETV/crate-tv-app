@@ -155,7 +155,7 @@ const NewsletterPage: React.FC<NewsletterPageProps> = ({ storyId }) => {
                                             {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recently Released'}
                                         </span>
                                     </div>
-                                    <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">{activeStory.title}</h1>
+                                    <h1 className="text-fluid-title-lg font-black uppercase tracking-tighter leading-none italic break-words">{activeStory.title}</h1>
                                     <p className="text-2xl md:text-3xl text-gray-400 font-medium leading-tight">{activeStory.subtitle}</p>
                                     <div className="flex items-center gap-4 pt-4">
                                         <div className="w-10 h-10 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-black text-[10px]">C</div>

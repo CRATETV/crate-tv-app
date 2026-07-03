@@ -165,7 +165,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
                             className="w-48 h-48 rounded-full object-cover border-4 border-red-600 flex-shrink-0 bg-gray-700 shadow-2xl"
                         />
                         <div>
-                            <h1 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none">{profile.name}</h1>
+                            <h1 className="text-fluid-title font-black text-white uppercase tracking-tighter leading-none break-words">{profile.name}</h1>
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-6">
                                 {canReach ? (
                                     <button 

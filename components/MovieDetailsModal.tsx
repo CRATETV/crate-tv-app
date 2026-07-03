@@ -151,8 +151,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             
             {/* Desktop Hero Overlay */}
             <div className="hidden md:block absolute bottom-10 left-10 right-10 text-white z-10">
-                <div className="flex items-center gap-4 mb-6">
-                   <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none drop-shadow-2xl">{movie.title}</h2>
+                <div className="flex items-center gap-4 mb-6 min-w-0">
+                   <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter leading-none drop-shadow-2xl break-words min-w-0">{movie.title}</h2>
                    {movie.isEpisode && (
                         <div className="bg-amber-600 text-white px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
                             Episode
@@ -167,7 +167,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             {/* Mobile Title and Actions Section (outside of absolute container) */}
             <div className="md:hidden space-y-6">
                 <div>
-                    <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight text-white">{movie.title}</h2>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight text-white break-words">{movie.title}</h2>
                     {movie.isEpisode && (
                         <span className="inline-block bg-amber-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest mt-2">Episode</span>
                     )}

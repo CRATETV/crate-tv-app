@@ -47,7 +47,7 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
                         <span className="text-red-500 font-black uppercase tracking-[0.4em] text-[9px] block">DISPATCH_TEASER_FEED</span>
                         <span className="bg-white/10 text-[7px] font-black text-gray-400 px-2 py-0.5 rounded border border-white/5 uppercase">Preview Mode</span>
                     </div>
-                    <h4 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl">{movie.title}</h4>
+                    <h4 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl break-words">{movie.title}</h4>
                     <p className="text-gray-300 text-sm md:text-lg font-medium italic line-clamp-2 drop-shadow-lg">"{movie.synopsis.replace(/<[^>]+>/g, '')}"</p>
                 </div>
                 <div className="flex gap-4 pointer-events-auto">

@@ -259,7 +259,7 @@ const TeaserMode: React.FC<{
         <div className="relative z-10 max-w-2xl mx-auto space-y-8 pt-32 pb-16">
 
             <div>
-                <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-3">{name || 'Playhouse West Film Festival - Philadelphia'}</h1>
+                <h1 className="text-fluid-title font-black uppercase tracking-tighter leading-none mb-3 break-words">{name || 'Playhouse West Film Festival - Philadelphia'}</h1>
                 <div className="w-16 h-1 bg-red-600 mx-auto rounded-full" />
             </div>
             {(tagline || true) && <p className="text-gray-500 text-sm uppercase tracking-widest font-bold">{tagline || <span>Presented by <span style={{color:'white'}}>Crate TV</span></span>}</p>}
@@ -329,14 +329,22 @@ const ProgrammeMode: React.FC = () => {
     const openingNightDate = useMemo(() => {
         // Was previously `allBlocks.find(b => b.watchPartyStartTime)` — the first
         // scheduled block in ARRAY order, not necessarily the earliest one
-        // chronologically. Any stray/test block with a start time set (even one
-        // that's just for testing, or added after the real opening block) could
-        // sit earlier in the array and hijack this countdown, pointing "Opening
-        // Night" at the wrong date. Picking the soonest upcoming scheduled time
-        // instead makes this correct regardless of block order.
+        // chronologically, AND it only ever looked at `watchPartyStartTime`.
+        // Blocks scheduled from the PWFF Festival editor are set via
+        // `screeningStartTime` (see the `lobbyMovie` fallback above, which
+        // already does `block.screeningStartTime || block.watchPartyStartTime`)
+        // — that field only mirrors into `watchPartyStartTime` when the editor
+        // explicitly re-saves the manifest. If the real opening block's date
+        // was only ever set as `screeningStartTime`, this countdown skipped it
+        // entirely and locked onto whatever OTHER block (e.g. a test block)
+        // happened to have `watchPartyStartTime` populated instead — which is
+        // why the fix in the previous commit (soonest-upcoming instead of
+        // first-in-array) didn't change anything: there was only one candidate
+        // being considered to begin with. Checking both fields, and picking
+        // the soonest upcoming one, fixes both problems at once.
         const now = Date.now();
         const upcoming = allBlocks
-            .map(b => b.watchPartyStartTime)
+            .map(b => b.screeningStartTime || b.watchPartyStartTime)
             .filter((t): t is string => !!t && new Date(t).getTime() > now)
             .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
         return upcoming[0];
@@ -360,7 +368,7 @@ const ProgrammeMode: React.FC = () => {
                         </span>
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] mb-4 text-white">
+                    <h1 className="text-fluid-title font-black uppercase tracking-tighter leading-[0.9] mb-4 text-white break-words">
                         {festivalConfig?.title || settings?.pwffFestivalName || 'Playhouse West Film Festival - Philadelphia'}
                     </h1>
 

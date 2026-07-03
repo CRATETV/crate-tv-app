@@ -275,7 +275,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                             <div className="max-w-2xl w-full space-y-12">
                                                 <div>
                                                     <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Transmission Complete</p>
-                                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">{movie.title}</h2>
+                                                    <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{movie.title}</h2>
                                                     <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-4">Directed by {movie.director}</p>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl mx-auto">
@@ -358,7 +358,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 <div className="px-5 pt-4 pb-16 max-w-3xl mx-auto w-full">
 
                     {/* Title */}
-                    <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none mb-1">
+                    <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none mb-1 break-words">
                         {movie.title}
                     </h1>
 

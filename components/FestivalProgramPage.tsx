@@ -267,7 +267,7 @@ const FestivalProgramPage: React.FC = () => {
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400">Official Programme</span>
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-4">
+                    <h1 className="text-fluid-title font-black uppercase tracking-tighter leading-none mb-4 break-words">
                         {festivalConfig?.title || 'Crate Film Festival'}
                     </h1>
 

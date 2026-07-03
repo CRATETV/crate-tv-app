@@ -50,10 +50,10 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                     </div>
                 </div>
                 
-                <div className="flex-grow space-y-6 md:space-y-8">
+                <div className="flex-grow space-y-6 md:space-y-8 min-w-0">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                        <div className="space-y-2">
-                            <h3 className="font-black text-2xl md:text-4xl text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors">{film.title}</h3>
+                        <div className="space-y-2 min-w-0">
+                            <h3 className="font-black text-2xl md:text-4xl text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors break-words">{film.title}</h3>
                             <div className="flex items-center gap-3">
                                 <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">AESTHETIC_ID: {movie.key.substring(0,8)}</p>
                                 <div className="h-px w-8 bg-white/10"></div>

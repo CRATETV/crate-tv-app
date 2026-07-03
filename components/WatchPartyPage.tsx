@@ -719,38 +719,37 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return;
         }
 
-        // There's a next film — write intermission + advance to Firestore
-        // Only the FIRST viewer to detect end triggers the advance (guard with a ref)
-        const db = getDbInstance();
-        if (!db) return;
-
-        const partyRef = db.collection('watch_parties').doc(movieKey);
-        const intermissionEnd = Date.now() + 60000; // 60 second intermission
-        const targetIdx = currentIdx + 1;
-
-        // TRANSACTION GUARD: multiple viewers detect "ended" within the same
-        // ~1s sync window. Without a transaction, each would re-write
-        // activeMovieIndex + a NEW serverTimestamp, repeatedly resetting
-        // filmStartTime and causing the next film to keep restarting from 0.
-        // The transaction ensures only the FIRST detection actually advances —
-        // every subsequent attempt sees activeMovieIndex already changed and no-ops.
-        db.runTransaction(async (tx) => {
-            const snap = await tx.get(partyRef);
-            const current = snap.data();
-            if ((current?.activeMovieIndex ?? 0) !== currentIdx) return; // already advanced by another client
-            tx.update(partyRef, {
-                activeMovieIndex: targetIdx,
-                intermissionUntil: intermissionEnd,
-                filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-                isPlaying: true,
-                currentTime: 0,
+        // There's a next film — advance via the server. This used to write
+        // straight to Firestore from the browser inside a transaction (the
+        // transaction was there so that if every viewer's client detects
+        // "ended" within the same ~1s window, only the first one actually
+        // advances instead of each re-triggering a fresh serverTimestamp and
+        // restarting the next film from 0). That direct client write is
+        // exactly what firestore.rules blocks though — `watch_parties` is
+        // server-only ("allow write: if false"). The API route below does the
+        // identical guard server-side (re-reads activeMovieIndex and no-ops
+        // if it's already moved on) using the Admin SDK, which isn't subject
+        // to those rules, so every viewer can safely call it and only the
+        // first one to land will actually change anything.
+        fetch('/api/advance-block-film', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                partyId: movieKey,
+                currentIndex: currentIdx,
+                totalFilms: blockKeys.length,
+            }),
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success === false) console.warn('[BLOCK AUTO-ADVANCE] Not advanced:', d.message || d.error);
+            })
+            .catch((err) => {
+                // This was previously a silent no-op — if the write was
+                // rejected, the film would just sit frozen on the "ended"
+                // frame with zero indication why to anyone.
+                console.error('[BLOCK AUTO-ADVANCE] Request failed:', err);
             });
-        }).catch((err) => {
-            // This was previously a silent no-op — if the Firestore transaction
-            // was rejected (e.g. a permissions error), the film would just sit
-            // frozen on the "ended" frame with zero indication why to anyone.
-            console.error('[BLOCK AUTO-ADVANCE] Transaction failed:', err);
-        });
 
         // Reset local ended state
         setIsEnded(false);
