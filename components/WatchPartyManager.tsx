@@ -735,14 +735,22 @@ const WatchPartyControlRoom: React.FC<{
                                         <button 
                                             onClick={async () => {
                                                 const msg = window.prompt("Enter a welcome message for viewers in the lobby:", partyState?.directorWelcome || "");
-                                                if (msg !== null) {
-                                                    const db = getDbInstance();
-                                                    if (db) {
-                                                        await db.collection('watch_parties').doc(item.id).set(
-                                                            { directorWelcome: msg }, 
-                                                            { merge: true }
-                                                        );
+                                                if (msg === null) return;
+                                                const password = sessionStorage.getItem('adminPassword');
+                                                if (!password) return;
+                                                try {
+                                                    const res = await fetch('/api/set-director-welcome', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ movieKey: item.id, message: msg, password }),
+                                                    });
+                                                    if (!res.ok) {
+                                                        const data = await res.json();
+                                                        throw new Error(data.error || 'Failed to save welcome message.');
                                                     }
+                                                } catch (error) {
+                                                    console.error('Failed to set director welcome:', error);
+                                                    alert(`Could not save the welcome message: ${(error as Error).message}`);
                                                 }
                                             }}
                                             className="bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-amber-500/30 transition-all flex items-center gap-2"

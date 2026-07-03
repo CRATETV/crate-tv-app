@@ -830,6 +830,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // This is the client-side half of the fix; the CDN needs the matching
     // server-side restriction to actually be enforced.
     const [signedStreamUrl, setSignedStreamUrl] = useState<string | null>(null);
+    // Tracks which film `signedStreamUrl` was actually fetched for. Resetting
+    // signedStreamUrl inside a useEffect (as this used to do) runs one render
+    // AFTER activeFilmKey changes — so on the very first render of a new
+    // film, signedStreamUrl still held the PREVIOUS film's signed URL, and
+    // the video would briefly try to load with the wrong film's (or an
+    // already-invalid) signed link. Resetting it synchronously during render
+    // — the standard React pattern for "derive state from a changing key" —
+    // means there's never a render where a stale value leaks through.
+    const [signedForKey, setSignedForKey] = useState<string | undefined>(undefined);
     const activeFilmKey = useMemo(() => {
         const m = movie as any;
         if (m?._blockMovieKeys && m._blockMovieKeys.length > 0) {
@@ -839,10 +848,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return movie?.key;
     }, [movie, partyState?.activeMovieIndex]);
 
+    if (signedForKey !== activeFilmKey) {
+        setSignedForKey(activeFilmKey);
+        setSignedStreamUrl(null);
+    }
+
     useEffect(() => {
-        if (!activeFilmKey || !hasAccess || movie?.isLiveStream) { setSignedStreamUrl(null); return; }
+        if (!activeFilmKey || !hasAccess || movie?.isLiveStream) return;
         let cancelled = false;
-        setSignedStreamUrl(null); // don't show the previous film's signed URL while the new one loads
 
         const fetchSignedUrl = async () => {
             try {
@@ -854,7 +867,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     body: JSON.stringify({ movieKey: activeFilmKey, blockId: parentBlock?.id, idToken }),
                 });
                 const data = await res.json();
-                if (!cancelled && data.url) setSignedStreamUrl(data.url);
+                if (cancelled || !data.url) return;
+
+                // Never swap the <video src> out from under playback that's
+                // already underway — changing src forces the browser to
+                // throw away whatever it had buffered and reload from
+                // scratch, which is exactly what was leaving the video
+                // "stuck" after a block advanced to the next film (this
+                // fetch would resolve a moment after the fresh raw-URL
+                // playback had already started, and the resulting swap
+                // hung instead of resuming). Only apply it if the video
+                // hasn't started loading yet, or is already paused/idle —
+                // both safe times to change the source.
+                const video = videoRef.current;
+                if (!video || video.readyState === 0 || video.paused) {
+                    setSignedStreamUrl(data.url);
+                }
             } catch (e) {
                 // Falls back to movie.fullMovie below — an outage here shouldn't
                 // stop a paying customer from watching.
@@ -864,12 +892,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         fetchSignedUrl();
 
         // Signed URLs expire after 4 hours — refresh before that in case a
-        // long block marathon runs longer than one film.
+        // long block marathon runs longer than one film. (Same mid-playback
+        // guard above applies, so this won't interrupt an actively-playing
+        // film either — it'll just catch on the next natural pause/idle
+        // moment, e.g. the next film's intermission.)
         const refreshTimer = setInterval(fetchSignedUrl, 3.5 * 60 * 60 * 1000);
         return () => { cancelled = true; clearInterval(refreshTimer); };
     }, [activeFilmKey, hasAccess, parentBlock?.id, movie?.isLiveStream, getUserIdToken]);
 
-    const playableUrl = signedStreamUrl || movie?.fullMovie;
+    const playableUrl = (signedForKey === activeFilmKey ? signedStreamUrl : null) || movie?.fullMovie;
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
@@ -1240,12 +1271,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2 text-white hover:bg-black/90 transition-all active:scale-95"
                                             onClick={() => {
                                                 const video = videoRef.current;
-                                                if (video) {
-                                                    video.muted = false;
-                                                    video.play().catch(() => {});
-                                                }
                                                 hasUserInteractedRef.current = true;
                                                 setNeedsUserGesture(false);
+                                                if (!video) return;
+                                                video.muted = false;
+
+                                                // Reported "stuck on tap" on Android: on some Android/Chrome +
+                                                // hls.js combinations, unmuting an already-playing HLS stream
+                                                // triggers a brief stall — the audio data wasn't necessarily
+                                                // being kept as tightly buffered while muted, so there's a
+                                                // catch-up moment right as sound turns on. A single
+                                                // play().catch(() => {}) with no retry just silently gives up
+                                                // if that happens, and a *resolved* play() promise doesn't
+                                                // actually guarantee the decoder resumed either — so check
+                                                // real paused state a few times after tapping and retry if
+                                                // it's still stuck, instead of trusting one attempt.
+                                                const tryPlay = () => { video.play().catch(() => {}); };
+                                                tryPlay();
+                                                [400, 1000, 2000].forEach(delay => {
+                                                    setTimeout(() => { if (video.paused) tryPlay(); }, delay);
+                                                });
                                             }}
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
