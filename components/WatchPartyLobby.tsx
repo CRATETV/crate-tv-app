@@ -521,7 +521,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                 <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
                             </div>
                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
-                                Waiting for the host to schedule a start time
+                                The movie will start at its scheduled start time
                             </p>
                         </div>
                     )}

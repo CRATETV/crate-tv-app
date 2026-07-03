@@ -58,6 +58,7 @@ const EmbeddedChat: React.FC<{
     const [isClearing, setIsClearing] = useState(false);
     const [isTogglingQA, setIsTogglingQA] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -71,8 +72,15 @@ const EmbeddedChat: React.FC<{
         return () => unsubscribe();
     }, [movieKey]);
 
+    // Scroll only the chat's own container, not scrollIntoView() — that call
+    // asks the browser to bring the element into view via whatever ancestor
+    // scrolling it takes to do so, which on the admin page (not fixed/locked
+    // like the viewer page) scrolled the entire dashboard on every new
+    // message. Scrolling this div directly keeps it fully contained.
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }, [messages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -258,7 +266,7 @@ const EmbeddedChat: React.FC<{
                     </button>
                 </div>
             </div>
-            <div className="flex-grow p-4 overflow-y-auto space-y-4">
+            <div ref={messagesContainerRef} className="flex-grow p-4 overflow-y-auto space-y-4">
                 {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3 group">
                         <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
@@ -336,6 +344,7 @@ const WatchPartyControlRoom: React.FC<{
     }, [item, allMovies, partyState?.activeMovieIndex]);
 
     // ── MANUAL ADVANCE: admin can skip to next film in block ─────────────
+    const [isAdvancing, setIsAdvancing] = useState(false);
     const handleAdvanceFilm = async () => {
         if (!item.movieKeys || item.type !== 'block') return;
         const currentIdx = partyState?.activeMovieIndex ?? 0;
@@ -345,16 +354,27 @@ const WatchPartyControlRoom: React.FC<{
             return;
         }
         if (!window.confirm(`Skip to Film ${nextIdx + 1}: "${allMovies[item.movieKeys[nextIdx]]?.title || 'Unknown'}"?`)) return;
-        const db = (await import('../services/firebaseClient')).getDbInstance();
-        if (!db) return;
-        const firebase = (await import('firebase/compat/app')).default;
-        await db.collection('watch_parties').doc(item.id).update({
-            activeMovieIndex: nextIdx,
-            intermissionUntil: Date.now() + 30000, // 30s intermission when manually advancing
-            filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-            isPlaying: true,
-            currentTime: 0,
-        });
+        setIsAdvancing(true);
+        try {
+            const db = (await import('../services/firebaseClient')).getDbInstance();
+            if (!db) throw new Error('Database unavailable — could not connect to Firestore.');
+            const firebase = (await import('firebase/compat/app')).default;
+            await db.collection('watch_parties').doc(item.id).update({
+                activeMovieIndex: nextIdx,
+                intermissionUntil: Date.now() + 30000, // 30s intermission when manually advancing
+                filmStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+                isPlaying: true,
+                currentTime: 0,
+            });
+        } catch (error) {
+            // This used to fail silently — if Firestore rejected the write (e.g.
+            // a security rules permission error) admins would click "Next Film"
+            // and nothing would happen with zero indication why.
+            console.error('[handleAdvanceFilm] Failed to advance film:', error);
+            alert(`Could not advance to the next film: ${(error as Error).message}\n\nCheck the browser console for details.`);
+        } finally {
+            setIsAdvancing(false);
+        }
     };
     
     const isProgrammaticSeekRef = useRef(false);
@@ -710,13 +730,13 @@ const WatchPartyControlRoom: React.FC<{
                                             {item.type === 'block' && item.movieKeys && item.movieKeys.length > 1 && (
                                                 <button
                                                     onClick={handleAdvanceFilm}
-                                                    disabled={(partyState?.activeMovieIndex ?? 0) >= item.movieKeys.length - 1}
+                                                    disabled={isAdvancing || (partyState?.activeMovieIndex ?? 0) >= item.movieKeys.length - 1}
                                                     className="bg-purple-600/20 hover:bg-purple-600 text-purple-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-purple-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
                                                 >
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                                                     </svg>
-                                                    Next Film ({(partyState?.activeMovieIndex ?? 0) + 1}/{item.movieKeys.length})
+                                                    {isAdvancing ? 'Advancing…' : `Next Film (${(partyState?.activeMovieIndex ?? 0) + 1}/${item.movieKeys.length})`}
                                                 </button>
                                             )}
                                             <button 

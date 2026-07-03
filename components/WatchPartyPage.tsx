@@ -580,6 +580,56 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     }, [partyState?.status]);
 
+    // ── SCREEN WAKE LOCK — keep the device screen from sleeping/dimming while
+    // the film is actively playing. Without this, phones apply their normal
+    // inactivity timeout and go dark mid-movie even though the video is
+    // still running, since there's no touch input while just watching.
+    const wakeLockRef = useRef<any>(null);
+    useEffect(() => {
+        if (isControllerMode) return;
+        const nav = navigator as any;
+        if (!nav.wakeLock) return; // unsupported browser — no-op
+
+        const isActivelyPlaying = partyState?.status === 'live' && !isEnded && !isInIntermission;
+
+        const requestWakeLock = async () => {
+            try {
+                wakeLockRef.current = await nav.wakeLock.request('screen');
+            } catch (e) {
+                // Can be refused (low battery, backgrounded, unsupported) — playback still works either way
+            }
+        };
+        const releaseWakeLock = () => {
+            wakeLockRef.current?.release?.().catch(() => {});
+            wakeLockRef.current = null;
+        };
+
+        if (isActivelyPlaying) {
+            requestWakeLock();
+        } else {
+            releaseWakeLock();
+        }
+
+        // The OS/browser automatically releases the wake lock when the tab is
+        // backgrounded — re-acquire it the moment the viewer comes back if
+        // the film is still playing, otherwise the screen can sleep again.
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && isActivelyPlaying && !wakeLockRef.current) {
+                requestWakeLock();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [partyState?.status, isEnded, isInIntermission, isControllerMode]);
+
+    // Always release the wake lock on unmount so it doesn't leak past this page
+    useEffect(() => {
+        return () => { wakeLockRef.current?.release?.().catch(() => {}); };
+    }, []);
+
     useEffect(() => {
         // Retry until Firebase is ready — it initializes async so first call may return null
         let unsubscribe: (() => void) | null = null;
@@ -695,7 +745,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 isPlaying: true,
                 currentTime: 0,
             });
-        }).catch(() => {});
+        }).catch((err) => {
+            // This was previously a silent no-op — if the Firestore transaction
+            // was rejected (e.g. a permissions error), the film would just sit
+            // frozen on the "ended" frame with zero indication why to anyone.
+            console.error('[BLOCK AUTO-ADVANCE] Transaction failed:', err);
+        });
 
         // Reset local ended state
         setIsEnded(false);
@@ -984,7 +1039,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     return (
         <div className="fixed inset-0 flex flex-col bg-black text-white overflow-hidden">
                 <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
-                <div className="flex-grow flex flex-col relative h-full">
+                <div className="flex-grow flex flex-col relative h-full pb-80 md:pb-0">
                     <div className="p-3 bg-black/90 flex items-center justify-between border-b border-white/5">
                         <button onClick={() => window.history.back()} className="text-gray-400 hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -1158,13 +1213,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ))}
                     </div>
 
-                    {/* Mobile chat — a fixed overlay, not a flex sibling of the video, so the
-                        keyboard opening can never resize/push the video player. It just
-                        slides up above the keyboard via the visualViewport offset. */}
+                    {/* Mobile chat — docked as a fixed panel at the bottom, with its own
+                        reserved space (see pb-80 on the container above) so it never
+                        overlaps the video or the reaction bar above it. It only moves via
+                        translateY when the keyboard opens, sliding up above the keyboard —
+                        the video itself never resizes or shifts. */}
                     <div
-                        className="md:hidden fixed left-0 right-0 z-40 h-80 flex flex-col overflow-hidden bg-[#0a0a0a] border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
+                        className="md:hidden fixed left-0 right-0 bottom-0 z-40 h-80 flex flex-col overflow-hidden bg-[#0a0a0a] border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
                         style={{
-                            bottom: 0,
                             transform: `translateY(-${keyboardOffset}px)`,
                             paddingBottom: keyboardOffset > 0 ? 0 : 'env(safe-area-inset-bottom)',
                             transition: 'transform 0.15s ease-out',

@@ -327,8 +327,19 @@ const ProgrammeMode: React.FC = () => {
     }, [showLobbyFor, allBlocks, movies]);
 
     const openingNightDate = useMemo(() => {
-        const first = allBlocks.find(b => b.watchPartyStartTime);
-        return first?.watchPartyStartTime;
+        // Was previously `allBlocks.find(b => b.watchPartyStartTime)` — the first
+        // scheduled block in ARRAY order, not necessarily the earliest one
+        // chronologically. Any stray/test block with a start time set (even one
+        // that's just for testing, or added after the real opening block) could
+        // sit earlier in the array and hijack this countdown, pointing "Opening
+        // Night" at the wrong date. Picking the soonest upcoming scheduled time
+        // instead makes this correct regardless of block order.
+        const now = Date.now();
+        const upcoming = allBlocks
+            .map(b => b.watchPartyStartTime)
+            .filter((t): t is string => !!t && new Date(t).getTime() > now)
+            .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+        return upcoming[0];
     }, [allBlocks]);
 
     return (
