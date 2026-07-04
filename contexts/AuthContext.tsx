@@ -361,15 +361,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(currentUser => currentUser ? ({ ...currentUser, unlockedBlocks: newUnlockedBlocks }) : null);
     };
     
+    // These three still wrote hasFestivalAllAccess / hasCrateFestPass /
+    // hasJuryPass directly to Firestore from the browser — exactly the
+    // fields firestore.rules' isWritingProtectedFields() now blocks clients
+    // from writing (the same fix already applied to unlockFestivalBlock /
+    // purchaseMovie / unlockWatchParty above, just missed on these three).
+    // With the rules actually deployed, that write now fails outright —
+    // meaning anyone who bought the $50 all-access pass, the CrateFest pass,
+    // or a Jury Pass would get charged and then hit a permission-denied
+    // error trying to grant themselves the very thing they just paid for.
+    // The real grant already happens server-side (Admin SDK) in
+    // process-square-payment.ts / the jury invite flow — these just need to
+    // update local state so the UI reflects it immediately, same pattern as
+    // the others.
     const grantFestivalAllAccess = async () => {
         if (!user) return;
         const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks
-        const update = { 
-            hasFestivalAllAccess: true, 
-            festivalPassExpiry: expirationDate.toISOString() 
+        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks — mirrors the server-side grant's window
+        const update = {
+            hasFestivalAllAccess: true,
+            festivalPassExpiry: expirationDate.toISOString()
         };
-        await updateUserProfile(user.uid, update);
         setUser(currentUser => currentUser ? ({ ...currentUser, ...update }) : null);
     };
 
@@ -377,17 +389,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!user) return;
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks
-        const update = { 
-            hasCrateFestPass: true, 
-            crateFestPassExpiry: expirationDate.toISOString() 
+        const update = {
+            hasCrateFestPass: true,
+            crateFestPassExpiry: expirationDate.toISOString()
         };
-        await updateUserProfile(user.uid, update);
         setUser(currentUser => currentUser ? ({ ...currentUser, ...update }) : null);
     };
 
     const grantJuryPass = async () => {
         if (!user || user.hasJuryPass) return;
-        await updateUserProfile(user.uid, { hasJuryPass: true });
         setUser(currentUser => currentUser ? ({ ...currentUser, hasJuryPass: true }) : null);
     };
 

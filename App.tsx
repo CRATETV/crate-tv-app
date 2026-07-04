@@ -47,7 +47,7 @@ const MaintenanceScreen: React.FC = () => (
 );
 
 const App: React.FC = () => {
-    const { user, hasCrateFestPass, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { user, hasCrateFestPass, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, grantFestivalAllAccess, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, festivalData, settings, analytics, activeParties, allPartyStates, livePartyMovie, viewCounts } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
@@ -276,6 +276,7 @@ const App: React.FC = () => {
     }, [movies, festivalData, allPartyStates]);
 
     const [catalogBlockPurchase, setCatalogBlockPurchase] = useState<any>(null);
+    const [showAllAccessPurchase, setShowAllAccessPurchase] = useState(false);
 
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -723,7 +724,7 @@ const App: React.FC = () => {
                                         </p>
                                         {!hasFestivalAllAccess && (
                                             <button
-                                                onClick={() => { window.history.pushState({}, '', '/pwff'); window.dispatchEvent(new Event('pushstate')); }}
+                                                onClick={() => setShowAllAccessPurchase(true)}
                                                 className="flex-shrink-0 bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all active:scale-95"
                                             >
                                                 Unlock All — $50
@@ -777,6 +778,30 @@ const App: React.FC = () => {
                                             try { await unlockFestivalBlock(details.itemId); } catch (e) { console.error('unlockFestivalBlock failed:', e); }
                                         }
                                         setTimeout(() => setCatalogBlockPurchase(null), 1200);
+                                    }}
+                                />
+                            )}
+                            {/* Buys straight from the homepage — this used to just navigate to
+                                /pwff and reuse the live-event ticket flow, which after payment
+                                tries to route into a "lobby" for a block id ('full-festival-pass')
+                                that was never a real festival block, and made buying the catalog
+                                pass require leaving the page you were already browsing. This
+                                closes the loop right here instead. */}
+                            {showAllAccessPurchase && (
+                                <SquarePaymentModal
+                                    paymentType="pass"
+                                    // The server's grant check (process-square-payment.ts) looks
+                                    // for itemId === 'full-festival-pass' specifically — without
+                                    // passing a block carrying that exact id, the modal would send
+                                    // itemId: 'pass' (falls back to paymentType when no movie/block
+                                    // is given) and the payment would go through with no access
+                                    // ever actually granted. Mirrors the same synthetic block object
+                                    // PwffPage.tsx already builds for this exact purchase.
+                                    block={{ id: 'full-festival-pass', title: 'Festival All-Access Pass', time: '', movieKeys: [], price: 50 } as any}
+                                    onClose={() => setShowAllAccessPurchase(false)}
+                                    onPaymentSuccess={async () => {
+                                        try { await grantFestivalAllAccess(); } catch (e) { console.error('grantFestivalAllAccess failed:', e); }
+                                        setTimeout(() => setShowAllAccessPurchase(false), 1200);
                                     }}
                                 />
                             )}

@@ -415,6 +415,38 @@ export async function POST(request: Request) {
         }
     }
 
+    // CrateFest pass / Jury pass — these were charged correctly (see
+    // staticPriceMap above) but never actually granted anything server-side.
+    // The only place that ever set hasCrateFestPass/hasJuryPass was a direct
+    // client-side Firestore write (AuthContext's grantCrateFestPass/
+    // grantJuryPass), which is exactly the kind of write firestore.rules now
+    // blocks — meaning anyone paying for either of these got charged and
+    // received nothing. Same fix pattern as every other grant in this file.
+    if (db && uid && paymentType === 'crateFestPass') {
+        try {
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + 14);
+            await db.collection('users').doc(uid).set({
+                hasCrateFestPass: true,
+                crateFestPassExpiry: expirationDate.toISOString(),
+            }, { merge: true });
+            console.log(`[Payment API] Granted CrateFest pass to user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to grant CrateFest pass:', e);
+        }
+    }
+
+    if (db && uid && paymentType === 'juryPass') {
+        try {
+            await db.collection('users').doc(uid).set({
+                hasJuryPass: true,
+            }, { merge: true });
+            console.log(`[Payment API] Granted Jury Pass to user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to grant Jury Pass:', e);
+        }
+    }
+
     // VOD rental — unlock individual film
     if (db && uid && paymentType === 'movie' && itemId) {
         try {
