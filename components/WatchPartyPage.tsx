@@ -225,7 +225,12 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0">
                 <div className={`flex items-center gap-2 rounded-full px-4 py-1 border ${isBackstageVerified ? 'bg-red-900/30 border-red-500/30' : 'bg-gray-800/80 border-white/10'}`}>
                     <input type="text" name="chat-message" autoComplete="off" autoCorrect="on" spellCheck="true" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageVerified ? "Answer a question..." : (isQALive ? "Ask the director a question..." : "Type a message...")} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
-                    <button type="submit" className={isBackstageVerified ? "text-red-400" : "text-red-500"} disabled={!user || isSending || !newMessage.trim()}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                    {/* p-2.5 around the icon brings the actual tap target to ~44px —
+                        it used to be just the bare 24px SVG, easy to miss especially
+                        with one thumb while the keyboard is open. disabled:opacity-30
+                        also now makes it visually obvious when there's nothing to send,
+                        instead of looking identical to the active state. */}
+                    <button type="submit" className={`flex-shrink-0 p-2.5 -m-1 rounded-full transition-opacity disabled:opacity-30 ${isBackstageVerified ? 'text-red-400' : 'text-red-500'}`} disabled={!user || isSending || !newMessage.trim()}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                 </div>
             </form>
         </div>
@@ -311,6 +316,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showCredits, setShowCredits] = useState(false);
     const [isVideoBuffering, setIsVideoBuffering] = useState(false); // start false — show player immediately
     const bufferingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Separate from isVideoBuffering (which also toggles during brief mid-
+    // playback rebuffers, and shouldn't fade the whole video out each time) —
+    // this is purely "has this video ever shown a real frame yet," used to
+    // fade the very first frame in instead of it popping into view the
+    // instant the element mounts, which read as an abrupt jump-cut right
+    // after the lobby's transition spinner disappears.
+    const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
+    // Real playback failures (bad source, unsupported codec, hls.js giving up
+    // after exhausting its own retry logic, the hls.js CDN script itself
+    // failing to load) used to have no visible handling at all — the video
+    // just sat there black/frozen forever with nothing telling the viewer
+    // (or us) anything had gone wrong. This drives a dedicated error overlay
+    // with a manual retry, distinct from isEnded (which is for a normal
+    // finished screening, not a failure).
+    const [videoError, setVideoError] = useState<string | null>(null);
 
     const handleVideoWaiting = useCallback(() => {
         // Only show buffering overlay after 1.5s of sustained stall — avoids flashing on seeks
@@ -319,6 +339,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const handleVideoCanPlay = useCallback(() => {
         if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current);
         setIsVideoBuffering(false);
+        setHasStartedPlaying(true);
+    }, []);
+
+    // Clear any pending buffering timer if the component unmounts mid-stall
+    // (e.g. viewer navigates back to the catalog before onCanPlay ever
+    // fires) — previously this timer was only ever cleared from inside
+    // onCanPlay/onPlaying, so an interrupted load left it running in the
+    // background pointing at a dead callback.
+    useEffect(() => {
+        return () => {
+            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current);
+        };
     }, []);
     // Was always true, meaning EVERY viewer landed on a muted video and had
     // to notice + tap a small corner button to hear anything — even though
@@ -339,7 +371,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const partyStateRef = useRef<WatchPartyState | undefined>(undefined);
     const movieRef = useRef<typeof movie>(undefined);
     const isEndedRef = useRef<boolean>(false);
-    const hasUserInteractedRef = useRef<boolean>(false); // mobile autoplay gate
+    // Seeded from the same global flag needsUserGesture uses — this used to
+    // always start `false` regardless of whether the user had already
+    // gestured, which meant the sync engine's play/pause check below (which
+    // reads this ref, not React state) could wrongly conclude "no gesture
+    // yet" and force the video back to muted on a later film in the block,
+    // even though the viewer had already unmuted once and shouldn't ever
+    // need to again. See the effect right below for the other half of this
+    // fix — it used to bail out before ever setting this ref if the gesture
+    // had already happened before this component mounted.
+    const hasUserInteractedRef = useRef<boolean>(hasUserGestured()); // mobile autoplay gate
 
     // ── AUTO-UNMUTE ON FIRST INTERACTION ─────────────────────────────────
     // Backs up the lazy needsUserGesture initializer above for the case
@@ -350,7 +391,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // itself — unmute automatically, so that button is a rarely-needed
     // fallback rather than the only path to sound.
     useEffect(() => {
-        if (!needsUserGesture) return;
+        if (!needsUserGesture) {
+            // Gesture already happened before this ran (e.g. it happened on
+            // an earlier screen, well before this component even mounted) —
+            // still need to make sure the ref agrees, since it's what the
+            // sync engine actually trusts, not this state variable directly.
+            hasUserInteractedRef.current = true;
+            return;
+        }
         return onFirstUserGesture(() => {
             hasUserInteractedRef.current = true;
             setNeedsUserGesture(false);
@@ -603,11 +651,47 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         // iOS Safari supports HLS natively — skip hls.js
         if (video.canPlayType('application/vnd.apple.mpegurl')) return;
 
+        setVideoError(null);
+
         const attachHls = () => {
             const Hls = (window as any).Hls;
-            if (!Hls || !Hls.isSupported()) return;
+            if (!Hls || !Hls.isSupported()) {
+                setVideoError('This device can’t play this stream. Please try a different browser.');
+                return;
+            }
             if (hlsRef.current) hlsRef.current.destroy();
-            const hls = new Hls({ maxBufferLength: 30, enableWorker: true });
+            // maxBufferLength trimmed from 30s to 20s — on a real cellular
+            // connection (not festival-venue wifi), prefetching 30s ahead
+            // burns data fast and stalls harder when it does run dry; 20s is
+            // still enough runway to absorb normal network jitter.
+            const hls = new Hls({ maxBufferLength: 20, enableWorker: true });
+
+            // Previously nothing listened for hls.js errors at all — a fatal
+            // network or media error (a dropped segment, a manifest hiccup,
+            // anything) meant hls.js gave up internally with zero visible
+            // sign to the viewer beyond a frozen/black video. This follows
+            // hls.js's own documented recovery pattern: retry loading on a
+            // network error, try to recover the media pipeline on a media
+            // error, and only surface a real "something's wrong" state (with
+            // a manual retry) if neither of those works.
+            hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+                if (!data?.fatal) return;
+                console.error('[HLS] fatal error', data.type, data.details);
+                switch (data.type) {
+                    case Hls.ErrorTypes.NETWORK_ERROR:
+                        hls.startLoad();
+                        break;
+                    case Hls.ErrorTypes.MEDIA_ERROR:
+                        hls.recoverMediaError();
+                        break;
+                    default:
+                        hls.destroy();
+                        hlsRef.current = null;
+                        setVideoError('Playback stopped unexpectedly.');
+                        break;
+                }
+            });
+
             hls.loadSource(src);
             hls.attachMedia(video);
             hlsRef.current = hls;
@@ -617,8 +701,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             attachHls();
         } else {
             const script = document.createElement('script');
+            // Pinned to the same version WatchPartyLobby.tsx preloads —
+            // that file was fetching hls.js@latest while this one used a
+            // pinned version, so depending on which mounted first, playback
+            // could silently pick up an untested hls.js release with no way
+            // to roll back except waiting for upstream to fix it.
             script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
             script.onload = attachHls;
+            script.onerror = () => {
+                console.error('[HLS] failed to load hls.js from CDN');
+                setVideoError('Couldn’t load the video player. Check your connection and retry.');
+            };
             document.head.appendChild(script);
         }
 
@@ -626,6 +719,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
         };
     }, [movie?.fullMovie]);
+
+    // ── CARRY "UNMUTED" THROUGH TO THE NEXT FILM ──────────────────────────
+    // Once a viewer has unmuted, they should never be asked to do it again
+    // for the rest of the session — but loading a new film's source into
+    // the same <video> element pauses it and can leave it sitting there
+    // muted-by-default rather than resuming with sound, since a fresh media
+    // load doesn't automatically inherit "the viewer already proved they
+    // want sound" the way React's own state does. This explicitly re-applies
+    // that whenever the active film changes, so advancing to the next film
+    // in a block (or the sync engine catching up a late/returning viewer)
+    // never quietly slips back into muted playback that only the small
+    // "Tap to Unmute" button could fix.
+    useEffect(() => {
+        if (needsUserGesture) return; // no gesture yet — first film still needs the button
+        const video = videoRef.current;
+        if (!video || !movie?.fullMovie) return;
+        video.muted = false;
+        const tryPlay = () => { video.play().catch(() => {}); };
+        tryPlay();
+        const retries = [300, 800, 1500, 3000].map(delay =>
+            setTimeout(() => { if (video.paused) tryPlay(); }, delay)
+        );
+        return () => retries.forEach(clearTimeout);
+    }, [movie?.fullMovie, needsUserGesture]);
 
     // ── HARD STOP WHEN ADMIN ENDS THE PARTY ───────────────────────────────
     // Ending the party swaps the JSX to the "Session Ended" screen, which
@@ -1248,7 +1365,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     <video
                                         ref={videoRef}
                                         src={playableUrl}
-                                        className={`relative w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`}
+                                        className={`relative w-full h-full object-contain transition-opacity duration-700 ${isEnded ? 'opacity-30 blur-xl' : hasStartedPlaying ? 'opacity-100' : 'opacity-0'}`}
                                         muted={needsUserGesture}
                                         playsInline
                                         webkit-playsinline="true"
@@ -1261,6 +1378,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         }}
                                         onWaiting={handleVideoWaiting}
                                         onStalled={handleVideoWaiting}
+                                        onError={() => {
+                                            // Previously nothing handled this at all — a 404'd source, an
+                                            // unsupported codec on an older Android phone, or any other
+                                            // native playback failure just left a permanently black/frozen
+                                            // video with zero indication anything had gone wrong.
+                                            const err = videoRef.current?.error;
+                                            console.error('[Video] playback error', err?.code, err?.message);
+                                            setVideoError('Playback error. Tap to try again.');
+                                        }}
                                         onEnded={() => {
                                             // Fire immediately on the real browser "ended" event so auto-advance
                                             // doesn't depend solely on the server-clock drift check in the sync
@@ -1268,6 +1394,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             if (!isEndedRef.current) setIsEnded(true);
                                         }}
                                     />
+                                    {videoError && !isEnded && (
+                                        <div className="absolute inset-0 z-[168] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md text-center p-8 gap-4">
+                                            <p className="text-white font-black uppercase tracking-widest text-sm max-w-xs">{videoError}</p>
+                                            <button
+                                                onClick={() => {
+                                                    setVideoError(null);
+                                                    const video = videoRef.current;
+                                                    if (!video) return;
+                                                    video.load();
+                                                    video.play().catch(() => {});
+                                                }}
+                                                className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* Buffering overlay — isVideoBuffering was already tracked (onWaiting/
                                         onStalled/onCanPlay above) but never actually shown to the viewer, so
                                         someone on a slow connection just saw a frozen frame with no explanation
@@ -1284,7 +1427,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     {/* Small unmute button — video autoplays muted, tap to unmute */}
                                     {needsUserGesture && partyState?.status === 'live' && !isEnded && (
                                         <button
-                                            className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2 text-white hover:bg-black/90 transition-all active:scale-95"
+                                            className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-6 py-4 min-h-[48px] text-white hover:bg-black/90 transition-all active:scale-95 shadow-lg"
                                             onClick={() => {
                                                 const video = videoRef.current;
                                                 hasUserInteractedRef.current = true;
@@ -1309,11 +1452,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 });
                                             }}
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                                             </svg>
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Tap to Unmute</span>
+                                            <span className="text-[11px] font-black uppercase tracking-widest">Tap to Unmute</span>
                                         </button>
                                     )}
                                     {isEnded && (
@@ -1339,15 +1482,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
                     </div>
 
-                    <div 
-                        className="p-4 bg-black/40 flex justify-center gap-6 md:gap-12 backdrop-blur-xl"
+                    {/* On short phones (iPhone SE and similar), the mobile keyboard plus
+                        the chat drawer sliding up to clear it can reach far enough to
+                        cover this row, making reactions un-tappable and confusing while
+                        typing. Collapsing it while the keyboard is open (mobile only —
+                        keyboardOffset never leaves 0 on desktop, which has no virtual
+                        keyboard) avoids that overlap; it's not something anyone needs
+                        while actively composing a chat message anyway. */}
+                    <div
+                        className={`p-4 bg-black/40 flex justify-center gap-2 md:gap-8 backdrop-blur-xl overflow-hidden transition-all duration-200 ${keyboardOffset > 0 ? 'max-h-0 !p-0 opacity-0' : 'max-h-24 opacity-100'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {REACTION_TYPES.map(emoji => (
-                            <button 
-                                key={emoji} 
-                                onClick={(e) => { e.stopPropagation(); logSentiment(emoji); }} 
-                                className="text-4xl md:text-5xl hover:scale-150 active:scale-90 transition-transform drop-shadow-lg"
+                            <button
+                                key={emoji}
+                                onClick={(e) => { e.stopPropagation(); logSentiment(emoji); }}
+                                // min-w/min-h guarantee a real ~48px tap target regardless of how
+                                // small the emoji glyph itself renders — on a 390px phone with 5
+                                // buttons, relying on font-size alone for the hit area made
+                                // adjacent reactions easy to mis-tap, especially one-handed.
+                                className="min-w-[3rem] min-h-[3rem] flex items-center justify-center text-4xl md:text-5xl hover:scale-150 active:scale-90 transition-transform drop-shadow-lg"
                             >
                                 {emoji}
                             </button>

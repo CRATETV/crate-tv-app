@@ -285,11 +285,11 @@ const BlockCard: React.FC<{
                                 <WaitlistButton blockId={block.id} />
                             </>
                         ) : isLive
-                            ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all animate-pulse">Join Party</button>
+                            ? <button onClick={onEnterLobby} className="bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 rounded-xl transition-all animate-pulse active:scale-95">Join Party</button>
                             : isBeforeScreening && (isUnlocked || !block.price || block.price === 0)
-                                ? <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Enter Lobby</button>
+                                ? <button onClick={onEnterLobby} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-3 rounded-xl transition-all active:scale-95">Enter Lobby</button>
                             : isBeforeScreening && !isUnlocked && block.price && block.price > 0
-                                ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
+                                ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-3 rounded-xl transition-all active:scale-95">Get Ticket — ${block.price.toFixed(2)}</button>
                             // Screening's over and this is unlocked — the block's live watch
                             // party has ended (WatchPartyPage explicitly dead-ends on "ended"
                             // parties, it doesn't replay them), so "Watch Now" needs to go
@@ -360,7 +360,7 @@ const ProgrammeMode: React.FC = () => {
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
     const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks || []), [festivalData]);
-    const allFestivalFilms = useMemo(() => allBlocks.flatMap(b => b.movieKeys.map(k => movies[k]).filter(Boolean)) as Movie[], [allBlocks, movies]);
+    const allFestivalFilms = useMemo(() => allBlocks.flatMap(b => (b.movieKeys || []).map(k => movies[k]).filter(Boolean)) as Movie[], [allBlocks, movies]);
     const filmsWithNotes = useMemo(() => allFestivalFilms.filter(m => m.festivalDirectorNote || m.festivalFilmmakerBio || m.festivalQuote), [allFestivalFilms]);
 
     const navigate = (path: string) => { window.history.pushState({}, '', path); window.dispatchEvent(new Event('pushstate')); };
@@ -625,7 +625,7 @@ const ProgrammeMode: React.FC = () => {
 
             {lobbyMovie && showLobbyFor && (() => {
                 const lobbyBlock = allBlocks.find(b => b.id === showLobbyFor);
-                const lobbyBlockFilms = lobbyBlock ? lobbyBlock.movieKeys.map((k: string) => movies[k]).filter(Boolean) : [];
+                const lobbyBlockFilms = lobbyBlock ? (lobbyBlock.movieKeys || []).map((k: string) => movies[k]).filter(Boolean) : [];
                 return (
                 <div className="fixed inset-0 z-[200] overflow-y-auto">
                     <WatchPartyLobby
@@ -768,13 +768,11 @@ const PwffPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#050505] text-white">
-            {showBanner && (
-                <LiveWatchPartyBanner
-                    movie={livePartyMovie!}
-                    onEnterLobby={handleBannerClick}
-                    onClose={() => setBannerDismissed(true)}
-                />
-            )}
+            {/* The site-wide LiveWatchPartyBanner used to render here too, but
+                this page already has its own "Live Now / Up Next" strip plus
+                per-block live/ended badges (see ProgrammeMode) — the extra
+                banner was pure duplication, and showed as a thin, mostly-empty
+                bar above content that already said the same thing. */}
 
             <ProgrammeMode />
             {ticketFlowBlock && (() => {

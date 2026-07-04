@@ -1074,7 +1074,14 @@ const WatchPartyManager: React.FC<{
                     title: block.title,
                     type: 'block',
                     isWatchPartyEnabled: block.isWatchPartyEnabled,
-                    watchPartyStartTime: block.watchPartyStartTime,
+                    // Blocks are scheduled via `screeningStartTime` — that's the
+                    // field the Festival Hub and the PWFF page actually read/write
+                    // (see PwffPage.tsx). `watchPartyStartTime` is an older, mostly
+                    // unset legacy field on blocks; reading it alone meant this
+                    // Control Room's countdown could be counting down to a stale
+                    // leftover date (or nothing at all) instead of the real
+                    // admin-configured screening time.
+                    watchPartyStartTime: block.screeningStartTime || block.watchPartyStartTime,
                     isWatchPartyPaid: (block.price || 0) > 0,
                     watchPartyPrice: block.price,
                     movieKeys: block.movieKeys
@@ -1090,7 +1097,7 @@ const WatchPartyManager: React.FC<{
                     title: block.title,
                     type: 'block',
                     isWatchPartyEnabled: block.isWatchPartyEnabled,
-                    watchPartyStartTime: block.watchPartyStartTime,
+                    watchPartyStartTime: block.screeningStartTime || block.watchPartyStartTime,
                     isWatchPartyPaid: (block.price || 0) > 0,
                     watchPartyPrice: block.price,
                     movieKeys: block.movieKeys

@@ -43,11 +43,16 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
 
-    // Preload hls.js from CDN during lobby so it's ready when film starts
+    // Preload hls.js from CDN during lobby so it's ready when film starts.
+    // Pinned to the exact same version WatchPartyPage.tsx loads — this was
+    // fetching @latest while the actual player pinned a specific version,
+    // so whichever loaded first determined which (possibly untested) build
+    // of hls.js the viewer actually got, with no way to roll back a bad
+    // upstream release except waiting for jsDelivr/hls.js to fix it.
     useEffect(() => {
         if ((window as any).Hls) return; // already loaded
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
         script.async = true;
         document.head.appendChild(script);
     }, []);
@@ -63,8 +68,18 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         if (!nav.wakeLock) return; // unsupported browser (older iOS/Safari pre-16.4) — no client-side fix exists for this case
         let wakeLock: any = null;
         let cancelled = false;
+        // `wakeLock.request()` is async, so there's a gap between calling it
+        // and `wakeLock` actually being set below — on some iOS versions the
+        // 'release' event, a visibilitychange, and the 20s safety-net poll
+        // can all land inside that gap and each independently call
+        // requestWakeLock() again, stacking up multiple in-flight requests
+        // for no reason. This guard makes re-entrant calls a no-op until the
+        // current request actually settles.
+        let requestInFlight = false;
 
         const requestWakeLock = async () => {
+            if (requestInFlight) return;
+            requestInFlight = true;
             try {
                 const lock = await nav.wakeLock.request('screen');
                 if (cancelled) { lock.release().catch(() => {}); return; }
@@ -80,6 +95,8 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 });
             } catch (e) {
                 // Can be refused (low battery, unsupported context) — lobby still works either way
+            } finally {
+                requestInFlight = false;
             }
         };
         requestWakeLock();
@@ -203,8 +220,17 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ movieKey: keyToStart })
                     })
-                    .then(r => r.json())
-                    .then(d => console.log('[auto-start] response:', d))
+                    // This used to go straight to r.json() regardless of status —
+                    // a 400/500 response body still parses as valid JSON, so a
+                    // rejected request logged as if it had succeeded. The 3s
+                    // retry loop below covers actually recovering from this, but
+                    // it's worth knowing when a request came back an actual error
+                    // rather than just silently retrying blind.
+                    .then(async r => ({ ok: r.ok, body: await r.json().catch(() => null) }))
+                    .then(({ ok, body }) => {
+                        if (ok) console.log('[auto-start] response:', body);
+                        else console.error('[auto-start] request rejected:', body);
+                    })
                     .catch(err => console.error('[auto-start] failed:', err));
                 } else {
                     // Already live — transition immediately
@@ -494,7 +520,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">CRATE Watch Party</span>
                     </div>
                     {onClose && (
-                        <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors" aria-label="Close lobby">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white text-xl transition-all" aria-label="Close lobby">
                             &times;
                         </button>
                     )}
