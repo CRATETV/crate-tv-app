@@ -1068,7 +1068,7 @@ const WatchPartyManager: React.FC<{
 
         // Add festival blocks
         localFestivalData.forEach(day => {
-            day.blocks.forEach(block => {
+            (day.blocks || []).forEach(block => {
                 items.push({
                     id: block.id,
                     title: block.title,
@@ -1142,7 +1142,7 @@ const WatchPartyManager: React.FC<{
         let foundFest = false;
         const newFestData = localFestivalData.map(day => ({
             ...day,
-            blocks: day.blocks.map(block => {
+            blocks: (day.blocks || []).map(block => {
                 if (block.id === itemId) {
                     foundFest = true;
                     return { ...block, ...updates };

@@ -120,7 +120,7 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
             let blockTitle = '';
             if (newCodeType === 'block' && selectedBlockId) {
                 for (const day of festivalDays) {
-                    const block = day.blocks.find(b => b.id === selectedBlockId);
+                    const block = (day.blocks || []).find(b => b.id === selectedBlockId);
                     if (block) {
                         blockTitle = block.title;
                         break;
@@ -548,8 +548,8 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
                                     >
                                         <option value="">Select a block...</option>
-                                        {festivalDays.flatMap(day => 
-                                            day.blocks.map(block => (
+                                        {festivalDays.flatMap(day =>
+                                            (day.blocks || []).map(block => (
                                                 <option key={block.id} value={block.id}>
                                                     Day {day.day}: {block.title}
                                                 </option>

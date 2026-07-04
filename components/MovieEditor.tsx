@@ -264,7 +264,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleDelete = async () => {
         if (!formData || isDeleting) return;
-        if (!window.confirm(`PURGE RECORD: Irreversibly erase "${formData.title}" from the global catalog?`)) return;
+        if (!window.confirm(`PURGE RECORD: Irreversibly erase "${formData.title}" from the global catalog AND permanently delete its video file from storage — this cannot be undone. Continue?`)) return;
         
         setIsDeleting(true);
         try {

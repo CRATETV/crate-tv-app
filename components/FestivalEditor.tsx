@@ -284,7 +284,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {day.blocks.map((block, blockIndex) => (
+              {(day.blocks || []).map((block, blockIndex) => (
                 <div key={blockIndex} className="bg-black/60 p-8 rounded-3xl border border-white/10 flex flex-col md:flex-row justify-between items-center gap-10 group shadow-inner">
                    <div className="flex-grow space-y-4 w-full md:w-auto">
                         <div className="space-y-1">

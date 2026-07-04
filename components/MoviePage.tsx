@@ -35,8 +35,8 @@ const getEmbedUrl = (url: string): string | null => {
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
-  const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, festivalData } = useFestival();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, unlockFestivalBlock } = useAuth();
+  const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, festivalData, allPartyStates } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
@@ -51,6 +51,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isBlockPurchaseModalOpen, setIsBlockPurchaseModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isDeepLinkOpen, setIsDeepLinkOpen] = useState(false);
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
@@ -64,7 +65,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Find which festival block (if any) this film belongs to — used both for
   // access checks and for the rewatch window expiry below.
   const parentFestivalBlock = useMemo(() => {
-    const allBlocks = festivalData.flatMap((d: any) => d.blocks);
+    // Missing `|| []` here meant a festival day doc without a `blocks`
+    // array (mid-write, malformed, or simply not yet populated) threw a
+    // TypeError on every single MoviePage render — which is exactly what
+    // "clicking Watch does nothing" looks like from a viewer's side: the
+    // page silently fails via the top-level error boundary instead of
+    // showing the video. Same class of bug already fixed everywhere else
+    // this session; this one instance was missed.
+    const allBlocks = festivalData.flatMap((d: any) => d.blocks || []);
     return allBlocks.find((b: any) => b.movieKeys?.includes(movieKey)) || null;
   }, [festivalData, movieKey]);
 
@@ -82,13 +90,34 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       if (unlockedWatchPartyKeys.has(parentFestivalBlock.id)) return true;
       // Free block — anyone can rewatch
       if (!(parentFestivalBlock.price > 0)) return true;
+
+      // Once this block's watch party has actually ended, its films move
+      // into the general catalog automatically and become individually
+      // purchasable — same $5 rental mechanism as any other standalone
+      // movie below, just also honored here once the live event for this
+      // specific block is over. Gating on the real "ended" status (not
+      // just elapsed time) keeps a cheaper individual purchase from ever
+      // undercutting a block ticket while that block is still actually live.
+      if (allPartyStates[parentFestivalBlock.id]?.status === 'ended') {
+        const rentalExpiration = rentals[movieKey];
+        if (rentalExpiration && new Date(rentalExpiration) > new Date()) return true;
+      }
       return false;
     }
 
     if (!movie.isForSale) return true;
     const expiration = rentals[movieKey];
     return expiration ? new Date(expiration) > new Date() : false;
-  }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys]);
+  }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, allPartyStates]);
+
+  // Festival films are never individually marked `isForSale`/`salePrice` in
+  // the editor (they're normally sold as a block, or through the full
+  // festival pass) — but once a block ends, hasAccess above starts honoring
+  // an individual $5 rental for its films (the server defaults to that same
+  // $5 when no salePrice is set — see process-square-payment.ts). This just
+  // makes sure the price shown to the viewer actually says so instead of a
+  // blank/generic "Unlock Now" with no number attached.
+  const displayPrice = movie?.salePrice ?? (parentFestivalBlock ? 5 : undefined);
 
   // ── SIGNED STREAM URL — DISABLED FOR NOW ──────────────────────────────
   // See the long note in WatchPartyPage.tsx: api/get-stream-url.ts rewrites
@@ -321,7 +350,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                              <img src={movie.poster} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
                              <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
-                             <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${movie.salePrice}</button>
+                             <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${displayPrice}</button>
                              <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>
                     )
@@ -409,9 +438,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </button>
                     ) : (
                         <>
-                            {movie.salePrice && (
+                            {displayPrice && (
                                 <p className="text-center text-gray-400 text-sm mb-2">
-                                    Unlock for <span className="text-white font-black text-lg">${movie.salePrice}</span>
+                                    Unlock for <span className="text-white font-black text-lg">${displayPrice}</span>
                                 </p>
                             )}
                             <button
@@ -423,6 +452,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 </svg>
                                 Unlock Now
                             </button>
+                            {/* Once a block has ended, its films sit in the general catalog
+                                individually priced at $5 — but someone who wants everything
+                                from that specific screening (not the whole festival) had no
+                                way to buy just the block from here, only the single film. */}
+                            {parentFestivalBlock && parentFestivalBlock.price > 0 && allPartyStates[parentFestivalBlock.id]?.status === 'ended' && (
+                                <button
+                                    onClick={() => setIsBlockPurchaseModalOpen(true)}
+                                    className="w-full text-center text-xs text-gray-500 hover:text-white transition-colors mb-3 underline underline-offset-4"
+                                >
+                                    Or unlock all of "{parentFestivalBlock.title}" for ${parentFestivalBlock.price.toFixed(2)}
+                                </button>
+                            )}
                         </>
                     )}
 
@@ -477,6 +518,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
         {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
         {isPurchaseModalOpen && <SquarePaymentModal paymentType="movie" movie={movie} onClose={() => setIsPurchaseModalOpen(false)} onPaymentSuccess={handlePurchaseSuccess} />}
+        {isBlockPurchaseModalOpen && parentFestivalBlock && (
+            <SquarePaymentModal
+                paymentType="block"
+                block={parentFestivalBlock}
+                priceOverride={parentFestivalBlock.price > 0 ? parentFestivalBlock.price : undefined}
+                onClose={() => setIsBlockPurchaseModalOpen(false)}
+                onPaymentSuccess={async (details) => {
+                    if (details.itemId) {
+                        try { await unlockFestivalBlock(details.itemId); } catch (e) { console.error('unlockFestivalBlock failed:', e); }
+                    }
+                    setIsBlockPurchaseModalOpen(false);
+                    setPlayerMode('full');
+                }}
+            />
+        )}
         {isSupportModalOpen && <SquarePaymentModal paymentType="donation" movie={movie} onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={() => setIsSupportModalOpen(false)} />}
         {isDeepLinkOpen && <DeepLinkUtility movieKey={movieKey} onClose={() => setIsDeepLinkOpen(false)} />}
     </div>

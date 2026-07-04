@@ -108,11 +108,18 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
-                      <div className="relative aspect-[16/9] rounded-lg bg-transparent">
-                          <img 
+                      <div className="relative aspect-[16/9] rounded-lg bg-black overflow-hidden">
+                          {/* object-contain here used to letterbox the poster (movie
+                              posters are portrait, this box is a wide 55%-width slice),
+                              leaving gaps at top/bottom where the card behind it showed
+                              through — object-cover fills the whole box, cropping instead
+                              of gapping. The missing overflow-hidden on the parent meant
+                              the hover zoom could also push the image past the rounded
+                              corners, "peeking" out past where it should've been clipped. */}
+                          <img
                               src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                               alt={movie.title}
-                              className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover/ranked:scale-105 transition-transform duration-300 rounded-r-lg"
+                              className="absolute top-0 right-0 h-full w-[55%] object-cover object-center group-hover/ranked:scale-105 transition-transform duration-300"
                               onContextMenu={(e) => e.preventDefault()}
                               crossOrigin="anonymous"
                           />

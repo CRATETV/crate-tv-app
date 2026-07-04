@@ -247,9 +247,35 @@ const App: React.FC = () => {
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
         if (!config) return [];
-        const keys = config.movieBlocks.flatMap((b: any) => b.movieKeys);
+        const keys = config.movieBlocks.flatMap((b: any) => b.movieKeys || []);
         return keys.map((k: string) => movies[k]).filter((m: Movie | undefined): m is Movie => !!m);
     }, [movies, settings.crateFestConfig]);
+
+    // Festival films move into the general catalog automatically the moment
+    // their block's watch party actually ends — no admin step required.
+    // Grouped by their original block (rather than one flat list) so the
+    // catalog keeps the "these films screened together" context instead of
+    // flattening everything into an undifferentiated row. Each block still
+    // shows its films individually purchasable for $5 (see MoviePage.tsx's
+    // hasAccess), and the block itself remains purchasable as a whole at
+    // its original price via the row header button below — on top of the
+    // $50 full-festival-pass, and any block ticket/pass access that already
+    // carries over for anyone who bought during the live event.
+    const festivalCatalogBlocks = useMemo(() => {
+        const endedBlocks = festivalData
+            .flatMap((d: any) => d.blocks || [])
+            .filter((b: any) => allPartyStates[b.id]?.status === 'ended');
+        return endedBlocks
+            .map((block: any) => ({
+                block,
+                films: (block.movieKeys || [])
+                    .map((k: string) => movies[k])
+                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted),
+            }))
+            .filter(({ films }) => films.length > 0);
+    }, [movies, festivalData, allPartyStates]);
+
+    const [catalogBlockPurchase, setCatalogBlockPurchase] = useState<any>(null);
 
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -304,7 +330,7 @@ const App: React.FC = () => {
 
         // Check festival blocks (regular festival + Crate Fest)
         const allBlocks = [
-            ...festivalData.flatMap(d => d.blocks),
+            ...festivalData.flatMap(d => d.blocks || []),
             ...(settings.crateFestConfig?.movieBlocks || [])
         ];
 
@@ -689,6 +715,71 @@ const App: React.FC = () => {
                             )}
 
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
+                            {festivalCatalogBlocks.length > 0 && (
+                                <div className="px-4 md:px-8 -mt-2 mb-2">
+                                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap bg-white/5 border border-white/10 rounded-2xl px-5 py-3">
+                                        <p className="text-xs md:text-sm text-gray-300">
+                                            Festival films are $5 each, or unlock a whole block below — or unlock every PWFF title, forever, for one price.
+                                        </p>
+                                        {!hasFestivalAllAccess && (
+                                            <button
+                                                onClick={() => { window.history.pushState({}, '', '/pwff'); window.dispatchEvent(new Event('pushstate')); }}
+                                                className="flex-shrink-0 bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all active:scale-95"
+                                            >
+                                                Unlock All — $50
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            {festivalCatalogBlocks.map(({ block, films }) => {
+                                const blockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                                const rowTitle = (
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white">
+                                            PWFF: {block.title}
+                                        </span>
+                                        {!blockUnlocked && block.price > 0 && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setCatalogBlockPurchase(block); }}
+                                                className="flex-shrink-0 bg-red-600 hover:bg-red-500 text-white font-black text-[9px] uppercase tracking-widest px-4 py-2 rounded-lg transition-all active:scale-95"
+                                            >
+                                                Unlock Block — ${block.price.toFixed(2)}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                                return (
+                                    <MovieCarousel
+                                        key={block.id}
+                                        title={rowTitle}
+                                        movies={films}
+                                        onSelectMovie={handlePlayMovie}
+                                        onShowDetails={handleSelectMovie}
+                                        watchedMovies={watchedMovies}
+                                        watchlist={watchlist}
+                                        likedMovies={likedMovies}
+                                        onToggleLike={toggleLikeMovie}
+                                        onToggleWatchlist={toggleWatchlist}
+                                        onSupportMovie={() => {}}
+                                        categoryKey={`pwffBlock-${block.id}`}
+                                    />
+                                );
+                            })}
+                            {catalogBlockPurchase && (
+                                <SquarePaymentModal
+                                    paymentType="block"
+                                    block={catalogBlockPurchase}
+                                    priceOverride={catalogBlockPurchase.price > 0 ? catalogBlockPurchase.price : undefined}
+                                    onClose={() => setCatalogBlockPurchase(null)}
+                                    onPaymentSuccess={async (details) => {
+                                        if (details.itemId) {
+                                            try { await unlockFestivalBlock(details.itemId); } catch (e) { console.error('unlockFestivalBlock failed:', e); }
+                                        }
+                                        setTimeout(() => setCatalogBlockPurchase(null), 1200);
+                                    }}
+                                />
+                            )}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
                             
                             {Object.entries(categories).map(([key, category]) => {
@@ -696,7 +787,7 @@ const App: React.FC = () => {
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial', 'vault'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
-                                const categoryMovies = typedCategory.movieKeys
+                                const categoryMovies = (typedCategory.movieKeys || [])
                                     .map((movieKey: string) => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m))
                                     .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());

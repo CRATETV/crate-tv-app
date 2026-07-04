@@ -367,7 +367,7 @@ const FestivalProgramPage: React.FC = () => {
                                 );
                             })}
 
-                            {currentDayData.blocks.length === 0 && (
+                            {(currentDayData.blocks || []).length === 0 && (
                                 <div className="text-center py-16 border border-dashed border-white/5 rounded-2xl">
                                     <p className="text-gray-700 font-black uppercase tracking-widest text-xs">No blocks scheduled for this day yet</p>
                                 </div>

@@ -1,6 +1,6 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { Movie, EditorialStory } from '../types.js';
 
@@ -115,10 +115,45 @@ export async function POST(request: Request) {
         let auditDetails = `Mutated ${type} resource.`;
 
         if (type === 'delete_movie') {
+            // Look up the video URL BEFORE deleting the catalog entry — the
+            // whole point of deleting a film when storage is the concern is
+            // to actually reclaim the space, and removing just the Firestore
+            // doc leaves the (large) video file sitting in S3 forever,
+            // still costing money, with no catalog entry left to find it
+            // through. This looks it up first so it can also be removed.
+            const movieDoc = await db.collection('movies').doc(data.key).get();
+            const fullMovieUrl = movieDoc.exists ? (movieDoc.data() as any)?.fullMovie : null;
+
             // IRREVERSIBLE PURGE: Remove document from DB
             batch.delete(db.collection('movies').doc(data.key));
             auditDetails = `PURGE: Deleted movie [${data.key}].`;
-        } 
+
+            // Best-effort — only for files actually hosted on our own S3
+            // bucket (older catalog entries sometimes point at a Vimeo/
+            // YouTube URL instead, which there's nothing to delete for).
+            // Committed as its own step so a storage hiccup here can never
+            // block the catalog deletion the admin actually asked for.
+            const bucketName = process.env.AWS_S3_BUCKET_NAME;
+            if (fullMovieUrl && bucketName && typeof fullMovieUrl === 'string' && fullMovieUrl.includes(`${bucketName}.s3`)) {
+                try {
+                    let region = process.env.AWS_S3_REGION || 'us-east-1';
+                    if (region === 'global') region = 'us-east-1';
+                    const s3Key = decodeURIComponent(new URL(fullMovieUrl).pathname.replace(/^\//, ''));
+                    const s3Client = new S3Client({
+                        region,
+                        credentials: {
+                            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+                            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+                        },
+                    });
+                    await s3Client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: s3Key }));
+                    auditDetails += ` Also removed video file from storage (${s3Key}).`;
+                } catch (s3Err) {
+                    console.error('[publish-data] Failed to delete S3 video file for', data.key, s3Err);
+                    auditDetails += ` WARNING: video file cleanup failed — may need manual removal from S3.`;
+                }
+            }
+        }
         else if (type === 'delete_category') {
             // IRREVERSIBLE PURGE: Remove document from DB
             batch.delete(db.collection('categories').doc(data.key));

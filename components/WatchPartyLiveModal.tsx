@@ -35,7 +35,7 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
         }> = [];
 
         for (const day of festivalData) {
-            for (const block of day.blocks) {
+            for (const block of day.blocks || []) {
                 // Check if this block has an active watch party — every write
                 // path (update-watch-parties.ts, auto-start-watch-party.ts,
                 // WatchPartyPage.tsx) stores a block's live party doc under
