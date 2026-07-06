@@ -143,7 +143,7 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
 };
 
 const FilmmakerDashboardView: React.FC = () => {
-    const { user } = useAuth();
+    const { user, getUserIdToken } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -157,10 +157,16 @@ const FilmmakerDashboardView: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
+            // This endpoint used to accept any directorName with zero auth —
+            // meaning anyone could pull up any filmmaker's private earnings,
+            // donation totals, and payout balance just by typing a name that's
+            // publicly visible on every movie page ("Directed by X"). It now
+            // requires a verified signed-in session.
+            const idToken = await getUserIdToken();
             const analyticsRes = await fetch('/api/get-filmmaker-analytics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ directorName: name }),
+                body: JSON.stringify({ directorName: name, idToken }),
             });
 
             if (!analyticsRes.ok) throw new Error('Failed to load analytics.');

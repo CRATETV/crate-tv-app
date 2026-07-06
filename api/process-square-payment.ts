@@ -447,6 +447,21 @@ export async function POST(request: Request) {
         }
     }
 
+    // Premium subscription — same gap as CrateFest/Jury pass: charged
+    // correctly (see staticPriceMap above) but the only thing that ever set
+    // isPremiumSubscriber was a direct client-side write (AuthContext's
+    // subscribe()), which firestore.rules blocks. Grant it here instead.
+    if (db && uid && paymentType === 'subscription') {
+        try {
+            await db.collection('users').doc(uid).set({
+                isPremiumSubscriber: true,
+            }, { merge: true });
+            console.log(`[Payment API] Granted premium subscription to user ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to grant subscription:', e);
+        }
+    }
+
     // VOD rental — unlock individual film
     if (db && uid && paymentType === 'movie' && itemId) {
         try {

@@ -176,13 +176,17 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       price: 10.00
     };
     const newData = [...data];
+    // A legacy/malformed day doc without a blocks array at all used to crash
+    // here outright — this guarantees one exists before pushing onto it.
+    if (!newData[dayIndex].blocks) newData[dayIndex].blocks = [];
     newData[dayIndex].blocks.push(newBlock);
     onDataChange(newData);
   };
-  
+
   const removeBlock = (dayIndex: number, blockIndex: number) => {
      setIsDirty(true);
      const newData = [...data];
+     if (!newData[dayIndex].blocks) newData[dayIndex].blocks = [];
      newData[dayIndex].blocks.splice(blockIndex, 1);
      onDataChange(newData);
   };

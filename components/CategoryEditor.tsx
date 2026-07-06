@@ -274,7 +274,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                                 {cat.showInSquare && <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full whitespace-nowrap">In The Square</span>}
                             </div>
                             <div className="flex items-center gap-3 mt-2">
-                                <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest">{cat.movieKeys.length} Records Connected</p>
+                                <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest">{cat.movieKeys?.length || 0} Records Connected</p>
                                 <div className="w-1 h-1 rounded-full bg-gray-800"></div>
                                 <p className="text-[8px] text-gray-800 font-black uppercase tracking-widest">UID: {key}</p>
                             </div>
@@ -314,10 +314,10 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       </div>
 
       {editingCategoryKey && (
-        <MovieSelectorModal 
-            allMovies={allMovies} 
-            initialSelectedKeys={categories[editingCategoryKey].movieKeys || []} 
-            title={`Curate: ${categories[editingCategoryKey].title}`}
+        <MovieSelectorModal
+            allMovies={allMovies}
+            initialSelectedKeys={categories[editingCategoryKey]?.movieKeys || []}
+            title={`Curate: ${categories[editingCategoryKey]?.title || ''}`}
             onSave={(newKeys) => handleMovieSelectionSave(editingCategoryKey, newKeys)} 
             onClose={() => setEditingCategoryKey(null)} 
         />

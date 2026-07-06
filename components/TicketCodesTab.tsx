@@ -167,13 +167,21 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
 
     const sendCodeEmail = async (email: string, name: string, code: string, type: string, blockTitle: string) => {
         try {
-            await fetch('/api/send-individual-email', {
+            // This was sending `to`/`html` and no password at all — the
+            // endpoint actually expects `email`/`htmlBody`, and rejects
+            // anything with a 401 if `password` doesn't match an admin or
+            // collaborator key. Every field here was wrong, so every code
+            // email sent through this tool has silently failed (the catch
+            // block below swallows it with no admin-facing error) since
+            // this was built.
+            const res = await fetch('/api/send-individual-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    to: email,
+                    password: sessionStorage.getItem('adminPassword') || '',
+                    email,
                     subject: '🎬 Your CrateFest Digital Access Code',
-                    html: `
+                    htmlBody: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #fff; padding: 40px; border-radius: 16px;">
                             <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" style="height: 40px; margin-bottom: 24px;" />
                             <h1 style="color: #fff; font-size: 28px; margin-bottom: 16px;">Your Digital Access Code</h1>
@@ -203,8 +211,14 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
                     `
                 })
             });
+            if (!res.ok) {
+                const body = await res.json().catch(() => null);
+                console.error('Error sending code email:', res.status, body?.error);
+                setError(`Code was created, but the email failed to send: ${body?.error || res.status}`);
+            }
         } catch (err) {
             console.error('Error sending email:', err);
+            setError('Code was created, but the email failed to send — check your connection.');
             // Don't fail the whole operation if email fails
         }
     };

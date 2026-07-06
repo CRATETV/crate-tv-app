@@ -247,7 +247,10 @@ const App: React.FC = () => {
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
         if (!config) return [];
-        const keys = config.movieBlocks.flatMap((b: any) => b.movieKeys || []);
+        // config.movieBlocks itself (not just each block's movieKeys) can be
+        // missing on a freshly-created CrateFest config before any blocks
+        // have been added — this crashed the whole home page in that case.
+        const keys = (config.movieBlocks || []).flatMap((b: any) => b.movieKeys || []);
         return keys.map((k: string) => movies[k]).filter((m: Movie | undefined): m is Movie => !!m);
     }, [movies, settings.crateFestConfig]);
 
@@ -715,7 +718,7 @@ const App: React.FC = () => {
                                 />
                             )}
 
-                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
+                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => { window.history.pushState({}, '', '/cratefest'); window.dispatchEvent(new Event('pushstate')); }} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} categoryKey="cratefest" />}
                             {festivalCatalogBlocks.length > 0 && (
                                 <div className="px-4 md:px-8 -mt-2 mb-2">
                                     <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap bg-white/5 border border-white/10 rounded-2xl px-5 py-3">

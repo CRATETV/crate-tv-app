@@ -156,6 +156,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
   }, []);
 
+  // A video that never fires an error event can still just hang forever on
+  // some devices — most commonly an MP4 exported without "faststart" (its
+  // metadata sitting at the end of the file instead of the front). Desktop
+  // browsers tend to tolerate that; iOS Safari can sit on readyState 0
+  // indefinitely with no error, no progress, nothing, which looks exactly
+  // like a permanently frozen poster with zero explanation. This gives
+  // real playback 20 seconds to begin before surfacing the same
+  // error-and-retry overlay used for hard failures.
+  useEffect(() => {
+    if (playerMode !== 'full' || !playableUrl) return;
+    const timer = setTimeout(() => {
+        const video = videoRef.current;
+        if (video && video.readyState === 0) setVideoError(true);
+    }, 20000);
+    return () => clearTimeout(timer);
+  }, [playerMode, playableUrl]);
+
   // Ensure video always starts from beginning when loaded
   useEffect(() => {
     const video = videoRef.current;

@@ -1,4 +1,4 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
@@ -41,13 +41,34 @@ async function fetchAllRelevantPayments(accessToken: string, locationId: string 
 
 export async function POST(request: Request) {
     try {
-        const { directorName } = await request.json();
+        const { directorName, idToken } = await request.json();
         if (!directorName) return new Response(JSON.stringify({ error: 'Name required' }), { status: 400 });
-        
+
         const initError = getInitializationError();
         if (initError) throw new Error(initError);
         const db = getAdminDb();
         if (!db) throw new Error("DB fail");
+
+        // This previously accepted directorName with no authentication at
+        // all — meaning anyone (no login required) could POST any name and
+        // pull that filmmaker's full private earnings, donation totals, and
+        // payout balance, just from a name that's publicly visible on every
+        // movie page ("Directed by X"). Requiring a verified session at
+        // least closes the "anyone on the internet, zero login" version of
+        // this hole. It doesn't yet stop one signed-in filmmaker from
+        // looking up another's numbers by name — films aren't tagged with
+        // an owning account, only a free-text director/producer credit, so
+        // there's currently no clean way to restrict this to "your own
+        // films only" without a larger data-model change.
+        const auth = getAdminAuth();
+        if (!idToken || !auth) {
+            return new Response(JSON.stringify({ error: 'Sign in required.' }), { status: 401 });
+        }
+        try {
+            await auth.verifyIdToken(idToken);
+        } catch {
+            return new Response(JSON.stringify({ error: 'Invalid or expired session.' }), { status: 401 });
+        }
 
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;

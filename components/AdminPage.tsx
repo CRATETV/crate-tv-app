@@ -281,9 +281,18 @@ const AdminPage: React.FC = () => {
             if (response.ok) {
                 setSaveMessage(`Manifest Synchronized.`);
                 await fetchAllData(pass!);
+            } else {
+                // A rejected save (bad auth, validation error, server fault)
+                // used to just do nothing here — no message, no indication
+                // anything failed. The admin would see their edit "applied"
+                // in the local form and have no reason to think it hadn't
+                // actually persisted.
+                let detail = '';
+                try { detail = (await response.json())?.error || ''; } catch {}
+                setSaveMessage(`Sync failed (${response.status})${detail ? `: ${detail}` : ''}. Changes were NOT saved — try again.`);
             }
         } catch (err) {
-            setSaveMessage("Sync failed.");
+            setSaveMessage("Sync failed. Changes were NOT saved — check your connection and try again.");
         } finally {
             setIsLoading(false);
             setIsSaving(false);

@@ -238,7 +238,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, grantFestivalAllAccess, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     // True once we've received a real Firestore snapshot for this party. Used to
@@ -295,6 +295,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.history.pushState({}, '', `/watchparty/${nextBlockInfo.id}`);
         window.dispatchEvent(new Event('pushstate'));
     }, [nextBlockInfo, unlockFestivalBlock]);
+
+    // "Upgrade to All-Access — $50" on the credits screen used to reuse
+    // `showPaywall`, which is hardcoded to charge for the CURRENT block/film
+    // again (paymentType 'block'/'watchPartyTicket', priced at that item's
+    // regular price) — someone tapping the $50 upgrade button would see a
+    // payment modal for something they'd already unlocked, at the wrong
+    // price, instead of the actual all-access pass. This gives it its own
+    // dedicated modal, matching the pattern used for the homepage purchase.
+    const [showFullPassPaywall, setShowFullPassPaywall] = useState(false);
 
     // Correct unlock: blocks use unlockFestivalBlock, individual films use unlockWatchParty
     const handlePaymentSuccess = useCallback(() => {
@@ -405,7 +414,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             const video = videoRef.current;
             if (!video) return;
             video.muted = false;
-            const tryPlay = () => { video.play().catch(() => {}); };
+            const tryPlay = () => {
+                video.play().catch((err: any) => {
+                    // Same defensive fallback as the film-advance effect below —
+                    // if the browser actually rejects unmuted playback here,
+                    // don't leave the viewer stuck silently; fall back to
+                    // muted (guaranteed to play) and bring the button back.
+                    if (err?.name === 'NotAllowedError') {
+                        video.muted = true;
+                        video.play().catch(() => {});
+                        setNeedsUserGesture(true);
+                    }
+                });
+            };
             tryPlay();
             [400, 1000, 2000].forEach(delay => {
                 setTimeout(() => { if (video.paused) tryPlay(); }, delay);
@@ -581,7 +602,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     if (!hasUserInteractedRef.current) {
                         video.muted = true; // ensure muted for autoplay
                     }
-                    video.play().catch(() => {});
+                    video.play().catch((err: any) => {
+                        // This runs on every ~1.5s sync tick, so if an unmuted
+                        // attempt keeps getting rejected here it would silently
+                        // retry forever with no sound and (since the button was
+                        // already hidden on the assumption unmute had worked)
+                        // no way for the viewer to fix it. Same fallback as the
+                        // other autoplay attempts in this file.
+                        if (err?.name === 'NotAllowedError' && !video.muted) {
+                            video.muted = true;
+                            video.play().catch(() => {});
+                            setNeedsUserGesture(true);
+                        }
+                    });
                 } else if (!ps.isPlaying && !video.paused) {
                     video.pause();
                 }
@@ -736,13 +769,57 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const video = videoRef.current;
         if (!video || !movie?.fullMovie) return;
         video.muted = false;
-        const tryPlay = () => { video.play().catch(() => {}); };
+
+        // A gesture happening ANYWHERE earlier on the page (tapping "Join
+        // Party," entering the lobby, etc.) is enough for Chrome to allow
+        // unmuted autoplay indefinitely afterward — but iOS Safari ties that
+        // permission more strictly to the specific play() call, and can
+        // reject an unmuted attempt here even though a real gesture already
+        // happened minutes ago. When that's what's happening, the browser
+        // rejects with NotAllowedError specifically — silently retrying the
+        // same unmuted call forever (the old behavior) just leaves the
+        // viewer stuck on a frozen frame with no sound and no button to fix
+        // it, since the button was hidden on the assumption this would work.
+        let cancelled = false;
+        const tryPlay = () => {
+            video.play().catch((err: any) => {
+                if (cancelled) return;
+                if (err?.name === 'NotAllowedError') {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                    setNeedsUserGesture(true); // bring the manual button back as a fallback
+                }
+            });
+        };
         tryPlay();
         const retries = [300, 800, 1500, 3000].map(delay =>
             setTimeout(() => { if (video.paused) tryPlay(); }, delay)
         );
-        return () => retries.forEach(clearTimeout);
+        return () => { cancelled = true; retries.forEach(clearTimeout); };
     }, [movie?.fullMovie, needsUserGesture]);
+
+    // ── STALLED-FOREVER DETECTION ──────────────────────────────────────────
+    // A video that never fires a single error event can still just hang
+    // indefinitely on some devices — most commonly an MP4 that wasn't
+    // exported with "faststart" (metadata at the front of the file instead
+    // of the end): desktop browsers tend to tolerate that and play it
+    // anyway, but iOS Safari can sit there forever on readyState 0 with no
+    // error, no progress, nothing — which looked exactly like "it just
+    // shows a frosted frame and never starts," with zero indication to the
+    // viewer (or to us) that anything was even wrong. This gives real
+    // playback 20 seconds to actually begin; if it hasn't by then, it
+    // surfaces the same error-and-retry overlay used for hard failures
+    // instead of leaving the viewer staring at a silent blank screen.
+    useEffect(() => {
+        if (!movie?.fullMovie) return;
+        const timer = setTimeout(() => {
+            const video = videoRef.current;
+            if (video && video.readyState === 0) {
+                setVideoError('This is taking longer than it should. Tap to try again.');
+            }
+        }, 20000);
+        return () => clearTimeout(timer);
+    }, [movie?.fullMovie]);
 
     // ── HARD STOP WHEN ADMIN ENDS THE PARTY ───────────────────────────────
     // Ending the party swaps the JSX to the "Session Ended" screen, which
@@ -1223,7 +1300,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     isLiked={isLiked}
                     onToggleLike={handleToggleLike}
                     hasFestivalAllAccess={hasFestivalAllAccess}
-                    onUpgradeToFullPass={() => setShowPaywall(true)}
+                    onUpgradeToFullPass={() => setShowFullPassPaywall(true)}
                     nextBlock={nextBlockInfo}
                     onBuyNextBlock={handleBuyNextBlock}
                 />
@@ -1242,6 +1319,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         block={nextBlockInfo}
                         onClose={() => setShowNextBlockPaywall(false)}
                         onPaymentSuccess={handleNextBlockPaymentSuccess}
+                    />
+                )}
+                {showFullPassPaywall && (
+                    <SquarePaymentModal
+                        paymentType="pass"
+                        // The server's grant check (process-square-payment.ts) looks
+                        // for itemId === 'full-festival-pass' specifically — this
+                        // synthetic block just carries that id through, same as the
+                        // homepage's all-access purchase.
+                        block={{ id: 'full-festival-pass', title: 'Festival All-Access Pass', time: '', movieKeys: [], price: 50 } as any}
+                        onClose={() => setShowFullPassPaywall(false)}
+                        onPaymentSuccess={async () => {
+                            try { await grantFestivalAllAccess(); } catch (e) { console.error('grantFestivalAllAccess failed:', e); }
+                            setTimeout(() => setShowFullPassPaywall(false), 1200);
+                        }}
                     />
                 )}
             </>

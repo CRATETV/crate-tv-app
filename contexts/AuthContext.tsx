@@ -420,7 +420,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const subscribe = async () => {
         if (!user || user.isPremiumSubscriber) return;
-        await updateUserProfile(user.uid, { isPremiumSubscriber: true });
+        // isPremiumSubscriber is in firestore.rules' protected fields list —
+        // this direct write used to succeed but now fails outright, same bug
+        // already found and fixed for hasCrateFestPass/hasJuryPass. The real
+        // grant now happens server-side in process-square-payment.ts after a
+        // verified charge; this just updates local UI state to match.
         setUser(currentUser => currentUser ? ({ ...currentUser, isPremiumSubscriber: true }) : null);
         fetch('/api/track-subscription', {
             method: 'POST',
