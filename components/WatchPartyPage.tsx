@@ -663,18 +663,38 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const interval = setInterval(() => syncClock(), 1500); // 1.5s — gentler cadence
         // Don't call syncClock() immediately on mount; let the video settle first.
         //
-        // This is forced on purpose. A viewer joining after the film has already
-        // been running needs an immediate large seek forward to catch up — but
-        // the normal (non-forced) path only attempts that once video.readyState
-        // reaches 3, which assumes smooth, quick buffering. On these currently
-        // un-optimized, non-CDN files that assumption can just never hold on a
-        // slower connection, so the catch-up seek would never fire at all and a
-        // late joiner would sit watching from minute 0 indefinitely instead of
-        // reaching the live position. Forcing this first attempt gives every
-        // late joiner one guaranteed, immediate catch-up try regardless of how
-        // much has buffered yet, same as the existing foreground-return handler
-        // already does for the "tab was backgrounded" case.
-        const initialDelay = setTimeout(() => syncClock({ force: true }), 3000);
+        // Forced on purpose — a late joiner needs an immediate large seek to
+        // catch up, and the normal (non-forced) path only attempts that once
+        // readyState reaches 3, which may never happen on a slow connection
+        // with these un-optimized, non-CDN files.
+        //
+        // First version of this fix just called syncClock({force:true}) after
+        // a flat 3s timeout with no readyState check — and made things worse:
+        // setting video.currentTime before the browser has loaded metadata
+        // (readyState === 0) gets silently DROPPED rather than queued, exactly
+        // like the note below for the backgrounded-tab case. A late joiner on
+        // a slow connection often hasn't loaded metadata within 3 seconds, so
+        // that forced seek just silently no-op'd — then every later
+        // (non-forced) tick needed readyState >= 3 to try again, which also
+        // might never come. Net result: a couple of different failed attempts
+        // (the "glitching"), then stuck for good. Mirroring the same
+        // wait-for-loadedmetadata pattern already proven in
+        // handleForegroundReturn below closes that gap properly.
+        let initialSyncMetadataListener: (() => void) | null = null;
+        const runInitialSync = () => {
+            const video = videoRef.current;
+            if (!video) return;
+            if (video.readyState === 0) {
+                initialSyncMetadataListener = () => {
+                    if (initialSyncMetadataListener) video.removeEventListener('loadedmetadata', initialSyncMetadataListener);
+                    syncClock({ force: true });
+                };
+                video.addEventListener('loadedmetadata', initialSyncMetadataListener);
+            } else {
+                syncClock({ force: true });
+            }
+        };
+        const initialDelay = setTimeout(runInitialSync, 3000);
 
         // ── FOREGROUND RESYNC ─────────────────────────────────────────────
         // iOS Safari throttles (or fully suspends) timers and video decoding
@@ -719,6 +739,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return () => {
             clearInterval(interval);
             clearTimeout(initialDelay);
+            if (initialSyncMetadataListener && videoRef.current) {
+                videoRef.current.removeEventListener('loadedmetadata', initialSyncMetadataListener);
+            }
             document.removeEventListener('visibilitychange', handleForegroundReturn);
             window.removeEventListener('pageshow', handleForegroundReturn);
             window.removeEventListener('focus', handleForegroundReturn);
