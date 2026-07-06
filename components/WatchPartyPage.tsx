@@ -1010,12 +1010,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             });
         }, 20000);
 
+        // ── HARD POLL FALLBACK — bypasses the realtime channel entirely ──────
+        // Observed in the wild: a viewer stayed on the page the whole time
+        // (so this isn't the backgrounded-tab case handleVisible covers) and
+        // never saw the intermission update — it only caught up once a much
+        // later "party ended" write finally came through. That means the
+        // onSnapshot watchdog above wasn't enough: tearing down and
+        // resubscribing onSnapshot can still get served by the same wedged
+        // streaming connection/cache on Safari, so recreating the *listener*
+        // doesn't necessarily recreate the underlying *connection*. A plain
+        // .get() is an ordinary one-off network request, independent of that
+        // persistent channel, so it succeeds even when the streaming layer
+        // itself is stuck. Short interval on purpose — this is the safety
+        // net for exactly the moments (intermission, block advance) where a
+        // missed update is most visible to viewers.
+        const hardPoll = setInterval(() => {
+            if (!partyRefForVisibility) return;
+            partyRefForVisibility.get().then(applyPartyDoc).catch(() => {});
+        }, 5000);
+
         return () => {
             if (retryTimer) clearTimeout(retryTimer);
             if (unsubscribe) unsubscribe();
             if (reactionsUnsub) reactionsUnsub();
             if (viewerUnsub) viewerUnsub();
             clearInterval(watchdog);
+            clearInterval(hardPoll);
             document.removeEventListener('visibilitychange', handleVisible);
         };
     }, [movieKey]);
