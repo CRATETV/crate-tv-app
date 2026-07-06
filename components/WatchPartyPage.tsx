@@ -990,11 +990,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         };
         document.addEventListener('visibilitychange', handleVisible);
 
+        // ── WATCHDOG — periodically re-establish the listener ────────────────
+        // This is the exact same fix applied to FestivalContext.tsx's
+        // watch_parties listener: Firestore's realtime connection can go
+        // silently stale (no error, no reconnect) with no visible symptom
+        // beyond "nothing updates until I refresh the page" — which is
+        // exactly the "had to refresh to see the unmute button/party go
+        // live" report this was built to close. This listener previously had
+        // no recovery mechanism for that at all (unlike the foreground-return
+        // handler above, which only helps if the tab was actually
+        // backgrounded — someone staring at the countdown the whole time
+        // never gets a chance to recover if the connection quietly drops).
+        const watchdog = setInterval(() => {
+            if (!partyRefForVisibility) return;
+            if (unsubscribe) unsubscribe();
+            unsubscribe = partyRefForVisibility.onSnapshot((doc: any) => {
+                applyPartyDoc(doc);
+                setPartyStateReady(true);
+            });
+        }, 20000);
+
         return () => {
             if (retryTimer) clearTimeout(retryTimer);
             if (unsubscribe) unsubscribe();
             if (reactionsUnsub) reactionsUnsub();
             if (viewerUnsub) viewerUnsub();
+            clearInterval(watchdog);
             document.removeEventListener('visibilitychange', handleVisible);
         };
     }, [movieKey]);

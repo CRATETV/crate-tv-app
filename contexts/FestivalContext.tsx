@@ -403,21 +403,40 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 setAllPartyStates(allStates);
             }, () => {});
 
-            unsubs.push(subscribeWatchParties());
-
-            // Watchdog — resubscribe every 90s to prevent silent listener failure
-            // This ensures the banner appears promptly when a party goes live
+            // This used to create TWO separate, permanent listeners on the
+            // exact same query — one pushed straight to `unsubs` here, and a
+            // second one immediately below for the watchdog to manage — for
+            // no benefit, just doubled Firestore reads for the whole
+            // session. Keeping only the watchdog-managed one.
+            //
+            // Watchdog — periodically tears down and re-establishes this
+            // listener, because Firestore's realtime connection can silently
+            // stop delivering updates (a real, previously-observed failure
+            // mode — WebChannel/long-polling connections going stale after
+            // a network switch, a backgrounded tab, etc.) with no error and
+            // no obvious symptom beyond "nothing updates until I refresh."
+            // That's most damaging at the exact moment a party goes live, so
+            // this interval is intentionally short — the whole point is
+            // limiting how long a silent failure can go unnoticed, not just
+            // occasionally tidying up the connection.
             let watchPartyUnsub = subscribeWatchParties();
             const watchdog = setInterval(() => {
                 watchPartyUnsub();
                 watchPartyUnsub = subscribeWatchParties();
-            }, 90000);
+            }, 20000);
             unsubs.push(() => { clearInterval(watchdog); watchPartyUnsub(); });
 
-            // Re-subscribe on auth change to pick up permission upgrades
+            // Re-subscribe on auth change to pick up permission upgrades —
+            // this used to just add another listener on top of the existing
+            // one every time auth state changed (sign in, sign out, token
+            // refresh), accumulating more and more parallel listeners for
+            // the rest of the session instead of replacing the current one.
             if (auth) {
                 auth.onAuthStateChanged(user => {
-                    if (user) unsubs.push(subscribeWatchParties());
+                    if (user) {
+                        watchPartyUnsub();
+                        watchPartyUnsub = subscribeWatchParties();
+                    }
                 });
             }
         };
