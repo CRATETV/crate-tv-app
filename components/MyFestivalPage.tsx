@@ -15,9 +15,18 @@ const navigate = (path: string) => {
     window.dispatchEvent(new Event('pushstate'));
 };
 
+// Used as "Starts {formatTime(...)}" everywhere below. Used to always spell
+// out an abbreviated weekday + month + day even for a screening starting
+// later today ("Starts Mon, Jul 6, 4:15 PM"), which reads as needlessly hard
+// to parse at a glance — a same-day screening reads much faster as "today,"
+// and a future one is clearer fully spelled out rather than abbreviated.
 const formatTime = (d: Date | null): string | null => {
     if (!d || isNaN(d.getTime())) return null;
-    return d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const isToday = d.toDateString() === new Date().toDateString();
+    if (isToday) return `today at ${timeStr}`;
+    const dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return `${dateStr} at ${timeStr}`;
 };
 
 const MyFestivalPage: React.FC = () => {

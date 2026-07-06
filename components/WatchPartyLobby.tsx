@@ -419,8 +419,22 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 {/* Main content — pb-28 reserves space for the fixed PWFF/Crate TV
                     badge pinned to the bottom of the outer container below. Without
                     it, the ticket button here could scroll down into the same
-                    screen space the badge occupies and visually collide with it. */}
-                <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center overflow-y-auto pt-24 pb-28">
+                    screen space the badge occupies and visually collide with it.
+                    `justify-center` used to be applied here unconditionally. That's
+                    a classic flexbox trap on a scrollable container: when content
+                    (poster + title + countdown + button) is taller than the actual
+                    viewport, centering an overflowing flex column bleeds the content
+                    equally past BOTH the top and bottom edges rather than just the
+                    bottom — so on a shorter/narrower viewport the poster renders up
+                    under the fixed top strip and the ticket button renders down under
+                    the fixed bottom badge, both overlapping actual real content
+                    instead of just needing a scroll. This showed up as overlapping
+                    elements on Android while looking fine on an iPhone that simply
+                    happened to have a taller viewport for this content to fit in.
+                    Anchoring to the top on small screens (still centering on md+,
+                    where there's reliably more room) means the worst case is just
+                    "not perfectly centered," never actual overlap. */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-start md:justify-center px-8 text-center overflow-y-auto pt-24 pb-28">
                     {/* Film poster */}
                     <div className="relative mx-auto w-32 md:w-44 mb-6">
                         <div className="absolute -inset-3 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />

@@ -1603,8 +1603,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                     setVideoError(null);
                                                     const video = videoRef.current;
                                                     if (!video) return;
+                                                    // Also unmute+retry-play here, matching the "Tap to Unmute"
+                                                    // button's own retry logic below — this button used to just
+                                                    // reload the source and leave sound as a separate second tap
+                                                    // on the unmute button. But the unmute button was rendering
+                                                    // ON TOP of this error screen (it isn't gated on !videoError),
+                                                    // so tapping "unmute" while an error was showing just tried to
+                                                    // play a video that had already errored out — no visible
+                                                    // change, reads as "the button doesn't do anything, we never
+                                                    // see the movie." Folding that logic in here means the one
+                                                    // visible, relevant button on this screen does the whole job.
+                                                    hasUserInteractedRef.current = true;
+                                                    setNeedsUserGesture(false);
+                                                    video.muted = false;
                                                     video.load();
-                                                    video.play().catch(() => {});
+                                                    const tryPlay = () => { video.play().catch(() => {}); };
+                                                    tryPlay();
+                                                    [400, 1000, 2000].forEach(delay => {
+                                                        setTimeout(() => { if (video.paused) tryPlay(); }, delay);
+                                                    });
                                                 }}
                                                 className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all"
                                             >
@@ -1616,17 +1633,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         onStalled/onCanPlay above) but never actually shown to the viewer, so
                                         someone on a slow connection just saw a frozen frame with no explanation
                                         of what was happening or that anything was happening at all. */}
+                                    {/* This used to be a full-screen bg-black/40 + backdrop-blur overlay
+                                        blacking out the entire video on every stall — reasonable for a rare
+                                        stall, but with buffering still expected to happen fairly often until
+                                        source files are on proper HLS/CDN delivery, that meant blanking the
+                                        whole screen repeatedly during normal playback. A small corner chip
+                                        gives the same "still working" signal without hiding the movie itself
+                                        every time the network hiccups. */}
                                     {isVideoBuffering && !isEnded && (
-                                        <div className="absolute inset-0 z-[165] flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                                            <div className="relative w-10 h-10 mb-4">
-                                                <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                        <div className="absolute top-4 left-4 z-[165] flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 pointer-events-none">
+                                            <div className="relative w-3 h-3 flex-shrink-0">
+                                                <div className="absolute inset-0 rounded-full border-2 border-white/20"></div>
                                                 <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
                                             </div>
-                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-300">Buffering — hang tight</p>
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 whitespace-nowrap">Buffering</p>
                                         </div>
                                     )}
-                                    {/* Small unmute button — video autoplays muted, tap to unmute */}
-                                    {needsUserGesture && partyState?.status === 'live' && !isEnded && (
+                                    {/* Small unmute button — video autoplays muted, tap to unmute.
+                                        Gated on !videoError: this used to render regardless, sitting on
+                                        top of (higher z-index than) the error/retry screen below whenever
+                                        the video actually failed to load — so tapping it just tried to
+                                        unmute+play a video that had already errored out. Hiding it during
+                                        an error leaves the Retry button (which now also unmutes) as the
+                                        one thing on screen to tap. */}
+                                    {needsUserGesture && partyState?.status === 'live' && !isEnded && !videoError && (
                                         <button
                                             className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-6 py-4 min-h-[48px] text-white hover:bg-black/90 transition-all active:scale-95 shadow-lg"
                                             onClick={() => {
