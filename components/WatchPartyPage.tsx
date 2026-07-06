@@ -372,8 +372,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [needsUserGesture, setNeedsUserGesture] = useState(() => !hasUserGestured());
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
+    const [introNeedsUnmute, setIntroNeedsUnmute] = useState(true);
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const introVideoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<any>(null);
     const lastSeekTimeRef = useRef<number>(0);
     // Stable refs so the sync interval never needs to be torn down on Firestore updates
@@ -530,6 +532,29 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => { movieRef.current = movie; }, [movie]);
     useEffect(() => { isEndedRef.current = isEnded; }, [isEnded]);
 
+    // ── RESET UNMUTE GATE ON EVERY FRESH PLAYBACK SESSION ─────────────────
+    // needsUserGesture/hasUserInteractedRef only ever get cleared by tapping
+    // the on-screen unmute button — nothing resets them when a NEW playback
+    // session begins on the same tab (the admin restarts the party, or a
+    // block advances to its next film). A gesture from an earlier session
+    // doesn't reliably re-authorize unmuted autoplay for a brand new
+    // <video> load on iOS Safari: the video prop `muted={needsUserGesture}`
+    // renders `muted={false}` from the stale "already interacted" state, the
+    // browser silently blocks the unmuted autoplay attempt, and — since the
+    // unmute button only renders while needsUserGesture is true — there's no
+    // button left on screen to recover it. Viewer sees a frozen frame with
+    // no way to unstick it. Reset both on every new session so it always
+    // starts from the safe muted-autoplay-first flow.
+    const lastSessionKeyRef = useRef<string | undefined>(undefined);
+    useEffect(() => {
+        const sessionKey = `${partyState?.lastStartedAt || ''}|${movie?.fullMovie || ''}`;
+        if (lastSessionKeyRef.current !== undefined && lastSessionKeyRef.current !== sessionKey) {
+            hasUserInteractedRef.current = false;
+            setNeedsUserGesture(true);
+        }
+        lastSessionKeyRef.current = sessionKey;
+    }, [partyState?.lastStartedAt, movie?.fullMovie]);
+
     // ── SYNC ENGINE — runs once, reads state via refs so Firestore updates
     //    never tear down and restart the interval (which caused repeated seeks) ──
     useEffect(() => {
@@ -598,7 +623,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                 // Play/pause — always try to play muted first (works without user gesture).
                 // If user has interacted, unmute is handled by the unmute button.
-                if (ps.isPlaying && video.paused && !video.ended && (video.readyState >= 2 || opts?.force)) {
+                //
+                // Deliberately NOT gating this on video.readyState anymore. It used to
+                // require readyState >= 2 (HAVE_CURRENT_DATA) before ever calling
+                // play() — but iOS Safari is conservative about actually buffering a
+                // video (even with preload="auto") until something calls play() on it.
+                // That created a standoff on iPhone: we wouldn't call play() until data
+                // was buffered, and Safari wouldn't seriously buffer until play() was
+                // called. On fast connections both sides "won" fast enough to go
+                // unnoticed; on anything slower the video just sat frozen on frame one
+                // indefinitely — the "frosted glass" freeze right after the countdown.
+                // Calling play() with insufficient data is safe: the element enters a
+                // pending-play state, fires 'waiting'/'stalled' (already handled above
+                // via handleVideoWaiting to show the buffering spinner), and starts
+                // itself the moment enough data arrives — no readyState check needed.
+                if (ps.isPlaying && video.paused && !video.ended) {
                     if (!hasUserInteractedRef.current) {
                         video.muted = true; // ensure muted for autoplay
                     }
@@ -1268,14 +1307,43 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return (
             <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
                 <video
+                    ref={introVideoRef}
                     src={movie.watchPartyIntroVideoUrl}
+                    // iOS Safari flatly refuses to autoplay unmuted video — no user
+                    // gesture, no play. Unlike Android/Chrome's autoplay heuristics,
+                    // this isn't probabilistic: it silently no-ops every time, leaving
+                    // the element frozen on its first frame with nothing on screen to
+                    // recover it (this used to have no muted fallback and no tap
+                    // affordance at all, so an iPhone viewer would just get stuck here
+                    // indefinitely). Start muted so playback is guaranteed to begin,
+                    // and offer a tap-for-sound button for anyone who wants audio.
                     autoPlay
+                    muted={introNeedsUnmute}
                     playsInline
                     controls={false}
                     className="w-full h-full object-contain"
                     onEnded={() => setIntroDone(true)}
                     onError={() => setIntroDone(true)}
                 />
+                {introNeedsUnmute && (
+                    <button
+                        className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2 text-white hover:bg-black/90 transition-all active:scale-95"
+                        onClick={() => {
+                            const video = introVideoRef.current;
+                            if (video) {
+                                video.muted = false;
+                                video.play().catch(() => {});
+                            }
+                            setIntroNeedsUnmute(false);
+                        }}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Tap to Unmute</span>
+                    </button>
+                )}
             </div>
         );
     }
