@@ -661,8 +661,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         };
 
         const interval = setInterval(() => syncClock(), 1500); // 1.5s — gentler cadence
-        // Don't call syncClock() immediately on mount; let the video settle first
-        const initialDelay = setTimeout(() => syncClock(), 3000);
+        // Don't call syncClock() immediately on mount; let the video settle first.
+        //
+        // This is forced on purpose. A viewer joining after the film has already
+        // been running needs an immediate large seek forward to catch up — but
+        // the normal (non-forced) path only attempts that once video.readyState
+        // reaches 3, which assumes smooth, quick buffering. On these currently
+        // un-optimized, non-CDN files that assumption can just never hold on a
+        // slower connection, so the catch-up seek would never fire at all and a
+        // late joiner would sit watching from minute 0 indefinitely instead of
+        // reaching the live position. Forcing this first attempt gives every
+        // late joiner one guaranteed, immediate catch-up try regardless of how
+        // much has buffered yet, same as the existing foreground-return handler
+        // already does for the "tab was backgrounded" case.
+        const initialDelay = setTimeout(() => syncClock({ force: true }), 3000);
 
         // ── FOREGROUND RESYNC ─────────────────────────────────────────────
         // iOS Safari throttles (or fully suspends) timers and video decoding
@@ -1172,6 +1184,34 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // safely turned back on.
     const playableUrl = movie?.fullMovie;
 
+    // ── LIVE-VIEW PRESENCE — keeps a viewer counted as "watching" past the lobby ──
+    // WatchPartyLobby writes its own presence doc into `lobby_viewers` and
+    // deletes it the moment IT unmounts — which is exactly the moment a
+    // viewer leaves the lobby for the live view once the party starts. Every
+    // viewer count downstream reads from that same collection (the admin
+    // Control Room's "N watching", and the credits screen's own count), so
+    // all of them would quietly drop toward zero right as a party actually
+    // goes live — the opposite of what "watching" should mean, and exactly
+    // why the admin has no reliable read on how many people are actually in
+    // the party once it's underway. This mirrors the same write/delete, but
+    // scoped to being anywhere PAST the lobby (live view or credits) instead
+    // — the dependency on shouldShowLobby means this effect's setup runs in
+    // the same commit as the lobby's cleanup, so the doc gets deleted and
+    // immediately rewritten rather than sitting empty until someone
+    // happens to trigger a re-render.
+    useEffect(() => {
+        if (shouldShowLobby || !hasAccess || !user) return;
+        const db = getDbInstance();
+        if (!db) return;
+        const viewerRef = db.collection('watch_parties').doc(movieKey).collection('lobby_viewers').doc(user.email || 'anon');
+        viewerRef.set({
+            name: user.name || 'Film Lover',
+            avatar: user.avatar || 'fox',
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        return () => { viewerRef.delete(); };
+    }, [shouldShowLobby, hasAccess, user, movieKey]);
+
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
     const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
@@ -1572,6 +1612,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         webkit-playsinline="true"
                                         preload="auto"
                                         controls={false}
+                                        // iPad specifically can render its own native AirPlay/Picture-in-
+                                        // Picture affordance over a video element even with controls={false}
+                                        // — that's browser-level chrome, not part of the page's DOM, so it
+                                        // sits above everything regardless of our z-index and can silently
+                                        // swallow taps meant for the "Tap to Unmute" button sitting in the
+                                        // same corner. iPad hits this far more than iPhone since AirPlay to
+                                        // a TV is a much more common use case there. Disabling both closes
+                                        // off that native overlay entirely.
+                                        disablePictureInPicture
+                                        disableRemotePlayback
+                                        x-webkit-airplay="deny"
                                         onCanPlay={handleVideoCanPlay}
                                         onPlaying={() => {
                                             hasUserInteractedRef.current = true;
