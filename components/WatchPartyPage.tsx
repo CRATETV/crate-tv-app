@@ -735,6 +735,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             // broken. This is an honest explanation (the watch party
                             // already started before they joined) with a real answer
                             // (it'll be in their library shortly), not a red error.
+                            //
+                            // video.pause() here is deliberate and load-bearing, not
+                            // cosmetic — a watch party is a synchronized live event, not
+                            // an early on-demand start. Without this, the underlying
+                            // video (stuck wherever the failed seeks left it, likely near
+                            // 0) would keep playing behind this overlay — hidden from
+                            // view but still advancing, unsynced with everyone else. This
+                            // guarantees nobody can end up watching the film live from the
+                            // beginning just because catch-up happened to fail.
+                            video.pause();
                             setIsCatchingUpToLive(false);
                             catchUpStartedAtRef.current = null;
                             setLateJoinGaveUp({ reason: 'catchup-failed' });
@@ -768,9 +778,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 // playback had silently reset to the start instead of catching
                 // back up.
                 if ((opts?.force || forceSeekThisTick) && absDrift > 1.5 && !video.seeking) {
-                    lastSeekTimeRef.current = now;
-                    video.currentTime = targetPosition;
-                    video.playbackRate = 1.0;
+                    if (video.readyState === 0) {
+                        // Setting currentTime before loadedmetadata fires gets silently
+                        // dropped by the browser rather than queued — the exact bug
+                        // already fixed once for the initial-join and foreground-return
+                        // cases (see runInitialSync / handleForegroundReturn). This same
+                        // gap existed here too: a freshly-loaded video (readyState 0,
+                        // e.g. right after the "Try Again" button's video.load()) hitting
+                        // this branch would have its seek silently ignored. Wait for
+                        // metadata, then retry as a fresh forced sync.
+                        const onForceSeekMetadata = () => {
+                            video.removeEventListener('loadedmetadata', onForceSeekMetadata);
+                            syncClock({ force: true });
+                        };
+                        video.addEventListener('loadedmetadata', onForceSeekMetadata);
+                    } else {
+                        lastSeekTimeRef.current = now;
+                        video.currentTime = targetPosition;
+                        video.playbackRate = 1.0;
+                    }
                 } else if (absDrift > 8 && !video.seeking && video.readyState >= 3) {
                     // Only hard-seek if drift is large AND video has enough data
                     // Use a longer debounce (3s) to avoid repeated seeks on mobile
@@ -1933,7 +1959,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                         catchUpAttemptsRef.current = 0;
                                                         catchUpStartedAtRef.current = null;
                                                         const video = videoRef.current;
-                                                        if (video) { video.load(); video.play().catch(() => {}); }
+                                                        // Deliberately NOT calling video.play() here directly —
+                                                        // that would start playback from wherever the reload
+                                                        // lands (near 0) immediately, briefly playing unsynced
+                                                        // before the sync interval's next tick (up to 1.5s later)
+                                                        // corrects it. Resetting catchUpStartedAtRef to null means
+                                                        // that next tick treats this as a fresh late-join
+                                                        // detection, which forces an immediate readyState-
+                                                        // independent seek (forceSeekThisTick above) before it
+                                                        // ever calls play() itself — so the sync engine is what
+                                                        // starts playback here, already at the right position,
+                                                        // not this button.
+                                                        if (video) { video.load(); }
                                                     }}
                                                     className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all mt-2"
                                                 >
