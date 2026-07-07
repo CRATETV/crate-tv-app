@@ -489,9 +489,17 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                     )}
 
                     {hasAccess && (
-                        <p className="text-gray-700 text-[10px] uppercase tracking-widest">
-                            You're in — film starts automatically
-                        </p>
+                        <div className="text-center space-y-2">
+                            <p className="text-gray-700 text-[10px] uppercase tracking-widest">
+                                You're in — film starts automatically
+                            </p>
+                            {/* Late joins need a bigger seek into an already-running stream, which
+                                takes noticeably longer to catch up than starting from the beginning —
+                                staying right here through the countdown gets the smoothest start. */}
+                            <p className="text-gray-600 text-[9px] normal-case tracking-normal max-w-xs mx-auto leading-relaxed">
+                                Stick around here — jumping in after it's started can take a little longer to catch up.
+                            </p>
+                        </div>
                     )}
                 </div>
 
@@ -657,11 +665,17 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
                     {/* Confirmed access badge */}
                     {hasAccess && (
-                        <div className="text-center animate-[fadeIn_0.5s_ease-out]">
+                        <div className="text-center animate-[fadeIn_0.5s_ease-out] space-y-3">
                             <span className="inline-flex items-center gap-2 bg-green-900/20 border border-green-500/30 text-green-400 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                 Admission Confirmed
                             </span>
+                            {/* Same reasoning as the reminder emails and the red-carpet window below —
+                                joining after the film's already running requires catching up to the live
+                                position, which takes noticeably longer than just starting from zero. */}
+                            <p className="text-gray-600 text-[10px] max-w-xs mx-auto leading-relaxed">
+                                Stick around here through the countdown — jumping in after it's started can take a little longer to catch up.
+                            </p>
                         </div>
                     )}
 

@@ -3,7 +3,9 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
-const LOGO_URL = 'https://cratetv.net/crate-logo-email.png';
+// Dark header bar below — needs the white/light logo, not the dark-text one.
+// See send-individual-email.ts for the full explanation.
+const LOGO_URL = 'https://cratetv.net/logo-tagline.png';
 
 export async function POST(request: Request) {
     try {

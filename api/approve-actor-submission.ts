@@ -1,6 +1,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Movie, ActorProfile } from '../types.js';
 import { Resend } from 'resend';
+import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -55,15 +56,25 @@ export async function POST(request: Request) {
 
     // --- Send Email ---
     const subject = userExists ? 'Your Crate TV Actor Portal is Active!' : 'Your Crate TV Profile has been Approved!';
-    const html = userExists 
-        ? `<h1>Welcome!</h1><p>Hi ${actorName}, your portal is now active at cratetv.net/portal.</p>`
-        : `<h1>Congrats!</h1><p>Hi ${actorName}, your profile is live. Sign up at cratetv.net/login?view=signup using ${email} to manage it.</p>`;
+    const bodyHtml = userExists
+        ? `
+            <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Actor Portal</p>
+            <h1 style="margin:0 0 20px;font-size:26px;font-weight:900;text-transform:uppercase;">Welcome, ${actorName}.</h1>
+            <p style="margin:0 0 28px;">Your Crate TV actor portal is now active — you can manage your profile anytime.</p>
+            ${renderEmailButton('Go To Your Portal', 'https://cratetv.net/portal')}
+        `
+        : `
+            <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Profile Approved</p>
+            <h1 style="margin:0 0 20px;font-size:26px;font-weight:900;text-transform:uppercase;">Congrats, ${actorName}!</h1>
+            <p style="margin:0 0 28px;">Your profile is now live on Crate TV. Sign up using <strong>${email}</strong> to claim and manage it.</p>
+            ${renderEmailButton('Create Your Account', 'https://cratetv.net/login?view=signup')}
+        `;
 
     await resend.emails.send({
       from: `Crate TV <${FROM_EMAIL}>`,
       to: [email],
       subject,
-      html,
+      html: renderBrandedEmail({ title: subject, bodyHtml }),
     });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });

@@ -2,6 +2,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { renderBrandedEmail } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -34,21 +35,18 @@ export async function POST(request: Request) {
     };
     const newPayoutRef = await db.collection('admin_payouts').add(payoutData);
 
-    const emailHtml = `
-      <div>
-        <h1>Admin Payout Recorded</h1>
-        <ul>
-          <li><strong>Amount:</strong> ${formatCurrency(payoutData.amount)}</li>
-          <li><strong>Reason:</strong> ${reason}</li>
-        </ul>
-      </div>
+    const bodyHtml = `
+      <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Finance</p>
+      <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">Admin Payout Recorded</h1>
+      <p style="margin:0 0 8px;"><strong>Amount:</strong> ${formatCurrency(payoutData.amount)}</p>
+      <p style="margin:0;"><strong>Reason:</strong> ${reason}</p>
     `;
-    
+
     await resend.emails.send({
         from: `Crate TV System <${fromEmail}>`,
         to: [adminEmail],
         subject: `Admin Payout Recorded: ${formatCurrency(payoutData.amount)}`,
-        html: emailHtml,
+        html: renderBrandedEmail({ title: `Admin Payout Recorded: ${formatCurrency(payoutData.amount)}`, bodyHtml }),
     });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });

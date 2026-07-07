@@ -5,6 +5,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
+import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 
 export async function GET(request: Request) {
     // Verify it's actually the first Monday of the month
@@ -91,12 +92,12 @@ export async function GET(request: Request) {
 <tr><td style="padding:28px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
 
-  <!-- Red header -->
+  <!-- Dark header with logo -->
   <tr>
-    <td bgcolor="#E50914" style="background:#E50914;padding:13px 28px;border-radius:10px 10px 0 0;">
+    <td bgcolor="#0a0a0a" style="background:#0a0a0a;padding:20px 28px;border-radius:10px 10px 0 0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td><p style="margin:0;color:#ffffff;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-weight:800;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">CRATETV</p></td>
+          <td><img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="110" style="display:block;border:0;" /></td>
           <td style="text-align:right;"><p style="margin:0;color:rgba(255,255,255,0.7);font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${monthName} ${year}</p></td>
         </tr>
       </table>

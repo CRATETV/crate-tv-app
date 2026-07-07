@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 
 /**
  * FILM SUBMISSION NOTIFICATION
@@ -39,10 +40,14 @@ export async function POST(request: Request) {
             <td style="padding: 40px 20px;">
                 <table role="presentation" style="max-width: 600px; margin: 0 auto; border-collapse: collapse;">
                     
-                    <!-- Header -->
+                    <!-- Header — this used to be a plain "CRATE" text wordmark instead of
+                         the actual logo, unlike the rest of the app's emails. Internal-only
+                         (admin submission alert), so the rest of this file's design is kept
+                         as-is rather than forced into the general light-content template,
+                         but the logo itself should still be consistent everywhere. -->
                     <tr>
                         <td style="text-align: center; padding-bottom: 30px;">
-                            <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px; color: #E50914;">CRATE</h1>
+                            <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="130" style="display: inline-block; border: 0;" />
                         </td>
                     </tr>
                     

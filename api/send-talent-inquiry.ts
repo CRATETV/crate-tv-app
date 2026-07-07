@@ -2,6 +2,7 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { renderBrandedEmail } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -30,20 +31,19 @@ export async function POST(request: Request) {
             }
         }
 
-        const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-                <h2 style="color: #ef4444; text-transform: uppercase; letter-spacing: 2px;">Professional Inquiry</h2>
-                <p>A new talent inquiry has been submitted through the Crate TV Actors Directory.</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p><strong>Target Talent:</strong> ${actorName}</p>
-                <p><strong>From:</strong> ${senderName} (${senderEmail})</p>
-                <p><strong>Message:</strong></p>
-                <div style="background-color: #0a0a0a; padding: 15px; border-radius: 8px; font-style: italic;">
-                    ${message.replace(/\n/g, '<br/>')}
-                </div>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p style="font-size: 11px; color: #888888;">This inquiry was routed through the Crate TV secure proxy and logged in the Admin Terminal.</p>
+        // Previously: white text (`color: #ffffff`) with no dark background set anywhere
+        // behind it — most email clients default to a white/light background, so this
+        // was rendering as invisible white-on-white text.
+        const bodyHtml = `
+            <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Professional Inquiry</p>
+            <h2 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">New Talent Inquiry</h2>
+            <p style="margin:0 0 20px;">A new talent inquiry has been submitted through the Crate TV Actors Directory.</p>
+            <p style="margin:0 0 8px;"><strong>Target Talent:</strong> ${actorName}</p>
+            <p style="margin:0 0 20px;"><strong>From:</strong> ${senderName} (${senderEmail})</p>
+            <div style="background-color: #f4f4f4; padding: 20px; border-radius: 8px; font-style: italic; color: #1a1a1a;">
+                ${message.replace(/\n/g, '<br/>')}
             </div>
+            <p style="margin:24px 0 0;font-size: 11px; color: #999999;">This inquiry was routed through the Crate TV secure proxy and logged in the Admin Terminal.</p>
         `;
 
         const { error: emailError } = await resend.emails.send({
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
             to: [ADMIN_EMAIL],
             reply_to: senderEmail,
             subject: `🎭 Talent Inquiry: ${actorName} (via ${senderName})`,
-            html: emailHtml
+            html: renderBrandedEmail({ title: `Talent Inquiry: ${actorName}`, bodyHtml })
         });
 
         if (emailError) throw new Error(`Resend Error: ${emailError.message}`);

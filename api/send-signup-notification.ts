@@ -1,6 +1,7 @@
 
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { renderBrandedEmail } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -27,15 +28,16 @@ export async function POST(request: Request) {
         from: `Crate TV Alerts <${FROM_EMAIL}>`,
         to: [technicalEmail],
         subject: `🎉 New Sign-Up: ${email}`,
-        html: `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff;">
-                <h1 style="color: #ef4444; text-transform: uppercase;">Infrastructure Alert</h1>
-                <p>A new node has been initialized in the global user cluster.</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p><strong>Account ID:</strong> ${email}</p>
-                <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-            </div>
-        `,
+        html: renderBrandedEmail({
+            title: `New Sign-Up: ${email}`,
+            bodyHtml: `
+                <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Infrastructure Alert</p>
+                <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">New Sign-Up</h1>
+                <p style="margin:0 0 20px;">A new user has joined Crate TV.</p>
+                <p style="margin:0 0 8px;"><strong>Account:</strong> ${email}</p>
+                <p style="margin:0;"><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+            `,
+        }),
     });
 
     if (error) throw new Error(error.message);

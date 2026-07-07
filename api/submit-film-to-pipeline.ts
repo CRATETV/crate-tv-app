@@ -1,6 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 
 /**
  * SERVER-SIDE FILM SUBMISSION HANDLER
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
                     <!-- Header -->
                     <tr>
                         <td style="text-align: center; padding-bottom: 30px;">
-                            <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px; color: #E50914;">CRATE</h1>
+                            <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="130" style="display: inline-block; border: 0;" />
                         </td>
                     </tr>
                     

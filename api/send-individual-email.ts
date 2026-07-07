@@ -3,7 +3,13 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
-const LOGO_URL = 'https://cratetv.net/crate-logo-email.png';
+// This is the dark header bar (#0a0a0a below), so it needs the white/light
+// logo (logo-tagline.png), not crate-logo-email.png — that one is dark text,
+// meant for a light background, and would be nearly invisible here. Also
+// worth knowing: crate-logo-email.png didn't even exist in production until
+// now (a confirmed 404), so this file's logo has never actually rendered for
+// anyone before this fix.
+const LOGO_URL = 'https://cratetv.net/logo-tagline.png';
 
 export async function POST(request: Request) {
     try {

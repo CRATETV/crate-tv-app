@@ -1,10 +1,18 @@
 import { Resend } from 'resend';
+import { LOGO_URL } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const config = { runtime: 'nodejs' };
 
-export default async function handler(req: Request) {
+// This used to be `export default async function handler` — every other
+// endpoint in this codebase uses a named `export async function POST`
+// instead (see send-watchparty-reminder.ts's comment for the exact same bug
+// found there: Vercel's routing convention here only picks up the named
+// export, so `export default` silently never gets called at all). Renamed
+// so this outreach-sending endpoint actually works instead of quietly
+// no-op'ing on every request.
+export async function POST(req: Request) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
@@ -146,8 +154,16 @@ export default async function handler(req: Request) {
                 subject: emailData.subject || `Your film on Crate TV — ${emailData.filmTitle || 'Invitation'}`,
                 html: `
                     <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #1a1a1a; line-height: 1.7; font-size: 15px;">
+                        <!-- Kept small and understated on purpose — this email is meant to read as a
+                             genuine, personal note from a person, not a corporate blast, so a big
+                             branded header would work against that. Swapped the plain text "CRATE TV"
+                             wordmark for the real logo, small, so it's still recognizably legitimate. -->
                         <div style="border-bottom: 2px solid #E50914; padding-bottom: 20px; margin-bottom: 28px;">
-                            <span style="font-family: Arial, sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 0.3em; color: #E50914;">CRATE TV</span>
+                            <!-- Removed filter:invert(1) — now that the real file is confirmed,
+                                 crate-logo-email.png is already dark text, which is correct as-is
+                                 against this email's light background. Inverting it here would have
+                                 turned it white-on-transparent, invisible against the light background. -->
+                            <img src="${LOGO_URL}" alt="Crate TV" width="90" style="display: block;" />
                         </div>
                         ${emailData.body.replace(/\n/g, '<br>')}
                         <div style="border-top: 1px solid #e5e5e5; margin-top: 32px; padding-top: 20px; font-size: 12px; color: #888; font-family: Arial, sans-serif;">

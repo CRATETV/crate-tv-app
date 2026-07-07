@@ -1,6 +1,7 @@
 
 import { getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
+import { renderBrandedEmail } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -43,21 +44,20 @@ export async function GET(request: Request) {
         }
 
         const subject = `🎉 ${anniversaryUsers.length} User Anniversaries Today!`;
-        const emailHtml = `
-            <div>
-                <h1>User Sign-Up Anniversaries</h1>
-                <p>The following users are celebrating their Crate TV sign-up anniversary today:</p>
-                <ul>
-                    ${anniversaryUsers.map(email => `<li>${email}</li>`).join('')}
-                </ul>
-            </div>
+        const bodyHtml = `
+            <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Anniversaries</p>
+            <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">${anniversaryUsers.length} Sign-Up Anniversaries Today</h1>
+            <p style="margin:0 0 16px;">The following users are celebrating their Crate TV sign-up anniversary today:</p>
+            <ul style="margin:0;padding-left:20px;">
+                ${anniversaryUsers.map(email => `<li style="margin-bottom:4px;">${email}</li>`).join('')}
+            </ul>
         `;
 
         await resend.emails.send({
             from: `Crate TV Anniversaries <${fromEmail}>`,
             to: [adminEmail],
             subject: subject,
-            html: emailHtml,
+            html: renderBrandedEmail({ title: subject, bodyHtml }),
         });
 
         return new Response(JSON.stringify({ success: true, message: `Sent anniversary notification for ${anniversaryUsers.length} users.` }), { status: 200, headers: { 'Content-Type': 'application/json' }});

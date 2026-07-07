@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
+import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 
 export async function POST(request: Request) {
     try {
@@ -37,67 +38,25 @@ export async function POST(request: Request) {
             await Promise.all(batch.map(async (entry) => {
                 try {
                     const greeting = entry.name ? `Hi ${entry.name},` : 'Hi there,';
+                    const bodyHtml = `
+                        <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Playhouse West-Philadelphia × Crate TV</p>
+                        <h1 style="margin:0 0 24px;font-size:28px;font-weight:900;color:#1a1a1a;line-height:1.15;text-transform:uppercase;letter-spacing:-0.5px;">The festival is live.</h1>
+                        ${bannerImageUrl ? `<img src="${bannerImageUrl}" alt="${name}" style="width:100%;max-width:480px;height:auto;border-radius:8px;display:block;margin:0 0 28px;" />` : ''}
+                        <p style="margin:0 0 20px;">${greeting}</p>
+                        <p style="margin:0 0 20px;">You signed up to be notified when the <strong>${name}</strong> went live on Crate TV. That moment is now.</p>
+                        <p style="margin:0 0 32px;">Every block is streaming live as it screens in Philadelphia. Ticket holders get full access — individual blocks and all-access passes are available at the link below.</p>
+                        ${renderEmailButton('Watch Now →', url)}
+                        <p style="margin:32px 0 0;font-size:12px;color:#999999;">You're receiving this because you signed up for festival updates at cratetv.net.</p>
+                    `;
                     await resend.emails.send({
                         from: 'Crate TV <hello@cratetv.net>',
                         to: entry.email,
                         subject: `🎬 ${name} is now streaming`,
-                        html: `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#080808;font-family:sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080808;">
-    <tr><td align="center" style="padding:40px 20px;">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#0f0f0f;border:1px solid #1a1a1a;border-radius:12px;overflow:hidden;">
-        
-        <!-- Red top bar -->
-        <tr><td height="5" style="background:#E50914;font-size:0;line-height:0;">&nbsp;</td></tr>
-        
-        <!-- Header -->
-        <tr><td style="padding:40px 40px 0;text-align:center;">
-          <p style="margin:0 0 8px;font-size:10px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:#E50914;">Playhouse West-Philadelphia × Crate TV</p>
-          <h1 style="margin:0;font-size:32px;font-weight:900;color:#ffffff;line-height:1.1;">The festival<br>is live.</h1>
-        </td></tr>
-        
-        ${bannerImageUrl ? `
-        <!-- Festival poster / banner image -->
-        <tr><td style="padding:24px 40px 0;">
-          <img src="${bannerImageUrl}" alt="${name}" style="width:100%;max-width:480px;height:auto;border-radius:8px;display:block;margin:0 auto;" />
-        </td></tr>` : ''}
-        
-        <!-- Body -->
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 20px;font-size:15px;color:#aaaaaa;line-height:1.7;">${greeting}</p>
-          <p style="margin:0 0 20px;font-size:15px;color:#aaaaaa;line-height:1.7;">
-            You signed up to be notified when the <strong style="color:#ffffff;">${name}</strong> went live on Crate TV. That moment is now.
-          </p>
-          <p style="margin:0 0 32px;font-size:15px;color:#aaaaaa;line-height:1.7;">
-            Every block is streaming live as it screens in Philadelphia. Ticket holders get full access — individual blocks and all-access passes are available at the link below.
-          </p>
-          
-          <!-- CTA -->
-          <table cellpadding="0" cellspacing="0" width="100%"><tr><td align="center">
-            <a href="${url}" style="display:inline-block;background:#E50914;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:16px 40px;border-radius:4px;">
-              Watch Now →
-            </a>
-          </td></tr></table>
-        </td></tr>
-        
-        <!-- Footer -->
-        <tr><td style="padding:24px 40px;border-top:1px solid #1a1a1a;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#444444;">
-            You're receiving this because you signed up for festival updates at cratetv.net.<br>
-            <a href="https://cratetv.net" style="color:#666666;text-decoration:none;">cratetv.net</a>
-          </p>
-        </td></tr>
-        
-        <!-- Red bottom bar -->
-        <tr><td height="5" style="background:#E50914;font-size:0;line-height:0;">&nbsp;</td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
+                        html: renderBrandedEmail({
+                            title: `${name} is now streaming`,
+                            bodyHtml,
+                            footerTagline: 'Playhouse West Film Festival — Philadelphia',
+                        }),
                     });
                     sent++;
                 } catch {

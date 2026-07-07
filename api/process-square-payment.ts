@@ -4,6 +4,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
+import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -317,8 +318,8 @@ export async function POST(request: Request) {
 
             const emailHtml = isWatchParty ? `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; border-radius: 12px; overflow: hidden;">
-                    <div style="background: #E50914; padding: 24px; text-align: center;">
-                        <p style="margin: 0; font-size: 11px; font-weight: 900; letter-spacing: 0.4em; text-transform: uppercase; color: white; opacity: 0.8;">Crate TV</p>
+                    <div style="background: #0a0a0a; padding: 24px; text-align: center;">
+                        <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="110" style="display: inline-block; border: 0; margin-bottom: 12px;" />
                         <h1 style="margin: 8px 0 0; font-size: 28px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: -0.02em;">You're In.</h1>
                     </div>
                     <div style="padding: 36px 32px;">
@@ -341,7 +342,7 @@ export async function POST(request: Request) {
                 </div>
             ` : `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; border-radius: 12px; overflow: hidden; padding: 32px;">
-                    <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: #E50914; margin: 0 0 8px;">Crate TV</p>
+                    <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="100" style="display: block; border: 0; margin-bottom: 20px;" />
                     <h1 style="font-size: 22px; font-weight: 900; color: white; margin: 0 0 24px; text-transform: uppercase;">Access Confirmed</h1>
                     <p style="color: #888; margin: 0 0 16px;"><strong style="color: white;">Resource:</strong> ${note}</p>
                     <p style="color: #888; margin: 0 0 24px;"><strong style="color: white;">Amount:</strong> ${amountFormatted}</p>

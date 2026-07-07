@@ -9,7 +9,11 @@ const InstallPwaBanner: React.FC<InstallPwaBannerProps> = ({ onInstallClick, onD
   return (
     <div className="fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50 bg-gray-800/90 backdrop-blur-md text-white p-4 rounded-lg shadow-2xl flex items-center gap-4 animate-[slideInUp_0.5s_ease-out]">
       <div className="flex-shrink-0">
-        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/favicons/favicon-96x96.png" alt="Crate TV Logo" className="w-12 h-12" />
+        {/* Was pointed at a CloudFront distribution (d3jhtrl1gnrh4b) that no longer
+            resolves — a request to it timed out entirely rather than 404ing, so
+            this was showing a permanently broken image icon. Every other logo/
+            favicon reference in the app consistently uses cratetv.net directly. */}
+        <img src="https://cratetv.net/favicon-96x96.png" alt="Crate TV Logo" className="w-12 h-12" />
       </div>
       <div className="flex-grow">
         <h3 className="font-bold">Get the Crate TV App!</h3>

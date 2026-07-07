@@ -2,6 +2,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -37,20 +38,19 @@ export async function POST(request: Request) {
 
     await db.collection('actorSubmissions').add(submissionData);
     
-    const emailHtml = `
-      <div>
-        <h1>New Actor Profile Submission</h1>
-        <p>A new actor profile for <strong>${actorName}</strong> is awaiting review.</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p>Review at: cratetv.net/admin</p>
-      </div>
+    const bodyHtml = `
+      <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">New Submission</p>
+      <h1 style="margin:0 0 20px;font-size:24px;font-weight:900;text-transform:uppercase;">Actor Profile: ${actorName}</h1>
+      <p style="margin:0 0 8px;">A new actor profile is awaiting review.</p>
+      <p style="margin:0 0 24px;"><strong>Email:</strong> ${email}</p>
+      ${renderEmailButton('Review in Admin', 'https://cratetv.net/admin')}
     `;
-    
+
     await resend.emails.send({
       from: `Crate TV Admin <${fromEmail}>`,
       to: adminEmail,
       subject: `New Actor Submission: ${actorName}`,
-      html: emailHtml,
+      html: renderBrandedEmail({ title: `New Actor Submission: ${actorName}`, bodyHtml }),
     });
 
 

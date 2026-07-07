@@ -2,6 +2,7 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { renderBrandedEmail } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = 'studio@cratetv.net';
@@ -23,16 +24,13 @@ export async function POST(request: Request) {
         const settingsDoc = await db.collection('content').doc('settings').get();
         const studioEmail = settingsDoc.data()?.businessEmail || FALLBACK_ADMIN;
 
-        const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-                <h1 style="color: #ef4444; text-transform: uppercase; font-size: 20px;">Incoming Contact Form</h1>
-                <p><strong>From:</strong> ${name}</p>
-                <p><strong>Reply-to:</strong> ${email}</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p><strong>Message:</strong></p>
-                <div style="background-color: #0a0a0a; padding: 15px; border-radius: 8px; font-style: italic;">${message}</div>
-                <p style="font-size: 10px; color: #888888; margin-top: 20px;">Transmission routed via Crate TV Studio Infrastructure.</p>
-            </div>
+        const bodyHtml = `
+            <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Contact Form</p>
+            <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">New Message</h1>
+            <p style="margin:0 0 8px;"><strong>From:</strong> ${name}</p>
+            <p style="margin:0 0 20px;"><strong>Reply-to:</strong> ${email}</p>
+            <div style="background-color: #f4f4f4; padding: 20px; border-radius: 8px; font-style: italic; color: #1a1a1a;">${message}</div>
+            <p style="font-size: 11px; color: #999999; margin-top: 20px;">Routed via Crate TV Studio Infrastructure.</p>
         `;
 
         const { error: emailError } = await resend.emails.send({
@@ -40,7 +38,7 @@ export async function POST(request: Request) {
             to: [studioEmail],
             reply_to: email,
             subject: `✉️ Message from ${name}`,
-            html: emailHtml
+            html: renderBrandedEmail({ title: `Message from ${name}`, bodyHtml })
         });
 
         if (emailError) throw new Error(`Resend Error: ${emailError.message}`);

@@ -6,6 +6,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { addPipelineEntryToCatalog } from './_lib/addToCatalog.js';
+import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 
 export async function POST(request: Request) {
     try {
@@ -107,8 +108,8 @@ export async function POST(request: Request) {
 <tr><td style="padding:28px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
   <tr>
-    <td bgcolor="#E50914" style="background:#E50914;padding:13px 28px;border-radius:10px 10px 0 0;">
-      <p style="margin:0;color:#ffffff;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-weight:800;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">CRATETV</p>
+    <td bgcolor="#0a0a0a" style="background:#0a0a0a;padding:20px 28px;border-radius:10px 10px 0 0;text-align:center;">
+      <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="120" style="display:inline-block;border:0;" />
     </td>
   </tr>
   <tr>
