@@ -462,7 +462,7 @@ const AdminPage: React.FC = () => {
                     {/* ── FESTIVAL ── */}
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1 mt-4">Festival</p>
                     <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                    {[['pwff','🎬 PWFF Festival'],['pipeline','📥 Submissions'],['analytics','📊 Stats'],['mail','✉️ Send Email']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                    {[['pipeline','📥 Submissions'],['analytics','📊 Stats'],['mail','✉️ Send Email']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                         <button
                             key={tabId}
                             onClick={() => navigateTo(tabId as string)}
