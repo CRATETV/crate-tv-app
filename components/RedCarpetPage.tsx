@@ -70,7 +70,7 @@ const RedCarpetPage: React.FC<RedCarpetPageProps> = ({ settings, onEnterWatchPar
     const hasContent = settings.pwffRedCarpetWelcomeVideo || clips.length > 0;
 
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col overflow-hidden relative">
+        <div className="h-[100dvh] bg-black text-white flex flex-col overflow-hidden relative">
 
             {/* Animated film grain texture */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -95,10 +95,10 @@ const RedCarpetPage: React.FC<RedCarpetPageProps> = ({ settings, onEnterWatchPar
             </div>
 
             {/* Main layout */}
-            <div className="flex-1 flex flex-col md:flex-row relative z-10">
+            <div className="flex-1 min-h-0 flex flex-col md:flex-row relative z-10 overflow-y-auto md:overflow-hidden">
 
                 {/* Left — Video player */}
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
 
                     {/* Countdown bar */}
                     <div className="bg-[#0a0a0a] border-b border-white/5 px-6 md:px-12 py-3 flex items-center justify-between">
@@ -226,7 +226,7 @@ const RedCarpetPage: React.FC<RedCarpetPageProps> = ({ settings, onEnterWatchPar
                 </div>
 
                 {/* Right — Info + Chat strip */}
-                <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-white/5 flex flex-col bg-[#050505]">
+                <div className="w-full md:w-80 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 flex flex-col bg-[#050505] md:h-full md:min-h-0 md:overflow-y-auto">
 
                     {/* Tonight's programme */}
                     <div className="p-6 border-b border-white/5">
@@ -251,7 +251,7 @@ const RedCarpetPage: React.FC<RedCarpetPageProps> = ({ settings, onEnterWatchPar
                     {clips.length > 0 && (
                         <div className="p-6 border-b border-white/5">
                             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4">Filmmakers Tonight</p>
-                            <div className="space-y-2">
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                                 {clips.map(clip => (
                                     <div key={clip.id} className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
