@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AnalyticsData, CrateFestConfig, Movie, StudioMessage } from '../types';
+import { StudioMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
 import LoadingSpinner from './LoadingSpinner';
@@ -9,13 +9,12 @@ interface ExtendedMessage extends StudioMessage {
     source?: string;
 }
 
-interface StudioMailProps {
-    analytics: AnalyticsData | null;
-    festivalConfig: CrateFestConfig | null;
-    movies: Record<string, Movie>;
-}
-
-const StudioMail: React.FC<StudioMailProps> = ({ analytics, festivalConfig, movies }) => {
+// Previously took analytics/movies/festivalConfig props from AdminPage.tsx —
+// none of them were actually read anywhere in this component (it fetches
+// its own data directly from Firestore below and uses useFestival() for
+// settings). Dead wiring left over from an earlier version, removed rather
+// than fixed since there's nothing here to connect them to.
+const StudioMail: React.FC = () => {
     const { settings } = useFestival();
     const [messages, setMessages] = useState<ExtendedMessage[]>([]);
     const [selectedMessage, setSelectedMessage] = useState<ExtendedMessage | null>(null);

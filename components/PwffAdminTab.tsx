@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDbInstance } from '../services/firebaseClient';
-import { PwffInterestEntry } from '../types';
+import { PwffInterestEntry, Movie, FestivalDay, FestivalConfig } from '../types';
+import FestivalEditor from './FestivalEditor';
 
 interface PwffAdminTabProps {
     pwffVisible: boolean;
@@ -18,12 +19,26 @@ interface PwffAdminTabProps {
     onChangeYear: (val: string) => void;
     onSave: () => void;
     isSaving: boolean;
+    // ── Programme / schedule — previously a completely separate "Festival Hub"
+    // tab (FestivalEditor) editing the same underlying festivalData/
+    // festivalConfig this tab already displayed a read-only block count for.
+    // An admin had to know to go to a differently-named, generically-labeled
+    // tab to actually edit the film schedule for what's shown here. Folded in
+    // directly so PWFF is managed from one place.
+    allMovies: Record<string, Movie>;
+    festivalData: FestivalDay[];
+    festivalConfig: FestivalConfig;
+    onFestivalDataChange: (data: FestivalDay[]) => void;
+    onFestivalConfigChange: (config: FestivalConfig) => void;
+    onSaveFestival: (config: FestivalConfig, data?: FestivalDay[]) => void;
+    isSavingFestival: boolean;
 }
 
 const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
     pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline, pwffYear, pwffBlocks = [],
     onToggleVisible, onChangeDate, onChangeName, onChangeDescription, onChangeTagline, onChangeYear,
-    onSave, isSaving
+    onSave, isSaving,
+    allMovies, festivalData, festivalConfig, onFestivalDataChange, onFestivalConfigChange, onSaveFestival, isSavingFestival
 }) => {
     const [emails, setEmails] = useState<(PwffInterestEntry & { id: string })[]>([]);
     const [viewCount, setViewCount] = useState(0);
@@ -301,6 +316,28 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                 >
                     {isSaving ? 'Saving...' : 'Save All Settings'}
                 </button>
+            </div>
+
+            {/* ── PROGRAMME / FILM SCHEDULE ─────────────────────────────────
+                This used to only be editable from a separate "Festival Hub" tab
+                with no visible connection to PWFF — an admin had to already know
+                that generically-named tab was actually where PWFF's real film
+                schedule lived. Reuses FestivalEditor as-is (same component, same
+                save behavior) just relocated into the tab it actually belongs to. */}
+            <div className="border-t-2 border-pink-500/20 pt-8">
+                <div className="mb-6">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-pink-400">Programme — Film Schedule</h3>
+                    <p className="text-xs text-gray-500 mt-1">Days, blocks, films, pricing, and screening windows for the programme shown above and on the public page.</p>
+                </div>
+                <FestivalEditor
+                    data={festivalData}
+                    config={festivalConfig}
+                    allMovies={allMovies}
+                    onDataChange={onFestivalDataChange}
+                    onConfigChange={onFestivalConfigChange}
+                    onSave={onSaveFestival}
+                    isSaving={isSavingFestival}
+                />
             </div>
 
             {/* ── STATS ─────────────────────────────────────────────────── */}

@@ -699,6 +699,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 // actually lands (common on a big non-CDN file — the browser may
                 // not have the byte-range info it needs for an arbitrary-offset
                 // jump) gets a real recovery instead of sitting frozen forever.
+                let forceSeekThisTick = false;
                 if (absDrift > CATCH_UP_LATE_JOIN_THRESHOLD_SEC) {
                     const nowTs = Date.now();
                     if (catchUpStartedAtRef.current === null) {
@@ -713,6 +714,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         }
                         catchUpStartedAtRef.current = nowTs;
                         setIsCatchingUpToLive(true);
+                        // This used to fall through to the seek logic below without
+                        // forcing it — on a normal (non-forced) tick that seek only
+                        // fires once video.readyState >= 3, which reflects buffered
+                        // health around the CURRENT position (still 0 at this point,
+                        // nothing has seeked yet), not the target position minutes
+                        // away. That could leave the video playing from 0 for the
+                        // full 12s watchdog window, sometimes longer if this exact
+                        // tick's readyState check happened to pass on stale data.
+                        // Forcing the very first detection tick closes that gap —
+                        // same immediate, readyState-independent seek the foreground-
+                        // return handler already relies on.
+                        forceSeekThisTick = true;
                     } else if (nowTs - catchUpStartedAtRef.current > CATCH_UP_WATCHDOG_TIMEOUT_MS) {
                         catchUpAttemptsRef.current += 1;
                         if (catchUpAttemptsRef.current >= CATCH_UP_MAX_ATTEMPTS) {
@@ -747,12 +760,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     setIsCatchingUpToLive(false);
                 }
 
-                // Forced resync (tab just came back to the foreground): seek
-                // immediately regardless of buffered readyState. A backgrounded
-                // video can report a stale/zeroed currentTime on iOS, and waiting
-                // for the readyState>=3 gate below made it look like playback had
-                // silently reset to the start instead of catching back up.
-                if (opts?.force && absDrift > 1.5 && !video.seeking) {
+                // Forced resync (tab just came back to the foreground, OR this is
+                // the first tick a late join was detected — see forceSeekThisTick
+                // above): seek immediately regardless of buffered readyState. A
+                // backgrounded video can report a stale/zeroed currentTime on iOS,
+                // and waiting for the readyState>=3 gate below made it look like
+                // playback had silently reset to the start instead of catching
+                // back up.
+                if ((opts?.force || forceSeekThisTick) && absDrift > 1.5 && !video.seeking) {
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
                     video.playbackRate = 1.0;

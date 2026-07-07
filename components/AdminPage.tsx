@@ -15,7 +15,6 @@ import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
 import { MoviePipelineTab } from './MoviePipelineTab';
 import CrateFestEditor from './CrateFestEditor';
-import FestivalEditor from './FestivalEditor';
 import PromoCodeManager from './PromoCodeManager';
 import PermissionsManager from './PermissionsManager';
 import EditorialManager from './EditorialManager';
@@ -47,7 +46,12 @@ const ALL_TABS: Record<string, string> = {
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
     ticketCodes: '🎟️ Ticket Codes',
-    festHub: '🎪 Festival Hub',
+    // festHub removed — its whole job (editing festivalData/festivalConfig, the
+    // real film schedule) is now inside the pwff tab below, since that's the
+    // only festival this data has ever actually been for. Having it as its
+    // own generically-named tab, separate from the PWFF tab that displayed a
+    // read-only summary of the same data, was exactly the kind of disconnected
+    // admin experience this cleanup pass is fixing.
     crateFestHub: '🎟️ Crate Fest Hub',
     vouchers: '🎫 Promo Codes',
     analytics: '📊 Platform Stats',
@@ -458,7 +462,7 @@ const AdminPage: React.FC = () => {
                     {/* ── FESTIVAL ── */}
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1 mt-4">Festival</p>
                     <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                    {[['festHub','🎪 Festival Hub'],['pipeline','📥 Submissions'],['analytics','📊 Stats'],['mail','✉️ Send Email']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                    {[['pwff','🎬 PWFF Festival'],['pipeline','📥 Submissions'],['analytics','📊 Stats'],['mail','✉️ Send Email']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                         <button
                             key={tabId}
                             onClick={() => navigateTo(tabId as string)}
@@ -519,9 +523,9 @@ const AdminPage: React.FC = () => {
                             <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />
                         </div>
                     )}
-                    {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
+                    {activeTab === 'mail' && <StudioMail />}
                     {activeTab === 'dispatch' && <CommunicationsTerminal movies={movies} />}
-                    {activeTab === 'intel' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
+                    {activeTab === 'intel' && <UserIntelligenceTab movies={movies} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'watchParty' && (
                         <WatchPartyManager 
@@ -545,19 +549,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'ticketCodes' && (
                         <TicketCodesTab festivalDays={festivalData} />
-                    )}
-                    {activeTab === 'festHub' && (
-                        <div className="space-y-16">
-                            <FestivalEditor 
-                                data={festivalData} 
-                                config={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }} 
-                                allMovies={movies}
-                                onDataChange={(d) => setFestivalData(d)}
-                                onConfigChange={(c) => setFestivalConfig(c)}
-                                onSave={(latestConfig: import('../types').FestivalConfig) => { handleSaveData('festival', { config: latestConfig, data: festivalData }); }}
-                                isSaving={isSaving}
-                            />
-                        </div>
                     )}
                     {activeTab === 'crateFestHub' && (
                         <div className="space-y-16">
@@ -589,6 +580,13 @@ const AdminPage: React.FC = () => {
                                 pwffUrlYear: pwffYear,
                             })}
                             isSaving={isSaving}
+                            allMovies={movies}
+                            festivalData={festivalData}
+                            festivalConfig={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }}
+                            onFestivalDataChange={(d) => setFestivalData(d)}
+                            onFestivalConfigChange={(c) => setFestivalConfig(c)}
+                            onSaveFestival={(latestConfig) => { handleSaveData('festival', { config: latestConfig, data: festivalData }); }}
+                            isSavingFestival={isSaving}
                         />
                     )}
                     {activeTab === 'vouchers' && (

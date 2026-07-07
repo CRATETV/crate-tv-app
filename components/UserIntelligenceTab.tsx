@@ -4,10 +4,15 @@ import LoadingSpinner from './LoadingSpinner';
 
 interface UserIntelligenceTabProps {
     movies: Record<string, Movie>;
-    onPrepareRecommendation: (email: string, draft: string) => void;
 }
 
-const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPrepareRecommendation }) => {
+// Previously also took an onPrepareRecommendation callback (wired to a no-op
+// in AdminPage.tsx) — this component actually sends recommendation emails
+// directly itself (see handleExecuteDispatch below, which calls
+// send-individual-email), so that hand-off callback was never invoked
+// anywhere. Removed rather than wired up, since the feature it implies
+// already works a different way.
+const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies }) => {
     const [users, setUsers] = useState<UserRecord[]>([]);
     const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
     const [isLoading, setIsLoading] = useState(true);
