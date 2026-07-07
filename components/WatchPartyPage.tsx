@@ -341,6 +341,54 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // finished screening, not a failure).
     const [videoError, setVideoError] = useState<string | null>(null);
 
+    // ── LATE-JOIN CATCH-UP TRACKING ──────────────────────────────────────
+    // Joining after a film's already running requires an immediate large
+    // seek forward — a fundamentally more expensive, less reliable operation
+    // than just buffering forward from zero, especially on a single big
+    // non-CDN file. Rather than let that silently fail or read as generic
+    // "buffering," this tracks it as its own state: a distinct message while
+    // it's happening, a watchdog that notices if the seek genuinely isn't
+    // landing, and an automatic fresh-reload retry instead of leaving the
+    // viewer stuck with no recourse.
+    const [isCatchingUpToLive, setIsCatchingUpToLive] = useState(false);
+    const catchUpStartedAtRef = useRef<number | null>(null);
+    const catchUpAttemptsRef = useRef(0);
+    const CATCH_UP_LATE_JOIN_THRESHOLD_SEC = 15; // drift this large on first sync = a late join, not just normal buffering
+    const CATCH_UP_WATCHDOG_TIMEOUT_MS = 12000; // how long one attempt gets before we assume it's genuinely stuck
+    const CATCH_UP_MAX_ATTEMPTS = 3;
+    // Separate, larger threshold for the "wait for the next film instead of
+    // seeking" feature below. Block transitions set filmStartTime the moment
+    // the block advances — BEFORE the ~60s intermission countdown even
+    // starts — so everyone's "elapsed since filmStartTime" already reads
+    // ~60s the instant the next film genuinely begins for real, not just for
+    // late joiners. Reusing the 15s catch-up threshold here would misfire on
+    // every viewer right as a normal intermission ends. This needs to
+    // comfortably clear that ~60s intermission window so it only fires for
+    // someone who joined meaningfully late into the film, not everyone at
+    // the moment it actually starts.
+    const BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC = 90;
+    // How close to the end a late joiner needs to be for a catch-up attempt to
+    // not even be worth it — successfully seeking them in only to hit the
+    // credits a minute later isn't a meaningful outcome, so skip straight to
+    // the honest "you can catch this one in your library" message instead.
+    const TOO_LATE_TO_BOTHER_FRACTION = 0.85;
+    // Distinct from videoError on purpose — that one implies something's
+    // broken and offers "tap to retry." This isn't a bug: it's an honest,
+    // calm explanation that the watch party already started before they
+    // joined, not a red error screen. 'too-far-in' = didn't even attempt a
+    // catch-up (see TOO_LATE_TO_BOTHER_FRACTION); 'catchup-failed' = we tried
+    // (up to CATCH_UP_MAX_ATTEMPTS times) and it genuinely didn't land.
+    const [lateJoinGaveUp, setLateJoinGaveUp] = useState<null | { reason: 'too-far-in' | 'catchup-failed' }>(null);
+
+    // Matched by title, not movie key — these two don't have on-demand rights
+    // to go into the catalog after their watch party screening (unlike
+    // everything else, which does), so late joiners for these specifically
+    // shouldn't be told "catch it in your library afterward." Only two
+    // titles as of now; if that list grows, this should become a real field
+    // on the movie record instead of a hardcoded list.
+    const NO_CATALOG_AFTER_SCREENING_TITLES = ['tino', 'mosses the black'];
+    const isNoCatalogFilm = (title?: string) => !!title && NO_CATALOG_AFTER_SCREENING_TITLES.includes(title.trim().toLowerCase());
+
     const handleVideoWaiting = useCallback(() => {
         // Only show buffering overlay after 1.5s of sustained stall — avoids flashing on seeks
         bufferingTimerRef.current = setTimeout(() => setIsVideoBuffering(true), 1500);
@@ -485,6 +533,45 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
 
+    // ── LATE JOIN INTO A BLOCK, WITH ANOTHER FILM STILL TO COME ──────────
+    // The catch-up watchdog above (search CATCH_UP_LATE_JOIN_THRESHOLD_SEC)
+    // recovers from a bad seek by retrying, but it's still gambling on an
+    // inherently unreliable operation — jumping to an arbitrary offset in a
+    // large non-CDN file. When this is a multi-film block AND there's
+    // another film still coming, there's a much safer option: don't attempt
+    // to join the film that's currently airing at all. Wait for it to
+    // naturally finish (everyone else's clients already drive that
+    // transition — see the isEnded auto-advance effect below) and join the
+    // NEXT film instead, at position zero, exactly like someone who arrived
+    // on time. Zero risky seeks involved.
+    //
+    // Purely derived from current state (activeMovieIndex, filmStartTime) —
+    // no effect or ref needed. Once the block actually advances,
+    // activeMovieIndex changes, `movie` updates to the new film, its
+    // filmStartTime is brand new, elapsed drops back near zero, and this
+    // naturally re-evaluates to null on its own — no manual reset required.
+    //
+    // Deliberately does NOT apply to the last film in a block (there's no
+    // "next film" to wait for) or a single-film watch party — those still
+    // rely on the catch-up watchdog since waiting isn't an option there.
+    const lateJoinWaitInfo = useMemo(() => {
+        const m = movie as any;
+        const blockKeys: string[] | undefined = m?._blockMovieKeys;
+        if (!blockKeys || blockKeys.length <= 1) return null;
+        if (partyState?.status !== 'live') return null;
+
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const hasNextFilm = currentIdx < blockKeys.length - 1;
+        if (!hasNextFilm) return null;
+
+        const startRef = partyState?.filmStartTime || partyState?.actualStartTime;
+        if (!startRef || typeof (startRef as any).toDate !== 'function') return null;
+        const elapsedSec = (Date.now() - (startRef as any).toDate().getTime()) / 1000;
+        if (elapsedSec <= BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC) return null;
+
+        return { currentFilmTitle: m?._activeFilmTitle || m?.title, nextIdx: currentIdx + 1 };
+    }, [movie, partyState]);
+
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
@@ -551,6 +638,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (lastSessionKeyRef.current !== undefined && lastSessionKeyRef.current !== sessionKey) {
             hasUserInteractedRef.current = false;
             setNeedsUserGesture(true);
+            // Also reset the late-join catch-up budget — otherwise someone who
+            // exhausted their 3 retry attempts on film 1 of a block would have
+            // zero retries left when film 2 starts and they need to catch up
+            // again.
+            catchUpStartedAtRef.current = null;
+            catchUpAttemptsRef.current = 0;
+            setIsCatchingUpToLive(false);
+            setLateJoinGaveUp(null);
         }
         lastSessionKeyRef.current = sessionKey;
     }, [partyState?.lastStartedAt, movie?.fullMovie]);
@@ -596,6 +691,61 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                 const drift = targetPosition - video.currentTime;
                 const absDrift = Math.abs(drift);
+
+                // ── LATE-JOIN CATCH-UP WATCHDOG ──────────────────────────────
+                // A drift this large means we just joined mid-film and need a big
+                // seek forward, not routine mid-playback correction. Track it
+                // explicitly so the UI can say so, and so a seek that never
+                // actually lands (common on a big non-CDN file — the browser may
+                // not have the byte-range info it needs for an arbitrary-offset
+                // jump) gets a real recovery instead of sitting frozen forever.
+                if (absDrift > CATCH_UP_LATE_JOIN_THRESHOLD_SEC) {
+                    const nowTs = Date.now();
+                    if (catchUpStartedAtRef.current === null) {
+                        // Close enough to the end that even a successful catch-up
+                        // wouldn't be a meaningful outcome — skip the attempt
+                        // entirely rather than seek someone in just in time for
+                        // the credits.
+                        if (targetPosition >= movieDuration * TOO_LATE_TO_BOTHER_FRACTION) {
+                            video.pause();
+                            setLateJoinGaveUp({ reason: 'too-far-in' });
+                            return;
+                        }
+                        catchUpStartedAtRef.current = nowTs;
+                        setIsCatchingUpToLive(true);
+                    } else if (nowTs - catchUpStartedAtRef.current > CATCH_UP_WATCHDOG_TIMEOUT_MS) {
+                        catchUpAttemptsRef.current += 1;
+                        if (catchUpAttemptsRef.current >= CATCH_UP_MAX_ATTEMPTS) {
+                            // Given it every reasonable shot — a plain reload-and-reseek
+                            // three times over — without landing. This isn't the generic
+                            // videoError screen on purpose: that implies something's
+                            // broken. This is an honest explanation (the watch party
+                            // already started before they joined) with a real answer
+                            // (it'll be in their library shortly), not a red error.
+                            setIsCatchingUpToLive(false);
+                            catchUpStartedAtRef.current = null;
+                            setLateJoinGaveUp({ reason: 'catchup-failed' });
+                        } else {
+                            // Clean reload: tears down whatever half-stuck state the
+                            // decoder is in and starts the byte-range/seek logic fresh,
+                            // rather than continuing to poke at a pipeline that hasn't
+                            // made progress in 12 seconds.
+                            catchUpStartedAtRef.current = nowTs;
+                            video.load();
+                            const onCatchUpMetadata = () => {
+                                video.removeEventListener('loadedmetadata', onCatchUpMetadata);
+                                syncClock({ force: true });
+                            };
+                            video.addEventListener('loadedmetadata', onCatchUpMetadata);
+                        }
+                        return;
+                    }
+                } else if (catchUpStartedAtRef.current !== null) {
+                    // Drift shrunk back down on its own — the seek landed, all good.
+                    catchUpStartedAtRef.current = null;
+                    catchUpAttemptsRef.current = 0;
+                    setIsCatchingUpToLive(false);
+                }
 
                 // Forced resync (tab just came back to the foreground): seek
                 // immediately regardless of buffered readyState. A backgrounded
@@ -1525,6 +1675,38 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return <LoadingSpinner />;
     }
 
+    // ── LATE JOIN, NEXT FILM STILL COMING — skip the risky seek entirely ──
+    if (lateJoinWaitInfo) {
+        return (
+            <div className="fixed inset-0 bg-black flex items-center justify-center p-8">
+                {movie?.poster && (
+                    <div className="absolute inset-0">
+                        <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-[0.08] blur-3xl scale-110" />
+                        <div className="absolute inset-0 bg-black/85" />
+                    </div>
+                )}
+                <div className="relative z-10 text-center space-y-6 max-w-md">
+                    <div className="relative w-12 h-12 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                        <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-500">You Joined Partway In</p>
+                        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
+                            "{lateJoinWaitInfo.currentFilmTitle}" is already underway
+                        </h2>
+                    </div>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                        Rather than drop you in partway through, we'll bring you in right at the start of the next film — no missed opening scenes, no catching up.
+                    </p>
+                    <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest">
+                        Next film starts automatically the moment this one ends
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="fixed inset-0 flex flex-col bg-black text-white overflow-hidden">
                 <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
@@ -1675,6 +1857,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             <button
                                                 onClick={() => {
                                                     setVideoError(null);
+                                                    // A manual retry tap is an explicit request for a fresh start —
+                                                    // give it a full new catch-up attempt budget rather than
+                                                    // immediately re-exhausting whatever was left before this
+                                                    // screen showed up.
+                                                    catchUpAttemptsRef.current = 0;
+                                                    catchUpStartedAtRef.current = null;
                                                     const video = videoRef.current;
                                                     if (!video) return;
                                                     // Also unmute+retry-play here, matching the "Tap to Unmute"
@@ -1703,6 +1891,42 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             </button>
                                         </div>
                                     )}
+                                    {/* Deliberately calm, not red/error-styled — this isn't a bug, it's an
+                                        honest explanation of why they're not seeing the film live: the watch
+                                        party already started before they joined. 'too-far-in' skipped the
+                                        catch-up attempt entirely (see TOO_LATE_TO_BOTHER_FRACTION);
+                                        'catchup-failed' means we genuinely tried (CATCH_UP_MAX_ATTEMPTS times)
+                                        and it didn't land. Either way the same honest answer applies: it'll
+                                        be in their library once this screening ends. */}
+                                    {lateJoinGaveUp && !isEnded && (
+                                        <div className="absolute inset-0 z-[168] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md text-center p-8 gap-4">
+                                            <p className="text-red-500 font-black uppercase tracking-[0.3em] text-[10px]">This Watch Party Already Started</p>
+                                            <p className="text-white font-black uppercase tracking-widest text-lg max-w-sm leading-snug">
+                                                {lateJoinGaveUp.reason === 'too-far-in'
+                                                    ? "You joined after this screening was already underway, too close to the end to jump in now."
+                                                    : "You joined after this screening was already underway, and we weren't able to get you caught up to the live position."}
+                                            </p>
+                                            <p className="text-gray-400 text-sm max-w-sm leading-relaxed">
+                                                {isNoCatalogFilm((movie as any)?._activeFilmTitle || movie?.title)
+                                                    ? "This particular title isn't available on-demand afterward, so this live screening was the only way to catch it — but keep an eye out for it at future events."
+                                                    : "No need to miss it entirely — this film will be available in your library to watch anytime once the watch party ends."}
+                                            </p>
+                                            {lateJoinGaveUp.reason === 'catchup-failed' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setLateJoinGaveUp(null);
+                                                        catchUpAttemptsRef.current = 0;
+                                                        catchUpStartedAtRef.current = null;
+                                                        const video = videoRef.current;
+                                                        if (video) { video.load(); video.play().catch(() => {}); }
+                                                    }}
+                                                    className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all mt-2"
+                                                >
+                                                    Try Again
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     {/* Buffering overlay — isVideoBuffering was already tracked (onWaiting/
                                         onStalled/onCanPlay above) but never actually shown to the viewer, so
                                         someone on a slow connection just saw a frozen frame with no explanation
@@ -1714,13 +1938,34 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         whole screen repeatedly during normal playback. A small corner chip
                                         gives the same "still working" signal without hiding the movie itself
                                         every time the network hiccups. */}
-                                    {isVideoBuffering && !isEnded && (
+                                    {/* Only show the generic buffering chip when we're NOT in the middle
+                                        of a late-join catch-up — that gets its own, more prominent message
+                                        below instead, since "buffering" undersells what's actually happening
+                                        and how long it can reasonably take. */}
+                                    {isVideoBuffering && !isEnded && !isCatchingUpToLive && !lateJoinGaveUp && (
                                         <div className="absolute top-4 left-4 z-[165] flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 pointer-events-none">
                                             <div className="relative w-3 h-3 flex-shrink-0">
                                                 <div className="absolute inset-0 rounded-full border-2 border-white/20"></div>
                                                 <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
                                             </div>
                                             <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 whitespace-nowrap">Buffering</p>
+                                        </div>
+                                    )}
+                                    {/* Late-join catch-up — distinct from routine buffering. This can
+                                        genuinely take longer (it's an arbitrary seek into a large file, not
+                                        just linear buffering), and the watchdog above will reload-and-retry
+                                        automatically up to a few times before handing off to the error
+                                        screen, so it's worth telling the viewer plainly what's going on
+                                        instead of leaving them staring at a generic "Buffering" chip while
+                                        several retries happen behind the scenes. */}
+                                    {isCatchingUpToLive && !isEnded && !videoError && !lateJoinGaveUp && (
+                                        <div className="absolute inset-0 z-[166] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none">
+                                            <div className="relative w-10 h-10 mb-4">
+                                                <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                                <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                                            </div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white mb-2">Catching Up To Live Position</p>
+                                            <p className="text-[11px] text-gray-300 max-w-xs text-center px-6">Joining after the film's already started takes a little longer to sync — hang tight.</p>
                                         </div>
                                     )}
                                     {/* Small unmute button — video autoplays muted, tap to unmute.
@@ -1730,7 +1975,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         unmute+play a video that had already errored out. Hiding it during
                                         an error leaves the Retry button (which now also unmutes) as the
                                         one thing on screen to tap. */}
-                                    {needsUserGesture && partyState?.status === 'live' && !isEnded && !videoError && (
+                                    {needsUserGesture && partyState?.status === 'live' && !isEnded && !videoError && !lateJoinGaveUp && (
                                         <button
                                             className="absolute bottom-4 right-4 z-[170] flex items-center gap-2 bg-black/70 backdrop-blur-xl border border-white/20 rounded-full px-6 py-4 min-h-[48px] text-white hover:bg-black/90 transition-all active:scale-95 shadow-lg"
                                             onClick={() => {
