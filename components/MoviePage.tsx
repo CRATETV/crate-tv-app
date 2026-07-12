@@ -85,9 +85,24 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     // ticket holder can come back during the 7-day window and just press
     // play like any other Crate TV title, no watch party/lobby involved.
     if (parentFestivalBlock) {
-      if (hasFestivalAllAccess) return true;
-      if (unlockedFestivalBlockIds.has(parentFestivalBlock.id)) return true;
-      if (unlockedWatchPartyKeys.has(parentFestivalBlock.id)) return true;
+      if (hasFestivalAllAccess || unlockedFestivalBlockIds.has(parentFestivalBlock.id) || unlockedWatchPartyKeys.has(parentFestivalBlock.id)) {
+        // Owning a ticket/pass used to grant access here with no timing
+        // check at all — PwffPage's schedule only ever showed a "Watch"
+        // button for these films once the block was actually live or ended
+        // (isBeforeScreening short-circuits to "Enter Lobby" instead), but
+        // this direct on-demand route had no equivalent gate. That meant
+        // anyone with a link to /movie/{key} — bookmarked, shared, or just
+        // guessed — could stream a block's films days before its scheduled
+        // premiere, ticket or not, which defeats the whole point of a
+        // scheduled watch-party premiere. Same isInWindow/isEnded check as
+        // PwffPage's filmsWatchable, enforced here so the UI fix there isn't
+        // just cosmetic.
+        const partyStatus = allPartyStates[parentFestivalBlock.id]?.status;
+        const screenStart = parentFestivalBlock.screeningStartTime ? new Date(parentFestivalBlock.screeningStartTime) : null;
+        const isInWindow = screenStart ? new Date() >= screenStart : true;
+        const isEnded = partyStatus === 'ended';
+        return isInWindow || isEnded;
+      }
       // Free block — anyone can rewatch
       if (!(parentFestivalBlock.price > 0)) return true;
 
@@ -192,11 +207,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
             setPlayerMode('full');
             setIsEnded(false);
-            // Play immediately - video is already preloading
-            if (videoRef.current) {
-                videoRef.current.currentTime = 0;
-                videoRef.current.play().catch(() => setIsPaused(true));
-            }
+            // Actually starting playback is left to the playContent() effect
+            // below (keyed off playerMode flipping to 'full') — this used to
+            // ALSO call videoRef.current.play() directly, right here, on the
+            // same video element, on top of both that effect's playContent()
+            // call AND the <video>'s own autoPlay attribute (removed below)
+            // firing at roughly the same time. Three separate triggers
+            // racing to play() the same element is exactly the kind of thing
+            // that works fine most of the time and then intermittently
+            // doesn't — a second play() (or an implicit seek from setting
+            // currentTime again) while the first is still pending aborts it
+            // in some browsers, which read as "I clicked Watch and nothing
+            // happened" with no visible error. One trigger, one place.
         } else {
             setPlayerMode('poster');
         }
@@ -297,10 +319,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         src={playableUrl}
                         preload="auto"
                         className={`absolute inset-0 w-full h-full object-contain ${playerMode === 'full' && !isEnded ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}
-                        controls={false} 
-                        playsInline 
-                        autoPlay={playerMode === 'full'}
-                        onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)} 
+                        controls={false}
+                        playsInline
+                        // No autoPlay attribute here on purpose — playContent()
+                        // (below, via the playerMode effect) is the single place
+                        // that calls .play(). Having the browser's native autoplay
+                        // ALSO try to start this same element right as that effect
+                        // runs was the other half of the race described above.
+                        onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)}
                         onPlay={() => { setVideoError(false); !isEnded && playerMode === 'full' && setIsPaused(false); }} 
                         onEnded={() => setIsEnded(true)} 
                         onError={() => setVideoError(true)}

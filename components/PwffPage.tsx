@@ -235,9 +235,9 @@ const WaitlistButton: React.FC<{ blockId: string }> = ({ blockId }) => {
 // ─── BLOCK CARD ───────────────────────────────────────────────────────────────
 const BlockCard: React.FC<{
     block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean; isEnded?: boolean;
-    isBeforeScreening?: boolean; screeningStartTime?: string;
+    isBeforeScreening?: boolean; screeningStartTime?: string; filmsWatchable?: boolean;
     dayLabel: string; onBuyTicket: () => void; onEnterLobby: () => void; onWatch: (key: string) => void;
-}> = ({ block, films, isUnlocked, isLive, isEnded, isBeforeScreening, screeningStartTime, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
+}> = ({ block, films, isUnlocked, isLive, isEnded, isBeforeScreening, screeningStartTime, filmsWatchable, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
     const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
@@ -305,7 +305,21 @@ const BlockCard: React.FC<{
             </div>
             <div className="px-5 md:px-7">
                 {films.length > 0
-                    ? films.map((f, i) => <FilmRow key={f.key} movie={f} index={i} isUnlocked={isUnlocked} onWatch={() => onWatch(f.key)} />)
+                    // Per-film rows used to be gated on the same `isUnlocked` as
+                    // the block header button above — but that one means "does
+                    // this viewer hold a ticket," which is true from the moment
+                    // they buy it, days before the block airs. The header button
+                    // never showed that as watchable pre-screening because its
+                    // own if/else chain checks isBeforeScreening FIRST and shows
+                    // "Enter Lobby" instead — but these per-film rows had no
+                    // equivalent check, so ticket holders saw a live "Watch"
+                    // button on every film in a block that hadn't happened yet,
+                    // and clicking it did open the on-demand player early (see
+                    // MoviePage's hasAccess — it grants access on ticket
+                    // ownership alone, with no timing check of its own either).
+                    // filmsWatchable adds the missing timing gate: only once the
+                    // block is actually in its live window or already ended.
+                    ? films.map((f, i) => <FilmRow key={f.key} movie={f} index={i} isUnlocked={!!filmsWatchable} onWatch={() => onWatch(f.key)} />)
                     : <p className="py-8 text-center text-gray-700 text-xs uppercase tracking-widest font-black">Programme coming soon</p>}
             </div>
         </div>
@@ -575,10 +589,11 @@ const ProgrammeMode: React.FC = () => {
                                 const isInWindow = screenStart ? new Date() >= screenStart : true;
                                 return (
                                     <BlockCard key={block.id} block={block} films={films}
-                                        isUnlocked={isUnlocked && (isInWindow || isBeforeScreening || isEnded)}
+                                        isUnlocked={isUnlocked}
                                         isLive={isLive}
                                         isEnded={isEnded}
                                         isBeforeScreening={isBeforeScreening}
+                                        filmsWatchable={isUnlocked && (isInWindow || isEnded)}
                                         screeningStartTime={block.screeningStartTime}
                                         dayLabel={`Day ${activeDay}`}
                                         onBuyTicket={() => setTicketFlowBlock(block)}

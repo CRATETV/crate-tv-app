@@ -1425,6 +1425,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     // Active whenever the user has paid access (live OR on-demand VOD)
 
+    // Hand off to the on-demand catalog player once the party ends, instead of
+    // dead-ending on a "Session Ended" screen (see the `if (partyState?.status
+    // === 'ended')` check further down, right where the render for that used
+    // to live). This has to be up here with the rest of the hooks, unconditional,
+    // not down there next to the return it's paired with — this component has
+    // several early `return`s above that point (isFestivalLoading/!movie,
+    // sessionKicked, shouldShowLobby), and a hook placed after them only gets
+    // called on renders that don't take one of those returns. The exact
+    // moment shouldShowLobby flips from true to false — a countdown hitting
+    // zero, or landing here already-live on a late join — is a render where
+    // the hook count changes mid-session on an already-mounted component,
+    // which React treats as a hard error (caught by GlobalErrorBoundary,
+    // "Sector Offline"). Every hook always runs; only the plain `if` + return
+    // below is conditional.
+    useEffect(() => {
+        if (partyState?.status === 'ended') {
+            window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
+            window.dispatchEvent(new Event('pushstate'));
+        }
+    }, [partyState?.status, movieKey]);
+
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
         if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({ emoji, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
@@ -1553,14 +1574,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // ended blocks straight to /movie/{key} (see its onWatch comment) —
     // this makes that true regardless of how the viewer arrived here, and
     // MoviePage's own hasAccess/paywall logic takes it from there for
-    // anyone who never actually bought a ticket.
-    useEffect(() => {
-        if (partyState?.status === 'ended') {
-            window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
-            window.dispatchEvent(new Event('pushstate'));
-        }
-    }, [partyState?.status, movieKey]);
-
+    // anyone who never actually bought a ticket. (The redirect itself is
+    // the useEffect further up, with the other hooks — see that comment.)
     if (partyState?.status === 'ended') {
         return <LoadingSpinner />;
     }
