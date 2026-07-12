@@ -593,7 +593,15 @@ const ProgrammeMode: React.FC = () => {
                                         isLive={isLive}
                                         isEnded={isEnded}
                                         isBeforeScreening={isBeforeScreening}
-                                        filmsWatchable={isUnlocked && (isInWindow || isEnded)}
+                                        // Only "ended" unlocks the per-film catalog rows — not merely
+                                        // "isInWindow" (i.e. past the scheduled start). While a block is
+                                        // actually live, ticket holders are meant to go through "Join
+                                        // Party" into the synced watch-party lobby, same as the block
+                                        // header button above (which only ever reaches its own "Watch
+                                        // Now" state once ended, never merely once live — this now
+                                        // matches that exactly instead of jumping the gun during the
+                                        // live window).
+                                        filmsWatchable={isUnlocked && isEnded}
                                         screeningStartTime={block.screeningStartTime}
                                         dayLabel={`Day ${activeDay}`}
                                         onBuyTicket={() => setTicketFlowBlock(block)}

@@ -87,21 +87,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (parentFestivalBlock) {
       if (hasFestivalAllAccess || unlockedFestivalBlockIds.has(parentFestivalBlock.id) || unlockedWatchPartyKeys.has(parentFestivalBlock.id)) {
         // Owning a ticket/pass used to grant access here with no timing
-        // check at all — PwffPage's schedule only ever showed a "Watch"
-        // button for these films once the block was actually live or ended
-        // (isBeforeScreening short-circuits to "Enter Lobby" instead), but
-        // this direct on-demand route had no equivalent gate. That meant
-        // anyone with a link to /movie/{key} — bookmarked, shared, or just
-        // guessed — could stream a block's films days before its scheduled
-        // premiere, ticket or not, which defeats the whole point of a
-        // scheduled watch-party premiere. Same isInWindow/isEnded check as
-        // PwffPage's filmsWatchable, enforced here so the UI fix there isn't
-        // just cosmetic.
-        const partyStatus = allPartyStates[parentFestivalBlock.id]?.status;
-        const screenStart = parentFestivalBlock.screeningStartTime ? new Date(parentFestivalBlock.screeningStartTime) : null;
-        const isInWindow = screenStart ? new Date() >= screenStart : true;
-        const isEnded = partyStatus === 'ended';
-        return isInWindow || isEnded;
+        // check at all. This route (/movie/{key}, the on-demand catalog
+        // player) is only meant to open once the block's watch party has
+        // actually ENDED — while it's before the screening OR actually
+        // live, a ticket holder is meant to go through the watch-party
+        // lobby (/watchparty/{key}) instead: countdown before it starts,
+        // "Join Party" for the synced live view once it's underway. This
+        // used to also unlock as soon as we were merely past the scheduled
+        // start time (isInWindow), which let ticket holders skip straight
+        // to on-demand playback during the live event itself — same
+        // "ended only" rule as PwffPage's filmsWatchable, enforced here so
+        // that's actually true and not just how the button looks.
+        return allPartyStates[parentFestivalBlock.id]?.status === 'ended';
       }
       // Free block — anyone can rewatch
       if (!(parentFestivalBlock.price > 0)) return true;
