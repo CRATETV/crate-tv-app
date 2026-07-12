@@ -1539,30 +1539,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         );
     }
 
-    // Show terminated screen when admin ends the party
+    // Hand off to the on-demand catalog player once the party ends, instead
+    // of dead-ending here. This used to unconditionally show a "Session
+    // Ended / Return Home" screen the instant partyState.status flipped to
+    // 'ended' — for EVERY viewer, regardless of hasAccess. Ticket holders
+    // (unlockedFestivalBlockIds / hasFestivalAllAccess / a live rental) are
+    // supposed to be able to keep watching during the 7-day rewatch window
+    // with no further payment — MoviePage.tsx's hasAccess already honors
+    // that correctly — but anyone still on this /watchparty/{key} route
+    // (mid-session when the host ends it, or a bookmarked/shared link
+    // opened after the fact) never got there, because this screen blocked
+    // them first with no path forward. PwffPage already knows to link
+    // ended blocks straight to /movie/{key} (see its onWatch comment) —
+    // this makes that true regardless of how the viewer arrived here, and
+    // MoviePage's own hasAccess/paywall logic takes it from there for
+    // anyone who never actually bought a ticket.
+    useEffect(() => {
+        if (partyState?.status === 'ended') {
+            window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
+            window.dispatchEvent(new Event('pushstate'));
+        }
+    }, [partyState?.status, movieKey]);
+
     if (partyState?.status === 'ended') {
-        return (
-            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-                <div className="text-center space-y-8 p-8 max-w-lg animate-[fadeIn_0.5s_ease-out]">
-                    <div className="w-16 h-16 mx-auto rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </div>
-                    <div>
-                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mb-2">Transmission Terminated</p>
-                        <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight">Session Ended</h1>
-                    </div>
-                    <p className="text-gray-500">This watch party has been ended by the host. Thank you for joining!</p>
-                    <button 
-                        onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
-                        className="bg-white text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
-                    >
-                        Return Home
-                    </button>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner />;
     }
 
     // Show credits/applause screen when film ends

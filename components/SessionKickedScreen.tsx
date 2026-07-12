@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SessionKickedScreenProps {
     reason: 'other_device' | 'session_expired' | null;
@@ -6,6 +7,30 @@ interface SessionKickedScreenProps {
 
 const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason }) => {
     const isExpired = reason === 'session_expired';
+    const { logout } = useAuth();
+    const [isSigningOut, setIsSigningOut] = useState(false);
+
+    // This device's Firebase Auth session is never actually revoked when the
+    // guard kicks it — useSessionGuard only flips a local `kicked` flag, it
+    // never calls signOut(). That meant clicking "Sign In" just pushed the
+    // /login URL while `user` was still truthy, and index.tsx's /login route
+    // immediately redirects signed-in users back home — so this button used
+    // to bounce straight back to the same kicked screen instead of ever
+    // showing the login form. Signing out for real first is what lets the
+    // user actually reach the form and reclaim the session on this device.
+    const handleSignInAgain = async () => {
+        if (isSigningOut) return;
+        setIsSigningOut(true);
+        try {
+            await logout();
+        } catch {
+            // Even if the Firestore session-token clear fails (e.g. offline),
+            // auth.signOut() inside logout() still runs first — proceed to
+            // the login form regardless so the user isn't stuck.
+        }
+        window.history.pushState({}, '', '/login');
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
     return (
         <div className="fixed inset-0 bg-black z-[400] flex items-center justify-center p-8">
@@ -32,10 +57,11 @@ const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason }) => 
 
                 <div className="space-y-3">
                     <button
-                        onClick={() => { window.history.pushState({}, '', '/login'); window.dispatchEvent(new Event('pushstate')); }}
-                        className="w-full bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-sm py-3.5 rounded-xl transition-all"
+                        onClick={handleSignInAgain}
+                        disabled={isSigningOut}
+                        className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-black uppercase tracking-widest text-sm py-3.5 rounded-xl transition-all"
                     >
-                        Sign In
+                        {isSigningOut ? 'Signing Out…' : 'Sign In'}
                     </button>
                     <button
                         onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
