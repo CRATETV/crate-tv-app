@@ -263,7 +263,18 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[150] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
+        // z-[600] — a payment modal has to sit above every other overlay it can
+        // be opened from underneath (the festival lobby overlay is z-[200],
+        // FestivalTicketFlow's own auth/lobby steps are z-[300],
+        // SessionKickedScreen is z-[400]). This was z-[150] — lower than all
+        // of those — which is exactly why PwffPage's "Get Ticket" button
+        // (clicked from inside the z-[200] lobby overlay, which was never
+        // being dismissed first) rendered this modal UNDER the still-visible
+        // lobby, making checkout look like it had vanished. See the matching
+        // PwffPage fix that stops leaving that lobby mounted; this is the
+        // belt-and-suspenders half — checkout should never end up hidden
+        // behind another screen even if something else is left mounted.
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[600] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
             <div className="bg-[#111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative" onClick={e => e.stopPropagation()}>
                 <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                     <div>

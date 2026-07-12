@@ -635,7 +635,7 @@ const ProgrammeMode: React.FC = () => {
                         onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}?skipLobby=1`); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
-                        onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) setTicketFlowBlock(b); }}
+                        onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) { setShowLobbyFor(null); setTicketFlowBlock(b); } }}
                         onClose={() => setShowLobbyFor(null)}
                         blockFilms={lobbyBlockFilms}
                     />
@@ -752,7 +752,7 @@ const PwffPage: React.FC = () => {
                         onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
-                        onBuyTicket={() => { if (liveBlock) setTicketFlowBlock(liveBlock); }}
+                        onBuyTicket={() => { if (liveBlock) { setShowLobbyFor(null); setTicketFlowBlock(liveBlock); } }}
                         onClose={() => setShowLobbyFor(null)}
                     />
                 </div>
@@ -791,7 +791,7 @@ const PwffPage: React.FC = () => {
                         onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
                         user={user}
                         hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
-                        onBuyTicket={() => { if (liveBlock) setTicketFlowBlock(liveBlock); }}
+                        onBuyTicket={() => { if (liveBlock) { setShowLobbyFor(null); setTicketFlowBlock(liveBlock); } }}
                         onClose={() => setShowLobbyFor(null)}
                     />
                 </div>
