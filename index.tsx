@@ -8,6 +8,7 @@ import { inject } from '@vercel/analytics';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 import { installGlobalErrorLogging } from './services/errorLogger';
+import { useAdminKeyboardShortcut } from './services/adminShortcut';
 
 // Inject Vercel Analytics
 inject();
@@ -91,6 +92,10 @@ const RedCarpetRoute: React.FC = () => {
 const AppRouter: React.FC = () => {
   const [route, setRoute] = useState(window.location.pathname);
   const { user, authInitialized, claimsLoaded } = useAuth();
+
+  // Typing "adm" anywhere on the site jumps to /admin. See
+  // services/adminShortcut.ts to disable or tweak this.
+  useAdminKeyboardShortcut();
 
   useEffect(() => {
     const onNavigate = () => {

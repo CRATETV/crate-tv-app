@@ -106,7 +106,7 @@ const LandingPage: React.FC = () => {
             
             <main className="flex-grow">
                 {/* SECTION 1: HERO */}
-                <section className="relative h-[95vh] flex flex-col items-center justify-center overflow-hidden border-b border-white/10">
+                <section className="relative h-[95vh] flex flex-col items-center justify-center overflow-hidden border-b border-white/10 pt-16 sm:pt-0">
                     <div className="absolute inset-0 z-0 grid grid-cols-3 md:grid-cols-6 gap-4 opacity-30 scale-110 rotate-[-5deg] pointer-events-none animate-slow-pan">
                         {modernPosters.concat(modernPosters).map((url, i) => (
                             <div key={i} className="aspect-[2/3] rounded-xl overflow-hidden bg-gray-900 shadow-2xl">
@@ -120,7 +120,7 @@ const LandingPage: React.FC = () => {
 
                     <div className="relative z-20 max-w-5xl px-6 text-center space-y-12 animate-[fadeIn_1s_ease-out]">
                         <div className="space-y-4">
-                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs md:text-sm">Official Distribution Afterlife</p>
+                            <p className="text-red-500 font-black uppercase tracking-[0.2em] sm:tracking-[0.6em] text-xs md:text-sm">Official Distribution Afterlife</p>
                             <h1 className="text-fluid-hero font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-[0_20px_50px_rgba(0,0,0,1)]">
                                 Cinema <br/><span className="text-red-600">Unbound.</span>
                             </h1>

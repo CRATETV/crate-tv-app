@@ -102,7 +102,12 @@ const FestivalView: React.FC<FestivalViewProps> = ({
         <div className="relative text-center py-12 sm:py-24 px-4 overflow-hidden mb-12">
             <div className="relative z-10 max-w-4xl mx-auto animate-fadeInHeroContent">
                 <div className="space-y-4 mb-8">
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter uppercase italic leading-none">{festivalConfig.title}</h1>
+                    {/* Fixed breakpoint jumps (text-4xl sm:text-5xl md:text-7xl) left a gap
+                        between sm and md where the larger size didn't fit — the exact bug
+                        that clipped this same style of heading on a Samsung S20 FE (see the
+                        .text-fluid-title comment in index.html). Fluid clamp() has no such
+                        gap. */}
+                    <h1 className="text-fluid-title font-black text-white tracking-tighter uppercase italic leading-none break-words">{festivalConfig.title}</h1>
                     {festivalConfig.subheader && (
                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs md:text-sm drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                             {festivalConfig.subheader}
@@ -137,7 +142,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                               <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
                               <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">Transmission Active Now</span>
                           </div>
-                          <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter italic leading-none drop-shadow-2xl">
+                          <h2 className="text-fluid-title font-black text-white uppercase tracking-tighter italic leading-none drop-shadow-2xl break-words">
                               {(activePartyEntity as any).title}
                           </h2>
                           <p className="text-red-100 font-bold uppercase tracking-[0.4em] text-xs">Join the synchronized community screening and director talkback.</p>

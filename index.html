@@ -246,6 +246,17 @@
       .text-fluid-hero {
         font-size: clamp(3.5rem, 18vw, 10rem);
       }
+      /* Below ~340px (Galaxy Fold's outer/cover screen is 280px, and a
+         handful of older small-Android widths sit in this range) 18vw still
+         renders "Unbound." wider than the viewport minus the hero's px-6
+         padding, clipping the trailing period. Only this narrow band gets a
+         gentler slope — everything at 340px and up (every mainstream phone)
+         keeps the original bold sizing untouched. */
+      @media (max-width: 340px) {
+        .text-fluid-hero {
+          font-size: clamp(2.25rem, 15vw, 10rem);
+        }
+      }
       .text-fluid-zine {
         font-size: clamp(3rem, 15vw, 8rem);
       }

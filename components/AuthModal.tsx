@@ -74,7 +74,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-md animate-[scaleIn_0.25s_cubic-bezier(0.34,1.56,0.64,1)]"
+                className="relative w-full max-w-md max-h-[90vh] overflow-y-auto animate-[scaleIn_0.25s_cubic-bezier(0.34,1.56,0.64,1)]"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Red glow */}

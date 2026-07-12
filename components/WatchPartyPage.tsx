@@ -351,10 +351,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // landing, and an automatic fresh-reload retry instead of leaving the
     // viewer stuck with no recourse.
     const [isCatchingUpToLive, setIsCatchingUpToLive] = useState(false);
-    const catchUpStartedAtRef = useRef<number | null>(null);
+    // 'idle' = not mid-seek, safe to play; 'seeking' = position unconfirmed,
+    // video must stay paused; 'given-up' = stopped trying, showing the
+    // honest explanation screen. Read from inside the sync engine's
+    // long-lived closures via a ref (not the isCatchingUpToLive/
+    // lateJoinGaveUp state directly) so it always reflects the current
+    // value instead of whatever it was when the effect first ran.
+    const syncPhaseRef = useRef<'idle' | 'seeking' | 'given-up'>('idle');
     const catchUpAttemptsRef = useRef(0);
-    const CATCH_UP_LATE_JOIN_THRESHOLD_SEC = 15; // drift this large on first sync = a late join, not just normal buffering
-    const CATCH_UP_WATCHDOG_TIMEOUT_MS = 12000; // how long one attempt gets before we assume it's genuinely stuck
+    // Set by the sync engine effect below; called by anything that needs to
+    // ask for an immediate resync — the "Try Again" button, a fresh session
+    // starting (new film in a block) — instead of waiting for the periodic
+    // drift monitor to eventually notice on its own.
+    const requestResyncRef = useRef<() => void>(() => {});
+    const CATCH_UP_LATE_JOIN_THRESHOLD_SEC = 15; // drift this large = a late join, not just normal buffering
+    const CATCH_UP_WATCHDOG_TIMEOUT_MS = 12000; // how long one seek attempt gets before we assume it's genuinely stuck
     const CATCH_UP_MAX_ATTEMPTS = 3;
     // Separate, larger threshold for the "wait for the next film instead of
     // seeking" feature below. Block transitions set filmStartTime the moment
@@ -425,7 +436,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const introVideoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<any>(null);
-    const lastSeekTimeRef = useRef<number>(0);
     // Stable refs so the sync interval never needs to be torn down on Firestore updates
     const partyStateRef = useRef<WatchPartyState | undefined>(undefined);
     const movieRef = useRef<typeof movie>(undefined);
@@ -642,297 +652,279 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // exhausted their 3 retry attempts on film 1 of a block would have
             // zero retries left when film 2 starts and they need to catch up
             // again.
-            catchUpStartedAtRef.current = null;
+            syncPhaseRef.current = 'idle';
             catchUpAttemptsRef.current = 0;
             setIsCatchingUpToLive(false);
             setLateJoinGaveUp(null);
+            // New film's src just changed (or the party restarted) — ask the
+            // sync engine to reach the correct position right away rather
+            // than waiting for the periodic drift monitor to eventually
+            // notice on its own.
+            requestResyncRef.current();
         }
         lastSessionKeyRef.current = sessionKey;
     }, [partyState?.lastStartedAt, movie?.fullMovie]);
 
-    // ── SYNC ENGINE — runs once, reads state via refs so Firestore updates
-    //    never tear down and restart the interval (which caused repeated seeks) ──
+    // ── UNIFIED SYNC ENGINE ──────────────────────────────────────────────
+    // Single source of truth for getting this viewer's video to the correct
+    // live position and keeping it there. There is deliberately no separate
+    // "late joiner" code path — joining exactly on time and joining 20
+    // minutes late are the same operation (reach wherever the live position
+    // currently is, then play), just with a smaller or larger gap to close.
+    // Treating them identically is what actually guarantees a late joiner
+    // can never end up watching from the beginning: there is no "normal"
+    // path left that starts playing immediately and hopes a catch-up seek
+    // wins a race against it.
+    //
+    // The previous version drove seeks off a polling interval and inferred
+    // whether a seek had "probably" finished from video.readyState — a
+    // proxy, not a fact, and the actual play() call ran on every tick
+    // regardless, racing the seek. This version uses the browser's own
+    // 'seeked' event as the real signal a seek completed, and the video is
+    // never unpaused while its position is unconfirmed. The sequence, every
+    // single time a (re)sync is needed, with no exceptions:
+    //   1. pause (if not already)
+    //   2. wait for metadata if the video hasn't loaded any yet — setting
+    //      currentTime before loadedmetadata fires gets silently dropped by
+    //      the browser rather than queued
+    //   3. request the seek
+    //   4. wait for the real 'seeked' event — not a timeout, not a
+    //      readyState guess
+    //   5. re-derive the target (real time passed while seeking) — close
+    //      enough now? play. still off? go back to step 3.
+    //   6. no 'seeked' within a generous timeout — the seek is genuinely
+    //      stuck (common on a big file with no CDN) — reload and retry,
+    //      capped at a few attempts, then stop and show an honest
+    //      "couldn't catch you up" screen with the video explicitly paused.
     useEffect(() => {
         if (isControllerMode) return;
 
-        const syncClock = (opts?: { force?: boolean }) => {
-            const video = videoRef.current;
+        let cancelled = false;
+        let seekGeneration = 0;
+        let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+        let monitorInterval: ReturnType<typeof setInterval> | null = null;
+
+        const clearWatchdog = () => {
+            if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null; }
+        };
+
+        // Where the live position SHOULD be right now, and how long this film
+        // runs — both purely derived from server-authoritative data, never
+        // from anything the local video element itself reports.
+        const computeTarget = () => {
             const ps = partyStateRef.current;
             const mv = movieRef.current;
+            if (!ps?.actualStartTime || mv?.isLiveStream) return null;
+            const startRef = ps.filmStartTime || ps.actualStartTime;
+            if (!startRef || typeof (startRef as any).toDate !== 'function') return null;
+            const serverStart = (startRef as any).toDate().getTime();
+            const targetPosition = Math.max(0, (Date.now() - serverStart) / 1000);
+            const video = videoRef.current;
+            const movieDuration = mv?.durationInMinutes
+                ? mv.durationInMinutes * 60
+                : (video && video.duration > 0 ? video.duration : 3600);
+            return { targetPosition, movieDuration, isPlaying: !!ps.isPlaying, status: ps.status };
+        };
 
-            if (!video || !ps?.actualStartTime || mv?.isLiveStream) return;
+        const attemptPlay = (video: HTMLVideoElement) => {
+            if (!hasUserInteractedRef.current) video.muted = true;
+            video.play().catch((err: any) => {
+                if (err?.name === 'NotAllowedError' && !video.muted) {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                    setNeedsUserGesture(true);
+                }
+            });
+        };
 
-            if (ps.status === 'ended' || ps.status !== 'live') {
-                video.pause();
+        // The one and only place a seek happens. Always pauses first, always
+        // waits for the real 'seeked' event, always re-derives the target
+        // afterward instead of trusting the position originally requested —
+        // real time keeps passing while a seek is in flight, sometimes for
+        // many seconds on these non-CDN files.
+        const seekToLive = (myGeneration: number) => {
+            if (cancelled || myGeneration !== seekGeneration) return;
+            const video = videoRef.current;
+            if (!video) return;
+
+            const target = computeTarget();
+            if (!target || target.status !== 'live') { video.pause(); return; }
+
+            if (target.targetPosition >= target.movieDuration) {
+                if (!isEndedRef.current) {
+                    setIsEnded(true);
+                    video.pause();
+                    video.currentTime = target.movieDuration;
+                }
                 return;
             }
 
-            const now = Date.now();
-            if (!opts?.force && now - lastSeekTimeRef.current < 2000) return;
+            // Close enough already — nothing to seek, just make sure it's playing.
+            if (Math.abs(target.targetPosition - video.currentTime) <= 1.5) {
+                syncPhaseRef.current = 'idle';
+                setIsCatchingUpToLive(false);
+                catchUpAttemptsRef.current = 0;
+                if (target.isPlaying && video.paused && !video.ended) attemptPlay(video);
+                else if (!target.isPlaying && !video.paused) video.pause();
+                return;
+            }
 
-            try {
-                const startRef = ps.filmStartTime || ps.actualStartTime;
-                const serverStart = (startRef as any).toDate().getTime();
-                const elapsedSinceStart = (now - serverStart) / 1000;
-                const targetPosition = Math.max(0, elapsedSinceStart);
+            // Close enough to the end that even a successful catch-up wouldn't
+            // be a meaningful outcome — skip straight to the honest explanation
+            // rather than seeking someone in just in time for the credits.
+            if (target.targetPosition >= target.movieDuration * TOO_LATE_TO_BOTHER_FRACTION) {
+                video.pause();
+                syncPhaseRef.current = 'given-up';
+                setIsCatchingUpToLive(false);
+                setLateJoinGaveUp({ reason: 'too-far-in' });
+                return;
+            }
 
-                const movieDuration = mv?.durationInMinutes
-                    ? mv.durationInMinutes * 60
-                    : (video.duration > 0 ? video.duration : 3600);
+            // Position is unconfirmed from here until 'seeked' fires — never
+            // audible or visible in the meantime. This is the actual guarantee
+            // against "plays from the beginning": not racing a seek against
+            // playback and hoping the seek wins, but never allowing playback
+            // at all until the position is confirmed correct.
+            video.pause();
+            syncPhaseRef.current = 'seeking';
+            setIsCatchingUpToLive(true);
 
-                if (targetPosition >= movieDuration) {
-                    if (!isEndedRef.current) {
-                        setIsEnded(true);
-                        video.pause();
-                        video.currentTime = movieDuration;
-                    }
-                    return;
-                }
+            const doSeek = () => {
+                if (cancelled || myGeneration !== seekGeneration) return;
+                const v = videoRef.current;
+                if (!v) return;
+                const t = computeTarget(); // re-derive — time passed while metadata loaded
+                if (!t) return;
 
-                const drift = targetPosition - video.currentTime;
-                const absDrift = Math.abs(drift);
+                const onSeeked = () => {
+                    v.removeEventListener('seeked', onSeeked);
+                    clearWatchdog();
+                    if (cancelled || myGeneration !== seekGeneration) return;
+                    // Landed, but check again rather than trusting the position
+                    // requested — the seek itself can take real time.
+                    seekToLive(myGeneration);
+                };
+                v.addEventListener('seeked', onSeeked);
+                v.currentTime = t.targetPosition;
 
-                // ── LATE-JOIN CATCH-UP WATCHDOG ──────────────────────────────
-                // A drift this large means we just joined mid-film and need a big
-                // seek forward, not routine mid-playback correction. Track it
-                // explicitly so the UI can say so, and so a seek that never
-                // actually lands (common on a big non-CDN file — the browser may
-                // not have the byte-range info it needs for an arbitrary-offset
-                // jump) gets a real recovery instead of sitting frozen forever.
-                let forceSeekThisTick = false;
-                if (absDrift > CATCH_UP_LATE_JOIN_THRESHOLD_SEC) {
-                    const nowTs = Date.now();
-                    if (catchUpStartedAtRef.current === null) {
-                        // Close enough to the end that even a successful catch-up
-                        // wouldn't be a meaningful outcome — skip the attempt
-                        // entirely rather than seek someone in just in time for
-                        // the credits.
-                        if (targetPosition >= movieDuration * TOO_LATE_TO_BOTHER_FRACTION) {
-                            video.pause();
-                            setLateJoinGaveUp({ reason: 'too-far-in' });
-                            return;
-                        }
-                        catchUpStartedAtRef.current = nowTs;
-                        setIsCatchingUpToLive(true);
-                        // This used to fall through to the seek logic below without
-                        // forcing it — on a normal (non-forced) tick that seek only
-                        // fires once video.readyState >= 3, which reflects buffered
-                        // health around the CURRENT position (still 0 at this point,
-                        // nothing has seeked yet), not the target position minutes
-                        // away. That could leave the video playing from 0 for the
-                        // full 12s watchdog window, sometimes longer if this exact
-                        // tick's readyState check happened to pass on stale data.
-                        // Forcing the very first detection tick closes that gap —
-                        // same immediate, readyState-independent seek the foreground-
-                        // return handler already relies on.
-                        forceSeekThisTick = true;
-                    } else if (nowTs - catchUpStartedAtRef.current > CATCH_UP_WATCHDOG_TIMEOUT_MS) {
-                        catchUpAttemptsRef.current += 1;
-                        if (catchUpAttemptsRef.current >= CATCH_UP_MAX_ATTEMPTS) {
-                            // Given it every reasonable shot — a plain reload-and-reseek
-                            // three times over — without landing. This isn't the generic
-                            // videoError screen on purpose: that implies something's
-                            // broken. This is an honest explanation (the watch party
-                            // already started before they joined) with a real answer
-                            // (it'll be in their library shortly), not a red error.
-                            //
-                            // video.pause() here is deliberate and load-bearing, not
-                            // cosmetic — a watch party is a synchronized live event, not
-                            // an early on-demand start. Without this, the underlying
-                            // video (stuck wherever the failed seeks left it, likely near
-                            // 0) would keep playing behind this overlay — hidden from
-                            // view but still advancing, unsynced with everyone else. This
-                            // guarantees nobody can end up watching the film live from the
-                            // beginning just because catch-up happened to fail.
-                            video.pause();
-                            setIsCatchingUpToLive(false);
-                            catchUpStartedAtRef.current = null;
-                            setLateJoinGaveUp({ reason: 'catchup-failed' });
-                        } else {
-                            // Clean reload: tears down whatever half-stuck state the
-                            // decoder is in and starts the byte-range/seek logic fresh,
-                            // rather than continuing to poke at a pipeline that hasn't
-                            // made progress in 12 seconds.
-                            catchUpStartedAtRef.current = nowTs;
-                            video.load();
-                            const onCatchUpMetadata = () => {
-                                video.removeEventListener('loadedmetadata', onCatchUpMetadata);
-                                syncClock({ force: true });
-                            };
-                            video.addEventListener('loadedmetadata', onCatchUpMetadata);
-                        }
+                clearWatchdog();
+                watchdogTimer = setTimeout(() => {
+                    if (cancelled || myGeneration !== seekGeneration) return;
+                    v.removeEventListener('seeked', onSeeked);
+                    catchUpAttemptsRef.current += 1;
+                    if (catchUpAttemptsRef.current >= CATCH_UP_MAX_ATTEMPTS) {
+                        // Given it every reasonable shot — a plain reload-and-
+                        // reseek, several times over — without landing. Not the
+                        // generic videoError screen on purpose: that implies
+                        // something's broken. This is an honest explanation (the
+                        // watch party already started before they joined) with a
+                        // real answer (it'll be in their library shortly), not a
+                        // red error — and the video stays explicitly paused, so
+                        // nobody ends up watching live from the beginning just
+                        // because catch-up happened to fail.
+                        v.pause();
+                        syncPhaseRef.current = 'given-up';
+                        setIsCatchingUpToLive(false);
+                        setLateJoinGaveUp({ reason: 'catchup-failed' });
                         return;
                     }
-                } else if (catchUpStartedAtRef.current !== null) {
-                    // Drift shrunk back down on its own — the seek landed, all good.
-                    catchUpStartedAtRef.current = null;
-                    catchUpAttemptsRef.current = 0;
-                    setIsCatchingUpToLive(false);
-                }
+                    // Clean reload: tears down whatever half-stuck state the
+                    // decoder is in and retries the whole dance fresh, rather
+                    // than continuing to poke at a pipeline that hasn't made
+                    // progress in CATCH_UP_WATCHDOG_TIMEOUT_MS.
+                    v.load();
+                    const onMeta = () => {
+                        v.removeEventListener('loadedmetadata', onMeta);
+                        if (cancelled || myGeneration !== seekGeneration) return;
+                        seekToLive(myGeneration);
+                    };
+                    v.addEventListener('loadedmetadata', onMeta);
+                }, CATCH_UP_WATCHDOG_TIMEOUT_MS);
+            };
 
-                // Forced resync (tab just came back to the foreground, OR this is
-                // the first tick a late join was detected — see forceSeekThisTick
-                // above): seek immediately regardless of buffered readyState. A
-                // backgrounded video can report a stale/zeroed currentTime on iOS,
-                // and waiting for the readyState>=3 gate below made it look like
-                // playback had silently reset to the start instead of catching
-                // back up.
-                if ((opts?.force || forceSeekThisTick) && absDrift > 1.5 && !video.seeking) {
-                    if (video.readyState === 0) {
-                        // Setting currentTime before loadedmetadata fires gets silently
-                        // dropped by the browser rather than queued — the exact bug
-                        // already fixed once for the initial-join and foreground-return
-                        // cases (see runInitialSync / handleForegroundReturn). This same
-                        // gap existed here too: a freshly-loaded video (readyState 0,
-                        // e.g. right after the "Try Again" button's video.load()) hitting
-                        // this branch would have its seek silently ignored. Wait for
-                        // metadata, then retry as a fresh forced sync.
-                        const onForceSeekMetadata = () => {
-                            video.removeEventListener('loadedmetadata', onForceSeekMetadata);
-                            syncClock({ force: true });
-                        };
-                        video.addEventListener('loadedmetadata', onForceSeekMetadata);
-                    } else {
-                        lastSeekTimeRef.current = now;
-                        video.currentTime = targetPosition;
-                        video.playbackRate = 1.0;
-                    }
-                } else if (absDrift > 8 && !video.seeking && video.readyState >= 3) {
-                    // Only hard-seek if drift is large AND video has enough data
-                    // Use a longer debounce (3s) to avoid repeated seeks on mobile
-                    lastSeekTimeRef.current = now;
-                    video.currentTime = targetPosition;
-                    video.playbackRate = 1.0;
-                } else if (absDrift > 1.5 && absDrift <= 8 && video.readyState >= 3) {
-                    // Gentler catch-up rate (±3% instead of ±6%) — noticeably smoother,
-                    // and the wider 1.5s dead zone (was 0.5s) stops the constant tiny
-                    // rate flips that made playback feel like it was "sticking".
-                    video.playbackRate = drift > 0 ? 1.03 : 0.97;
-                } else if (video.playbackRate !== 1.0) {
-                    video.playbackRate = 1.0;
-                }
-
-                // Play/pause — always try to play muted first (works without user gesture).
-                // If user has interacted, unmute is handled by the unmute button.
-                //
-                // Deliberately NOT gating this on video.readyState anymore. It used to
-                // require readyState >= 2 (HAVE_CURRENT_DATA) before ever calling
-                // play() — but iOS Safari is conservative about actually buffering a
-                // video (even with preload="auto") until something calls play() on it.
-                // That created a standoff on iPhone: we wouldn't call play() until data
-                // was buffered, and Safari wouldn't seriously buffer until play() was
-                // called. On fast connections both sides "won" fast enough to go
-                // unnoticed; on anything slower the video just sat frozen on frame one
-                // indefinitely — the "frosted glass" freeze right after the countdown.
-                // Calling play() with insufficient data is safe: the element enters a
-                // pending-play state, fires 'waiting'/'stalled' (already handled above
-                // via handleVideoWaiting to show the buffering spinner), and starts
-                // itself the moment enough data arrives — no readyState check needed.
-                if (ps.isPlaying && video.paused && !video.ended) {
-                    if (!hasUserInteractedRef.current) {
-                        video.muted = true; // ensure muted for autoplay
-                    }
-                    video.play().catch((err: any) => {
-                        // This runs on every ~1.5s sync tick, so if an unmuted
-                        // attempt keeps getting rejected here it would silently
-                        // retry forever with no sound and (since the button was
-                        // already hidden on the assumption unmute had worked)
-                        // no way for the viewer to fix it. Same fallback as the
-                        // other autoplay attempts in this file.
-                        if (err?.name === 'NotAllowedError' && !video.muted) {
-                            video.muted = true;
-                            video.play().catch(() => {});
-                            setNeedsUserGesture(true);
-                        }
-                    });
-                } else if (!ps.isPlaying && !video.paused) {
-                    video.pause();
-                }
-            } catch (e) { console.error('Sync heartbeat failure:', e); }
-        };
-
-        const interval = setInterval(() => syncClock(), 1500); // 1.5s — gentler cadence
-        // Don't call syncClock() immediately on mount; let the video settle first.
-        //
-        // Forced on purpose — a late joiner needs an immediate large seek to
-        // catch up, and the normal (non-forced) path only attempts that once
-        // readyState reaches 3, which may never happen on a slow connection
-        // with these un-optimized, non-CDN files.
-        //
-        // First version of this fix just called syncClock({force:true}) after
-        // a flat 3s timeout with no readyState check — and made things worse:
-        // setting video.currentTime before the browser has loaded metadata
-        // (readyState === 0) gets silently DROPPED rather than queued, exactly
-        // like the note below for the backgrounded-tab case. A late joiner on
-        // a slow connection often hasn't loaded metadata within 3 seconds, so
-        // that forced seek just silently no-op'd — then every later
-        // (non-forced) tick needed readyState >= 3 to try again, which also
-        // might never come. Net result: a couple of different failed attempts
-        // (the "glitching"), then stuck for good. Mirroring the same
-        // wait-for-loadedmetadata pattern already proven in
-        // handleForegroundReturn below closes that gap properly.
-        let initialSyncMetadataListener: (() => void) | null = null;
-        const runInitialSync = () => {
-            const video = videoRef.current;
-            if (!video) return;
             if (video.readyState === 0) {
-                initialSyncMetadataListener = () => {
-                    if (initialSyncMetadataListener) video.removeEventListener('loadedmetadata', initialSyncMetadataListener);
-                    syncClock({ force: true });
+                const onMeta = () => {
+                    video.removeEventListener('loadedmetadata', onMeta);
+                    if (cancelled || myGeneration !== seekGeneration) return;
+                    doSeek();
                 };
-                video.addEventListener('loadedmetadata', initialSyncMetadataListener);
+                video.addEventListener('loadedmetadata', onMeta);
             } else {
-                syncClock({ force: true });
+                doSeek();
             }
         };
-        const initialDelay = setTimeout(runInitialSync, 3000);
 
-        // ── FOREGROUND RESYNC ─────────────────────────────────────────────
-        // iOS Safari throttles (or fully suspends) timers and video decoding
-        // while a tab is backgrounded/screen is locked. When the user comes
-        // back — e.g. after leaving the lobby tab and returning mid-film —
-        // the interval above can take up to 1.5s to fire again, and by then
-        // the video element may be sitting on a stale frame from whenever it
-        // got suspended. This forces an immediate hard seek + resume instead
-        // of waiting, so viewers land back on the live position rather than
-        // appearing stuck (or looking like playback reset to frame one).
+        // Starts a brand new sync attempt, invalidating any seek already in
+        // flight (its listeners check seekGeneration and no-op once
+        // superseded). Used for every kind of "please resync now" moment:
+        // initial mount, the tab returning to the foreground, a new film
+        // starting in a block, and the "Try Again" button.
+        const startFreshSync = () => {
+            seekGeneration += 1;
+            catchUpAttemptsRef.current = 0;
+            seekToLive(seekGeneration);
+        };
+        requestResyncRef.current = startFreshSync;
+
+        // Lightweight periodic monitor — NOT what performs the seek for a
+        // fresh join (startFreshSync/the handlers below own that moment).
+        // This just watches for drift appearing during otherwise-settled
+        // playback: small ongoing drift gets a gentle playback-rate nudge
+        // (imperceptible, no pause needed), and a large drift appearing out
+        // of nowhere (a long stall, a background suspend that wasn't caught
+        // by the foreground handler, etc.) triggers the exact same
+        // seekToLive dance a fresh join uses — no separate mechanism, no
+        // separate bugs to have.
+        monitorInterval = setInterval(() => {
+            if (cancelled || syncPhaseRef.current !== 'idle') return; // never fight an in-progress seek
+            const video = videoRef.current;
+            if (!video) return;
+            const target = computeTarget();
+            if (!target) return;
+
+            if (target.status !== 'live') { video.pause(); return; }
+            if (target.targetPosition >= target.movieDuration) return; // handled inside seekToLive
+
+            const drift = target.targetPosition - video.currentTime;
+            const absDrift = Math.abs(drift);
+
+            if (absDrift > CATCH_UP_LATE_JOIN_THRESHOLD_SEC) {
+                startFreshSync();
+                return;
+            } else if (absDrift > 1.5) {
+                // Gentle catch-up rate for small ongoing drift — no pause/reseek needed.
+                video.playbackRate = drift > 0 ? 1.03 : 0.97;
+            } else if (video.playbackRate !== 1.0) {
+                video.playbackRate = 1.0;
+            }
+
+            if (target.isPlaying && video.paused && !video.ended) attemptPlay(video);
+            else if (!target.isPlaying && !video.paused) video.pause();
+        }, 2000);
+
+        // Give the party doc a moment to be available, then make the first
+        // attempt — covers a fresh on-time join (small/no gap) and a late
+        // join (large gap) through the exact same path, since seekToLive
+        // doesn't distinguish between them.
+        const initialDelay = setTimeout(startFreshSync, 1000);
+
+        // Tab returns from background — iOS in particular can fully suspend
+        // video decoding while away, so treat it exactly like a fresh join
+        // rather than trusting whatever stale position/state is left over.
         const handleForegroundReturn = () => {
             if (document.visibilityState !== 'visible') return;
-            const video = videoRef.current;
-            if (!video) return;
-
-            // readyState === 0 (HAVE_NOTHING) means iOS fully tore down the
-            // decoder while backgrounded — there's genuinely nothing to seek
-            // within yet, so a reload is unavoidable. Anything above that
-            // (even stale/paused data) can be seeked directly; the browser
-            // fetches whatever byte range the new position needs on its own.
-            // Calling load() in that common case was the actual cause of the
-            // slow resume: it wipes the element, and setting currentTime
-            // immediately afterward (before 'loadedmetadata' fires) gets
-            // silently dropped, so the seek didn't stick until a *later*
-            // sync tick retried it — several extra seconds of buffering
-            // from position 0 before the real resume even started.
-            if (video.readyState === 0) {
-                const onLoadedMetadata = () => {
-                    video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                    syncClock({ force: true });
-                };
-                video.addEventListener('loadedmetadata', onLoadedMetadata);
-                video.load();
-            } else {
-                syncClock({ force: true });
-            }
+            startFreshSync();
         };
         document.addEventListener('visibilitychange', handleForegroundReturn);
         window.addEventListener('pageshow', handleForegroundReturn);
         window.addEventListener('focus', handleForegroundReturn);
 
         return () => {
-            clearInterval(interval);
+            cancelled = true;
+            seekGeneration += 1; // invalidates any listeners still in flight
+            clearWatchdog();
             clearTimeout(initialDelay);
-            if (initialSyncMetadataListener && videoRef.current) {
-                videoRef.current.removeEventListener('loadedmetadata', initialSyncMetadataListener);
-            }
+            if (monitorInterval) clearInterval(monitorInterval);
             document.removeEventListener('visibilitychange', handleForegroundReturn);
             window.removeEventListener('pageshow', handleForegroundReturn);
             window.removeEventListener('focus', handleForegroundReturn);
@@ -1898,33 +1890,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             <button
                                                 onClick={() => {
                                                     setVideoError(null);
-                                                    // A manual retry tap is an explicit request for a fresh start —
-                                                    // give it a full new catch-up attempt budget rather than
-                                                    // immediately re-exhausting whatever was left before this
-                                                    // screen showed up.
+                                                    syncPhaseRef.current = 'idle';
                                                     catchUpAttemptsRef.current = 0;
-                                                    catchUpStartedAtRef.current = null;
-                                                    const video = videoRef.current;
-                                                    if (!video) return;
-                                                    // Also unmute+retry-play here, matching the "Tap to Unmute"
-                                                    // button's own retry logic below — this button used to just
-                                                    // reload the source and leave sound as a separate second tap
-                                                    // on the unmute button. But the unmute button was rendering
-                                                    // ON TOP of this error screen (it isn't gated on !videoError),
-                                                    // so tapping "unmute" while an error was showing just tried to
-                                                    // play a video that had already errored out — no visible
-                                                    // change, reads as "the button doesn't do anything, we never
-                                                    // see the movie." Folding that logic in here means the one
-                                                    // visible, relevant button on this screen does the whole job.
                                                     hasUserInteractedRef.current = true;
                                                     setNeedsUserGesture(false);
-                                                    video.muted = false;
-                                                    video.load();
-                                                    const tryPlay = () => { video.play().catch(() => {}); };
-                                                    tryPlay();
-                                                    [400, 1000, 2000].forEach(delay => {
-                                                        setTimeout(() => { if (video.paused) tryPlay(); }, delay);
-                                                    });
+                                                    const video = videoRef.current;
+                                                    if (video) {
+                                                        video.muted = false;
+                                                        // Unlike a late-join catch-up retry, this button means the
+                                                        // decoder pipeline itself errored (bad source, codec issue,
+                                                        // network failure) — readyState doesn't necessarily reset to
+                                                        // 0 just because an error occurred, so an explicit reload is
+                                                        // needed here to actually clear that broken state before the
+                                                        // engine's own seek logic has anything sane to work with.
+                                                        video.load();
+                                                    }
+                                                    // Also unmute here, matching the "Tap to Unmute" button's own
+                                                    // intent — this button used to reload the source and leave
+                                                    // sound as a separate second tap on the unmute button. But the
+                                                    // unmute button was rendering ON TOP of this error screen (it
+                                                    // isn't gated on !videoError), so tapping "unmute" while an
+                                                    // error was showing just tried to play a video that had
+                                                    // already errored out. Everything else — reloading, seeking,
+                                                    // and actually calling play() — is the sync engine's job now,
+                                                    // not this button's; it owns the whole pause/seek/wait-for-
+                                                    // seeked/play sequence, so duplicating a manual retry-play
+                                                    // loop here would just fight it.
+                                                    requestResyncRef.current();
                                                 }}
                                                 className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all"
                                             >
@@ -1956,21 +1948,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 <button
                                                     onClick={() => {
                                                         setLateJoinGaveUp(null);
-                                                        catchUpAttemptsRef.current = 0;
-                                                        catchUpStartedAtRef.current = null;
-                                                        const video = videoRef.current;
-                                                        // Deliberately NOT calling video.play() here directly —
-                                                        // that would start playback from wherever the reload
-                                                        // lands (near 0) immediately, briefly playing unsynced
-                                                        // before the sync interval's next tick (up to 1.5s later)
-                                                        // corrects it. Resetting catchUpStartedAtRef to null means
-                                                        // that next tick treats this as a fresh late-join
-                                                        // detection, which forces an immediate readyState-
-                                                        // independent seek (forceSeekThisTick above) before it
-                                                        // ever calls play() itself — so the sync engine is what
-                                                        // starts playback here, already at the right position,
-                                                        // not this button.
-                                                        if (video) { video.load(); }
+                                                        syncPhaseRef.current = 'idle';
+                                                        // Hand off entirely to the sync engine rather than
+                                                        // manipulating the video element directly here — it
+                                                        // owns the whole pause/seek/wait-for-seeked/play
+                                                        // sequence, so this button just asks for a fresh
+                                                        // attempt the same way a foreground-return or a new
+                                                        // film starting does.
+                                                        requestResyncRef.current();
                                                     }}
                                                     className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all mt-2"
                                                 >
