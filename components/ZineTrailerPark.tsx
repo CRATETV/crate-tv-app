@@ -3,21 +3,24 @@ import { Movie } from '../types';
 
 const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
     const [isMuted, setIsMuted] = useState(true);
+    // Click-to-play by design: no video byte should ever be requested from
+    // storage until a visitor explicitly asks for it. Nothing here auto-loads
+    // or auto-streams anything — the poster image is the only thing fetched
+    // by default, same as any other poster already shown across the site.
+    const [isPlaying, setIsPlaying] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const hasTrailer = !!movie.trailer;
 
+    // Reset to the static poster whenever the selected film changes, so
+    // browsing the filmstrip below never silently keeps streaming video.
     useEffect(() => {
-        if (videoRef.current && hasTrailer) {
-            videoRef.current.play().catch(() => {
-                console.warn("Autoplay blocked for trailer stage");
-            });
-        }
-    }, [movie.key, hasTrailer]);
+        setIsPlaying(false);
+    }, [movie.key]);
 
     return (
         <div className="relative aspect-video lg:aspect-[2.35/1] bg-black rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,1)] border border-white/10 group z-10">
-            {hasTrailer ? (
-                <video 
+            {hasTrailer && isPlaying ? (
+                <video
                     ref={videoRef}
                     key={movie.key}
                     src={movie.trailer}
@@ -28,17 +31,28 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
                     className="w-full h-full object-cover opacity-80"
                 />
             ) : (
-                <div className="w-full h-full relative">
+                <div
+                    className={`w-full h-full relative ${hasTrailer ? 'cursor-pointer' : ''}`}
+                    onClick={() => { if (hasTrailer) setIsPlaying(true); }}
+                >
                     <img src={movie.poster} className="w-full h-full object-cover opacity-40 blur-xl scale-110" alt="" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-white/5 backdrop-blur-md p-10 rounded-[3rem] border border-white/10 text-center">
-                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.4em] mb-4">Teaser Source Missing</p>
-                            <h5 className="text-2xl font-black text-white uppercase italic tracking-tighter">High-Bitrate Manifest Ready</h5>
+                    {hasTrailer ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-red-600/80 group-hover:scale-110 transition-all shadow-2xl">
+                                <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="bg-white/5 backdrop-blur-md p-10 rounded-[3rem] border border-white/10 text-center">
+                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.4em] mb-4">Teaser Source Missing</p>
+                                <h5 className="text-2xl font-black text-white uppercase italic tracking-tighter">High-Bitrate Manifest Ready</h5>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
-            
+
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
             
             <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row justify-between items-end gap-6 z-20">
@@ -48,11 +62,11 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
                         <span className="bg-white/10 text-[7px] font-black text-gray-400 px-2 py-0.5 rounded border border-white/5 uppercase">Preview Mode</span>
                     </div>
                     <h4 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl break-words">{movie.title}</h4>
-                    <p className="text-gray-300 text-sm md:text-lg font-medium italic line-clamp-2 drop-shadow-lg">"{movie.synopsis.replace(/<[^>]+>/g, '')}"</p>
+                    <p className="text-gray-300 text-sm md:text-lg font-medium italic line-clamp-2 drop-shadow-lg">"{(movie.synopsis || '').replace(/<[^>]+>/g, '')}"</p>
                 </div>
                 <div className="flex gap-4 pointer-events-auto">
-                    {hasTrailer && (
-                        <button 
+                    {hasTrailer && isPlaying && (
+                        <button
                             onClick={() => setIsMuted(!isMuted)}
                             className="bg-black/60 backdrop-blur-md p-4 rounded-full border border-white/20 hover:bg-white/10 transition-all"
                         >

@@ -6,8 +6,12 @@ import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
-import { EditorialStory, ZineSection } from '../types';
+import { EditorialStory, ZineSection, Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
+import ZineTrailerPark from './ZineTrailerPark';
+import ZineGameEmoji from './ZineGameEmoji';
+import ZinePuzzle from './ZinePuzzle';
+import ZineSentiment from './ZineSentiment';
 
 const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div 
@@ -44,8 +48,39 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
     </div>
 );
 
+const FeaturedZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
+    <div
+        onClick={onClick}
+        className="group cursor-pointer relative rounded-[3rem] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.6)] border border-white/10 min-h-[480px] md:min-h-[620px] flex items-end"
+    >
+        <img
+            src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1400ms] group-hover:scale-105"
+            alt=""
+            crossOrigin="anonymous"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+        <div className="relative z-10 p-8 md:p-16 space-y-6 max-w-4xl">
+            <div className="flex items-center gap-3">
+                <span className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.3em] px-3 py-1.5 rounded-full">Latest Dispatch</span>
+                <span className="text-white/60 font-black uppercase text-[9px] tracking-[0.3em]">{story.type}</span>
+            </div>
+            <h2 className="text-fluid-title-lg font-serif font-medium tracking-tighter text-white leading-[0.95] drop-shadow-2xl">
+                {story.title}
+            </h2>
+            <p className="text-zinc-300 text-lg md:text-2xl font-serif italic max-w-2xl leading-snug hidden md:block">
+                {story.subtitle}
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+                <div className="w-6 h-px bg-red-600/70"></div>
+                <span className="text-white font-black uppercase text-[10px] tracking-[0.2em] italic">By {story.author}</span>
+            </div>
+        </div>
+    </div>
+);
+
 const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
-    const { zineStories: stories, isLoading } = useFestival();
+    const { zineStories: stories, movies, isLoading } = useFestival();
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [activeFilter, setActiveFilter] = useState('ALL'); 
     const [email, setEmail] = useState('');
@@ -67,6 +102,22 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         if (activeFilter === 'ALL') return stories;
         return stories.filter(s => s.type === activeFilter);
     }, [stories, activeFilter]);
+
+    // Lead story gets the big hero treatment — only pull it out when browsing
+    // "ALL" so filtered views (e.g. just INTERVIEW) still show every match
+    // in the regular grid instead of hiding one inside the featured slot.
+    const featuredStory = activeFilter === 'ALL' && filteredStories.length > 0 ? filteredStories[0] : null;
+    const gridStories = featuredStory ? filteredStories.slice(1) : filteredStories;
+
+    // Feed for "The Cinema Stage" — prefer films with an actual trailer clip,
+    // then top up with poster-only titles (ZineTrailerPark's TrailerStage
+    // already renders a graceful placeholder when a trailer is missing).
+    const stageMovies = useMemo(() => {
+        const all = (Object.values(movies || {}) as Movie[]).filter(m => !!m && !m.isUnlisted && !!m.poster);
+        const withTrailer = all.filter(m => !!m.trailer);
+        const withoutTrailer = all.filter(m => !m.trailer);
+        return [...withTrailer, ...withoutTrailer].slice(0, 12);
+    }, [movies]);
 
     const handleNavigate = (id: string | null) => {
         const path = id ? `/zine/${id}` : '/zine';
@@ -125,8 +176,18 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     A curated dispatch on independent cinema, <br className="hidden md:block" />
                                     watch parties, and the distribution afterlife.
                                 </p>
+                                <div className="flex flex-col items-center gap-4 pt-4">
+                                    <span className="text-zinc-700 font-black uppercase text-[9px] tracking-[0.5em]">Set The Mood</span>
+                                    <ZineSentiment />
+                                </div>
                             </div>
                         </div>
+
+                        {featuredStory && (
+                            <div className="max-w-[1600px] mx-auto px-6 md:px-20 pb-24">
+                                <FeaturedZineCard story={featuredStory} onClick={() => handleNavigate(featuredStory.id)} />
+                            </div>
+                        )}
 
                         <div className="sticky top-[72px] z-40 py-8 bg-black/95 backdrop-blur-xl border-y border-zinc-900 flex items-center justify-center gap-6 md:gap-16 overflow-x-auto scrollbar-hide px-6">
                             {filters.map(f => (
@@ -142,23 +203,49 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                         <div className="max-w-[1600px] mx-auto px-6 md:px-20 pt-24 pb-40">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-32">
-                                {filteredStories.length > 0 ? (
-                                    filteredStories.map((story) => (
-                                        <ZineCard 
-                                            key={story.id} 
-                                            story={story} 
-                                            onClick={() => handleNavigate(story.id)} 
+                                {gridStories.length > 0 ? (
+                                    gridStories.map((story) => (
+                                        <ZineCard
+                                            key={story.id}
+                                            story={story}
+                                            onClick={() => handleNavigate(story.id)}
                                         />
                                     ))
-                                ) : (
+                                ) : !featuredStory ? (
                                     <div className="col-span-full py-48 text-center opacity-30">
                                         <p className="text-zinc-600 uppercase font-black tracking-[0.5em] text-xs">No records found.</p>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 
-                        <section className="max-w-6xl mx-auto px-6 mt-60 pb-60">
+                        {/* THE CINEMA STAGE — trailer showcase, independent of zine
+                            articles so this space feels alive even before any
+                            dispatches are published. */}
+                        {stageMovies.length > 0 && (
+                            <section className="max-w-[1600px] mx-auto px-6 md:px-20 pb-60">
+                                <ZineTrailerPark movies={stageMovies} />
+                            </section>
+                        )}
+
+                        {/* GAMES & DIVERSIONS — the interactive mini-games built for
+                            the zine but never actually surfaced anywhere until now. */}
+                        <section className="max-w-6xl mx-auto px-6 pb-60 space-y-12">
+                            <div className="text-center space-y-3">
+                                <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">Interlude</span>
+                                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-white">Games &amp; Diversions</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="bg-[#0f0f0f] p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl">
+                                    <ZineGameEmoji />
+                                </div>
+                                <div className="bg-[#0f0f0f] p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl">
+                                    <ZinePuzzle />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="max-w-6xl mx-auto px-6 pb-60">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
                                 <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>

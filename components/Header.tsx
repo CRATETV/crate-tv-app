@@ -70,7 +70,8 @@ const Header: React.FC<HeaderProps> = ({
     const headerClasses = `fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${isScrolled || isScrolledProp ? 'py-3 bg-black/80 backdrop-blur-2xl border-b border-white/5 shadow-2xl' : 'py-8 bg-transparent'}`;
     
     const navLinks = [
-        { path: '/', label: 'Home' }, 
+        { path: '/', label: 'Home' },
+        { path: '/zine', label: 'Zine' },
         { path: '/public-square', label: 'Public Square' }
     ];
     if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });

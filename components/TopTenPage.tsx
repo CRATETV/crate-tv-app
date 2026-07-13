@@ -10,7 +10,7 @@ import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 import { isMovieReleased } from '../constants';
 
-const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => (
+const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void }> = ({ movie, rank, onSelect }) => (
     <div 
         onClick={() => onSelect(movie)}
         className="group relative flex items-center bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-red-600/30 p-4 md:p-8 rounded-[2.5rem] transition-all duration-500 cursor-pointer overflow-hidden animate-[fadeIn_0.5s_ease-out]"
@@ -36,13 +36,6 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
                 <h3 className="text-2xl md:text-5xl font-black text-white uppercase tracking-tighter italic group-hover:text-red-500 transition-colors truncate leading-none">
                     {movie.title}
                 </h3>
-                {views > 0 && (
-                    <div className="mt-4">
-                        <p className="text-xl md:text-3xl font-black text-red-600 italic tracking-tighter">
-                            {views.toLocaleString()}
-                        </p>
-                    </div>
-                )}
             </div>
 
             <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
@@ -149,11 +142,10 @@ const TopTenPage: React.FC = () => {
 
                     <div className="space-y-6">
                         {sortedMovies.map((movie, index) => (
-                            <RankCard 
-                                key={movie.key} 
-                                movie={movie} 
+                            <RankCard
+                                key={movie.key}
+                                movie={movie}
                                 rank={index + 1}
-                                views={viewCounts?.[movie.key] || 0}
                                 onSelect={handleSelectMovie}
                             />
                         ))}
