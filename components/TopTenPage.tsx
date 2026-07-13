@@ -8,6 +8,7 @@ import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
 import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
+import { isMovieReleased } from '../constants';
 
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => (
     <div 
@@ -54,16 +55,24 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 );
 
 const TopTenPage: React.FC = () => {
-    const { movies, analytics, isLoading } = useFestival();
+    // NOTE: this used to read `analytics?.viewCounts`, but `analytics` in
+    // FestivalContext is declared and exposed yet never actually populated
+    // (no setAnalytics call anywhere) — it's permanently null. That made
+    // every view count here evaluate to 0, so the "ranking" was really just
+    // whatever order Object.values(movies) happened to return, not real
+    // popularity. The in-app Top Ten (App.tsx) correctly uses the live
+    // `viewCounts` map from context — switching to that here so both lists
+    // are computed the same way and actually match.
+    const { movies, viewCounts, isLoading } = useFestival();
     const [isGenerating, setIsGenerating] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
-    
+
     const sortedMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && !m.isUnlisted && !!m.poster)
-            .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
+            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
+            .sort((a, b) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
             .slice(0, 10);
-    }, [movies, analytics]);
+    }, [movies, viewCounts]);
 
     const handleSelectMovie = (movie: Movie) => {
         window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
@@ -143,8 +152,8 @@ const TopTenPage: React.FC = () => {
                             <RankCard 
                                 key={movie.key} 
                                 movie={movie} 
-                                rank={index + 1} 
-                                views={analytics?.viewCounts?.[movie.key] || 0}
+                                rank={index + 1}
+                                views={viewCounts?.[movie.key] || 0}
                                 onSelect={handleSelectMovie}
                             />
                         ))}
