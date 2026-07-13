@@ -32,9 +32,11 @@ import FestivalReportTab from './FestivalReportTab';
 import TicketCodesTab from './TicketCodesTab';
 import MonthlySpotlightTab from './MonthlySpotlightTab';
 import HeroEditor from './HeroEditor';
+import HeroManager from './HeroManager';
 
 const ALL_TABS: Record<string, string> = {
     hero: '🏠 Hero Section',
+    heroSpotlight: '🎬 Hero Spotlight',
     spotlight: '✨ Monthly Spotlight',
     pulse: '⚡ Daily Pulse',
     mail: '✉️ Studio Mail',
@@ -526,6 +528,14 @@ const AdminPage: React.FC = () => {
                             config={heroConfig}
                             isSaving={isSaving}
                             onSave={async (c) => { setHeroConfig(c); await handleSaveData('settings', { heroConfig: c }); }}
+                        />
+                    )}
+                    {activeTab === 'heroSpotlight' && (
+                        <HeroManager
+                            allMovies={Object.values(movies) as Movie[]}
+                            featuredKeys={categories.featured?.movieKeys || []}
+                            isSaving={isSaving}
+                            onSave={(newKeys) => handleSaveData('categories', { featured: { ...(categories.featured || {}), title: categories.featured?.title || 'Featured', movieKeys: newKeys } })}
                         />
                     )}
                     {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
