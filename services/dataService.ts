@@ -7,6 +7,7 @@ interface LiveData {
     festivalConfig: FestivalConfig;
     aboutData: AboutData;
     adConfig?: AdConfig;
+    settings?: Record<string, any>;
 }
 
 interface FetchResult {

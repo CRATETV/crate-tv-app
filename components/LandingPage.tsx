@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
 import MovieCarousel from './MovieCarousel';
-import { Movie, Category } from '../types';
+import { Movie, Category, HeroConfig } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import AuthModal from './AuthModal';
 import CollapsibleFooter from './CollapsibleFooter';
 import SEO from './SEO';
+import { HERO_DEFAULTS } from './HeroEditor';
 
 const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ title, desc, icon }) => (
     <div className="relative p-[1px] bg-gradient-to-br from-red-600 via-purple-600 to-indigo-600 rounded-[2.5rem] shadow-2xl group transition-all duration-700 hover:shadow-[0_20px_80px_rgba(239,68,68,0.2)] hover:-translate-y-2">
@@ -47,6 +48,7 @@ const LandingPage: React.FC = () => {
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+    const [hero, setHero] = useState<Required<HeroConfig>>(HERO_DEFAULTS);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [initialAuthView, setInitialAuthView] = useState<'login' | 'signup'>('login');
     const [email, setEmail] = useState('');
@@ -58,6 +60,8 @@ const LandingPage: React.FC = () => {
                 setMovies(data.movies || {});
                 setCategories(data.categories || {});
                 if ((data as any).viewCounts) setViewCounts((data as any).viewCounts);
+                const heroConfig = (data as any).settings?.heroConfig;
+                if (heroConfig) setHero({ ...HERO_DEFAULTS, ...heroConfig });
             } catch (error) {
                 console.error("Landing Load Fail:", error);
             } finally {
@@ -120,18 +124,18 @@ const LandingPage: React.FC = () => {
 
                     <div className="relative z-20 max-w-5xl px-6 text-center space-y-12 animate-[fadeIn_1s_ease-out]">
                         <div className="space-y-4">
-                            <p className="text-red-500 font-black uppercase tracking-[0.2em] sm:tracking-[0.6em] text-xs md:text-sm">Official Distribution Afterlife</p>
+                            <p className="text-red-500 font-black uppercase tracking-[0.2em] sm:tracking-[0.6em] text-xs md:text-sm">{hero.eyebrow}</p>
                             <h1 className="text-fluid-hero font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-[0_20px_50px_rgba(0,0,0,1)]">
-                                Cinema <br/><span className="text-red-600">Unbound.</span>
+                                {hero.headlineLine1} <br/><span className="text-red-600">{hero.headlineLine2}</span>
                             </h1>
                         </div>
-                        
+
                         <p className="text-2xl md:text-4xl text-gray-200 font-medium max-w-3xl mx-auto leading-tight tracking-tight">
-                            Unlimited independent stories. <br className="hidden md:block"/> Zero subscriptions. Pure cinema.
+                            {hero.subheadline}
                         </p>
 
                         <div className="w-full max-w-2xl mx-auto pt-8">
-                            <p className="text-lg text-gray-400 mb-6">Ready to watch? Enter your email to create your free account.</p>
+                            <p className="text-lg text-gray-400 mb-6">{hero.emailPromptText}</p>
                             <form onSubmit={(e) => { e.preventDefault(); openAuthModal('signup'); }} className="flex flex-col md:flex-row gap-4">
                                 <input
                                     type="email"
@@ -141,11 +145,11 @@ const LandingPage: React.FC = () => {
                                     className="flex-grow p-6 bg-black/80 backdrop-blur-xl border-2 border-white/10 rounded-2xl text-white text-xl focus:border-red-600 outline-none transition-all shadow-2xl"
                                     required
                                 />
-                                <button 
+                                <button
                                     type="submit"
                                     className="bg-red-600 hover:bg-red-700 text-white font-black py-6 px-12 rounded-2xl text-2xl uppercase tracking-tighter transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_60px_rgba(239,68,68,0.4)]"
                                 >
-                                    Get Started
+                                    {hero.ctaButtonText}
                                 </button>
                             </form>
                         </div>

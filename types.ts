@@ -377,6 +377,18 @@ export interface AdConfig {
     [key: string]: any;
 }
 
+// Editable copy for the landing page hero — lets an admin change the
+// headline/subheadline/CTA without a code deploy. All fields optional so
+// LandingPage can fall back to its hardcoded defaults if nothing's been set.
+export interface HeroConfig {
+  eyebrow?: string;
+  headlineLine1?: string;
+  headlineLine2?: string;
+  subheadline?: string;
+  emailPromptText?: string;
+  ctaButtonText?: string;
+}
+
 export interface ZineSection {
   id: string;
   type: 'text' | 'header' | 'quote' | 'image' | 'video';

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from '../types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData, HeroConfig } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import MovieEditor from './MovieEditor';
 import CategoryEditor from './CategoryEditor';
@@ -31,8 +31,10 @@ import FilmmakerOutreachTab from './FilmmakerOutreachTab';
 import FestivalReportTab from './FestivalReportTab';
 import TicketCodesTab from './TicketCodesTab';
 import MonthlySpotlightTab from './MonthlySpotlightTab';
+import HeroEditor from './HeroEditor';
 
 const ALL_TABS: Record<string, string> = {
+    hero: '🏠 Hero Section',
     spotlight: '✨ Monthly Spotlight',
     pulse: '⚡ Daily Pulse',
     mail: '✉️ Studio Mail',
@@ -83,6 +85,7 @@ const AdminPage: React.FC = () => {
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig | null>(null);
+    const [heroConfig, setHeroConfig] = useState<HeroConfig>({});
     const [pwffVisible, setPwffVisible] = useState(false);
     const [pwffDate, setPwffDate] = useState('');
     const [pwffName, setPwffName] = useState('');
@@ -188,6 +191,7 @@ const AdminPage: React.FC = () => {
                 setFestivalData(data.festivalData || []);
                 setFestivalConfig(data.festivalConfig || null);
                 if (data.settings?.crateFestConfig) setCrateFestConfig(data.settings.crateFestConfig);
+                if (data.settings?.heroConfig) setHeroConfig(data.settings.heroConfig);
                 if (data.settings?.pwffProgramVisible !== undefined) setPwffVisible(!!data.settings.pwffProgramVisible);
                 if (data.settings?.pwffFestivalDate) setPwffDate(data.settings.pwffFestivalDate);
                 if (data.settings?.pwffFestivalName) setPwffName(data.settings.pwffFestivalName);
@@ -448,7 +452,7 @@ const AdminPage: React.FC = () => {
                     {/* ── DAILY USE ── */}
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1">Daily</p>
                     <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                    {[['pulse','⚡ Dashboard'],['movies','🎞️ Catalog'],['watchParty','🍿 Watch Party'],['pwff','🎬 PWFF Festival'],['intel','🧠 Users']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                    {[['pulse','⚡ Dashboard'],['hero','🏠 Hero Section'],['movies','🎞️ Catalog'],['watchParty','🍿 Watch Party'],['pwff','🎬 PWFF Festival'],['intel','🧠 Users']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                         <button
                             key={tabId}
                             onClick={() => navigateTo(tabId as string)}
@@ -517,6 +521,13 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {/* Content-level guard — never renders a tab the current role isn't permitted to see */}
                     {allowedTabs.includes(activeTab) && (<>
+                    {activeTab === 'hero' && (
+                        <HeroEditor
+                            config={heroConfig}
+                            isSaving={isSaving}
+                            onSave={async (c) => { setHeroConfig(c); await handleSaveData('settings', { heroConfig: c }); }}
+                        />
+                    )}
                     {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
                     {activeTab === 'pulse' && (
                         <div>
