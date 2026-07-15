@@ -201,7 +201,7 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
             onClick={onClose}
         >
             <div
-                className="w-full max-w-md bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+                className="w-full max-w-md bg-[#111] border border-white/10 rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header — festival context */}

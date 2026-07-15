@@ -142,7 +142,7 @@ const FestivalReportTab: React.FC = () => {
                 <div className="px-6 py-4 border-b border-white/5">
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Revenue Split — 70/30 Agreement</p>
                 </div>
-                <div className="grid grid-cols-3 divide-x divide-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-white/5">
                     <div className="px-6 py-6 text-center">
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2">Gross Revenue</p>
                         <p className="text-3xl font-black text-white">${totalRevenue.toFixed(2)}</p>

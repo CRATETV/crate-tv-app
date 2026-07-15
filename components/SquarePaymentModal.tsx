@@ -275,8 +275,16 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         // belt-and-suspenders half — checkout should never end up hidden
         // behind another screen even if something else is left mounted.
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[600] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
-            <div className="bg-[#111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative" onClick={e => e.stopPropagation()}>
-                <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+            {/* max-h-[90vh] + overflow-y-auto — every other modal in this app
+                (AuthModal, FinancialOnboardingModal, etc.) scrolls internally
+                when its content is taller than the viewport. This one didn't,
+                so on short viewports (small phones, landscape, or a phone
+                keyboard shrinking the visible area while the card field is
+                focused) the centered-but-unscrollable panel got clipped by
+                the parent's overflow-hidden — the header and/or the submit
+                button rendered off-screen instead of being reachable. */}
+            <div className="bg-[#111] border border-white/10 rounded-[1.75rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+                <div className="p-6 sm:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                     <div>
                         <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Secure Checkout</h2>
                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">Verified Node Terminal</p>
@@ -288,7 +296,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                     )}
                 </div>
 
-                <div className="p-8 space-y-8">
+                <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
                     {paymentSuccess ? (
                         <div className="space-y-8 py-6">
                             <div className="flex justify-center">
@@ -304,12 +312,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                         </div>
                     ) : (
                         <form onSubmit={handlePayment} className="space-y-8">
-                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex justify-between items-center shadow-inner">
+                            <div className="bg-white/5 p-5 sm:p-6 rounded-3xl border border-white/10 flex justify-between items-center gap-4 shadow-inner">
                                 <div className="min-w-0">
                                     <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Target Resource</p>
                                     <h4 className="text-xl font-black text-white uppercase tracking-tight truncate">{itemTitle}</h4>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right shrink-0">
                                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Amount</p>
                                     <p className={`text-2xl font-black ${isFree ? 'text-green-500' : 'text-white'}`}>
                                         {isFree ? 'FREE' : `$${displayAmount.toFixed(2)}`}
@@ -321,12 +329,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Manual Amount Allocation</label>
                                     <div className="relative">
-                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-700">$</span>
-                                        <input 
-                                            type="number" 
-                                            value={customAmount} 
-                                            onChange={e => setCustomAmount(e.target.value)} 
-                                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-6 pl-12 text-3xl font-black text-white focus:border-red-600 transition-all outline-none"
+                                        <span className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-black text-gray-700">$</span>
+                                        <input
+                                            type="number"
+                                            value={customAmount}
+                                            onChange={e => setCustomAmount(e.target.value)}
+                                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-5 sm:p-6 pl-11 sm:pl-12 text-2xl sm:text-3xl font-black text-white focus:border-red-600 transition-all outline-none"
                                             step="0.50"
                                             min="1.00"
                                         />
@@ -337,8 +345,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                             {!isFree && (
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
-                                    <div className="bg-black/40 border-2 border-white/10 rounded-2xl p-6 focus-within:border-red-600 transition-all">
-                                        <div id="card-container"></div>
+                                    {/* p-4 on mobile, p-6 from sm: up — narrow phones (~320-375px) were
+                                        losing that padding twice over (outer modal padding + this
+                                        wrapper's), squeezing Square's card iframe enough that its
+                                        number/expiry/CVV row could crowd or clip at the edge. */}
+                                    <div className="bg-black/40 border-2 border-white/10 rounded-2xl p-4 sm:p-6 focus-within:border-red-600 transition-all overflow-x-auto">
+                                        <div id="card-container" className="min-w-[220px]"></div>
                                     </div>
                                 </div>
                             )}
@@ -401,7 +413,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                     )}
                 </div>
 
-                <div className="p-6 bg-black/40 border-t border-white/5 text-center">
+                <div className="p-5 sm:p-6 bg-black/40 border-t border-white/5 text-center">
                     <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.3em]">AES-256 Cloud Encryption // PII_PROTECTED // NO_STORAGE</p>
                 </div>
             </div>
