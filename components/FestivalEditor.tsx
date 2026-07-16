@@ -168,17 +168,29 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
 
   const addBlock = (dayIndex: number) => {
     setIsDirty(true);
+    const newData = [...data];
+    // A legacy/malformed day doc without a blocks array at all used to crash
+    // here outright — this guarantees one exists before pushing onto it.
+    if (!newData[dayIndex].blocks) newData[dayIndex].blocks = [];
+    // `Date.now()` alone collides if two blocks get created within the same
+    // millisecond (e.g. a double-click, or two admins saving close together) —
+    // every downstream lookup (lobby routing, party status, ticket unlocks)
+    // keys off this id, so a collision makes two unrelated blocks behave as
+    // one: whichever block a lookup finds first "wins" and the other block's
+    // lobby/ticket/party silently resolves to it instead. Appending a random
+    // suffix makes a collision astronomically unlikely regardless of timing.
+    const existingIds = new Set(newData.flatMap(d => (d.blocks || []).map(b => b.id)));
+    let id = `block_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    while (existingIds.has(id)) {
+      id = `block_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
     const newBlock: FilmBlock = {
-      id: `block_${Date.now()}`,
+      id,
       title: 'New Official Block',
       time: '7:00 PM',
       movieKeys: [],
       price: 10.00
     };
-    const newData = [...data];
-    // A legacy/malformed day doc without a blocks array at all used to crash
-    // here outright — this guarantees one exists before pushing onto it.
-    if (!newData[dayIndex].blocks) newData[dayIndex].blocks = [];
     newData[dayIndex].blocks.push(newBlock);
     onDataChange(newData);
   };
@@ -189,6 +201,23 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
      if (!newData[dayIndex].blocks) newData[dayIndex].blocks = [];
      newData[dayIndex].blocks.splice(blockIndex, 1);
      onDataChange(newData);
+  };
+
+  // Moves a block to a different day without touching any of its data (id,
+  // title, price, screening time, selected films) — previously the only way
+  // to fix a block added under the wrong day was delete-and-recreate, which
+  // silently threw away the film selections and forced re-entering everything.
+  const moveBlockToDay = (fromDayIndex: number, blockIndex: number, toDayIndex: number) => {
+    if (fromDayIndex === toDayIndex) return;
+    setIsDirty(true);
+    const newData = [...data];
+    const fromBlocks = [...(newData[fromDayIndex].blocks || [])];
+    const [block] = fromBlocks.splice(blockIndex, 1);
+    if (!block) return;
+    newData[fromDayIndex] = { ...newData[fromDayIndex], blocks: fromBlocks };
+    const toBlocks = [...(newData[toDayIndex].blocks || []), block];
+    newData[toDayIndex] = { ...newData[toDayIndex], blocks: toBlocks };
+    onDataChange(newData);
   };
 
   return (
@@ -355,6 +384,18 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         </div>
                    </div>
                    <div className="flex items-center gap-6 flex-shrink-0">
+                     {data.length > 1 && (
+                        <div className="space-y-1">
+                            <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase block">Move to Day</label>
+                            <select
+                                value={dayIndex}
+                                onChange={e => moveBlockToDay(dayIndex, blockIndex, parseInt(e.target.value, 10))}
+                                className="bg-black/40 text-white text-xs font-bold outline-none border border-white/10 rounded-lg px-3 py-2 focus:border-red-500"
+                            >
+                                {data.map((d, i) => <option key={i} value={i}>Day 0{d.day}</option>)}
+                            </select>
+                        </div>
+                     )}
                      <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="bg-white text-black font-black px-8 py-4 rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all shadow-xl active:scale-95">Program Selections ({block.movieKeys.length})</button>
                      <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-gray-800 hover:text-red-500 transition-colors p-3">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
