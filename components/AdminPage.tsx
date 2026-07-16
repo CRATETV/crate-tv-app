@@ -454,7 +454,7 @@ const AdminPage: React.FC = () => {
                     {/* ── DAILY USE ── */}
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1">Daily</p>
                     <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                    {[['pulse','⚡ Dashboard'],['hero','🏠 Hero Section'],['movies','🎞️ Catalog'],['watchParty','🍿 Watch Party'],['pwff','🎬 PWFF Festival'],['intel','🧠 Users']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                    {[['pulse','⚡ Dashboard'],['hero','🏠 Hero Section'],['heroSpotlight','🎬 Hero Spotlight'],['movies','🎞️ Catalog'],['watchParty','🍿 Watch Party'],['pwff','🎬 PWFF Festival'],['intel','🧠 Users']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                         <button
                             key={tabId}
                             onClick={() => navigateTo(tabId as string)}
