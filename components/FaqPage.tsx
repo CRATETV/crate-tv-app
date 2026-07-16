@@ -27,7 +27,7 @@ const faqs = [
     },
     {
         q: "How does Crate TV support filmmakers?",
-        a: "Every film on Crate has a director's profile page. Filmmakers get real analytics — how many people watched, where they're from, how long they stayed. Watch parties put filmmakers in direct conversation with their audience. The Crate Zine features filmmaker interviews and behind-the-scenes stories. And our festival partnership gives filmmakers a virtual distribution window alongside physical screenings."
+        a: "Every film on Crate has a director's profile page. Filmmakers get real analytics — how many people watched, where they're from, how long they stayed. Watch parties put filmmakers in direct conversation with their audience. The Unpack features filmmaker interviews and behind-the-scenes stories. And our festival partnership gives filmmakers a virtual distribution window alongside physical screenings."
     },
     {
         q: "Who is behind Crate TV?",

@@ -71,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({
     
     const navLinks = [
         { path: '/', label: 'Home' },
-        { path: '/zine', label: 'Zine' },
+        { path: '/zine', label: 'The Unpack' },
         { path: '/public-square', label: 'Public Square' }
     ];
     if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });

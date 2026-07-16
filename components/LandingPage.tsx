@@ -200,7 +200,7 @@ const LandingPage: React.FC = () => {
                             icon="🛰️"
                         />
                         <ReasonCard 
-                            title="Crate Zine" 
+                            title="The Unpack"
                             desc="Access deep-dive interviews and curatorial dispatches from the cinematic underground."
                             icon="🍿"
                         />
@@ -218,7 +218,7 @@ const LandingPage: React.FC = () => {
                             />
                             <FaqItem 
                                 question="How much does it cost?" 
-                                answer={<p>Browsing the catalog and reading the Zine is completely free. Most films are free to stream, while certain "Live Premieres" or premium rentals require a small one-time fee. You only pay for what you watch—no monthly subscriptions.</p>}
+                                answer={<p>Browsing the catalog and reading The Unpack is completely free. Most films are free to stream, while certain "Live Premieres" or premium rentals require a small one-time fee. You only pay for what you watch—no monthly subscriptions.</p>}
                             />
                             <FaqItem 
                                 question="Where can I watch?" 

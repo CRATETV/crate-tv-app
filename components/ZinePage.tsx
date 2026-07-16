@@ -11,39 +11,66 @@ import { useFestival } from '../contexts/FestivalContext';
 import ZineTrailerPark from './ZineTrailerPark';
 import ZineGameEmoji from './ZineGameEmoji';
 import ZinePuzzle from './ZinePuzzle';
-import ZineSentiment from './ZineSentiment';
+import UnpackCountdown from './UnpackCountdown';
 
 const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
-    <div 
+    <div
         onClick={onClick}
-        className="group cursor-pointer flex flex-col gap-6 transition-all duration-500"
+        className="group cursor-pointer flex flex-col gap-5 transition-all duration-500"
     >
         <div className="relative overflow-hidden aspect-[4/3] bg-zinc-900">
-            <img 
-                src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
-                alt="" 
+            <img
+                src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`}
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                alt=""
                 crossOrigin="anonymous"
             />
         </div>
-        <div className="space-y-3">
-            <div className="flex items-center gap-2">
-                <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.2em]">
-                    {story.type || 'DISPATCH'}
-                </span>
-            </div>
-            <h3 className="font-serif text-2xl md:text-3xl text-white leading-tight group-hover:text-red-500 transition-colors">
+        <div className="space-y-2">
+            <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.2em]">
+                {story.type || 'DISPATCH'}
+            </span>
+            <h3 className="font-black uppercase text-xl md:text-2xl text-white leading-[0.95] tracking-tight group-hover:text-red-500 transition-colors">
                 {story.title}
             </h3>
-            <p className="text-zinc-500 text-sm font-medium line-clamp-2 leading-relaxed font-sans">
+            <p className="text-zinc-500 text-sm font-medium line-clamp-2 leading-relaxed">
                 {story.subtitle}
             </p>
-            <div className="pt-4 flex items-center gap-3">
-                <div className="w-6 h-px bg-red-600/50"></div>
-                <span className="text-white font-black uppercase text-[10px] tracking-[0.2em] italic">
-                    By {story.author}
-                </span>
-            </div>
+            <span className="block pt-1 text-zinc-600 font-bold uppercase text-[10px] tracking-[0.15em]">
+                By {story.author}
+            </span>
+        </div>
+    </div>
+);
+
+const SPOTLIGHT_COLORS = ['bg-indigo-600', 'bg-emerald-600', 'bg-red-600'];
+
+const ZineSpotlightCard: React.FC<{ story: EditorialStory; onClick: () => void; color: string }> = ({ story, onClick, color }) => (
+    <div
+        onClick={onClick}
+        className={`group cursor-pointer col-span-full grid grid-cols-1 md:grid-cols-2 rounded-[2.5rem] overflow-hidden ${color}`}
+    >
+        <div className="relative aspect-[16/10] md:aspect-auto overflow-hidden">
+            <img
+                src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`}
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                alt=""
+                crossOrigin="anonymous"
+            />
+        </div>
+        <div className="p-10 md:p-14 flex flex-col justify-center gap-4">
+            <span className="text-white/70 font-black uppercase text-[9px] tracking-[0.3em]">
+                {story.type || 'DISPATCH'}
+            </span>
+            <h3 className="font-black uppercase text-3xl md:text-4xl text-white leading-[0.95] tracking-tight">
+                {story.title}
+            </h3>
+            <p className="text-white/80 text-sm md:text-base font-medium leading-relaxed line-clamp-3">
+                {story.subtitle}
+            </p>
+            <span className="pt-2 text-white/70 font-bold uppercase text-[10px] tracking-[0.15em]">
+                By {story.author}
+            </span>
         </div>
     </div>
 );
@@ -65,16 +92,13 @@ const FeaturedZineCard: React.FC<{ story: EditorialStory; onClick: () => void }>
                 <span className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.3em] px-3 py-1.5 rounded-full">Latest Dispatch</span>
                 <span className="text-white/60 font-black uppercase text-[9px] tracking-[0.3em]">{story.type}</span>
             </div>
-            <h2 className="text-fluid-title-lg font-serif font-medium tracking-tighter text-white leading-[0.95] drop-shadow-2xl">
+            <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter text-white leading-[0.9] drop-shadow-2xl">
                 {story.title}
             </h2>
-            <p className="text-zinc-300 text-lg md:text-2xl font-serif italic max-w-2xl leading-snug hidden md:block">
+            <p className="text-zinc-300 text-lg md:text-2xl max-w-2xl leading-snug hidden md:block">
                 {story.subtitle}
             </p>
-            <div className="flex items-center gap-3 pt-2">
-                <div className="w-6 h-px bg-red-600/70"></div>
-                <span className="text-white font-black uppercase text-[10px] tracking-[0.2em] italic">By {story.author}</span>
-            </div>
+            <span className="block pt-2 text-zinc-400 font-bold uppercase text-[10px] tracking-[0.2em]">By {story.author}</span>
         </div>
     </div>
 );
@@ -86,6 +110,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const [email, setEmail] = useState('');
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
+    const newsletterRef = useRef<HTMLElement>(null);
 
     const filters = ['ALL', 'SPOTLIGHT', 'NEWS', 'INTERVIEW', 'DEEP_DIVE'];
 
@@ -119,11 +144,31 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         return [...withTrailer, ...withoutTrailer].slice(0, 12);
     }, [movies]);
 
+    // Countdown hero — the nearest upcoming release with a future releaseDateTime.
+    // Feeds the same field the watch-party countdown already reads, so no new
+    // admin field is needed to light this block up.
+    const nextPremiere = useMemo(() => {
+        const now = Date.now();
+        const upcoming = (Object.values(movies || {}) as Movie[])
+            .filter(m => !!m && !m.isUnlisted && !!m.poster && !!m.releaseDateTime && new Date(m.releaseDateTime).getTime() > now)
+            .sort((a, b) => new Date(a.releaseDateTime!).getTime() - new Date(b.releaseDateTime!).getTime());
+        return upcoming[0] || null;
+    }, [movies]);
+
     const handleNavigate = (id: string | null) => {
         const path = id ? `/zine/${id}` : '/zine';
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
         window.scrollTo(0, 0);
+    };
+
+    const handleExploreMovie = (movie: Movie) => {
+        window.history.pushState({}, '', `/movie/${movie.key}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleRemindMe = () => {
+        newsletterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const handleSubscribe = async (e: React.FormEvent) => {
@@ -149,7 +194,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     return (
         <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600 relative overflow-x-hidden">
             <SEO 
-                title={activeStory ? activeStory.title : "Crate Zine"} 
+                title={activeStory ? activeStory.title : "The Unpack"}
                 description={activeStory ? activeStory.subtitle : "Stay up to date with all that's happening at crate: watch parties, film festivals new releases."} 
                 image={activeStory?.heroImage}
                 type={activeStory ? "article" : "website"}
@@ -169,19 +214,25 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 <div className="space-y-4">
                                     <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">The Editorial Hub</span>
                                     <h1 className="text-fluid-zine font-serif font-medium tracking-tighter text-white leading-[0.85]">
-                                        Crate <span className="italic">Zine.</span>
+                                        The <span className="italic">Unpack.</span>
                                     </h1>
                                 </div>
                                 <p className="text-xl md:text-3xl text-zinc-500 font-medium max-w-3xl leading-snug font-serif italic">
                                     A curated dispatch on independent cinema, <br className="hidden md:block" />
                                     watch parties, and the distribution afterlife.
                                 </p>
-                                <div className="flex flex-col items-center gap-4 pt-4">
-                                    <span className="text-zinc-700 font-black uppercase text-[9px] tracking-[0.5em]">Set The Mood</span>
-                                    <ZineSentiment />
-                                </div>
                             </div>
                         </div>
+
+                        {nextPremiere && (
+                            <div className="max-w-[1600px] mx-auto px-6 md:px-20 pb-24">
+                                <UnpackCountdown
+                                    movie={nextPremiere}
+                                    onExplore={() => handleExploreMovie(nextPremiere)}
+                                    onRemindMe={handleRemindMe}
+                                />
+                            </div>
+                        )}
 
                         {featuredStory && (
                             <div className="max-w-[1600px] mx-auto px-6 md:px-20 pb-24">
@@ -204,13 +255,30 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         <div className="max-w-[1600px] mx-auto px-6 md:px-20 pt-24 pb-40">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-32">
                                 {gridStories.length > 0 ? (
-                                    gridStories.map((story) => (
-                                        <ZineCard
-                                            key={story.id}
-                                            story={story}
-                                            onClick={() => handleNavigate(story.id)}
-                                        />
-                                    ))
+                                    gridStories.map((story, index) => {
+                                        // Every 4th card breaks out into a full-bleed colored
+                                        // spotlight block, cycling accent colors, so the grid
+                                        // doesn't read as one long uniform scroll.
+                                        const isSpotlight = (index + 1) % 4 === 0;
+                                        if (isSpotlight) {
+                                            const color = SPOTLIGHT_COLORS[Math.floor(index / 4) % SPOTLIGHT_COLORS.length];
+                                            return (
+                                                <ZineSpotlightCard
+                                                    key={story.id}
+                                                    story={story}
+                                                    color={color}
+                                                    onClick={() => handleNavigate(story.id)}
+                                                />
+                                            );
+                                        }
+                                        return (
+                                            <ZineCard
+                                                key={story.id}
+                                                story={story}
+                                                onClick={() => handleNavigate(story.id)}
+                                            />
+                                        );
+                                    })
                                 ) : !featuredStory ? (
                                     <div className="col-span-full py-48 text-center opacity-30">
                                         <p className="text-zinc-600 uppercase font-black tracking-[0.5em] text-xs">No records found.</p>
@@ -245,7 +313,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </section>
 
-                        <section className="max-w-6xl mx-auto px-6 pb-60">
+                        <section ref={newsletterRef} className="max-w-6xl mx-auto px-6 pb-60">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
                                 <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>

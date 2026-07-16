@@ -24,7 +24,7 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
             <h3 className="font-bold text-white mb-4">Company</h3>
             <ul className="space-y-2">
               <li><a href="/faq" onClick={(e) => handleNavigate(e, '/faq')} className="hover:text-white transition">About / FAQ</a></li>
-              <li><a href="/zine" onClick={(e) => handleNavigate(e, '/zine')} className="hover:text-white transition">Crate Zine</a></li>
+              <li><a href="/zine" onClick={(e) => handleNavigate(e, '/zine')} className="hover:text-white transition">The Unpack</a></li>
               <li><a href="/about" onClick={(e) => handleNavigate(e, '/about')} className="hover:text-white transition">About Us</a></li>
               <li><a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact</a></li>
               <li><a href="https://www.instagram.com/cratetv_net/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Instagram</a></li>
