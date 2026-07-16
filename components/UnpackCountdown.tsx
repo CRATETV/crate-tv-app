@@ -56,7 +56,7 @@ const UnpackCountdown: React.FC<UnpackCountdownProps> = ({ movie, onExplore, onR
     ];
 
     return (
-        <div className="group relative overflow-hidden rounded-[3rem] border border-white/10 shadow-[0_40px_120px_rgba(0,0,0,0.6)] min-h-[440px] md:min-h-[560px] flex items-end">
+        <div className="group relative overflow-hidden rounded-[3rem] shadow-xl min-h-[420px] md:min-h-[520px] flex items-end">
             <img
                 src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1400ms] group-hover:scale-105"
@@ -68,7 +68,7 @@ const UnpackCountdown: React.FC<UnpackCountdownProps> = ({ movie, onExplore, onR
                 <span className="inline-block bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.3em] px-3 py-1.5 rounded-full">
                     Coming Soon
                 </span>
-                <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic text-white leading-[0.9] drop-shadow-2xl">
+                <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-white leading-[0.9] drop-shadow-2xl">
                     {movie.title}
                 </h2>
                 <div className="flex gap-3 md:gap-4">

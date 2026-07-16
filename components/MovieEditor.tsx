@@ -368,7 +368,23 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film/Series Title" className="form-input bg-black/40" />
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
                                     <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
-                                    
+
+                                    <div className="space-y-2">
+                                        <label className="form-label">Release Date &amp; Time</label>
+                                        <input
+                                            type="datetime-local"
+                                            name="releaseDateTime"
+                                            value={formData.releaseDateTime ? (() => {
+                                                const d = new Date(formData.releaseDateTime);
+                                                const offset = d.getTimezoneOffset() * 60000;
+                                                return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                                            })() : ''}
+                                            onChange={handleChange}
+                                            className="form-input bg-black/40"
+                                        />
+                                        <p className="text-[9px] text-gray-600 uppercase font-bold">Set a future date to power the "Coming Soon" badge and light up the countdown on The Unpack. Leave blank for films that are already out.</p>
+                                    </div>
+
                                     <div className="space-y-2">
                                         <label className="form-label">Editorial / Zine URL</label>
                                         <input 

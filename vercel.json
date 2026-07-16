@@ -27,6 +27,10 @@
       "destination": "/api/apple-developer-merchantid-domain-association"
     },
     {
+      "source": "/zine/:id",
+      "destination": "/api/zine-preview?id=:id"
+    },
+    {
       "source": "/((?!api/|.*\\..*).*)",
       "destination": "/index.html"
     }

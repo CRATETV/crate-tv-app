@@ -53,43 +53,29 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
                 </div>
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
-            
-            <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row justify-between items-end gap-6 z-20">
-                <div className="space-y-2 max-w-2xl pointer-events-none">
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className="text-red-500 font-black uppercase tracking-[0.4em] text-[9px] block">DISPATCH_TEASER_FEED</span>
-                        <span className="bg-white/10 text-[7px] font-black text-gray-400 px-2 py-0.5 rounded border border-white/5 uppercase">Preview Mode</span>
-                    </div>
-                    <h4 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl break-words">{movie.title}</h4>
-                    <p className="text-gray-300 text-sm md:text-lg font-medium italic line-clamp-2 drop-shadow-lg">"{(movie.synopsis || '').replace(/<[^>]+>/g, '')}"</p>
-                </div>
-                <div className="flex gap-4 pointer-events-auto">
-                    {hasTrailer && isPlaying && (
-                        <button
-                            onClick={() => setIsMuted(!isMuted)}
-                            className="bg-black/60 backdrop-blur-md p-4 rounded-full border border-white/20 hover:bg-white/10 transition-all"
-                        >
-                            {isMuted ? (
-                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                            ) : (
-                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.982 5.982 0 0115 10a5.982 5.982 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.987 3.987 0 0013 10a3.987 3.987 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
-                            )}
-                        </button>
-                    )}
-                    <button 
-                        onClick={() => { window.history.pushState({}, '', `/movie/${movie.key}?play=true`); window.dispatchEvent(new Event('pushstate')); }}
-                        className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
+            {/* Controls only — no title/synopsis text over the frame, so the
+                trailer's own opening card (often full of on-screen text
+                itself) never has to compete with our UI for the same space. */}
+            <div className="absolute bottom-6 right-6 flex items-center gap-3 z-20">
+                {hasTrailer && isPlaying && (
+                    <button
+                        onClick={() => setIsMuted(!isMuted)}
+                        className="bg-black/60 backdrop-blur-md p-3 rounded-full border border-white/20 hover:bg-white/10 transition-all"
+                        aria-label={isMuted ? 'Unmute trailer' : 'Mute trailer'}
                     >
-                        Watch Full Film ⚡
+                        {isMuted ? (
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                        ) : (
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.982 5.982 0 0115 10a5.982 5.982 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.987 3.987 0 0013 10a3.987 3.987 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
+                        )}
                     </button>
-                </div>
-            </div>
-            
-            <div className="absolute top-8 left-8 pointer-events-none">
-                <div className="bg-red-600/20 backdrop-blur-md px-3 py-1 rounded border border-red-500/30">
-                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest animate-pulse">Teaser Core Sync</p>
-                </div>
+                )}
+                <button
+                    onClick={() => { window.history.pushState({}, '', `/movie/${movie.key}?play=true`); window.dispatchEvent(new Event('pushstate')); }}
+                    className="bg-white text-black font-black px-6 py-3 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    Watch Full Film ⚡
+                </button>
             </div>
         </div>
     );

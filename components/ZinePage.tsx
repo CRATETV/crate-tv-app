@@ -9,8 +9,6 @@ import SEO from './SEO';
 import { EditorialStory, ZineSection, Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import ZineTrailerPark from './ZineTrailerPark';
-import ZineGameEmoji from './ZineGameEmoji';
-import ZinePuzzle from './ZinePuzzle';
 import UnpackCountdown from './UnpackCountdown';
 
 const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
@@ -18,7 +16,7 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
         onClick={onClick}
         className="group cursor-pointer flex flex-col gap-5 transition-all duration-500"
     >
-        <div className="relative overflow-hidden aspect-[4/3] bg-zinc-900">
+        <div className="relative overflow-hidden aspect-[4/3] bg-zinc-100">
             <img
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`}
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
@@ -30,20 +28,22 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
             <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.2em]">
                 {story.type || 'DISPATCH'}
             </span>
-            <h3 className="font-black uppercase text-xl md:text-2xl text-white leading-[0.95] tracking-tight group-hover:text-red-500 transition-colors">
+            <h3 className="font-black uppercase text-xl md:text-2xl text-zinc-900 leading-[0.95] tracking-tight group-hover:text-red-600 transition-colors">
                 {story.title}
             </h3>
             <p className="text-zinc-500 text-sm font-medium line-clamp-2 leading-relaxed">
                 {story.subtitle}
             </p>
-            <span className="block pt-1 text-zinc-600 font-bold uppercase text-[10px] tracking-[0.15em]">
+            <span className="block pt-1 text-zinc-400 font-bold uppercase text-[10px] tracking-[0.15em]">
                 By {story.author}
             </span>
         </div>
     </div>
 );
 
-const SPOTLIGHT_COLORS = ['bg-indigo-600', 'bg-emerald-600', 'bg-red-600'];
+// Pastel accent cycle for the spotlight breaks — bright, light, and airy
+// instead of saturated/dark, so the page reads fresh rather than cinematic.
+const SPOTLIGHT_COLORS = ['bg-indigo-200', 'bg-emerald-200', 'bg-amber-200', 'bg-rose-200'];
 
 const ZineSpotlightCard: React.FC<{ story: EditorialStory; onClick: () => void; color: string }> = ({ story, onClick, color }) => (
     <div
@@ -59,16 +59,16 @@ const ZineSpotlightCard: React.FC<{ story: EditorialStory; onClick: () => void; 
             />
         </div>
         <div className="p-10 md:p-14 flex flex-col justify-center gap-4">
-            <span className="text-white/70 font-black uppercase text-[9px] tracking-[0.3em]">
+            <span className="text-zinc-700 font-black uppercase text-[9px] tracking-[0.3em]">
                 {story.type || 'DISPATCH'}
             </span>
-            <h3 className="font-black uppercase text-3xl md:text-4xl text-white leading-[0.95] tracking-tight">
+            <h3 className="font-black uppercase text-3xl md:text-4xl text-zinc-900 leading-[0.95] tracking-tight">
                 {story.title}
             </h3>
-            <p className="text-white/80 text-sm md:text-base font-medium leading-relaxed line-clamp-3">
+            <p className="text-zinc-700 text-sm md:text-base font-medium leading-relaxed line-clamp-3">
                 {story.subtitle}
             </p>
-            <span className="pt-2 text-white/70 font-bold uppercase text-[10px] tracking-[0.15em]">
+            <span className="pt-2 text-zinc-600 font-bold uppercase text-[10px] tracking-[0.15em]">
                 By {story.author}
             </span>
         </div>
@@ -78,7 +78,7 @@ const ZineSpotlightCard: React.FC<{ story: EditorialStory; onClick: () => void; 
 const FeaturedZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div
         onClick={onClick}
-        className="group cursor-pointer relative rounded-[3rem] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.6)] border border-white/10 min-h-[480px] md:min-h-[620px] flex items-end"
+        className="group cursor-pointer relative rounded-[3rem] overflow-hidden shadow-xl min-h-[420px] md:min-h-[560px] flex items-end"
     >
         <img
             src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`}
@@ -86,19 +86,19 @@ const FeaturedZineCard: React.FC<{ story: EditorialStory; onClick: () => void }>
             alt=""
             crossOrigin="anonymous"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
         <div className="relative z-10 p-8 md:p-16 space-y-6 max-w-4xl">
             <div className="flex items-center gap-3">
                 <span className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.3em] px-3 py-1.5 rounded-full">Latest Dispatch</span>
-                <span className="text-white/60 font-black uppercase text-[9px] tracking-[0.3em]">{story.type}</span>
+                <span className="text-white/70 font-black uppercase text-[9px] tracking-[0.3em]">{story.type}</span>
             </div>
-            <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter text-white leading-[0.9] drop-shadow-2xl">
+            <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter text-white leading-[0.9]">
                 {story.title}
             </h2>
-            <p className="text-zinc-300 text-lg md:text-2xl max-w-2xl leading-snug hidden md:block">
+            <p className="text-zinc-200 text-lg md:text-2xl max-w-2xl leading-snug hidden md:block">
                 {story.subtitle}
             </p>
-            <span className="block pt-2 text-zinc-400 font-bold uppercase text-[10px] tracking-[0.2em]">By {story.author}</span>
+            <span className="block pt-2 text-zinc-300 font-bold uppercase text-[10px] tracking-[0.2em]">By {story.author}</span>
         </div>
     </div>
 );
@@ -106,7 +106,7 @@ const FeaturedZineCard: React.FC<{ story: EditorialStory; onClick: () => void }>
 const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const { zineStories: stories, movies, isLoading } = useFestival();
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
-    const [activeFilter, setActiveFilter] = useState('ALL'); 
+    const [activeFilter, setActiveFilter] = useState('ALL');
     const [email, setEmail] = useState('');
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
@@ -192,34 +192,29 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600 relative overflow-x-hidden">
-            <SEO 
+        <div className="flex flex-col min-h-screen text-zinc-900 bg-white selection:bg-red-600 selection:text-white relative overflow-x-hidden">
+            <SEO
                 title={activeStory ? activeStory.title : "The Unpack"}
-                description={activeStory ? activeStory.subtitle : "Stay up to date with all that's happening at crate: watch parties, film festivals new releases."} 
+                description={activeStory ? activeStory.subtitle : "Stay up to date with all that's happening at crate: watch parties, film festivals new releases."}
                 image={activeStory?.heroImage}
                 type={activeStory ? "article" : "website"}
             />
-
-            <div className="fixed top-[-10%] right-[-10%] w-[70%] h-[70%] bg-red-600/10 blur-[180px] rounded-full pointer-events-none z-0 animate-pulse"></div>
-            <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[180px] rounded-full pointer-events-none z-0"></div>
-            <div className="fixed top-[20%] left-[-5%] w-[40%] h-[40%] bg-emerald-600/5 blur-[150px] rounded-full pointer-events-none z-0"></div>
 
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        <div className="relative pt-48 pb-24 px-6 md:px-20">
-                            <div className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-10">
+                        <div className="relative pt-48 pb-20 px-6 md:px-20">
+                            <div className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-8">
                                 <div className="space-y-4">
                                     <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">The Editorial Hub</span>
-                                    <h1 className="text-fluid-zine font-serif font-medium tracking-tighter text-white leading-[0.85]">
-                                        The <span className="italic">Unpack.</span>
+                                    <h1 className="text-fluid-zine font-black uppercase tracking-tighter text-zinc-900 leading-[0.9]">
+                                        The Unpack.
                                     </h1>
                                 </div>
-                                <p className="text-xl md:text-3xl text-zinc-500 font-medium max-w-3xl leading-snug font-serif italic">
-                                    A curated dispatch on independent cinema, <br className="hidden md:block" />
-                                    watch parties, and the distribution afterlife.
+                                <p className="text-xl md:text-2xl text-zinc-500 font-medium max-w-2xl leading-snug">
+                                    A curated dispatch on independent cinema, watch parties, and the distribution afterlife.
                                 </p>
                             </div>
                         </div>
@@ -234,18 +229,27 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         )}
 
+                        {/* THE CINEMA STAGE — trailer showcase, moved up near the
+                            top so it feels alive even before any dispatches are
+                            published, instead of buried below the whole grid. */}
+                        {stageMovies.length > 0 && (
+                            <section className="max-w-[1600px] mx-auto px-6 md:px-20 pb-24">
+                                <ZineTrailerPark movies={stageMovies} />
+                            </section>
+                        )}
+
                         {featuredStory && (
                             <div className="max-w-[1600px] mx-auto px-6 md:px-20 pb-24">
                                 <FeaturedZineCard story={featuredStory} onClick={() => handleNavigate(featuredStory.id)} />
                             </div>
                         )}
 
-                        <div className="sticky top-[72px] z-40 py-8 bg-black/95 backdrop-blur-xl border-y border-zinc-900 flex items-center justify-center gap-6 md:gap-16 overflow-x-auto scrollbar-hide px-6">
+                        <div className="sticky top-[72px] z-40 py-6 bg-white/95 backdrop-blur-xl border-y border-zinc-100 flex items-center justify-center gap-6 md:gap-16 overflow-x-auto scrollbar-hide px-6">
                             {filters.map(f => (
-                                <button 
-                                    key={f} 
+                                <button
+                                    key={f}
                                     onClick={() => setActiveFilter(f)}
-                                    className={`whitespace-nowrap font-black uppercase text-[10px] tracking-[0.3em] transition-all ${activeFilter === f ? 'text-red-600' : 'text-zinc-700 hover:text-white'}`}
+                                    className={`whitespace-nowrap font-black uppercase text-[10px] tracking-[0.3em] transition-all ${activeFilter === f ? 'text-red-600' : 'text-zinc-400 hover:text-zinc-900'}`}
                                 >
                                     {f.replace('_', ' ')}
                                 </button>
@@ -253,10 +257,10 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         </div>
 
                         <div className="max-w-[1600px] mx-auto px-6 md:px-20 pt-24 pb-40">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-32">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-24">
                                 {gridStories.length > 0 ? (
                                     gridStories.map((story, index) => {
-                                        // Every 4th card breaks out into a full-bleed colored
+                                        // Every 4th card breaks out into a full-bleed pastel
                                         // spotlight block, cycling accent colors, so the grid
                                         // doesn't read as one long uniform scroll.
                                         const isSpotlight = (index + 1) % 4 === 0;
@@ -280,67 +284,39 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                         );
                                     })
                                 ) : !featuredStory ? (
-                                    <div className="col-span-full py-48 text-center opacity-30">
-                                        <p className="text-zinc-600 uppercase font-black tracking-[0.5em] text-xs">No records found.</p>
+                                    <div className="col-span-full py-48 text-center opacity-40">
+                                        <p className="text-zinc-400 uppercase font-black tracking-[0.5em] text-xs">No records found.</p>
                                     </div>
                                 ) : null}
                             </div>
                         </div>
 
-                        {/* THE CINEMA STAGE — trailer showcase, independent of zine
-                            articles so this space feels alive even before any
-                            dispatches are published. */}
-                        {stageMovies.length > 0 && (
-                            <section className="max-w-[1600px] mx-auto px-6 md:px-20 pb-60">
-                                <ZineTrailerPark movies={stageMovies} />
-                            </section>
-                        )}
-
-                        {/* GAMES & DIVERSIONS — the interactive mini-games built for
-                            the zine but never actually surfaced anywhere until now. */}
-                        <section className="max-w-6xl mx-auto px-6 pb-60 space-y-12">
-                            <div className="text-center space-y-3">
-                                <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">Interlude</span>
-                                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-white">Games &amp; Diversions</h2>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                <div className="bg-[#0f0f0f] p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl">
-                                    <ZineGameEmoji />
-                                </div>
-                                <div className="bg-[#0f0f0f] p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl">
-                                    <ZinePuzzle />
-                                </div>
-                            </div>
-                        </section>
-
                         <section ref={newsletterRef} className="max-w-6xl mx-auto px-6 pb-60">
-                            <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
-                                <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>
-                                    
+                            <div className="relative p-[1px] bg-gradient-to-r from-red-500 via-purple-500 to-emerald-500 rounded-[4rem] shadow-lg">
+                                <div className="bg-white rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
                                     <div className="relative z-10 space-y-4">
-                                        <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the Newsletter.</h2>
-                                        <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight italic">Direct access to festival maps and live watch party reveals.</p>
+                                        <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none text-zinc-900">Join the Newsletter.</h2>
+                                        <p className="text-zinc-500 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight">Direct access to festival maps and live watch party reveals.</p>
                                     </div>
-                                    
+
                                     {subStatus === 'success' ? (
-                                        <div className="bg-green-600/10 border border-green-500/20 p-10 rounded-3xl inline-block px-20 animate-bounce">
-                                            <p className="text-green-500 font-black uppercase text-sm tracking-[0.5em]">CONNECTION ESTABLISHED ✓</p>
+                                        <div className="bg-green-50 border border-green-200 p-10 rounded-3xl inline-block px-20">
+                                            <p className="text-green-700 font-black uppercase text-sm tracking-[0.5em]">CONNECTION ESTABLISHED ✓</p>
                                         </div>
                                     ) : (
                                         <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 max-w-xl mx-auto relative z-10">
-                                            <input 
-                                                type="email" 
-                                                placeholder="EMAIL ADDRESS" 
+                                            <input
+                                                type="email"
+                                                placeholder="EMAIL ADDRESS"
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
-                                                className="flex-grow bg-white/5 border-2 border-white/10 p-6 rounded-2xl text-white text-lg outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest placeholder:text-gray-800 shadow-inner"
+                                                className="flex-grow bg-zinc-50 border-2 border-zinc-200 p-6 rounded-2xl text-zinc-900 text-lg outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest placeholder:text-zinc-400 shadow-inner"
                                                 required
                                             />
-                                            <button 
-                                                type="submit" 
+                                            <button
+                                                type="submit"
                                                 disabled={subStatus === 'loading'}
-                                                className="bg-white text-black font-black py-6 px-12 rounded-2xl uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:bg-red-600 hover:text-white active:scale-95 disabled:opacity-50"
+                                                className="bg-zinc-900 text-white font-black py-6 px-12 rounded-2xl uppercase text-xs tracking-[0.2em] shadow-lg transition-all hover:bg-red-600 active:scale-95 disabled:opacity-50"
                                             >
                                                 {subStatus === 'loading' ? 'UPLINKING...' : 'JOIN NEWSLETTER'}
                                             </button>
@@ -351,9 +327,9 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         </section>
                     </div>
                 ) : (
-                    <div className="animate-[fadeIn_0.8s_ease-out] bg-[#0a0a0a]">
+                    <div className="animate-[fadeIn_0.8s_ease-out] bg-white">
                         <div className="max-w-[1400px] mx-auto px-6 pt-40 pb-20">
-                            <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-zinc-600 hover:text-white transition-all uppercase font-black text-[10px] tracking-[0.3em] mb-12">
+                            <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-900 transition-all uppercase font-black text-[10px] tracking-[0.3em] mb-12">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                                 Back to Archive
                             </button>
@@ -362,23 +338,23 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 <div className="lg:col-span-7 space-y-10">
                                     <div className="space-y-6">
                                         <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">{activeStory.type}</span>
-                                        <h1 className="text-fluid-zine font-serif font-medium tracking-tighter text-white leading-[0.9]">{activeStory.title}</h1>
-                                        <p className="text-fluid-sub text-zinc-400 font-serif italic leading-snug">"{activeStory.subtitle}"</p>
+                                        <h1 className="text-fluid-zine font-black uppercase tracking-tight text-zinc-900 leading-[0.95]">{activeStory.title}</h1>
+                                        <p className="text-fluid-sub text-zinc-500 leading-snug">"{activeStory.subtitle}"</p>
                                     </div>
-                                    <div className="flex items-center gap-6 pt-6 border-t border-zinc-900">
+                                    <div className="flex items-center gap-6 pt-6 border-t border-zinc-200">
                                         <div className="space-y-1">
-                                            <p className="text-zinc-600 font-black uppercase text-[9px] tracking-widest">Written By</p>
-                                            <p className="text-white font-black uppercase text-sm tracking-[0.2em] italic">{activeStory.author}</p>
+                                            <p className="text-zinc-400 font-black uppercase text-[9px] tracking-widest">Written By</p>
+                                            <p className="text-zinc-900 font-black uppercase text-sm tracking-[0.2em]">{activeStory.author}</p>
                                         </div>
-                                        <div className="w-px h-8 bg-zinc-900"></div>
+                                        <div className="w-px h-8 bg-zinc-200"></div>
                                         <div className="space-y-1">
-                                            <p className="text-zinc-600 font-black uppercase text-[9px] tracking-widest">Published</p>
-                                            <p className="text-white font-black uppercase text-sm tracking-[0.2em]">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</p>
+                                            <p className="text-zinc-400 font-black uppercase text-[9px] tracking-widest">Published</p>
+                                            <p className="text-zinc-900 font-black uppercase text-sm tracking-[0.2em]">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="lg:col-span-5">
-                                    <div className="aspect-[4/5] bg-zinc-900 overflow-hidden shadow-2xl">
+                                    <div className="aspect-[4/5] bg-zinc-100 overflow-hidden shadow-xl rounded-2xl">
                                         <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
                                     </div>
                                 </div>
@@ -390,47 +366,44 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 {activeStory.sections && activeStory.sections.length > 0 ? (
                                     activeStory.sections.map((section, idx) => (
                                         <div key={section.id}>
-                                            {section.type === 'header' && <h3 className="text-3xl md:text-5xl font-serif font-medium text-white mb-8 leading-tight">{section.content}</h3>}
+                                            {section.type === 'header' && <h3 className="text-3xl md:text-5xl font-black text-zinc-900 mb-8 leading-tight">{section.content}</h3>}
                                             {section.type === 'quote' && (
-                                                <div className="py-12 border-y border-zinc-900 my-16">
-                                                    <p className="text-2xl md:text-4xl font-serif italic text-white leading-tight text-center max-w-2xl mx-auto">
+                                                <div className="py-12 border-y border-zinc-200 my-16">
+                                                    <p className="text-2xl md:text-4xl font-serif italic text-zinc-900 leading-tight text-center max-w-2xl mx-auto">
                                                         "{section.content}"
                                                     </p>
                                                 </div>
                                             )}
                                             {section.type === 'image' && (
                                                 <div className="my-16">
-                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto shadow-2xl" alt="" crossOrigin="anonymous" />
+                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto rounded-2xl shadow-lg" alt="" crossOrigin="anonymous" />
                                                 </div>
                                             )}
                                             {section.type === 'video' && (
-                                                <div className="my-16 aspect-video bg-zinc-900 shadow-2xl">
+                                                <div className="my-16 aspect-video bg-zinc-100 rounded-2xl overflow-hidden shadow-lg">
                                                     <video src={section.content} controls className="w-full h-full object-cover" playsInline />
                                                 </div>
                                             )}
                                             {section.type === 'text' && (
-                                                <p className="text-lg md:text-xl text-zinc-400 font-medium leading-relaxed mb-8 font-serif">
+                                                <p className="text-lg md:text-xl text-zinc-700 font-medium leading-relaxed mb-8">
                                                     {section.content}
                                                 </p>
                                             )}
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="prose prose-invert max-w-none">
-                                        <p className="text-lg md:text-xl text-zinc-400 font-medium leading-relaxed font-serif whitespace-pre-wrap">
+                                    <div className="prose max-w-none">
+                                        <p className="text-lg md:text-xl text-zinc-700 font-medium leading-relaxed whitespace-pre-wrap">
                                             {activeStory.content}
                                         </p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="mt-80 pt-32 border-t border-white/10 text-center flex flex-col items-center gap-20">
-                                <div className="relative">
-                                    <div className="absolute inset-0 blur-[100px] bg-red-600/30 scale-150 rounded-full animate-pulse"></div>
-                                    <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-96 invert relative z-10 opacity-90" alt="Crate TV" />
-                                </div>
+                            <div className="mt-40 pt-32 border-t border-zinc-200 text-center flex flex-col items-center gap-16">
+                                <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-72 opacity-80" alt="Crate TV" />
                                 <div className="space-y-10">
-                                    <button onClick={() => handleNavigate(null)} className="bg-white text-black font-black px-24 py-8 rounded-[3rem] uppercase tracking-[0.5em] text-sm hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_100px_rgba(255,255,255,0.2)]">Return to Hub</button>
+                                    <button onClick={() => handleNavigate(null)} className="bg-zinc-900 text-white font-black px-24 py-8 rounded-[3rem] uppercase tracking-[0.5em] text-sm hover:bg-red-600 transition-all transform hover:scale-105 active:scale-95 shadow-lg">Return to Hub</button>
                                 </div>
                             </div>
                         </article>
@@ -441,17 +414,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <Footer />
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => handleNavigate(null)} />
-            
-            <style>{`
-                @keyframes chroma {
-                    0% { filter: hue-rotate(0deg); }
-                    50% { filter: hue-rotate(20deg); }
-                    100% { filter: hue-rotate(0deg); }
-                }
-                .animate-chroma {
-                    animation: chroma 8s ease-in-out infinite;
-                }
-            `}</style>
         </div>
     );
 };
