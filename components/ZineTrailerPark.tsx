@@ -89,15 +89,8 @@ const ZineTrailerPark: React.FC<{ movies: Movie[] }> = ({ movies }) => {
 
     return (
         <div className="space-y-12 relative z-10">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative z-30">
-                <div>
-                    <h3 className="text-5xl font-black text-white uppercase tracking-tighter italic leading-none">THE CINEMA STAGE 🍿</h3>
-                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.6em] mt-3">High-Bitrate Kinetic Dispatches</p>
-                </div>
-                <div className="flex items-center gap-4 text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                    <span>{selectedIdx + 1} OF {movies.length} SLOTS</span>
-                    <div className="h-px w-20 bg-white/5"></div>
-                </div>
+            <div className="relative z-30">
+                <h3 className="text-5xl font-black text-white uppercase tracking-tighter italic leading-none">THE CINEMA STAGE 🍿</h3>
             </div>
 
             <TrailerStage movie={activeMovie} />
