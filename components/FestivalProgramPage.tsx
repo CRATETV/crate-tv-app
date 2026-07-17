@@ -222,6 +222,19 @@ const FestivalProgramPage: React.FC = () => {
         [festivalData, activeDay]
     );
 
+    // Same fix as PwffPage.tsx — blocks are stored in admin insertion order,
+    // not screening order, so sort by actual scheduled time for display.
+    // Untimed blocks sort last rather than jumping ahead of scheduled ones.
+    const sortedDayBlocks = useMemo(() => {
+        const blocks = currentDayData?.blocks || [];
+        const getTime = (b: any) => {
+            const t = b.screeningStartTime || b.watchPartyStartTime;
+            const parsed = t ? new Date(t).getTime() : NaN;
+            return isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+        };
+        return [...blocks].sort((a, b) => getTime(a) - getTime(b));
+    }, [currentDayData]);
+
     const navigate = (path: string) => {
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
@@ -344,7 +357,7 @@ const FestivalProgramPage: React.FC = () => {
 
                         {/* Blocks */}
                         <div className="space-y-6">
-                            {(currentDayData.blocks || []).map(block => {
+                            {sortedDayBlocks.map(block => {
                                 const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                                 const isLive = activeParties[block.id]?.status === 'live';

@@ -374,6 +374,23 @@ const ProgrammeMode: React.FC = () => {
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
     const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks || []), [festivalData]);
+    // Blocks are stored in whatever order they were added in the Festival
+    // Manager admin (see FestivalEditor's addBlock, which just pushes onto
+    // the array) — that's insertion order, not screening order, so a block
+    // added later for an earlier time slot rendered below one for a later
+    // slot. Sorting by actual scheduled time here fixes display without
+    // touching how blocks are stored/added. Blocks with no time set sort to
+    // the end (rather than the top) so an unscheduled block doesn't jump
+    // ahead of everything that IS scheduled.
+    const sortedDayBlocks = useMemo(() => {
+        const blocks = currentDay?.blocks || [];
+        const getTime = (b: FilmBlock) => {
+            const t = b.screeningStartTime || b.watchPartyStartTime;
+            const parsed = t ? new Date(t).getTime() : NaN;
+            return isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+        };
+        return [...blocks].sort((a, b) => getTime(a) - getTime(b));
+    }, [currentDay]);
     const allFestivalFilms = useMemo(() => allBlocks.flatMap(b => (b.movieKeys || []).map(k => movies[k]).filter(Boolean)) as Movie[], [allBlocks, movies]);
     const filmsWithNotes = useMemo(() => allFestivalFilms.filter(m => m.festivalDirectorNote || m.festivalFilmmakerBio || m.festivalQuote), [allFestivalFilms]);
 
@@ -569,7 +586,7 @@ const ProgrammeMode: React.FC = () => {
                             </div>
                         )}
                         <div className="space-y-4">
-                            {(currentDay?.blocks || []).length > 0 ? (currentDay?.blocks || []).map(block => {
+                            {sortedDayBlocks.length > 0 ? sortedDayBlocks.map(block => {
                                 const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
                                 // `activeParties` only ever contains docs with status==='live' (it's

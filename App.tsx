@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieCarousel from './components/MovieCarousel';
@@ -203,6 +203,39 @@ const App: React.FC = () => {
         
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, dismissedBannerKeys, activeParties, allPartyStates]);
+
+    // ── STABLE BANNER TYPE — smooths over transient recalculation gaps ──────
+    // `activeBannerType` depends on several independent Firestore listeners
+    // (scheduledParties, activeParties, allPartyStates, movies) that don't all
+    // resolve/update in the same tick. A brief moment where one has updated
+    // but another hasn't yet can make `livePartyMovie` momentarily fall back
+    // to null, which flips this to 'NONE' and back within a second or two —
+    // reported as the watch-party ribbon "appearing/disappearing" (separate
+    // from, and in addition to, the iOS fixed-position compositing issue
+    // already addressed in LiveWatchPartyBanner.tsx). The ribbon is meant to
+    // be a persistent, always-available way into the lobby, so once it's
+    // showing WATCH_PARTY, don't drop it until the computed type has actually
+    // held steady at something else for a few seconds — a real change (user
+    // dismissed it, party truly ended, etc.) still comes through, just not
+    // instantly on a one-tick flicker.
+    const [stableBannerType, setStableBannerType] = useState(activeBannerType);
+    useEffect(() => {
+        if (activeBannerType === stableBannerType) return;
+        if (stableBannerType === 'WATCH_PARTY' && activeBannerType !== 'WATCH_PARTY') {
+            const t = setTimeout(() => setStableBannerType(activeBannerType), 4000);
+            return () => clearTimeout(t);
+        }
+        setStableBannerType(activeBannerType);
+    }, [activeBannerType, stableBannerType]);
+
+    // The banner TYPE is held steady above, but `livePartyMovie` itself can
+    // still go null during that same window (it's what caused the flicker in
+    // the first place) — rendering the WATCH_PARTY banner with a null movie
+    // would crash instead of flicker. Hang onto the last real movie so the
+    // banner has something valid to show for as long as the type is held.
+    const lastLivePartyMovieRef = useRef(livePartyMovie);
+    if (livePartyMovie) lastLivePartyMovieRef.current = livePartyMovie;
+    const displayedLivePartyMovie = livePartyMovie || lastLivePartyMovieRef.current;
 
     const currentLiveHeroConfig = useMemo(() => {
         const crateFestConfig = settings.crateFestConfig;
@@ -477,15 +510,15 @@ const App: React.FC = () => {
     const mainPaddingTop = useMemo(() => {
         const isMobile = window.innerWidth < 768;
         // Only the festival banner is tall on mobile — watch party banner is always slim 48px
-        const isFestivalBanner = activeBannerType === 'GENERAL_FESTIVAL';
-        const bannerHeight = activeBannerType !== 'NONE'
+        const isFestivalBanner = stableBannerType === 'GENERAL_FESTIVAL';
+        const bannerHeight = stableBannerType !== 'NONE'
             ? (isFestivalBanner && isMobile ? 112 : 48)
             : 0;
         const headerHeight = 64;
         const isHomePage = window.location.pathname === '/';
         if (!isHomePage) return `${bannerHeight + headerHeight}px`;
         return `${bannerHeight}px`;
-    }, [activeBannerType]);
+    }, [stableBannerType]);
 
     if (isLoading) return <LoadingSpinner />;
     if (settings.maintenanceMode) return <MaintenanceScreen />;
@@ -542,14 +575,14 @@ const App: React.FC = () => {
 
             {/* Watch Party Ticket Notification — announcement card */}
             
-            {activeBannerType === 'WATCH_PARTY' && (
-                <LiveWatchPartyBanner 
-                    movie={livePartyMovie!}
+            {stableBannerType === 'WATCH_PARTY' && displayedLivePartyMovie && (
+                <LiveWatchPartyBanner
+                    movie={displayedLivePartyMovie}
                     onEnterLobby={() => setShowLobbyOverlay(true)}
                     onClose={() => {
-                        const isLive = activeParties[livePartyMovie!.key]?.status === 'live';
-                        dismissBanner(isLive ? `live-${livePartyMovie!.key}` : `upcoming-${livePartyMovie!.key}`);
-                    }} 
+                        const isLive = activeParties[displayedLivePartyMovie.key]?.status === 'live';
+                        dismissBanner(isLive ? `live-${displayedLivePartyMovie.key}` : `upcoming-${displayedLivePartyMovie.key}`);
+                    }}
                 />
             )}
             {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && (
@@ -622,8 +655,8 @@ const App: React.FC = () => {
                 searchQuery={searchQuery} 
                 onSearch={onSearch} 
                 onMobileSearchClick={handleSearchClick} 
-                topOffset={activeBannerType !== 'NONE' ? (activeBannerType === 'GENERAL_FESTIVAL' && window.innerWidth < 768 ? '7rem' : '3rem') : '0px'} 
-                hideLiveSpotlight={activeBannerType !== 'NONE'}
+                topOffset={stableBannerType !== 'NONE' ? (stableBannerType === 'GENERAL_FESTIVAL' && window.innerWidth < 768 ? '7rem' : '3rem') : '0px'}
+                hideLiveSpotlight={stableBannerType !== 'NONE'}
             />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: mainPaddingTop }}>
