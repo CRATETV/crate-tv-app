@@ -238,7 +238,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, authInitialized, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, grantFestivalAllAccess, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
+    const { user, authInitialized, claimActiveSession, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, grantFestivalAllAccess, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     // True once we've received a real Firestore snapshot for this party. Used to
@@ -351,6 +351,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // landing, and an automatic fresh-reload retry instead of leaving the
     // viewer stuck with no recourse.
     const [isCatchingUpToLive, setIsCatchingUpToLive] = useState(false);
+    // FIX (user report — "just a blank screen... when we refresh it sticks
+    // on frames"): seekToLive had a branch that fires whenever party/movie
+    // data isn't resolvable yet (computeTarget() returns null — happens
+    // routinely for a second or two right after mount/refresh while
+    // Firestore listeners are still catching up) or the party isn't
+    // reporting 'live' yet. That branch just paused the video and returned
+    // — no state was set to explain what was happening, so nothing on
+    // screen changed: not the catching-up spinner, not an error, nothing.
+    // If real data happened to still be unavailable by the time the retry
+    // loop checked again, this repeated indefinitely with the viewer
+    // staring at a silent, frozen frame the whole time — and a refresh hits
+    // the exact same window again, which is why it "sticks" every time.
+    // This gives that state an honest, visible explanation instead of
+    // silence.
+    const [isPreparingStream, setIsPreparingStream] = useState(false);
     // 'idle' = not mid-seek, safe to play; 'seeking' = position unconfirmed,
     // video must stay paused; 'given-up' = stopped trying, showing the
     // honest explanation screen. Read from inside the sync engine's
@@ -431,7 +446,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [needsUserGesture, setNeedsUserGesture] = useState(() => !hasUserGestured());
     const [introPlaying, setIntroPlaying] = useState(false);
     const [introDone, setIntroDone] = useState(false);
-    const [introNeedsUnmute, setIntroNeedsUnmute] = useState(true);
+    // FIX (user report — "having to click unmute ruins the feel of the
+    // watch party"): this always started hardcoded `true`, completely
+    // ignoring hasUserGestured() — unlike needsUserGesture just above,
+    // which correctly skips the unmute step when the viewer already
+    // interacted with the page earlier (joining the lobby, etc). Since the
+    // intro plays FIRST, every single viewer hit a muted intro and had to
+    // notice + tap "Tap to Unmute" regardless of how much they'd already
+    // interacted with the site — exactly the broken first impression being
+    // reported. Seeding this from the same shared gesture tracker the main
+    // video already uses fixes it for the common case.
+    const [introNeedsUnmute, setIntroNeedsUnmute] = useState(() => !hasUserGestured());
     const [viewerCount, setViewerCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const introVideoRef = useRef<HTMLVideoElement>(null);
@@ -493,6 +518,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             });
         });
     }, [needsUserGesture]);
+
+    // Same fix as above, applied to the intro video specifically — the intro
+    // has its own <video> element and its own mute flag (introNeedsUnmute),
+    // so it needs its own subscription to the shared gesture tracker rather
+    // than inheriting the main video's.
+    useEffect(() => {
+        if (!introNeedsUnmute) return;
+        return onFirstUserGesture(() => {
+            const video = introVideoRef.current;
+            setIntroNeedsUnmute(false);
+            if (!video) return;
+            video.muted = false;
+            video.play().catch(() => {});
+        });
+    }, [introNeedsUnmute]);
 
     // ── BLOCK / SEQUENTIAL PLAYBACK STATE ───────────────────────────────
     const [intermissionSeconds, setIntermissionSeconds] = useState<number>(0);
@@ -673,6 +713,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             syncPhaseRef.current = 'idle';
             catchUpAttemptsRef.current = 0;
             setIsCatchingUpToLive(false);
+            setIsPreparingStream(false);
             setLateJoinGaveUp(null);
             // New film's src just changed (or the party restarted) — ask the
             // sync engine to reach the correct position right away rather
@@ -766,7 +807,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (!video) return;
 
             const target = computeTarget();
-            if (!target || target.status !== 'live') { video.pause(); return; }
+            if (!target || target.status !== 'live') {
+                video.pause();
+                setIsPreparingStream(true);
+                return;
+            }
+            // Real data resolved — clear the "preparing" state we may have
+            // set on an earlier attempt that couldn't resolve it yet.
+            setIsPreparingStream(false);
 
             if (target.targetPosition >= target.movieDuration) {
                 if (!isEndedRef.current) {
@@ -777,8 +825,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 return;
             }
 
-            // Close enough already — nothing to seek, just make sure it's playing.
-            if (Math.abs(target.targetPosition - video.currentTime) <= 1.5) {
+            // FIX (user report — "huge delay... it needs to play the movie
+            // straight, not go to an overlay"): this was 1.5 seconds. Between
+            // normal render/mount overhead and the 1-second startup delay
+            // below, a genuinely on-time viewer was almost always already a
+            // few seconds past a 1.5s window by the time this first check
+            // ran — which meant EVERY join, not just real late ones, took
+            // the full pause → seek → "Catching Up" overlay → wait → play
+            // path. 8 seconds of drift is imperceptible in a group watch
+            // context and not worth an intrusive seek ritual to correct;
+            // the periodic monitor further down still gently nudges
+            // playback rate to close any small gap over time, and a
+            // genuinely late join (the case this mechanism actually exists
+            // for) is still many multiples of this, so it's unaffected.
+            if (Math.abs(target.targetPosition - video.currentTime) <= 8) {
                 syncPhaseRef.current = 'idle';
                 setIsCatchingUpToLive(false);
                 catchUpAttemptsRef.current = 0;
@@ -920,11 +980,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             else if (!target.isPlaying && !video.paused) video.pause();
         }, 2000);
 
-        // Give the party doc a moment to be available, then make the first
-        // attempt — covers a fresh on-time join (small/no gap) and a late
-        // join (large gap) through the exact same path, since seekToLive
-        // doesn't distinguish between them.
-        const initialDelay = setTimeout(startFreshSync, 1000);
+        // FIX (user report — "huge delay"): this used to wait a fixed 1
+        // second before even trying, on the theory that gave the party doc
+        // time to load. That's no longer needed — isPreparingStream (see
+        // its declaration above) already handles "data isn't ready yet"
+        // gracefully with a real message and automatic retry, so there's
+        // nothing gained by guessing a delay up front. Attempting
+        // immediately means someone who's actually on time starts as fast
+        // as the network allows instead of waiting a full second
+        // unconditionally, whether they needed to or not.
+        const initialDelay = setTimeout(startFreshSync, 0);
 
         // Tab returns from background — iOS in particular can fully suspend
         // video decoding while away, so treat it exactly like a fresh join
@@ -1440,6 +1505,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
     const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
 
+    // ── CLAIM THE SINGLE-STREAM SLOT AT WATCH-TIME, NOT JUST LOGIN-TIME ────
+    // useSessionGuard only KICKS a device that's already behind; something
+    // still has to WRITE a fresh token to actually create that conflict in
+    // the first place. That write used to happen only inside signIn/signUp —
+    // meaning two devices that were each already independently logged in
+    // (the normal case: nobody re-types their password on their phone every
+    // time they open the site) could both sit there with locally-valid,
+    // non-conflicting tokens forever, since neither device ever did
+    // anything that would overwrite the other's claim. For a paid watch
+    // party specifically, the moment that actually matters is "starting to
+    // watch," not "logging in" — so claim the slot right here, which
+    // immediately supersedes whatever device was watching before, and gets
+    // that other device kicked on its next 30s poll.
+    const hasClaimedSessionRef = useRef(false);
+    useEffect(() => {
+        if (!isPaidContent || !user?.uid) { hasClaimedSessionRef.current = false; return; }
+        if (hasClaimedSessionRef.current) return;
+        hasClaimedSessionRef.current = true;
+        claimActiveSession(user.uid).catch(() => { hasClaimedSessionRef.current = false; });
+    }, [isPaidContent, user?.uid, claimActiveSession]);
+
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     // Active whenever the user has paid access (live OR on-demand VOD)
 
@@ -1458,11 +1544,28 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // "Sector Offline"). Every hook always runs; only the plain `if` + return
     // below is conditional.
     useEffect(() => {
-        if (partyState?.status === 'ended') {
-            window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
-            window.dispatchEvent(new Event('pushstate'));
+        if (partyState?.status !== 'ended') return;
+        // FIX (user report — admin-ended screening showed a sterile
+        // generic "Content Restricted" message instead of anything
+        // resembling a goodbye): this used to unconditionally redirect
+        // EVERY ended watch party to /movie/{key}?play=true, on the
+        // assumption that the viewer now has VOD access to rewatch there.
+        // That's true for a standalone single-movie watch party (it really
+        // does have its own movie page) — but for a festival BLOCK, there
+        // is no such page; a block id doesn't resolve to a movie, so
+        // MoviePage's "!movie" fallback ("Content Restricted") was the
+        // only thing that could ever show. Blocks already have a properly
+        // designed goodbye screen for the natural-end case — the credits
+        // screen below, with a thank-you and next-block ticket info — it
+        // just wasn't being used when the admin ends things manually
+        // instead of the block finishing on its own. Routing here too.
+        if (parentBlock) {
+            setShowCredits(true);
+            return;
         }
-    }, [partyState?.status, movieKey]);
+        window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
+    }, [partyState?.status, movieKey, parentBlock]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -1483,9 +1586,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 </div>
                 <div className="p-4 bg-white/5 grid grid-cols-5 gap-2 border-t border-white/10">
                     {REACTION_TYPES.map(emoji => (
-                        <button key={emoji} onClick={() => logSentiment(emoji)} className="text-3xl py-4 hover:scale-125 transition-transform">{emoji}</button>
+                        <button
+                            key={emoji}
+                            onClick={() => logSentiment(emoji)}
+                            className="crate-reaction-chip text-3xl py-4 rounded-2xl bg-gradient-to-b from-red-950/60 to-black/70 border-2 border-red-600/70 shadow-[0_0_16px_rgba(220,38,38,0.25)] hover:border-red-400 hover:shadow-[0_0_20px_rgba(220,38,38,0.45)] hover:scale-110 active:scale-95 transition-all"
+                        >
+                            {emoji}
+                        </button>
                     ))}
                 </div>
+                <style>{`
+                    @keyframes crateReactionPulse {
+                        0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
+                        100% { box-shadow: 0 0 0 14px rgba(220,38,38,0); }
+                    }
+                    .crate-reaction-chip:active { animation: crateReactionPulse 0.4s ease-out; }
+                `}</style>
             </div>
         );
     }
@@ -1594,7 +1710,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // MoviePage's own hasAccess/paywall logic takes it from there for
     // anyone who never actually bought a ticket. (The redirect itself is
     // the useEffect further up, with the other hooks — see that comment.)
-    if (partyState?.status === 'ended') {
+    if (partyState?.status === 'ended' && !parentBlock) {
         return <LoadingSpinner />;
     }
 
@@ -2029,7 +2145,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         of a late-join catch-up — that gets its own, more prominent message
                                         below instead, since "buffering" undersells what's actually happening
                                         and how long it can reasonably take. */}
-                                    {isVideoBuffering && !isEnded && !isCatchingUpToLive && !lateJoinGaveUp && (
+                                    {isVideoBuffering && !isEnded && !isCatchingUpToLive && !isPreparingStream && !lateJoinGaveUp && (
                                         <div className="absolute top-4 left-4 z-[165] flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 pointer-events-none">
                                             <div className="relative w-3 h-3 flex-shrink-0">
                                                 <div className="absolute inset-0 rounded-full border-2 border-white/20"></div>
@@ -2053,6 +2169,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             </div>
                                             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white mb-2">Catching Up To Live Position</p>
                                             <p className="text-[11px] text-gray-300 max-w-xs text-center px-6">Joining after the film's already started takes a little longer to sync — hang tight.</p>
+                                        </div>
+                                    )}
+                                    {/* FIX — see isPreparingStream declaration above: this is the state
+                                        that used to leave a silent, frozen frame with zero explanation
+                                        while party/movie data was still loading (routinely for a second or
+                                        two right after mount, longer if something's genuinely slow). Kept
+                                        visually distinct from "Catching Up" since it's honestly a different
+                                        (earlier, shorter) moment — this is "we don't know where live is
+                                        yet," not "we know and are seeking there." */}
+                                    {isPreparingStream && !isCatchingUpToLive && !isEnded && !videoError && !lateJoinGaveUp && (
+                                        <div className="absolute inset-0 z-[166] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none">
+                                            <div className="relative w-10 h-10 mb-4">
+                                                <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                                                <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                                            </div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white mb-2">Connecting To Watch Party</p>
+                                            <p className="text-[11px] text-gray-300 max-w-xs text-center px-6">One moment — getting the live stream info before we bring you in.</p>
                                         </div>
                                     )}
                                     {/* Small unmute button — video autoplays muted, tap to unmute.
@@ -2138,12 +2271,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 // small the emoji glyph itself renders — on a 390px phone with 5
                                 // buttons, relying on font-size alone for the hit area made
                                 // adjacent reactions easy to mis-tap, especially one-handed.
-                                className="min-w-[3rem] min-h-[3rem] flex items-center justify-center text-4xl md:text-5xl hover:scale-150 active:scale-90 transition-transform drop-shadow-lg"
+                                // crate-reaction-chip: the branded ring/glow treatment — keeps
+                                // the actual emoji (universally recognizable, zero learning
+                                // curve) but gives the row a look that's distinctly Crate
+                                // rather than a bare row of default OS emoji.
+                                className="crate-reaction-chip min-w-[3rem] min-h-[3rem] flex items-center justify-center text-4xl md:text-5xl rounded-full bg-gradient-to-b from-red-950/70 to-black/80 border-2 border-red-600/70 shadow-[0_0_14px_rgba(220,38,38,0.3)] hover:border-red-400 hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:scale-125 active:scale-90 transition-all drop-shadow-lg"
                             >
                                 {emoji}
                             </button>
                         ))}
                     </div>
+                    <style>{`
+                        @keyframes crateReactionPulse {
+                            0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
+                            100% { box-shadow: 0 0 0 14px rgba(220,38,38,0); }
+                        }
+                        .crate-reaction-chip:active { animation: crateReactionPulse 0.4s ease-out; }
+                    `}</style>
 
                     {/* Mobile chat — docked as a fixed panel at the bottom, with its own
                         reserved space (see pb-80 on the container above) so it never

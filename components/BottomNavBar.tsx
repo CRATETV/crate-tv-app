@@ -22,11 +22,20 @@ const NavItem: React.FC<{ path: string; activePath: string; icon: React.ReactEle
     };
     
     return (
-        <a href={path} onClick={handleNavigate} className="flex flex-col items-center justify-center text-center flex-1">
+        <a href={path} onClick={handleNavigate} className="flex flex-col items-center justify-center text-center flex-1 min-w-0">
             <div className={`transition-colors ${isActive ? 'text-white' : 'text-gray-400'}`}>
                 {icon}
             </div>
-            <span className={`text-[10px] mt-1 transition-colors font-black uppercase tracking-tighter ${isActive ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+            {/* FIX (user report — nav bar looks cluttered/messy on some
+                devices): labels like "The Square" were wrapping onto a
+                second line on narrower phones with 6 items in the bar,
+                breaking the row's alignment. whitespace-nowrap + a
+                slightly smaller size stops that outright regardless of
+                screen width, rather than hoping the label is always short
+                enough to fit — the actual fix is shortening "The Square"
+                to "Square" below, this is the safety net for anything
+                else that gets added to the bar later. */}
+            <span className={`text-[9px] mt-1 whitespace-nowrap transition-colors font-black uppercase tracking-tighter ${isActive ? 'text-white' : 'text-gray-500'}`}>{label}</span>
         </a>
     );
 };
@@ -55,7 +64,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
 
     return (
         <div 
-            className="md:hidden fixed bottom-0 left-0 right-0 w-full h-20 bg-black/85 backdrop-blur-md border-t border-white/5 z-40 flex justify-around items-start pt-2"
+            className="md:hidden fixed bottom-0 left-0 right-0 w-full h-20 bg-black/85 backdrop-blur-md border-t border-white/5 z-40 flex justify-around items-center px-1"
             style={{ 
                 height: `calc(5rem + env(safe-area-inset-bottom))`,
                 paddingBottom: `env(safe-area-inset-bottom)`
@@ -71,7 +80,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
                 path="/public-square" 
                 activePath={activePath} 
                 icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-                label="The Square" 
+                label="Square" 
             />
             <NavItem 
                 path="/library" 
@@ -99,7 +108,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
                 activePath={activePath} 
                 icon={
                     user?.avatar ? (
-                        <div className="w-6 h-6 rounded-full overflow-hidden border border-white/20" dangerouslySetInnerHTML={{ __html: avatars[user.avatar] }} />
+                        <div className="w-5 h-5 rounded-full overflow-hidden border border-white/20" dangerouslySetInnerHTML={{ __html: avatars[user.avatar] }} />
                     ) : (
                         <div className="w-5 h-5 rounded-md bg-white/10 border border-white/20 flex items-center justify-center font-black text-[8px] text-white">C</div>
                     )

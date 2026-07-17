@@ -11,12 +11,16 @@ import { useFestival } from '../contexts/FestivalContext';
 import ZineTrailerPark from './ZineTrailerPark';
 import UnpackCountdown from './UnpackCountdown';
 
-const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
+const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void; tint: string }> = ({ story, onClick, tint }) => (
     <div
         onClick={onClick}
         className="group cursor-pointer flex flex-col gap-5 transition-all duration-500"
     >
-        <div className="relative overflow-hidden aspect-[4/3] bg-zinc-100">
+        {/* Bigger, and tinted instead of flat bg-zinc-100 — every card in the
+            grid gets a color backdrop now, not just the every-4th spotlight
+            break, and the taller ratio gives imagery more room instead of
+            a cropped-down landscape sliver. */}
+        <div className={`relative overflow-hidden aspect-[4/5] rounded-2xl ${tint}`}>
             <img
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`}
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
@@ -44,6 +48,10 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
 // Pastel accent cycle for the spotlight breaks — bright, light, and airy
 // instead of saturated/dark, so the page reads fresh rather than cinematic.
 const SPOTLIGHT_COLORS = ['bg-indigo-200', 'bg-emerald-200', 'bg-amber-200', 'bg-rose-200'];
+// Lighter version of the same palette for every regular grid card's image
+// backdrop — was flat bg-zinc-100 for every card except the every-4th
+// spotlight break, so 3 out of 4 cards had zero color at all.
+const ZINE_CARD_TINTS = ['bg-indigo-50', 'bg-emerald-50', 'bg-amber-50', 'bg-rose-50'];
 
 const ZineSpotlightCard: React.FC<{ story: EditorialStory; onClick: () => void; color: string }> = ({ story, onClick, color }) => (
     <div
@@ -205,7 +213,16 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        <div className="relative pt-48 pb-20 px-6 md:px-20">
+                        <div className="relative pt-48 pb-20 px-6 md:px-20 overflow-hidden">
+                            {/* Soft color wash — this was flat white before, the very
+                                first thing on the page, with nothing but text on it.
+                                Keeping the light theme (per your call) but giving it
+                                actual color instead of a blank field. */}
+                            <div className="absolute inset-0 -z-10 pointer-events-none">
+                                <div className="absolute -top-24 -left-24 w-[420px] h-[420px] bg-rose-200/50 rounded-full blur-[100px]" />
+                                <div className="absolute -top-10 right-0 w-[380px] h-[380px] bg-indigo-200/50 rounded-full blur-[100px]" />
+                                <div className="absolute top-40 left-1/3 w-[320px] h-[320px] bg-amber-200/40 rounded-full blur-[100px]" />
+                            </div>
                             <div className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-8">
                                 <div className="space-y-4">
                                     <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">The Editorial Hub</span>
@@ -279,6 +296,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                             <ZineCard
                                                 key={story.id}
                                                 story={story}
+                                                tint={ZINE_CARD_TINTS[index % ZINE_CARD_TINTS.length]}
                                                 onClick={() => handleNavigate(story.id)}
                                             />
                                         );

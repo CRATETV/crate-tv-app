@@ -23,6 +23,11 @@ interface AuthContextType {
     setAvatar: (avatarId: string) => Promise<void>;
     updateName: (name: string) => Promise<void>;
     getUserIdToken: () => Promise<string | null>;
+    // Re-claims this device as the account's single active session, the
+    // same way signIn/signUp do — but callable independently of logging in.
+    // See the call site in WatchPartyPage.tsx for why this needs to exist
+    // separately from login.
+    claimActiveSession: (uid: string) => Promise<void>;
     watchlist: string[];
     toggleWatchlist: (movieKey: string) => Promise<void>;
     watchedMovies: string[];
@@ -184,8 +189,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!auth) throw new Error("Authentication service is not available.");
         
         if (auth.isSignInWithEmailLink(window.location.href)) {
-            await auth.signInWithEmailLink(email, window.location.href);
+            const result = await auth.signInWithEmailLink(email, window.location.href);
             window.localStorage.removeItem('emailForSignIn');
+            // FIX: this used to be the one sign-in path that never wrote a
+            // session token — signIn() and signUp() both do this, but this
+            // one didn't, so anyone using the emailed magic-link flow was
+            // permanently invisible to useSessionGuard (it treats "no local
+            // token" as "pre-feature session, skip checking" — see that
+            // hook's comment). That meant magic-link viewers could watch
+            // paid content on unlimited simultaneous devices with zero
+            // enforcement, forever, regardless of the fix below.
+            if (result.user) {
+                await writeSessionToken(result.user.uid);
+                await grantInviteAccessIfEligible(result.user);
+            }
         }
     };
 
@@ -434,7 +451,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const value = useMemo(() => ({
-        user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
+        user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName, claimActiveSession: writeSessionToken,
         watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie, updatePlaybackProgress,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
         unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe

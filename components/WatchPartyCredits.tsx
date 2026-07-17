@@ -115,6 +115,19 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
         setTimeout(() => setShowThankYou(true), 500);
     };
 
+    // FIX (user report — "right now there's no way for them to get home"):
+    // there WAS a "Return Home" link, but it sat at the very bottom of a
+    // screen with a lot stacked above it (title, stats, director message,
+    // next-block card, upsell card) — technically reachable by scrolling,
+    // practically invisible to someone who doesn't. Also adding an
+    // auto-redirect as a safety net: nobody should be able to get stuck on
+    // this screen indefinitely just by not noticing any exit at all.
+    const AUTO_HOME_MS = 3 * 60 * 1000; // 3 minutes
+    useEffect(() => {
+        const timer = setTimeout(() => { onClose(); }, AUTO_HOME_MS);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
     return (
         <div className="fixed inset-0 bg-black z-50 overflow-hidden">
             {/* Background poster blur */}
@@ -126,6 +139,16 @@ const WatchPartyCredits: React.FC<WatchPartyCreditsProps> = ({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/80" />
             </div>
+
+            {/* Persistent close button — always visible without scrolling,
+                unlike the "Return Home" link further down the page. */}
+            <button
+                onClick={onClose}
+                aria-label="Return home"
+                className="absolute top-4 right-4 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-black/50 border border-white/15 backdrop-blur-xl text-white/70 hover:text-white hover:bg-black/70 transition-all active:scale-90"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
 
             {/* Floating applause */}
             {floatingEmojis.map(e => (

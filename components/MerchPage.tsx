@@ -1,32 +1,20 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import Header from './Header';
-// FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
-import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
-import { useFestival } from '../contexts/FestivalContext';
-// FIX: Corrected import path
-import { Movie } from '../types';
 
-// Data for merchandise items
-const merchItems = [
-    {
-        name: 'Crate TV Classic Tee',
-        imageUrl: 'https://d3jhtrl1gnrh4b.cloudfront.net/merch-tee.jpg',
-        storeUrl: 'https://cratetv.creator-spring.com/listing/crate-tv-logo-apparel',
-        description: 'The official Crate TV logo on a comfortable, high-quality classic tee. Perfect for filmmakers, film lovers, and supporters of indie cinema.'
-    },
-];
-
+// Was a live page with exactly one product (a single tee linking out to an
+// external store) — sparse enough that it read as unfinished rather than
+// "not open yet." Replaced with an actual "Coming Soon" announcement in the
+// same dramatic, single-focal-point spirit as Netflix's premiere reveal
+// cards: dark, minimal, one bold idea on screen at a time. The email
+// capture reuses the same /api/subscribe-newsletter endpoint the Zine page
+// already uses, so a "notify me" list actually gets built in the meantime.
 const MerchPage: React.FC = () => {
-    const { movies } = useFestival();
-
-    const handleSelectFromSearch = (movie: Movie) => {
-        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
-        window.dispatchEvent(new Event('pushstate'));
-    };
+    const [email, setEmail] = useState('');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
     const handleSearch = (query: string) => {
         window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
@@ -38,58 +26,87 @@ const MerchPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleNotifyMe = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email.trim()) return;
+        setStatus('loading');
+        try {
+            const res = await fetch('/api/subscribe-newsletter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.toLowerCase().trim() }),
+            });
+            if (res.ok) {
+                setStatus('success');
+                setEmail('');
+            } else {
+                setStatus('idle');
+            }
+        } catch {
+            setStatus('idle');
+        }
+    };
+
     return (
-        <div className="flex flex-col min-h-screen text-white">
-            <Header 
-                searchQuery="" 
-                onSearch={handleSearch} 
+        <div className="flex flex-col min-h-screen bg-black text-white">
+            <Header
+                searchQuery=""
+                onSearch={handleSearch}
                 isScrolled={true}
                 onMobileSearchClick={handleMobileSearch}
             />
 
-            <main className="flex-grow">
-                <div 
-                    className="relative py-24 md:py-32 bg-cover bg-center"
-                    style={{ backgroundImage: `url('https://d3jhtrl1gnrh4b.cloudfront.net/merch-bg.jpg')` }}
-                    onContextMenu={(e) => e.preventDefault()}
-                >
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-                    <div className="relative z-10 max-w-4xl mx-auto text-center px-4 animate-fadeInHeroContent">
-                        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Wear Your Love for Indie Film</h1>
-                        <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
-                            Shop the official Crate TV merchandise. Every purchase helps us continue to support and showcase independent filmmakers.
-                        </p>
-                    </div>
+            <main className="flex-grow flex items-center justify-center relative overflow-hidden py-32 px-6">
+                {/* Ambient glow — no product photography exists yet, so the
+                    drama comes from typography and light rather than an
+                    image, same trick the reveal-card reference uses. */}
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140vw] h-[140vw] max-w-[900px] max-h-[900px] bg-red-600/10 rounded-full blur-[120px]" />
+                    <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
                 </div>
 
-                <div className="max-w-6xl mx-auto p-8 md:p-12">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {merchItems.map((item, index) => (
-                            <div key={index} className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden flex flex-col group">
-                                <div className="aspect-square overflow-hidden">
-                                    <img 
-                                        src={item.imageUrl} 
-                                        alt={item.name}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                                        onContextMenu={(e) => e.preventDefault()}
-                                    />
-                                </div>
-                                <div className="p-6 flex flex-col flex-grow">
-                                    <h2 className="text-2xl font-bold text-white mb-2">{item.name}</h2>
-                                    <p className="text-gray-400 mb-6 flex-grow">{item.description}</p>
-                                    <a
-                                        href={item.storeUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mt-auto text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-transform duration-300 transform hover:scale-105"
-                                    >
-                                        Shop Now
-                                    </a>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                <div className="relative z-10 max-w-xl w-full text-center space-y-8 animate-[fadeIn_1s_ease-out]">
+                    <span className="inline-block bg-red-600 text-white font-black uppercase text-[10px] tracking-[0.4em] px-4 py-2 rounded-full">
+                        The Crate Shop
+                    </span>
+                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] italic">
+                        Coming<br />Soon
+                    </h1>
+                    <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-md mx-auto">
+                        Festival posters, printed on real things — tees, mugs, prints, and more, straight from the films you watched here. We're building it now.
+                    </p>
+
+                    <form onSubmit={handleNotifyMe} className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm mx-auto">
+                        {status === 'success' ? (
+                            <p className="text-red-400 font-bold text-sm">You're on the list — we'll let you know.</p>
+                        ) : (
+                            <>
+                                <input
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Your email"
+                                    className="w-full sm:flex-1 bg-white/5 border border-white/15 rounded-full px-5 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={status === 'loading'}
+                                    className="w-full sm:w-auto bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] px-6 py-3 rounded-full hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 whitespace-nowrap"
+                                >
+                                    {status === 'loading' ? 'Sending...' : 'Notify Me'}
+                                </button>
+                            </>
+                        )}
+                    </form>
                 </div>
+
+                <style>{`
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(12px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                `}</style>
             </main>
 
             <Footer />

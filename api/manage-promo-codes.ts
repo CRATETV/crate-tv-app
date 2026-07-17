@@ -19,7 +19,7 @@ const checkAuth = (request: Request) => {
     const token = authHeader?.replace('Bearer ', '');
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-    return (primaryAdminPassword && token === primaryAdminPassword) || (masterPassword && token === masterPassword);
+    return Boolean((primaryAdminPassword && token === primaryAdminPassword) || (masterPassword && token === masterPassword));
 };
 
 export async function POST(request: Request) {
@@ -65,15 +65,15 @@ export async function POST(request: Request) {
         const resolvedType: PromoCode['type'] = type === 'discount' ? 'discount' : 'one_time_access';
         const codeData: Omit<PromoCode, 'id'> = {
             code: cleanCode,
-            internalName: internalName?.trim() || undefined,
             type: resolvedType,
             discountValue: resolvedType === 'discount' ? (Number(discountValue) || 0) : 100,
             maxUses: Number(maxUses) > 0 ? Number(maxUses) : 1,
             usedCount: 0,
-            itemId: itemId || undefined,
             createdBy: createdBy || 'admin',
-            createdAt: FieldValue.serverTimestamp(),
-        } as any;
+            createdAt: FieldValue.serverTimestamp() as any,
+        };
+        if (internalName?.trim()) codeData.internalName = internalName.trim();
+        if (itemId) codeData.itemId = itemId;
 
         await codeRef.set(codeData);
         return new Response(JSON.stringify({ success: true, code: cleanCode }), { status: 201 });
