@@ -3,8 +3,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PromoCode, Movie, FilmBlock, User } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
-import firebase from 'firebase/compat/app';
-import { promoCodesData } from '../constants';
 
 interface PromoCodeManagerProps {
     isAdmin: boolean;
@@ -301,26 +299,22 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     const handleRestoreDefaults = async () => {
         if (!window.confirm("RESTORE PROTOCOL: Synchronize hardcoded system vouchers from constants.ts into live database? This will restore classic codes like PULSE_25 and VIP_ACCESS.")) return;
         setIsRestoring(true);
-        const db = getDbInstance();
-        if (!db) return;
+        const password = sessionStorage.getItem('adminPassword');
 
         try {
-            const batch = db.batch();
-            Object.entries(promoCodesData).forEach(([id, data]) => {
-                const ref = db.collection('promo_codes').doc(id);
-                batch.set(ref, {
-                    ...data,
-                    code: id,
-                    usedCount: 0,
-                    createdBy: 'system_restore',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
+            const res = await fetch('/api/manage-promo-codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${password}` },
+                body: JSON.stringify({ action: 'restoreDefaults' }),
             });
-            await batch.commit();
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Restore failed.');
+            }
             alert("System vouchers successfully restored.");
             await fetchCodes();
-        } catch (e) {
-            alert("Restore failed.");
+        } catch (err: any) {
+            alert(err.message || "Restore failed.");
         } finally {
             setIsRestoring(false);
         }
@@ -330,34 +324,35 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         e.preventDefault();
         const cleanCode = newCode.toUpperCase().trim().replace(/\s/g, '');
         if (!cleanCode || isQuotaExceeded || codeAvailability === 'taken') return;
-        
-        setIsGenerating(true);
-        const db = getDbInstance();
-        if (!db) return;
 
-        const codeData: Omit<PromoCode, 'id'> = {
-            code: cleanCode,
-            internalName: internalName.trim() || undefined,
-            type,
-            discountValue: type === 'one_time_access' ? 100 : discountValue,
-            maxUses: maxUses > 0 ? maxUses : 1, 
-            usedCount: 0,
-            itemId: selectedItemId || undefined,
-            createdBy: isAdmin ? 'admin' : (filmmakerName || 'unknown'),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        setIsGenerating(true);
+        const password = sessionStorage.getItem('adminPassword');
 
         try {
-            await db.collection('promo_codes').doc(codeData.code).set(codeData);
+            const res = await fetch('/api/manage-promo-codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${password}` },
+                body: JSON.stringify({
+                    code: cleanCode,
+                    internalName: internalName.trim() || undefined,
+                    type,
+                    discountValue: type === 'one_time_access' ? 100 : discountValue,
+                    maxUses: maxUses > 0 ? maxUses : 1,
+                    itemId: selectedItemId || undefined,
+                    createdBy: isAdmin ? 'admin' : (filmmakerName || 'unknown'),
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error generating code. Please try a different alias.');
             setNewCode('');
             setInternalName('');
             if (!defaultItemId) setSelectedItemId('');
             setCodeAvailability('idle');
             await fetchCodes();
         } catch (err: any) {
-            alert(err.message?.includes('permission') 
-                ? "Access Denied: You cannot overwrite this code as it was created by another node." 
-                : "Error generating code. Please try a different alias.");
+            alert(err.message?.includes('permission')
+                ? "Access Denied: You cannot overwrite this code as it was created by another node."
+                : (err.message || "Error generating code. Please try a different alias."));
         } finally {
             setIsGenerating(false);
         }
@@ -365,10 +360,19 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
     const handleDelete = async (id: string) => {
         if (!window.confirm("Revoke this voucher immediately?")) return;
-        const db = getDbInstance();
-        if (db) {
-            await db.collection('promo_codes').doc(id).delete();
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const res = await fetch(`/api/manage-promo-codes?id=${encodeURIComponent(id)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${password}` },
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to revoke code.');
+            }
             await fetchCodes();
+        } catch (err: any) {
+            alert(err.message || "Failed to revoke code.");
         }
     };
 

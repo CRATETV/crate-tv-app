@@ -238,7 +238,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 });
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, grantFestivalAllAccess, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
+    const { user, authInitialized, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, grantFestivalAllAccess, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     // True once we've received a real Firestore snapshot for this party. Used to
@@ -555,32 +555,50 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // NEXT film instead, at position zero, exactly like someone who arrived
     // on time. Zero risky seeks involved.
     //
-    // Purely derived from current state (activeMovieIndex, filmStartTime) —
-    // no effect or ref needed. Once the block actually advances,
-    // activeMovieIndex changes, `movie` updates to the new film, its
-    // filmStartTime is brand new, elapsed drops back near zero, and this
-    // naturally re-evaluates to null on its own — no manual reset required.
-    //
     // Deliberately does NOT apply to the last film in a block (there's no
     // "next film" to wait for) or a single-film watch party — those still
     // rely on the catch-up watchdog since waiting isn't an option there.
-    const lateJoinWaitInfo = useMemo(() => {
+    //
+    // FIX (see screenshot bug — on-time viewer shown "already underway"
+    // mid-film): this used to be a useMemo recomputed on every render,
+    // purely from live elapsed-time-since-filmStartTime. That meant it went
+    // from false to true for EVERY viewer in the block — not just late
+    // joiners — the instant elapsed time crossed
+    // BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC, silently yanking the video
+    // away from someone who'd been watching from the start and replacing it
+    // with this full-screen "wait for the next film" takeover for the rest
+    // of the movie. The decision needs to reflect "did I arrive late,"
+    // which is a one-time fact about this viewer's session, not "is it
+    // currently late in the film," which is true for everyone eventually.
+    // So it's now decided exactly once per playback session (initial mount,
+    // or a new film starting within the block) and then locked in — later
+    // renders don't re-derive it, so an on-time viewer who was correctly
+    // judged "not late" at session start stays that way for the rest of
+    // that film, even after real elapsed time later crosses the threshold.
+    const [lateJoinWaitInfo, setLateJoinWaitInfo] = useState<null | { currentFilmTitle?: string; nextIdx: number }>(null);
+    const evaluatedLateJoinSessionRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!partyState || !movie) return; // wait for real data before deciding anything
+        const sessionKey = `${partyState.lastStartedAt || ''}|${movie.fullMovie || ''}`;
+        if (evaluatedLateJoinSessionRef.current === sessionKey) return; // already decided for this session
+        evaluatedLateJoinSessionRef.current = sessionKey;
+
         const m = movie as any;
         const blockKeys: string[] | undefined = m?._blockMovieKeys;
-        if (!blockKeys || blockKeys.length <= 1) return null;
-        if (partyState?.status !== 'live') return null;
+        if (!blockKeys || blockKeys.length <= 1) { setLateJoinWaitInfo(null); return; }
+        if (partyState.status !== 'live') { setLateJoinWaitInfo(null); return; }
 
-        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        const currentIdx = partyState.activeMovieIndex ?? 0;
         const hasNextFilm = currentIdx < blockKeys.length - 1;
-        if (!hasNextFilm) return null;
+        if (!hasNextFilm) { setLateJoinWaitInfo(null); return; }
 
-        const startRef = partyState?.filmStartTime || partyState?.actualStartTime;
-        if (!startRef || typeof (startRef as any).toDate !== 'function') return null;
+        const startRef = partyState.filmStartTime || partyState.actualStartTime;
+        if (!startRef || typeof (startRef as any).toDate !== 'function') { setLateJoinWaitInfo(null); return; }
         const elapsedSec = (Date.now() - (startRef as any).toDate().getTime()) / 1000;
-        if (elapsedSec <= BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC) return null;
+        if (elapsedSec <= BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC) { setLateJoinWaitInfo(null); return; }
 
-        return { currentFilmTitle: m?._activeFilmTitle || m?.title, nextIdx: currentIdx + 1 };
-    }, [movie, partyState]);
+        setLateJoinWaitInfo({ currentFilmTitle: m?._activeFilmTitle || m?.title, nextIdx: currentIdx + 1 });
+    }, [partyState, movie]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -1708,6 +1726,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 )}
             </>
         );
+    }
+
+    // ── DON'T JUDGE ACCESS BEFORE AUTH HAS ACTUALLY LOADED ────────────────
+    // hasAccess (below) is derived entirely from `user` — specifically
+    // unlockedFestivalBlockIds/hasFestivalAllAccess/rentals, all of which
+    // live on the Firestore user profile that Firebase auth fetches
+    // asynchronously. Right after a page reload/restore, `user` starts out
+    // null for the brief window before that profile has loaded back in —
+    // and hasAccess has no way to distinguish "definitely doesn't have a
+    // ticket" from "haven't found out yet," so it read as false either way.
+    // That's what showed up as a false "Admission Required" repayment
+    // prompt on restore for someone who'd already paid: this screen was
+    // rendering during that loading window, before the real answer had
+    // arrived. FestivalTicketFlow already waits on this same flag before
+    // deciding anything; this screen needs to as well.
+    if (!authInitialized) {
+        return <LoadingSpinner />;
     }
 
     // ── AVOID FLASHING THE WRONG FILM ─────────────────────────────────────
