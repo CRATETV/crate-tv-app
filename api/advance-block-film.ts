@@ -52,10 +52,26 @@ export async function POST(request: Request): Promise<Response> {
             }
 
             const intermissionEnd = Date.now() + 30000;
+            // FIX (user report — "the countdown to the new movie starts but
+            // it still had to catch them up... they should just go into
+            // the new movie when it starts"): this used to write
+            // FieldValue.serverTimestamp() here — i.e. "right now," the
+            // moment the PREVIOUS film ended. But the next film doesn't
+            // actually start until the 30s intermission finishes. The sync
+            // engine (WatchPartyPage.tsx) computes everyone's target
+            // position as elapsed time since filmStartTime — so by the time
+            // the intermission ended and the new film actually began, every
+            // viewer's target position already read ~30 seconds in, and the
+            // sync engine dutifully tried to seek/catch up EVERY viewer to
+            // that position, not just genuinely late ones. Using the actual
+            // future moment the film starts (matching intermissionUntil)
+            // means elapsed-since-filmStartTime correctly reads ~0 for
+            // everyone once the film really begins.
+            const filmStartTime = new Date(intermissionEnd);
             tx.update(partyRef, {
                 activeMovieIndex: nextIndex,
                 intermissionUntil: intermissionEnd,
-                filmStartTime: FieldValue.serverTimestamp(),
+                filmStartTime,
                 isPlaying: true,
                 currentTime: 0,
             });

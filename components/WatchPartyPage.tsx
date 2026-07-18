@@ -72,7 +72,7 @@ const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>((
         return () => clearTimeout(timer);
     }, [randomDuration, onComplete]);
     return (
-        <div className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl drop-shadow-2xl" style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}>{emoji}</div>
+        <div className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl" style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}>{emoji}</div>
     );
 });
 
@@ -715,6 +715,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setIsCatchingUpToLive(false);
             setIsPreparingStream(false);
             setLateJoinGaveUp(null);
+            // FIX — see the "BLOCK AUTO-ADVANCE" effect's comment: isEnded
+            // used to get reset the instant the advance request was fired,
+            // before the real data backing this session change had
+            // actually arrived. Resetting it here instead means it flips
+            // false at the same moment this effect fires — i.e. once the
+            // new session is genuinely confirmed — so there's no gap where
+            // neither the "ended" overlay nor the next screen has anything
+            // to show.
+            setIsEnded(false);
             // New film's src just changed (or the party restarted) — ask the
             // sync engine to reach the correct position right away rather
             // than waiting for the periodic drift monitor to eventually
@@ -1194,7 +1203,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const nav = navigator as any;
         if (!nav.wakeLock) return; // unsupported browser — no-op
 
-        const isActivelyPlaying = partyState?.status === 'live' && !isEnded && !isInIntermission;
+        // FIX (user report — "during the countdown the iphone cut off"):
+        // this explicitly excluded intermission from counting as "actively
+        // playing," which released the wake lock the moment a film ended
+        // and let the screen sleep during the countdown to the next film —
+        // exactly when someone's sitting there waiting, not doing anything
+        // that would otherwise keep the screen awake on its own.
+        const isActivelyPlaying = partyState?.status === 'live' && !isEnded;
 
         const requestWakeLock = async () => {
             try {
@@ -1227,7 +1242,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return () => {
             document.removeEventListener('visibilitychange', handleVisibility);
         };
-    }, [partyState?.status, isEnded, isInIntermission, isControllerMode]);
+    }, [partyState?.status, isEnded, isControllerMode]);
 
     // Always release the wake lock on unmount so it doesn't leak past this page
     useEffect(() => {
@@ -1396,9 +1411,74 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 console.error('[BLOCK AUTO-ADVANCE] Request failed:', err);
             });
 
-        // Reset local ended state
-        setIsEnded(false);
+        // FIX (user report — "there was a blank screen before the countdown
+        // to the other movie began"): this used to call setIsEnded(false)
+        // immediately here, synchronously, right after firing the request
+        // above — not waiting for the server's write to actually be
+        // reflected in partyState via the Firestore listener. That opened a
+        // real gap: isEnded flips false (hiding the "Thank You" overlay)
+        // but isInIntermission is still false too (the real data hasn't
+        // arrived yet), so neither screen had anything to show — just the
+        // old, now-not-isEnded video sitting there on its last frame with
+        // zero explanation, until the update finally landed a moment later.
+        // isEnded is now left alone here; it gets reset once a genuinely
+        // new session is confirmed (see the "RESET UNMUTE GATE" effect
+        // below), which happens at the same moment intermission/the next
+        // film's data actually arrives — so the "Thank You" overlay bridges
+        // the gap instead of leaving a blank frame.
     }, [isEnded]);
+
+    // ── AUTO-END THE PARTY once the last film has genuinely finished ────
+    // FEATURE (user request — "a few minutes after the movie ends can we
+    // automatically end the party? that way it can get ready for the next
+    // block"): see api/auto-end-watch-party.ts for the server-side
+    // verification that makes this safe for every viewer's client to call
+    // independently. This effect just decides WHEN to first try — the
+    // server re-checks the real film-finished time itself before acting,
+    // so a slightly early or late call from here is harmless; the server
+    // is the actual authority, not this timer.
+    useEffect(() => {
+        if (!isEnded) return;
+        const m = movie as any;
+        const blockKeys: string[] | undefined = m?._blockMovieKeys;
+        const currentIdx = partyState?.activeMovieIndex ?? 0;
+        // A standalone (non-block) party has no "next film" to advance to
+        // either, so it's always "the last film" in the same sense.
+        const isLastFilm = !blockKeys || blockKeys.length === 0 || currentIdx >= blockKeys.length - 1;
+        if (!isLastFilm) return; // api/advance-block-film.ts owns that transition instead
+
+        let cancelled = false;
+        // Matches the server's own AUTO_END_GRACE_MS — trying right around
+        // when the server will actually agree it's ready avoids pointless
+        // early rejections in the common case.
+        const AUTO_END_DELAY_MS = 3 * 60 * 1000;
+        const RETRY_DELAY_MS = 60 * 1000;
+
+        const attemptAutoEnd = () => {
+            if (cancelled) return;
+            fetch('/api/auto-end-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partyId: movieKey }),
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (cancelled) return;
+                    if (d.success === false && d.message === 'Grace period has not elapsed yet.') {
+                        // This client's clock/timing landed a little early
+                        // relative to the server's — harmless, just retry
+                        // shortly rather than giving up.
+                        setTimeout(attemptAutoEnd, RETRY_DELAY_MS);
+                    } else if (d.success === false) {
+                        console.warn('[AUTO-END] Not ended:', d.message || d.error);
+                    }
+                })
+                .catch(err => console.error('[AUTO-END] Request failed:', err));
+        };
+
+        const timer = setTimeout(attemptAutoEnd, AUTO_END_DELAY_MS);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [isEnded, movie, partyState?.activeMovieIndex, movieKey]);
 
     // ── INTERMISSION COUNTDOWN: tick down locally from partyState ───────
     useEffect(() => {
@@ -1563,8 +1643,24 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setShowCredits(true);
             return;
         }
-        window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
-        window.dispatchEvent(new Event('pushstate'));
+        // FIX (user report — "after admin ended the party it doesn't say
+        // that the party ended"): this used to redirect a standalone
+        // single-movie party straight to /movie/{key}?play=true with zero
+        // acknowledgment — one render the party's live, the next it's
+        // silently on the on-demand movie page, with nothing ever telling
+        // the viewer the party ended (as opposed to, say, them navigating
+        // there themselves). Genuinely reusing the credits screen here
+        // instead would strand "Re-Watch" on a video the sync engine will
+        // just keep pausing (partyState.status is 'ended', not 'live') —
+        // so this shows a brief, honest transition message first (see the
+        // `partyState?.status === 'ended' && !parentBlock` render further
+        // down), THEN hands off to the real on-demand player, preserving
+        // the working rewatch path while actually saying what happened.
+        const timer = setTimeout(() => {
+            window.history.replaceState({}, '', `/movie/${movieKey}?play=true`);
+            window.dispatchEvent(new Event('pushstate'));
+        }, 3000);
+        return () => clearTimeout(timer);
     }, [partyState?.status, movieKey, parentBlock]);
 
     const logSentiment = async (emoji: string) => {
@@ -1589,7 +1685,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <button
                             key={emoji}
                             onClick={() => logSentiment(emoji)}
-                            className="crate-reaction-chip text-3xl py-4 rounded-2xl bg-gradient-to-b from-red-950/60 to-black/70 border-2 border-red-600/70 shadow-[0_0_16px_rgba(220,38,38,0.25)] hover:border-red-400 hover:shadow-[0_0_20px_rgba(220,38,38,0.45)] hover:scale-110 active:scale-95 transition-all"
+                            // FIX (user report — "I don't like the rings around the
+                            // emojies"): removed the border entirely. A soft radial glow
+                            // fading into the dark background gives the same warm,
+                            // branded feel without a hard-edged ring shape.
+                            className="crate-reaction-chip text-3xl py-4 rounded-2xl bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.35),rgba(0,0,0,0.75)_75%)] shadow-[0_0_18px_rgba(220,38,38,0.22)] hover:shadow-[0_0_28px_rgba(220,38,38,0.5)] hover:scale-110 active:scale-95 transition-all"
                         >
                             {emoji}
                         </button>
@@ -1711,7 +1811,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // anyone who never actually bought a ticket. (The redirect itself is
     // the useEffect further up, with the other hooks — see that comment.)
     if (partyState?.status === 'ended' && !parentBlock) {
-        return <LoadingSpinner />;
+        // FIX (user report — "it doesn't say that the party ended"): this
+        // was a bare LoadingSpinner — visually indistinguishable from any
+        // other loading moment in the app, saying nothing about what
+        // actually happened. The real redirect still fires from the
+        // useEffect above after a few seconds; this is just what's shown
+        // during that brief window instead of an unexplained spinner.
+        return (
+            <div className="fixed inset-0 bg-black flex items-center justify-center p-8">
+                {movie?.poster && (
+                    <div className="absolute inset-0">
+                        <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-[0.08] blur-3xl scale-110" />
+                        <div className="absolute inset-0 bg-black/85" />
+                    </div>
+                )}
+                <div className="relative z-10 text-center space-y-6 max-w-md">
+                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Transmission Complete</p>
+                    <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white">The Watch Party Has Ended</h2>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                        Taking you to on-demand playback so you can keep watching{isNoCatalogFilm((movie as any)?._activeFilmTitle || movie?.title) ? '' : ' anytime'}.
+                    </p>
+                    <div className="relative w-8 h-8 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                        <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // Show credits/applause screen when film ends
@@ -2267,15 +2393,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             <button
                                 key={emoji}
                                 onClick={(e) => { e.stopPropagation(); logSentiment(emoji); }}
-                                // min-w/min-h guarantee a real ~48px tap target regardless of how
-                                // small the emoji glyph itself renders — on a 390px phone with 5
-                                // buttons, relying on font-size alone for the hit area made
-                                // adjacent reactions easy to mis-tap, especially one-handed.
-                                // crate-reaction-chip: the branded ring/glow treatment — keeps
-                                // the actual emoji (universally recognizable, zero learning
-                                // curve) but gives the row a look that's distinctly Crate
-                                // rather than a bare row of default OS emoji.
-                                className="crate-reaction-chip min-w-[3rem] min-h-[3rem] flex items-center justify-center text-4xl md:text-5xl rounded-full bg-gradient-to-b from-red-950/70 to-black/80 border-2 border-red-600/70 shadow-[0_0_14px_rgba(220,38,38,0.3)] hover:border-red-400 hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:scale-125 active:scale-90 transition-all drop-shadow-lg"
+                                // FIX (user report — "I don't like the rings around the
+                                // emojies"): removed the border/ring, kept a soft glow
+                                // that fades into the dark background instead — still
+                                // distinctly Crate, no hard-edged ring shape.
+                                className="crate-reaction-chip min-w-[3rem] min-h-[3rem] flex items-center justify-center text-4xl md:text-5xl rounded-full bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.4),rgba(0,0,0,0.8)_75%)] shadow-[0_0_16px_rgba(220,38,38,0.28)] hover:shadow-[0_0_30px_rgba(220,38,38,0.55)] hover:scale-125 active:scale-90 transition-all drop-shadow-lg"
                             >
                                 {emoji}
                             </button>

@@ -58,6 +58,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTrackedViewRef = useRef(false);
+  // FIX (user report — "when we try to replay the film from the catalog...
+  // it says playback error"): WatchPartyPage.tsx has always attached
+  // hls.js for .m3u8 sources (needed on Android Chrome and other
+  // non-Safari browsers, which can't play HLS natively) — this catalog
+  // player had none of that at all. Any HLS-hosted film would fail
+  // immediately with a native media error on any non-Safari browser the
+  // instant someone tried to watch it here, which is exactly what "it says
+  // playback error" describes. Mirrors WatchPartyPage.tsx's already-proven
+  // implementation rather than writing new, untested logic.
+  const hlsRef = useRef<any>(null);
   const [videoError, setVideoError] = useState(false);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
@@ -167,6 +177,75 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         window.removeEventListener('popstate', onUrlChange);
     };
   }, []);
+
+  // ── HLS.JS ATTACHMENT — Android Chrome doesn't support HLS natively ──────
+  // See the comment on hlsRef above. Same implementation as
+  // WatchPartyPage.tsx: iOS Safari plays HLS natively and is skipped;
+  // everything else gets hls.js attached, with the same fatal-error
+  // recovery (retry on network errors, attempt media recovery on media
+  // errors, only surface a real "something's wrong" state if neither
+  // works) instead of silently giving up.
+  useEffect(() => {
+    const video = videoRef.current;
+    const src = playableUrl;
+    if (!video || !src || !src.includes('.m3u8')) return;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) return;
+
+    setVideoError(false);
+
+    const attachHls = () => {
+        const Hls = (window as any).Hls;
+        if (!Hls || !Hls.isSupported()) {
+            setVideoError(true);
+            return;
+        }
+        if (hlsRef.current) hlsRef.current.destroy();
+        const hls = new Hls({ maxBufferLength: 20, enableWorker: true });
+
+        hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+            if (!data?.fatal) return;
+            console.error('[HLS] fatal error', data.type, data.details);
+            switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                    hls.startLoad();
+                    break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                    hls.recoverMediaError();
+                    break;
+                default:
+                    hls.destroy();
+                    hlsRef.current = null;
+                    setVideoError(true);
+                    break;
+            }
+        });
+
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hlsRef.current = hls;
+    };
+
+    if ((window as any).Hls) {
+        attachHls();
+    } else {
+        const script = document.createElement('script');
+        // Pinned to the same version WatchPartyPage.tsx/WatchPartyLobby.tsx
+        // use — keeping this in sync with those matters; see the comment
+        // on that pin in WatchPartyPage.tsx for why.
+        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+        script.onload = attachHls;
+        script.onerror = () => {
+            console.error('[HLS] failed to load hls.js from CDN');
+            setVideoError(true);
+        };
+        document.head.appendChild(script);
+    }
+
+    return () => {
+        if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    };
+  }, [playableUrl]);
 
   // A video that never fires an error event can still just hang forever on
   // some devices — most commonly an MP4 exported without "faststart" (its
