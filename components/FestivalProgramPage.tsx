@@ -211,7 +211,7 @@ const BlockSection: React.FC<{
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const FestivalProgramPage: React.FC = () => {
     const { festivalData, festivalConfig, movies, activeParties, isLoading, livePartyMovie } = useFestival();
-    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, user } = useAuth();
+    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, unlockWatchParty, user } = useAuth();
 
     const [activeDay, setActiveDay] = useState<number>(1);
     const [paymentItem, setPaymentItem] = useState<{ blockId?: string; type: 'block' | 'pass' | 'watchPartyTicket' } | null>(null);
@@ -245,6 +245,8 @@ const FestivalProgramPage: React.FC = () => {
             await grantFestivalAllAccess();
         } else if (details.paymentType === 'block' && details.itemId) {
             await unlockFestivalBlock(details.itemId);
+        } else if (details.paymentType === 'watchPartyTicket' && details.itemId) {
+            await unlockWatchParty(details.itemId);
         }
         setPaymentItem(null);
     };
@@ -359,7 +361,7 @@ const FestivalProgramPage: React.FC = () => {
                         <div className="space-y-6">
                             {sortedDayBlocks.map(block => {
                                 const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
-                                const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                                const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id) || (!block.price || block.price === 0);
                                 const isLive = activeParties[block.id]?.status === 'live';
                                 const hasWatchParty = !!block.isWatchPartyEnabled;
 
@@ -401,7 +403,10 @@ const FestivalProgramPage: React.FC = () => {
                             navigate(`/watchparty/${showLobbyFor}`);
                         }}
                         user={user}
-                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor) || (() => {
+                            const block = festivalData.flatMap(d => d.blocks || []).find(b => b.id === showLobbyFor);
+                            return !!block && (!block.price || block.price === 0);
+                        })()}
                         onBuyTicket={() => setPaymentItem({ blockId: showLobbyFor, type: 'watchPartyTicket' })}
                         onClose={() => setShowLobbyFor(null)}
                     />

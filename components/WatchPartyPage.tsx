@@ -380,8 +380,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // drift monitor to eventually notice on its own.
     const requestResyncRef = useRef<() => void>(() => {});
     const CATCH_UP_LATE_JOIN_THRESHOLD_SEC = 15; // drift this large = a late join, not just normal buffering
-    const CATCH_UP_WATCHDOG_TIMEOUT_MS = 12000; // how long one seek attempt gets before we assume it's genuinely stuck
-    const CATCH_UP_MAX_ATTEMPTS = 3;
+    // Widened from 12s/3 attempts (user report — late join felt "aggressive"
+    // and the movie never actually started): seeking into a large, non-CDN
+    // S3 file can genuinely take longer than 12 seconds to land, and every
+    // watchdog timeout triggers a full v.load() reload — a visible black-
+    // screen flash. Too short a timeout meant perfectly recoverable seeks
+    // were being treated as stuck and reloaded repeatedly until attempts
+    // ran out, which is what read as aggressive and is also what caused a
+    // real late joiner to give up before ever landing on a playable frame.
+    const CATCH_UP_WATCHDOG_TIMEOUT_MS = 20000; // how long one seek attempt gets before we assume it's genuinely stuck
+    const CATCH_UP_MAX_ATTEMPTS = 5;
     // Separate, larger threshold for the "wait for the next film instead of
     // seeking" feature below. Block transitions set filmStartTime the moment
     // the block advances — BEFORE the ~60s intermission countdown even
@@ -1670,6 +1678,24 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
 
+    // ── DON'T JUDGE ACCESS BEFORE AUTH HAS ACTUALLY LOADED ────────────────
+    // hasAccess is derived entirely from `user` — specifically
+    // unlockedFestivalBlockIds/hasFestivalAllAccess/rentals, all of which
+    // live on the Firestore user profile that Firebase auth fetches
+    // asynchronously. Right after a page reload/late join, `user` starts
+    // out null for the brief window before that profile has loaded back
+    // in — and hasAccess has no way to distinguish "definitely doesn't
+    // have a ticket" from "haven't found out yet," so it reads as false
+    // either way. This used to only be guarded on the credits-screen
+    // return path below; the lobby branch (shouldShowLobby, just below
+    // this) rendered its own "Buy Ticket" prompt using the same
+    // not-yet-loaded hasAccess, which is what showed up as a false
+    // "Admission Required" repayment prompt for someone who'd already
+    // paid and joined a watch party partway through. Moved up here so
+    // every return path — controller, lobby, live view, credits — waits
+    // on the real answer before rendering anything access-gated.
+    if (!authInitialized) return <LoadingSpinner />;
+
     if (isControllerMode) {
         return (
             <div className="fixed inset-0 bg-black flex flex-col z-[500]">
@@ -1968,23 +1994,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 )}
             </>
         );
-    }
-
-    // ── DON'T JUDGE ACCESS BEFORE AUTH HAS ACTUALLY LOADED ────────────────
-    // hasAccess (below) is derived entirely from `user` — specifically
-    // unlockedFestivalBlockIds/hasFestivalAllAccess/rentals, all of which
-    // live on the Firestore user profile that Firebase auth fetches
-    // asynchronously. Right after a page reload/restore, `user` starts out
-    // null for the brief window before that profile has loaded back in —
-    // and hasAccess has no way to distinguish "definitely doesn't have a
-    // ticket" from "haven't found out yet," so it read as false either way.
-    // That's what showed up as a false "Admission Required" repayment
-    // prompt on restore for someone who'd already paid: this screen was
-    // rendering during that loading window, before the real answer had
-    // arrived. FestivalTicketFlow already waits on this same flag before
-    // deciding anything; this screen needs to as well.
-    if (!authInitialized) {
-        return <LoadingSpinner />;
     }
 
     // ── AVOID FLASHING THE WRONG FILM ─────────────────────────────────────

@@ -10,24 +10,16 @@ interface CollapsibleFooterProps {
 const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice = false, showActorLinks = false }) => {
   const { settings } = useFestival();
   const [isOpen, setIsOpen] = useState(false);
-  const [isNearBottom, setIsNearBottom] = useState(false);
 
   useEffect(() => {
     const handleNavigation = () => {
       setIsOpen(false);
     };
 
-    const handleScroll = () => {
-      const isCloseToBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 150;
-      setIsNearBottom(isCloseToBottom);
-    };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('pushstate', handleNavigation);
     window.addEventListener('popstate', handleNavigation);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('pushstate', handleNavigation);
       window.removeEventListener('popstate', handleNavigation);
     };
@@ -42,10 +34,17 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
-        <div className={`flex justify-center transition-opacity duration-300 ${isNearBottom || isOpen ? 'opacity-100' : 'opacity-0'}`}>
+        {/* FIX (user report — "on the iPad, when we scroll the footer comes
+            up and interrupts the view of the page"): this toggle used to
+            fade in based on scroll position (isNearBottom), which meant it
+            rose into view and overlapped real page content at exactly the
+            moment a reader scrolled near it — the worst possible time. It's
+            now a normal, always-present small tab instead of something that
+            appears mid-scroll, so nothing changes on screen while scrolling. */}
+        <div className="flex justify-center">
              <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-20 h-10 rounded-t-lg flex items-center justify-center transition-colors"
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-20 h-10 rounded-t-lg flex items-center justify-center transition-colors shadow-lg"
                 aria-label={isOpen ? "Hide footer" : "Show footer"}
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">

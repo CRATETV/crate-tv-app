@@ -96,6 +96,19 @@ const formatISOForInput = (isoString?: string): string => {
     }
 };
 
+// Derives the "7:00 PM" style label shown to viewers from the actual
+// screening datetime, so admins only ever have to set the time once.
+const formatDisplayTime = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch (e) {
+        return '';
+    }
+};
+
 const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave, isSaving }) => {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -112,6 +125,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                       ...block,
                       watchPartyStartTime: block.screeningStartTime,
                       isWatchPartyEnabled: true,
+                      time: formatDisplayTime(block.screeningStartTime) || block.time,
                   };
               }
               return block;
@@ -126,10 +140,13 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     setIsDirty(true);
     const newData = [...data];
     let update: any = { [field]: value };
-    // When screeningStartTime changes, keep watchPartyStartTime in sync
+    // When screeningStartTime changes, keep watchPartyStartTime AND the
+    // human-readable Display Time label in sync — set the time once here,
+    // it shows up correctly everywhere else.
     if (field === 'screeningStartTime') {
         update.watchPartyStartTime = value;
         update.isWatchPartyEnabled = !!value;
+        update.time = formatDisplayTime(value) || newData[dayIndex].blocks[blockIndex].time;
     }
     newData[dayIndex].blocks[blockIndex] = { ...newData[dayIndex].blocks[blockIndex], ...update };
     onDataChange(newData);
@@ -327,7 +344,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         <div className="flex flex-wrap items-center gap-6">
                             <div className="space-y-1">
                                 <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Display Time</label>
-                                <input value={block.time} onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)} className="bg-transparent text-gray-400 text-sm font-black uppercase tracking-widest outline-none border-b border-white/5" placeholder="7:00 PM" />
+                                <input
+                                    value={block.time}
+                                    onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)}
+                                    readOnly={!!block.screeningStartTime}
+                                    className={`bg-transparent text-sm font-black uppercase tracking-widest outline-none border-b border-white/5 ${block.screeningStartTime ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400'}`}
+                                    placeholder="7:00 PM"
+                                />
+                                {block.screeningStartTime && (
+                                    <p className="text-[7px] text-gray-700">Auto-set from Screening Starts At below</p>
+                                )}
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Admission Price ($)</label>
