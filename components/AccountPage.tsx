@@ -7,10 +7,28 @@ import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 
 const AccountPage: React.FC = () => {
-    const { user, logout, setAvatar, updateName } = useAuth();
+    const { user, logout, setAvatar, updateName, claimActiveSession } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
+    const [isClearingDevices, setIsClearingDevices] = useState(false);
+    const [deviceClearMessage, setDeviceClearMessage] = useState('');
     const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || 'fox');
     const [displayName, setDisplayName] = useState(user?.name || '');
+
+    const handleLogOutOtherDevices = async () => {
+        if (!user || isClearingDevices) return;
+        setIsClearingDevices(true);
+        setDeviceClearMessage('');
+        try {
+            await claimActiveSession(user.uid);
+            setDeviceClearMessage('Done — this device is now the only one with access');
+            setTimeout(() => setDeviceClearMessage(''), 4000);
+        } catch {
+            setDeviceClearMessage("Couldn't clear other devices — try again");
+            setTimeout(() => setDeviceClearMessage(''), 4000);
+        } finally {
+            setIsClearingDevices(false);
+        }
+    };
 
     const handleSaveChanges = async () => {
         if (!user) return;
@@ -202,6 +220,25 @@ const AccountPage: React.FC = () => {
                             <button onClick={logout} className="bg-white/5 hover:bg-white/10 text-gray-500 hover:text-red-500 font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs border border-white/5 transition-all w-full sm:w-auto">
                                 Logout
                             </button>
+                        </div>
+
+                        {/* FEATURE (user request — a button to log out of all other
+                            devices so the current one becomes the active one, without
+                            having to wait to get kicked first): each ticket only plays
+                            on one device at a time, so if another device is still
+                            active — yours from earlier, or someone else's — this
+                            reclaims the slot for whichever device you click it on. */}
+                        <div className="mt-6 pt-6 border-t border-white/5 text-center">
+                            <button
+                                onClick={handleLogOutOtherDevices}
+                                disabled={isClearingDevices}
+                                className="text-gray-600 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
+                            >
+                                {isClearingDevices ? 'Clearing…' : deviceClearMessage || 'Log Out of All Other Devices'}
+                            </button>
+                            <p className="text-[10px] text-gray-700 mt-2 max-w-sm mx-auto">
+                                Makes this device the only one with access to paid content on this account.
+                            </p>
                         </div>
                     </div>
                 </div>

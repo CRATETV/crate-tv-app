@@ -3,12 +3,33 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface SessionKickedScreenProps {
     reason: 'other_device' | 'session_expired' | null;
+    otherSessionAt?: string | null;
 }
 
-const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason }) => {
+const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason, otherSessionAt }) => {
     const isExpired = reason === 'session_expired';
-    const { logout } = useAuth();
+    const { logout, user, claimActiveSession } = useAuth();
     const [isSigningOut, setIsSigningOut] = useState(false);
+    const [isTakingOver, setIsTakingOver] = useState(false);
+    const [takeoverError, setTakeoverError] = useState('');
+
+    // FEATURE (user suggestion — "maybe there should be a way to let the
+    // viewer see what device they're logged into"): with a single-active-
+    // session model there's never more than one device to list, so a full
+    // device list doesn't really fit — but telling the person WHEN that
+    // other session started turns an unexplained block into something they
+    // can actually place ("oh, that's from when I was testing on my other
+    // laptop this morning") instead of a mysterious wall.
+    const formattedOtherSessionAt = (() => {
+        if (!otherSessionAt) return null;
+        try {
+            const d = new Date(otherSessionAt);
+            if (isNaN(d.getTime())) return null;
+            return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        } catch {
+            return null;
+        }
+    })();
 
     // This device's Firebase Auth session is never actually revoked when the
     // guard kicks it — useSessionGuard only flips a local `kicked` flag, it
@@ -32,6 +53,29 @@ const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason }) => 
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    // FEATURE (user request — "we should implement a button that will
+    // allow us to log out of all devices so we can log into the device and
+    // page we're currently on"): reclaiming the session already existed as
+    // a mechanism (it's exactly what a fresh sign-in does), but the only
+    // way to trigger it from here was "Sign In" — a full logout plus
+    // re-entering a password, even though this device's actual Firebase
+    // Auth login was never revoked in the first place (kicking only flips
+    // a local flag). This calls the same underlying claim directly, using
+    // the account that's already right here, no password needed — the
+    // fastest path to "make THIS device the active one."
+    const handleTakeOver = async () => {
+        if (isTakingOver || !user) return;
+        setIsTakingOver(true);
+        setTakeoverError('');
+        try {
+            await claimActiveSession(user.uid);
+            window.location.reload();
+        } catch {
+            setTakeoverError("Couldn't take over — check your connection and try again.");
+            setIsTakingOver(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black z-[400] flex items-center justify-center p-8">
             <div className="text-center space-y-6 max-w-sm animate-[fadeIn_0.5s_ease-out]">
@@ -51,17 +95,34 @@ const SessionKickedScreen: React.FC<SessionKickedScreenProps> = ({ reason }) => 
                     <p className="text-gray-400 text-sm leading-relaxed">
                         {isExpired
                             ? 'Your session has expired for security. Please sign in again to continue watching.'
-                            : 'Your account is currently active on another device. Each ticket is for one viewer at a time. Sign in again on this device to continue.'}
+                            : 'Your account is currently active on another device. Each ticket is for one viewer at a time. Use this device instead to take over.'}
                     </p>
+                    {!isExpired && formattedOtherSessionAt && (
+                        <p className="text-gray-600 text-xs mt-3">
+                            That other session started {formattedOtherSessionAt}. If that wasn't you, use this device instead below.
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-3">
+                    {!isExpired && user && (
+                        <button
+                            onClick={handleTakeOver}
+                            disabled={isTakingOver}
+                            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-black uppercase tracking-widest text-sm py-3.5 rounded-xl transition-all"
+                        >
+                            {isTakingOver ? 'Taking Over…' : 'Use This Device Instead'}
+                        </button>
+                    )}
+                    {takeoverError && <p className="text-red-400 text-xs">{takeoverError}</p>}
                     <button
                         onClick={handleSignInAgain}
                         disabled={isSigningOut}
-                        className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-black uppercase tracking-widest text-sm py-3.5 rounded-xl transition-all"
+                        className={!isExpired && user
+                            ? "w-full bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-bold py-3 rounded-xl transition-all"
+                            : "w-full bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-black uppercase tracking-widest text-sm py-3.5 rounded-xl transition-all"}
                     >
-                        {isSigningOut ? 'Signing Out…' : 'Sign In'}
+                        {isSigningOut ? 'Signing Out…' : 'Sign In With a Different Account'}
                     </button>
                     <button
                         onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
