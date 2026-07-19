@@ -312,6 +312,8 @@ export interface WatchPartyState {
   activeBlockId?: string;
   activeMovieIndex?: number;
   intermissionUntil?: number;       // unix ms — if set, show intermission screen until this time
+  intermissionTotalSeconds?: number; // how long this specific intermission was set for (30 normal, 90 stretch break)
+  isStretchBreak?: boolean;          // true for the deliberately longer break at the midpoint of a long block
   filmStartTime?: any;              // Firestore timestamp — when the current film in the block started
   actualStartTime?: any;
   lastStartedAt?: string;           // ISO string — set fresh every time the party (re)starts, used to detect a new playback session

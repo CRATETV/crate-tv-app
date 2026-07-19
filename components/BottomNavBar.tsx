@@ -67,7 +67,22 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
             className="md:hidden fixed bottom-0 left-0 right-0 w-full h-20 bg-black/85 backdrop-blur-md border-t border-white/5 z-40 flex justify-around items-center px-1"
             style={{ 
                 height: `calc(5rem + env(safe-area-inset-bottom))`,
-                paddingBottom: `env(safe-area-inset-bottom)`
+                paddingBottom: `env(safe-area-inset-bottom)`,
+                // FIX (user report — nav bar doesn't stay pinned, visibly
+                // scrolls with the page instead of sitting fixed at the
+                // bottom): this is a well-known iOS Safari bug, not a CSS
+                // mistake — position:fixed elements can visibly drift along
+                // with page content during an active scroll gesture and
+                // only snap back to their correct fixed position once
+                // scrolling actually stops, because Safari doesn't always
+                // give a plain fixed element its own compositing layer.
+                // Forcing one with translateZ(0) (plus a will-change hint)
+                // is the standard fix — it tells the browser to composite
+                // this independently of page content instead of
+                // repainting it inline with everything else during scroll.
+                transform: 'translateZ(0)',
+                WebkitTransform: 'translateZ(0)',
+                willChange: 'transform',
             }}
         >
             <NavItem 

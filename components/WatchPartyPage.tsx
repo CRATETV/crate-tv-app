@@ -399,8 +399,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // every viewer right as a normal intermission ends. This needs to
     // comfortably clear that ~60s intermission window so it only fires for
     // someone who joined meaningfully late into the film, not everyone at
-    // the moment it actually starts.
-    const BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC = 90;
+    // the moment it actually starts. Bumped from 90 to 120 now that a real
+    // intermission can legitimately run 90s (the midpoint "stretch break" —
+    // see api/advance-block-film.ts) instead of the ~60s this was
+    // originally sized against; this needs to comfortably clear the
+    // longest real intermission, not sit exactly on top of it.
+    const BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC = 120;
     // How close to the end a late joiner needs to be for a catch-up attempt to
     // not even be worth it — successfully seeking them in only to hit the
     // credits a minute later isn't a meaningful outcome, so skip straight to
@@ -1883,6 +1887,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 currentIndex={nextIdx}
                 totalFilms={blockKeys.length}
                 secondsRemaining={intermissionSeconds}
+                totalSeconds={partyState?.intermissionTotalSeconds}
+                isStretchBreak={partyState?.isStretchBreak}
             />
         );
     }

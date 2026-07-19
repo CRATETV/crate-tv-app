@@ -7,6 +7,8 @@ interface IntermissionScreenProps {
     currentIndex: number;
     totalFilms: number;
     secondsRemaining: number;
+    totalSeconds?: number;      // actual configured length of this break (30 normal, 90 for a stretch break) — see api/advance-block-film.ts
+    isStretchBreak?: boolean;   // the deliberately longer break at the midpoint of a long block
 }
 
 const IntermissionScreen: React.FC<IntermissionScreenProps> = ({
@@ -15,9 +17,15 @@ const IntermissionScreen: React.FC<IntermissionScreenProps> = ({
     currentIndex,
     totalFilms,
     secondsRemaining,
+    totalSeconds,
+    isStretchBreak,
 }) => {
-    const progress = ((60 - secondsRemaining) / 60) * 100;
+    // Falls back to 30 for older/in-flight party docs written before
+    // intermissionTotalSeconds existed — matches the previous fixed default.
+    const TOTAL_INTERMISSION_SECONDS = totalSeconds || 30;
+    const progress = ((TOTAL_INTERMISSION_SECONDS - secondsRemaining) / TOTAL_INTERMISSION_SECONDS) * 100;
     const circumference = 2 * Math.PI * 44;
+    const filmsRemaining = totalFilms - currentIndex;
 
     return (
         <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-8">
@@ -28,11 +36,22 @@ const IntermissionScreen: React.FC<IntermissionScreenProps> = ({
             </div>
 
             <div className="mb-10 text-center">
-                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-6 py-2 mb-4">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.35em] text-amber-400">Intermission</span>
+                <div className={`inline-flex items-center gap-2 border rounded-full px-6 py-2 mb-4 ${isStretchBreak ? 'bg-red-600/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isStretchBreak ? 'bg-red-500' : 'bg-amber-400'}`} />
+                    <span className={`text-[10px] font-black uppercase tracking-[0.35em] ${isStretchBreak ? 'text-red-400' : 'text-amber-400'}`}>{isStretchBreak ? 'Stretch Break' : 'Intermission'}</span>
                 </div>
                 <p className="text-gray-500 text-sm">Film {currentIndex} of {totalFilms} has ended</p>
+                {/* Friendly, factual — not commentary on the film itself, which
+                    wouldn't read right across the whole range of genres this
+                    plays (a documentary and a horror short shouldn't get the
+                    same chipper tone). Just an honest "here's where you are." */}
+                {filmsRemaining > 0 && (
+                    <p className="text-gray-600 text-xs mt-1">
+                        {isStretchBreak
+                            ? `Halfway there — ${filmsRemaining} more to go`
+                            : filmsRemaining === 1 ? '1 more to go' : `${filmsRemaining} more to go`}
+                    </p>
+                )}
             </div>
 
             <div className="w-full max-w-md mb-10">

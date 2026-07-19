@@ -51,7 +51,20 @@ export async function POST(request: Request): Promise<Response> {
                 return { kind: 'ended' };
             }
 
-            const intermissionEnd = Date.now() + 30000;
+            // FEATURE (user request — blocks running 8 films back-to-back,
+            // wondering if viewers get worn down by that many short
+            // intermissions in a row): give longer blocks one deliberately
+            // longer break at the midpoint instead of treating every gap
+            // identically — a real pause partway through, not just another
+            // 30-second blink. Only kicks in for blocks long enough that
+            // "halfway" actually means something (5+ films); a 2- or
+            // 3-film block just gets its normal short breaks throughout.
+            const STRETCH_BREAK_THRESHOLD_FILMS = 5;
+            const STRETCH_BREAK_SECONDS = 90;
+            const NORMAL_INTERMISSION_SECONDS = 30;
+            const isStretchBreak = totalFilms >= STRETCH_BREAK_THRESHOLD_FILMS && nextIndex === Math.floor(totalFilms / 2);
+            const intermissionTotalSeconds = isStretchBreak ? STRETCH_BREAK_SECONDS : NORMAL_INTERMISSION_SECONDS;
+            const intermissionEnd = Date.now() + intermissionTotalSeconds * 1000;
             // FIX (user report — "the countdown to the new movie starts but
             // it still had to catch them up... they should just go into
             // the new movie when it starts"): this used to write
@@ -71,6 +84,8 @@ export async function POST(request: Request): Promise<Response> {
             tx.update(partyRef, {
                 activeMovieIndex: nextIndex,
                 intermissionUntil: intermissionEnd,
+                intermissionTotalSeconds,
+                isStretchBreak,
                 filmStartTime,
                 isPlaying: true,
                 currentTime: 0,
