@@ -715,7 +715,7 @@ function ordinal(n: number): string {
 
 const PwffPage: React.FC = () => {
     const { settings, isLoading, livePartyMovie, activeParties, allPartyStates, festivalData, movies } = useFestival();
-    const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user } = useAuth();
+    const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user, authInitialized } = useAuth();
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
@@ -755,7 +755,7 @@ const PwffPage: React.FC = () => {
         return livePartyMovie;
     }, [showLobbyFor, livePartyMovie]);
 
-    if (isLoading) return (
+    if (isLoading || !authInitialized) return (
         <div className="min-h-screen bg-[#050505] flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
         </div>

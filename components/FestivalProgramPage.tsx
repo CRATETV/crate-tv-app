@@ -211,7 +211,7 @@ const BlockSection: React.FC<{
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const FestivalProgramPage: React.FC = () => {
     const { festivalData, festivalConfig, movies, activeParties, isLoading, livePartyMovie } = useFestival();
-    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, unlockWatchParty, user } = useAuth();
+    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, unlockWatchParty, user, authInitialized } = useAuth();
 
     const [activeDay, setActiveDay] = useState<number>(1);
     const [paymentItem, setPaymentItem] = useState<{ blockId?: string; type: 'block' | 'pass' | 'watchPartyTicket' } | null>(null);
@@ -259,7 +259,7 @@ const FestivalProgramPage: React.FC = () => {
         })())
         : null;
 
-    if (isLoading) {
+    if (isLoading || !authInitialized) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />

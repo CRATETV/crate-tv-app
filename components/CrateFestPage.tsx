@@ -16,7 +16,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import LiveWatchPartyBanner from './LiveWatchPartyBanner';
 
 const CrateFestPage: React.FC = () => {
-    const { user, hasCrateFestPass, grantCrateFestPass, unlockedFestivalBlockIds, rentals, purchaseMovie, unlockFestivalBlock } = useAuth();
+    const { user, authInitialized, hasCrateFestPass, grantCrateFestPass, unlockedFestivalBlockIds, rentals, purchaseMovie, unlockFestivalBlock } = useAuth();
     const { isLoading, movies, settings, pipeline, livePartyMovie } = useFestival();
     const [paymentItem, setPaymentItem] = useState<{ type: 'crateFestPass' | 'block' | 'movie', block?: FilmBlock, movie?: Movie } | null>(null);
     const [isBannerDismissed, setIsBannerDismissed] = useState(false);
@@ -81,7 +81,7 @@ const CrateFestPage: React.FC = () => {
         return false;
     };
 
-    if (isLoading) return <LoadingSpinner />;
+    if (isLoading || !authInitialized) return <LoadingSpinner />;
     if (!config) return <div className="h-screen bg-black flex items-center justify-center font-black uppercase text-gray-800">System Core Offline</div>;
 
     const showPartyBanner = !!livePartyMovie && !isBannerDismissed;

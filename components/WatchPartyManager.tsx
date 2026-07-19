@@ -394,11 +394,12 @@ const FestivalLiveStatus: React.FC<{
 const WatchPartyControlRoom: React.FC<{
     item: WatchableItem;
     partyState: WatchPartyState | undefined;
+    partyStatesLoaded: boolean;
     onStartParty: () => void;
     onTerminateParty: () => void;
     onSyncState: (state: Partial<WatchPartyState>) => void;
     allMovies: Record<string, Movie>;
-}> = ({ item, partyState, onStartParty, onTerminateParty, onSyncState, allMovies }) => {
+}> = ({ item, partyState, partyStatesLoaded, onStartParty, onTerminateParty, onSyncState, allMovies }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
     const lastSyncTime = useRef(0);
@@ -480,10 +481,43 @@ const WatchPartyControlRoom: React.FC<{
     };
     
     const isProgrammaticSeekRef = useRef(false);
+    const hasInitialSyncedRef = useRef(false);
+
+    // Reset whenever we're actually looking at a different film — each new
+    // film legitimately starts near 0, so there's nothing to correct for,
+    // but this flag should only ever describe "have we aligned to THIS
+    // film's live position," not carry over from the previous one.
+    useEffect(() => {
+        hasInitialSyncedRef.current = false;
+    }, [currentMovie?.key, partyState?.activeMovieIndex]);
+
+    const handleLoadedMetadata = () => {
+        const video = videoRef.current;
+        if (!video || hasInitialSyncedRef.current) return;
+        hasInitialSyncedRef.current = true;
+        if (partyState?.currentTime && partyState.currentTime > 1) {
+            isProgrammaticSeekRef.current = true;
+            video.currentTime = partyState.currentTime;
+        }
+    };
 
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState) return;
+
+        // FIX (user report — admin opening the Watch Party tab mid-movie
+        // restarts it for everyone): a freshly-mounted <video> element
+        // always starts at position 0 with nothing here to correct that —
+        // this effect would see partyState.isPlaying === true and call
+        // video.play() immediately, so the admin's own preview started
+        // playing from 0 regardless of where the real party actually was.
+        // From there, handleTimeUpdate below reports that wrong position
+        // back to Firestore every few seconds, and that's what viewers
+        // sync their own playback to — so it visibly restarted the movie
+        // for the whole party. Holding playback here until
+        // handleLoadedMetadata has done its one-time seek to the real
+        // position closes that gap.
+        if (!hasInitialSyncedRef.current && (partyState.currentTime || 0) > 1) return;
 
         // Admin is the source of truth for currentTime — only sync play/pause state.
         // Reading currentTime back from Firestore caused a restart loop:
@@ -495,10 +529,67 @@ const WatchPartyControlRoom: React.FC<{
             video.pause();
         }
     }, [partyState]);
-    
+
+    // ── POST-MOVIE COUNTDOWN + AUTO-END VISIBILITY ─────────────────────────
+    // FEATURE (user request — a countdown after the movie ends, and a
+    // trigger to end it, visible in the admin Watch Party tab): the party
+    // already auto-ends 3 minutes after the last film finishes (see
+    // AUTO_END_DELAY_MS in WatchPartyPage.tsx and the server-side check in
+    // api/auto-end-watch-party.ts), but that was entirely invisible from
+    // here, and entirely dependent on some viewer still having a browser
+    // tab open to trigger it — if everyone had already left, nothing would
+    // ever call it. This mirrors that same countdown on the admin side
+    // (same 3-minute grace, same endpoint) so it's visible here regardless
+    // of whether any viewer is still connected, and calls the same
+    // server-authoritative endpoint as an independent backstop — safe to
+    // call redundantly, since the server re-verifies the real elapsed time
+    // itself before actually ending anything.
+    const AUTO_END_GRACE_MS = 3 * 60 * 1000;
+    const [nowTick, setNowTick] = useState(Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNowTick(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const isLastFilmOfBlock = item.type !== 'block' || !item.movieKeys || (partyState?.activeMovieIndex ?? 0) >= item.movieKeys.length - 1;
+
+    const expectedFilmEndMs = useMemo(() => {
+        const startRef = partyState?.filmStartTime || partyState?.actualStartTime;
+        const duration = currentMovie?.durationInMinutes;
+        if (!startRef || typeof (startRef as any).toDate !== 'function' || !duration) return null;
+        return (startRef as any).toDate().getTime() + duration * 60000;
+    }, [partyState?.filmStartTime, partyState?.actualStartTime, currentMovie?.durationInMinutes]);
+
+    const secondsUntilFilmEnds = expectedFilmEndMs ? Math.round((expectedFilmEndMs - nowTick) / 1000) : null;
+    const hasFilmEndedByClock = secondsUntilFilmEnds !== null && secondsUntilFilmEnds <= 0;
+    const secondsUntilAutoEnd = hasFilmEndedByClock && expectedFilmEndMs
+        ? Math.max(0, Math.round((expectedFilmEndMs + AUTO_END_GRACE_MS - nowTick) / 1000))
+        : null;
+
+    const autoEndAttemptedRef = useRef(false);
+    useEffect(() => {
+        if (partyState?.status !== 'live' || !isLastFilmOfBlock || secondsUntilAutoEnd !== 0 || autoEndAttemptedRef.current) return;
+        autoEndAttemptedRef.current = true;
+        fetch('/api/auto-end-watch-party', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partyId: item.id }),
+        }).catch(err => console.error('[Admin auto-end backstop] Request failed:', err));
+    }, [partyState?.status, isLastFilmOfBlock, secondsUntilAutoEnd, item.id]);
+
+    // Reset the one-shot guard whenever a new film/party actually starts, so
+    // the next film's ending is eligible to trigger this again.
+    useEffect(() => { autoEndAttemptedRef.current = false; }, [partyState?.filmStartTime]);
+
+    const formatMMSS = (totalSeconds: number) => {
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        return `${m}:${String(s).padStart(2, '0')}`;
+    };
+
     const status = getPartyStatusText(item, partyState);
     const isLive = partyState?.status === 'live';
-    const canStart = item.isWatchPartyEnabled && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
+    const canStart = item.isWatchPartyEnabled && partyStatesLoaded && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
     
     const [isStarting, setIsStarting] = useState(false);
     const [isTogglingQA, setIsTogglingQA] = useState(false);
@@ -712,6 +803,7 @@ const WatchPartyControlRoom: React.FC<{
                                 <video
                                     ref={videoRef}
                                     src={currentMovie.fullMovie}
+                                    onLoadedMetadata={handleLoadedMetadata}
                                     onPlay={handlePlay}
                                     onPause={handlePause}
                                     onSeeked={handleSeeked}
@@ -871,6 +963,13 @@ const WatchPartyControlRoom: React.FC<{
                                                     {isAdvancing ? 'Advancing…' : `Next Film (${(partyState?.activeMovieIndex ?? 0) + 1}/${item.movieKeys.length})`}
                                                 </button>
                                             )}
+                                            {isLastFilmOfBlock && hasFilmEndedByClock && secondsUntilAutoEnd !== null && (
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-xl py-3 px-4">
+                                                    {secondsUntilAutoEnd > 0
+                                                        ? `Film ended — auto-ending party in ${formatMMSS(secondsUntilAutoEnd)}`
+                                                        : 'Film ended — ending party now…'}
+                                                </span>
+                                            )}
                                             <button 
                                                 onClick={onTerminateParty} 
                                                 className="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white font-bold py-3 px-6 rounded-xl border border-red-500/30 transition-all"
@@ -1018,6 +1117,7 @@ const WatchPartyManager: React.FC<{
     onSaveCrateFest: (config: CrateFestConfig) => Promise<void>;
 }> = ({ allMovies, festivalData, crateFestConfig, onSaveMovie, onSaveFestival, onSaveCrateFest }) => {
     const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
+    const [partyStatesLoaded, setPartyStatesLoaded] = useState(false);
     const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -1045,6 +1145,7 @@ const WatchPartyManager: React.FC<{
                 states[doc.id] = doc.data() as WatchPartyState;
             });
             setPartyStates(states);
+            setPartyStatesLoaded(true);
         });
         return () => unsub();
     }, []);
@@ -1286,6 +1387,7 @@ const WatchPartyManager: React.FC<{
                 <WatchPartyControlRoom
                     item={currentSelectedItem}
                     partyState={partyStates[currentSelectedItem.id]}
+                    partyStatesLoaded={partyStatesLoaded}
                     onStartParty={handleStartParty}
                     onTerminateParty={handleTerminateParty}
                     onSyncState={handleSyncState}

@@ -35,7 +35,7 @@ const getEmbedUrl = (url: string): string | null => {
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, unlockFestivalBlock } = useAuth();
+  const { user, authInitialized, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, unlockFestivalBlock, claimActiveSession } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, festivalData, allPartyStates } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -165,6 +165,27 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // came through.
   const needsSessionGuard = hasAccess && (isFestivalFilm || !!movie?.isForSale);
   const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, needsSessionGuard);
+
+  // ── CLAIM THE SINGLE-STREAM SLOT AT WATCH-TIME, NOT JUST LOGIN-TIME ─────
+  // Same fix as WatchPartyPage.tsx's identically-named effect, ported here:
+  // useSessionGuard above only KICKS a device that's already behind: it
+  // never WRITES the fresh token that actually creates that conflict in
+  // the first place. That write only happened inside signIn/signUp — so
+  // two devices that were each already independently logged in (the
+  // normal case; nobody re-enters their password every time they reopen
+  // the site) could both sit there with locally-valid, non-conflicting
+  // tokens and both watch the same paid rental simultaneously, forever,
+  // since neither one's viewing ever did anything that would overwrite
+  // the other's claim. Claiming the slot the moment paid playback
+  // actually starts closes that gap the same way it was already closed
+  // for watch parties.
+  const hasClaimedMovieSessionRef = useRef(false);
+  useEffect(() => {
+    if (!needsSessionGuard || !user?.uid) { hasClaimedMovieSessionRef.current = false; return; }
+    if (hasClaimedMovieSessionRef.current) return;
+    hasClaimedMovieSessionRef.current = true;
+    claimActiveSession(user.uid).catch(() => { hasClaimedMovieSessionRef.current = false; });
+  }, [needsSessionGuard, user?.uid, claimActiveSession]);
 
   useEffect(() => {
     const onUrlChange = () => {
@@ -362,7 +383,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
   }, [playerMode, hasAccess, playContent, currentSearch]);
 
-  if (isDataLoading) return <LoadingSpinner />;
+  if (isDataLoading || !authInitialized) return <LoadingSpinner />;
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
   // useSessionGuard was being called but its result was never rendered here,
   // so the multi-device kick never actually surfaced on plain movie/festival
