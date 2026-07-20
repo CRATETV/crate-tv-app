@@ -491,13 +491,32 @@ const WatchPartyControlRoom: React.FC<{
         hasInitialSyncedRef.current = false;
     }, [currentMovie?.key, partyState?.activeMovieIndex]);
 
+    // Prefer computing the real elapsed position from filmStartTime (wall-
+    // clock time since the film actually started) over trusting
+    // partyState.currentTime directly — that field only gets updated when
+    // an admin's own preview is open to report it, so if no admin has been
+    // in this tab since the film started, it's stale (often still ~0) and
+    // seeking to it lands the preview at the wrong spot — which then gets
+    // pushed to every viewer as if it were the real position. This mirrors
+    // the same computation used for the post-movie countdown above.
+    const getExpectedCurrentTime = (): number | null => {
+        const startRef = partyState?.filmStartTime || partyState?.actualStartTime;
+        if (startRef && typeof (startRef as any).toDate === 'function') {
+            const elapsed = (Date.now() - (startRef as any).toDate().getTime()) / 1000;
+            const duration = (currentMovie?.durationInMinutes || 0) * 60;
+            if (elapsed >= 0) return duration > 0 ? Math.min(elapsed, duration) : elapsed;
+        }
+        return partyState?.currentTime && partyState.currentTime > 1 ? partyState.currentTime : null;
+    };
+
     const handleLoadedMetadata = () => {
         const video = videoRef.current;
         if (!video || hasInitialSyncedRef.current) return;
         hasInitialSyncedRef.current = true;
-        if (partyState?.currentTime && partyState.currentTime > 1) {
+        const expected = getExpectedCurrentTime();
+        if (expected && expected > 1) {
             isProgrammaticSeekRef.current = true;
-            video.currentTime = partyState.currentTime;
+            video.currentTime = expected;
         }
     };
 
@@ -517,7 +536,7 @@ const WatchPartyControlRoom: React.FC<{
         // for the whole party. Holding playback here until
         // handleLoadedMetadata has done its one-time seek to the real
         // position closes that gap.
-        if (!hasInitialSyncedRef.current && (partyState.currentTime || 0) > 1) return;
+        if (!hasInitialSyncedRef.current && (getExpectedCurrentTime() || 0) > 1) return;
 
         // Admin is the source of truth for currentTime — only sync play/pause state.
         // Reading currentTime back from Firestore caused a restart loop:
