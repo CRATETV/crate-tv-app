@@ -20,7 +20,7 @@ interface WatchPartyPageProps {
   movieKey: string;
 }
 
-const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
+const REACTION_TYPES = ['😂', '😲', '❤️', '👏', '😢'] as const;
 
 /**
  * LIVE RELAY ENGINE V4.5
@@ -1550,20 +1550,31 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return !!(exp && new Date(exp) > new Date());
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
-    // ── SIGNED STREAM URL — DISABLED FOR NOW ────────────────────────────────
-    // This briefly routed playback through api/get-stream-url.ts (a
-    // time-limited signed CloudFront URL instead of the permanent public
-    // movie.fullMovie link) as part of closing a piracy/paywall-bypass gap.
-    // Turned out that endpoint was never actually finished being configured:
-    // it rewrites every video URL onto the CloudFront distribution that
-    // serves posters/logos/photos, not the one (if any) in front of the S3
-    // bucket that actually hosts movie files (cratetelevision.s3...). Every
-    // request through it was breaking — that's what was causing videos to
-    // not start, get stuck, and need a refresh, worst on Android. Reverted
-    // to the direct URL (the reliable, previously-working path) until
-    // get-stream-url.ts is pointed at the right origin and this can be
-    // safely turned back on.
-    const playableUrl = movie?.fullMovie;
+    // ── CDN DELIVERY — RE-ENABLED, MINIMAL VERSION ──────────────────────────
+    // Previously disabled (see prior comment in git history) after the
+    // signed-URL version broke playback — that version rewrote onto a
+    // CloudFront distribution believed to serve only posters/images, not
+    // video. Confirmed via direct browser test that this distribution
+    // (d3jhtrl1gnrh4b.cloudfront.net) DOES serve video files correctly —
+    // video and posters share the same S3 bucket, so the old "wrong
+    // distribution" assumption no longer holds (may not have held then
+    // either). This version deliberately skips signing: today's direct S3
+    // URLs already have zero access protection, so a bare CDN rewrite is a
+    // pure improvement (faster delivery, same protection level) without the
+    // extra signing complexity that's the likely actual cause of the
+    // original breakage. Signing can be layered on later, separately, once
+    // it's verified in isolation.
+    const CDN_DOMAIN = 'd3jhtrl1gnrh4b.cloudfront.net';
+    const toCdnUrl = (rawUrl?: string): string | undefined => {
+        if (!rawUrl) return rawUrl;
+        try {
+            const u = new URL(rawUrl);
+            return `https://${CDN_DOMAIN}${u.pathname}`;
+        } catch {
+            return rawUrl; // malformed URL — fall back to whatever was stored rather than break playback
+        }
+    };
+    const playableUrl = toCdnUrl(movie?.fullMovie);
 
     // ── LIVE-VIEW PRESENCE — keeps a viewer counted as "watching" past the lobby ──
     // WatchPartyLobby writes its own presence doc into `lobby_viewers` and
@@ -1595,7 +1606,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);
-    const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, isPaidContent);
+    const { kicked: sessionKicked, reason: kickReason, otherSessionAt } = useSessionGuard(user?.uid, isPaidContent);
 
     // ── CLAIM THE SINGLE-STREAM SLOT AT WATCH-TIME, NOT JUST LOGIN-TIME ────
     // useSessionGuard only KICKS a device that's already behind; something
@@ -1737,7 +1748,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }
 
     // ── SESSION KICKED SCREEN ─────────────────────────────────────────────────
-    if (sessionKicked) return <SessionKickedScreen reason={kickReason} />;
+    if (sessionKicked) return <SessionKickedScreen reason={kickReason} otherSessionAt={otherSessionAt} />;
 
     // ── WAITING SCREEN — user skipped lobby but party hasn't started yet ─────
     // Shows a cinematic holding screen with the film preloading in background

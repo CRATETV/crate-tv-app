@@ -141,14 +141,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // blank/generic "Unlock Now" with no number attached.
   const displayPrice = movie?.salePrice ?? (parentFestivalBlock ? 5 : undefined);
 
-  // ── SIGNED STREAM URL — DISABLED FOR NOW ──────────────────────────────
-  // See the long note in WatchPartyPage.tsx: api/get-stream-url.ts rewrites
-  // video URLs onto the wrong CloudFront distribution (the one serving
-  // posters/images, not the S3 bucket that actually hosts movie files), so
-  // every request through it was broken — that's what was causing videos
-  // not to start / get stuck / need a refresh. Reverted to the direct URL
-  // until that endpoint is pointed at the correct origin.
-  const playableUrl = movie?.fullMovie;
+  // ── CDN DELIVERY — RE-ENABLED, MINIMAL VERSION ─────────────────────────
+  // See the long note in WatchPartyPage.tsx — confirmed via direct browser
+  // test that d3jhtrl1gnrh4b.cloudfront.net correctly serves video (video
+  // and posters share one S3 bucket, so the earlier "wrong distribution"
+  // assumption no longer holds). Deliberately unsigned for now — today's
+  // direct S3 URLs already have no access protection, so this is a pure
+  // speed improvement without the signing complexity that likely caused
+  // the original breakage.
+  const CDN_DOMAIN = 'd3jhtrl1gnrh4b.cloudfront.net';
+  const toCdnUrl = (rawUrl?: string): string | undefined => {
+      if (!rawUrl) return rawUrl;
+      try {
+          const u = new URL(rawUrl);
+          return `https://${CDN_DOMAIN}${u.pathname}`;
+      } catch {
+          return rawUrl;
+      }
+  };
+  const playableUrl = toCdnUrl(movie?.fullMovie);
 
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked
@@ -164,7 +175,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Guard any content that's actually paid, regardless of which gate it
   // came through.
   const needsSessionGuard = hasAccess && (isFestivalFilm || !!movie?.isForSale);
-  const { kicked: sessionKicked, reason: kickReason } = useSessionGuard(user?.uid, needsSessionGuard);
+  const { kicked: sessionKicked, reason: kickReason, otherSessionAt } = useSessionGuard(user?.uid, needsSessionGuard);
 
   // ── CLAIM THE SINGLE-STREAM SLOT AT WATCH-TIME, NOT JUST LOGIN-TIME ─────
   // Same fix as WatchPartyPage.tsx's identically-named effect, ported here:
@@ -389,7 +400,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // so the multi-device kick never actually surfaced on plain movie/festival
   // pages — only on WatchPartyPage, which does render this. Wiring it up so
   // paid content is actually protected everywhere it's checked.
-  if (sessionKicked) return <SessionKickedScreen reason={kickReason} />;
+  if (sessionKicked) return <SessionKickedScreen reason={kickReason} otherSessionAt={otherSessionAt} />;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
 
