@@ -1550,31 +1550,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return !!(exp && new Date(exp) > new Date());
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
 
-    // ── CDN DELIVERY — RE-ENABLED, MINIMAL VERSION ──────────────────────────
-    // Previously disabled (see prior comment in git history) after the
-    // signed-URL version broke playback — that version rewrote onto a
-    // CloudFront distribution believed to serve only posters/images, not
-    // video. Confirmed via direct browser test that this distribution
-    // (d3jhtrl1gnrh4b.cloudfront.net) DOES serve video files correctly —
-    // video and posters share the same S3 bucket, so the old "wrong
-    // distribution" assumption no longer holds (may not have held then
-    // either). This version deliberately skips signing: today's direct S3
-    // URLs already have zero access protection, so a bare CDN rewrite is a
-    // pure improvement (faster delivery, same protection level) without the
-    // extra signing complexity that's the likely actual cause of the
-    // original breakage. Signing can be layered on later, separately, once
-    // it's verified in isolation.
-    const CDN_DOMAIN = 'd3jhtrl1gnrh4b.cloudfront.net';
-    const toCdnUrl = (rawUrl?: string): string | undefined => {
-        if (!rawUrl) return rawUrl;
-        try {
-            const u = new URL(rawUrl);
-            return `https://${CDN_DOMAIN}${u.pathname}`;
-        } catch {
-            return rawUrl; // malformed URL — fall back to whatever was stored rather than break playback
-        }
-    };
-    const playableUrl = toCdnUrl(movie?.fullMovie);
+    // ── CDN DELIVERY — REVERTED AGAIN ───────────────────────────────────────
+    // Attempted re-enable (see git history) after a manual browser test of
+    // ONE film's rewritten URL worked. Turned out that didn't generalize —
+    // a live watch party hit MEDIA_ELEMENT_ERROR (format error, code 4) on
+    // a different film, meaning that film's path doesn't resolve correctly
+    // through this CloudFront distribution even though the manually-tested
+    // one did. Reverted to the direct S3 URL (the reliable path) until every
+    // film's CDN path has actually been verified individually, not just one.
+    const playableUrl = movie?.fullMovie;
 
     // ── LIVE-VIEW PRESENCE — keeps a viewer counted as "watching" past the lobby ──
     // WatchPartyLobby writes its own presence doc into `lobby_viewers` and

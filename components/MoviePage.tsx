@@ -141,25 +141,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // blank/generic "Unlock Now" with no number attached.
   const displayPrice = movie?.salePrice ?? (parentFestivalBlock ? 5 : undefined);
 
-  // ── CDN DELIVERY — RE-ENABLED, MINIMAL VERSION ─────────────────────────
-  // See the long note in WatchPartyPage.tsx — confirmed via direct browser
-  // test that d3jhtrl1gnrh4b.cloudfront.net correctly serves video (video
-  // and posters share one S3 bucket, so the earlier "wrong distribution"
-  // assumption no longer holds). Deliberately unsigned for now — today's
-  // direct S3 URLs already have no access protection, so this is a pure
-  // speed improvement without the signing complexity that likely caused
-  // the original breakage.
-  const CDN_DOMAIN = 'd3jhtrl1gnrh4b.cloudfront.net';
-  const toCdnUrl = (rawUrl?: string): string | undefined => {
-      if (!rawUrl) return rawUrl;
-      try {
-          const u = new URL(rawUrl);
-          return `https://${CDN_DOMAIN}${u.pathname}`;
-      } catch {
-          return rawUrl;
-      }
-  };
-  const playableUrl = toCdnUrl(movie?.fullMovie);
+  // ── CDN DELIVERY — REVERTED AGAIN ──────────────────────────────────────
+  // See the long note in WatchPartyPage.tsx — a live test hit a format
+  // error on a film whose path didn't resolve correctly through the CDN,
+  // even though a different film worked in manual testing. Reverted to
+  // the direct URL until every film's CDN path is verified individually.
+  const playableUrl = movie?.fullMovie;
 
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked
