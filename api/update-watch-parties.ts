@@ -143,7 +143,15 @@ export async function GET(request: Request) {
                                 isPlaying: true,
                                 currentTime: 0,
                                 actualStartTime: FieldValue.serverTimestamp(),
-                                filmStartTime: startTimeStr,
+                                // FIX (viewers stuck on "Connecting to Watch
+                                // Party" forever on auto-started blocks): this was a raw
+                                // string, which has no .toDate() — the client's sync engine
+                                // requires that method and silently gives up forever without
+                                // it. Wrapping in new Date(...) matches how
+                                // api/advance-block-film.ts already sets filmStartTime for
+                                // later films in the block; the Admin SDK auto-converts a JS
+                                // Date into a real Firestore Timestamp on write.
+                                filmStartTime: new Date(startTimeStr),
                                 lastUpdated: FieldValue.serverTimestamp(),
                                 backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
                             }, { merge: true });
