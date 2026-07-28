@@ -1683,6 +1683,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         // screen below, with a thank-you and next-block ticket info — it
         // just wasn't being used when the admin ends things manually
         // instead of the block finishing on its own. Routing here too.
+        // FIX (user report — iPhone stuck "just loading" after admin
+        // manually ended a multi-film block, never reaching the credits
+        // screen or getting back home): parentBlock comes from
+        // festivalData, which loads asynchronously via its own Firestore
+        // listener — independent of this effect. If the party's status
+        // flips to 'ended' before festivalData has actually delivered
+        // this block yet, parentBlock reads as null here — indistinguishable
+        // from "this really is a standalone movie" — which used to send
+        // this down the wrong branch below: a 3s redirect to
+        // /movie/{the-block-id}?play=true, a URL with no real movie behind
+        // it for a block id, stranding the viewer instead of showing the
+        // real credits screen with its working way home. Waiting for
+        // isFestivalLoading to actually finish before trusting a null
+        // parentBlock closes that window — worst case this effect just
+        // waits one more render for the real data to answer definitively.
+        if (isFestivalLoading) return;
         if (parentBlock) {
             setShowCredits(true);
             return;
@@ -1705,7 +1721,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             window.dispatchEvent(new Event('pushstate'));
         }, 3000);
         return () => clearTimeout(timer);
-    }, [partyState?.status, movieKey, parentBlock]);
+    }, [partyState?.status, movieKey, parentBlock, isFestivalLoading]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
