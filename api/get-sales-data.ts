@@ -1,5 +1,5 @@
 
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig, AdminPayout, BillSavingsTransaction } from '../types.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
@@ -83,6 +83,21 @@ export async function POST(request: Request) {
         if (initError) errors.firebase = initError;
         const db = getAdminDb();
         if (!db) throw new Error("Database offline.");
+        const auth = getAdminAuth();
+
+        // True account count — every Firebase Auth user, not just whoever
+        // has a Firestore profile doc (see this script's header comment).
+        const listAllAuthUsers = async () => {
+            if (!auth) return [];
+            const allUsers: { email?: string }[] = [];
+            let pageToken: string | undefined;
+            do {
+                const listUsersResult = await auth.listUsers(1000, pageToken);
+                allUsers.push(...listUsersResult.users);
+                pageToken = listUsersResult.pageToken;
+            } while (pageToken);
+            return allUsers;
+        };
 
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
@@ -95,7 +110,7 @@ export async function POST(request: Request) {
         const crateFestConfig = settingsDoc.data()?.crateFestConfig as CrateFestConfig | undefined;
         const crateFestBlockTitles = crateFestConfig?.movieBlocks.map(b => b.title) || [];
 
-        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot, adminPayoutsSnapshot, billSavingsSnapshot, rokuLinksSnapshot, rokuEventsSnapshot] = await Promise.all([
+        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot, adminPayoutsSnapshot, billSavingsSnapshot, rokuLinksSnapshot, rokuEventsSnapshot, allAuthUsers] = await Promise.all([
             accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
@@ -105,7 +120,8 @@ export async function POST(request: Request) {
             db.collection('admin_payouts').orderBy('payoutDate', 'desc').get(),
             db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get(),
             db.collection('roku_links').get(),
-            db.collection('traffic_events').where('platform', '==', 'ROKU').get()
+            db.collection('traffic_events').where('platform', '==', 'ROKU').get(),
+            listAllAuthUsers()
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -226,7 +242,7 @@ export async function POST(request: Request) {
             totalCrateTvRevenue, 
             totalAdminPayouts, 
             pastAdminPayouts,
-            totalUsers: usersSnapshot.size, 
+            totalUsers: allAuthUsers.length, 
             viewCounts, 
             movieLikes, 
             watchlistCounts, 
