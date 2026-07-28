@@ -22,6 +22,17 @@ interface WatchPartyPageProps {
 
 const REACTION_TYPES = ['😂', '😲', '❤️', '👏', '😢'] as const;
 
+// iOS presents its own UA string patterns across iPhone/iPad/iPod; iPadOS
+// 13+ additionally masquerades as desktop Safari in its UA string but
+// exposes multi-touch, which real desktop Safari doesn't — checked as a
+// fallback so iPads aren't missed.
+const isIOSDevice = (): boolean => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) return true;
+    return ua.includes('Macintosh') && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+};
+
 /**
  * LIVE RELAY ENGINE V4.5
  * Automatically converts browser URLs from major platforms into secure full-screen iframes.
@@ -388,8 +399,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // were being treated as stuck and reloaded repeatedly until attempts
     // ran out, which is what read as aggressive and is also what caused a
     // real late joiner to give up before ever landing on a playable frame.
-    const CATCH_UP_WATCHDOG_TIMEOUT_MS = 20000; // how long one seek attempt gets before we assume it's genuinely stuck
-    const CATCH_UP_MAX_ATTEMPTS = 5;
+    // FIX (user report — iPhone viewer wrongly told the watch party
+    // already started): the budget below was tuned against desktop
+    // testing. iOS gets a longer per-attempt timeout and one extra
+    // attempt — 30s x 6 = 180s ceiling instead of 100s — before we
+    // actually conclude the seek is stuck rather than just slow.
+    const IS_IOS = isIOSDevice();
+    const CATCH_UP_WATCHDOG_TIMEOUT_MS = IS_IOS ? 30000 : 20000; // how long one seek attempt gets before we assume it's genuinely stuck
+    const CATCH_UP_MAX_ATTEMPTS = IS_IOS ? 6 : 5;
     // Separate, larger threshold for the "wait for the next film instead of
     // seeking" feature below. Block transitions set filmStartTime the moment
     // the block advances — BEFORE the ~60s intermission countdown even
@@ -975,14 +992,34 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         // seekToLive dance a fresh join uses — no separate mechanism, no
         // separate bugs to have.
         monitorInterval = setInterval(() => {
-            if (cancelled || syncPhaseRef.current !== 'idle') return; // never fight an in-progress seek
+            if (cancelled) return;
             const video = videoRef.current;
             if (!video) return;
             const target = computeTarget();
             if (!target) return;
 
+            // FIX (user report — iPhone viewer stuck forever on "this watch
+            // party already started," never saw the end-of-movie message):
+            // this end check used to live only inside seekToLive, and
+            // nothing calls seekToLive again once syncPhaseRef flips to
+            // 'given-up' — so a viewer whose catch-up genuinely failed (the
+            // common case: a slow/cellular iPhone connection where seeking
+            // into a large in-progress file times out) never had isEnded
+            // set for the rest of that film. Checking it here, before the
+            // 'idle'-only guard below, means it keeps running for every
+            // viewer regardless of sync phase — it's read-only against the
+            // server clock and never resumes playback, so it's safe to run
+            // even mid-seek or post-give-up.
+            if (target.targetPosition >= target.movieDuration) {
+                if (!isEndedRef.current) {
+                    setIsEnded(true);
+                    video.pause();
+                }
+                return;
+            }
+
+            if (syncPhaseRef.current !== 'idle') return; // never fight an in-progress seek
             if (target.status !== 'live') { video.pause(); return; }
-            if (target.targetPosition >= target.movieDuration) return; // handled inside seekToLive
 
             const drift = target.targetPosition - video.currentTime;
             const absDrift = Math.abs(drift);
