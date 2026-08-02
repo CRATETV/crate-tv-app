@@ -235,7 +235,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const sendPasswordReset = async (email: string) => {
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
-        await auth.sendPasswordResetEmail(email);
+        // FIX (audit finding): without actionCodeSettings, Firebase sends
+        // people to its own generic, unbranded reset page with no way back
+        // to the actual site. This gives that page a "continue" link back
+        // to cratetv.net once the reset completes.
+        const actionCodeSettings = {
+            url: 'https://cratetv.net/',
+            handleCodeInApp: false,
+        };
+        await auth.sendPasswordResetEmail(email, actionCodeSettings);
     };
 
     const getUserIdToken = useCallback(async (): Promise<string | null> => {

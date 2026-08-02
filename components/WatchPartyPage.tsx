@@ -1728,7 +1728,38 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({ emoji, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
     };
 
-    if (isFestivalLoading || !movie) return <LoadingSpinner />;
+    if (isFestivalLoading) return <LoadingSpinner />;
+
+    // FIX (user report — "it just buffers like this" with no way out):
+    // this used to be "if (isFestivalLoading || !movie) return
+    // <LoadingSpinner />" — a single bare spinner for both "still
+    // loading" (normal) and "this movie/block doesn't exist anymore"
+    // (e.g. an admin deleted it, or someone landed on a stale link).
+    // Once festival data has finished loading and movie is STILL null,
+    // nothing was ever going to make it become non-null again — so that
+    // second case showed an unexplained spinner PERMANENTLY, with no
+    // message and no way out, for anyone mid-session when an admin
+    // pulled the film. This gives that case an actual explanation and a
+    // way home instead of an endless silent spin.
+    if (!movie) {
+        return (
+            <div className="fixed inset-0 bg-black flex items-center justify-center p-8">
+                <div className="relative z-10 text-center space-y-6 max-w-md">
+                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Signal Lost</p>
+                    <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white">This Screening Is No Longer Available</h2>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                        This watch party may have been removed or updated. Head back to Crate TV to keep browsing.
+                    </p>
+                    <a
+                        href="/"
+                        className="inline-block bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 px-8 rounded-xl transition-all hover:scale-105 active:scale-95"
+                    >
+                        Return Home
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     // ── DON'T JUDGE ACCESS BEFORE AUTH HAS ACTUALLY LOADED ────────────────
     // hasAccess is derived entirely from `user` — specifically
