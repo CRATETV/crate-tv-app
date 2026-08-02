@@ -10,29 +10,50 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // FIX (support ticket — "Missing or insufficient permissions" on
+    // every new signup): the old version called
+    // request.resource.data.diff(resource.data) unconditionally.
+    // `resource` doesn't exist yet on a create (every brand-new
+    // account's very first write), which fails rule evaluation and
+    // surfaces to the client as a permission error — blocking every
+    // single new signup, not just updates.
+    //
+    // This checks each protected field's VALUE instead of just whether
+    // its key is present in the write. That matters because
+    // createUserProfile() legitimately writes these fields at their
+    // safe defaults (false / [] / {}) on every new account — a
+    // key-name-only check would keep blocking signup even once the
+    // null-resource crash above is fixed. A field is only treated as
+    // "being written" if its value would actually change from what it
+    // already is (or from its safe default, if the document doesn't
+    // exist yet) — so devtools tampering to self-grant paid access is
+    // still blocked, same as before, while normal signup/update isn't.
+    function protectedFieldUnchanged(field, defaultVal) {
+      let touchesField = field in request.resource.data;
+      let existingValue = resource != null ? resource.data.get(field, defaultVal) : defaultVal;
+      return !touchesField || request.resource.data[field] == existingValue;
+    }
+
     function isWritingProtectedFields() {
-      let protectedFields = [
-        'hasFestivalAllAccess',
-        'hasCrateFestPass',
-        'hasJuryPass',
-        'isPremiumSubscriber',
-        'purchasedMovieKeys',
-        // These four grant access to paid content (movie rentals, watch party
-        // tickets, festival block unlocks, and legacy block-unlock formats)
-        // and were previously writable by clients directly — meaning anyone
-        // with browser devtools could grant themselves any paid movie or
-        // watch party for free by writing straight to their own user doc.
-        // Access to these is now only ever granted server-side (Admin SDK,
-        // which bypasses these rules) after a verified payment or a verified
-        // ticket-code redemption — see api/process-square-payment.ts and
-        // api/redeem-ticket-code.ts.
-        'rentals',
-        'unlockedWatchPartyKeys',
-        'unlockedBlocks',
-        'unlockedBlockIds',
-        'unlockedFestivalDays',
-      ];
-      return request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedFields);
+      // These fields grant access to paid content (movie rentals, watch
+      // party tickets, festival block unlocks, and legacy block-unlock
+      // formats) and were previously writable by clients directly —
+      // meaning anyone with browser devtools could grant themselves any
+      // paid movie or watch party for free by writing straight to their
+      // own user doc. Access to these is now only ever granted
+      // server-side (Admin SDK, which bypasses these rules) after a
+      // verified payment or a verified ticket-code redemption — see
+      // api/process-square-payment.ts and api/redeem-ticket-code.ts.
+      return !protectedFieldUnchanged('hasFestivalAllAccess', false)
+          || !protectedFieldUnchanged('hasCrateFestPass', false)
+          || !protectedFieldUnchanged('hasJuryPass', false)
+          || !protectedFieldUnchanged('isPremiumSubscriber', false)
+          || !protectedFieldUnchanged('purchasedMovieKeys', [])
+          || !protectedFieldUnchanged('rentals', {})
+          || !protectedFieldUnchanged('unlockedWatchPartyKeys', [])
+          || !protectedFieldUnchanged('unlockedBlocks', [])
+          || !protectedFieldUnchanged('unlockedBlockIds', [])
+          || !protectedFieldUnchanged('unlockedFestivalDays', []);
     }
 
     // ── Users ──────────────────────────────────────────────────────────
