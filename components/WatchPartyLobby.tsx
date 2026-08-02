@@ -646,22 +646,38 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         </div>
                     )}
 
-                    {/* Ticket purchase prompt for unpaid users */}
-                    {!hasAccess && onBuyTicket && (
-                        <div className="animate-[fadeIn_0.8s_ease-out] space-y-3 w-full max-w-sm mx-auto px-4 md:px-0">
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center space-y-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Admission Required</p>
-                                <p className="text-gray-400 text-sm">Secure your seat before the party starts.</p>
-                                <button
-                                    onClick={onBuyTicket}
-                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
-                                >
-                                    Get Ticket — ${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}
-                                </button>
-                                <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
+                    {/* Ticket/RSVP prompt for unadmitted users.
+                        FIX (user report): this used to always show "Get Ticket —
+                        $X.XX", even for a free block, which showed "Get Ticket —
+                        $0.00" — purchase language for something that isn't a
+                        purchase. Free blocks still need a tap to register
+                        attendance (onBuyTicket is unchanged), just with copy that
+                        doesn't imply money changing hands. */}
+                    {!hasAccess && onBuyTicket && (() => {
+                        const ticketPrice = blockPrice ?? movie.watchPartyPrice ?? 10;
+                        const isFreeParty = ticketPrice <= 0;
+                        return (
+                            <div className="animate-[fadeIn_0.8s_ease-out] space-y-3 w-full max-w-sm mx-auto px-4 md:px-0">
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center space-y-4">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-red-500">
+                                        {isFreeParty ? 'Free Screening' : 'Admission Required'}
+                                    </p>
+                                    <p className="text-gray-400 text-sm">
+                                        {isFreeParty
+                                            ? 'Reserve your spot before the party starts.'
+                                            : 'Secure your seat before the party starts.'}
+                                    </p>
+                                    <button
+                                        onClick={onBuyTicket}
+                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                                    >
+                                        {isFreeParty ? 'Reserve My Free Seat' : `Get Ticket — ${ticketPrice.toFixed(2)}`}
+                                    </button>
+                                    <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Confirmed access badge */}
                     {hasAccess && (
