@@ -59,10 +59,14 @@ export async function POST(request: Request) {
             });
         }
 
+        // FIX (user report — reminder email showed "UTC" instead of a
+        // Philadelphia-relevant time): same missing-timeZone issue as
+        // update-watch-parties.ts. Pinned to Eastern to match PWFF.
         const timeStr = watchPartyStartTime
             ? new Date(watchPartyStartTime).toLocaleString('en-US', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-                hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+                hour: '2-digit', minute: '2-digit',
+                timeZone: 'America/New_York', timeZoneName: 'short',
             })
             : null;
         const watchPartyUrl = `${process.env.VITE_APP_URL || 'https://cratetv.net'}/watchparty/${itemId}`;

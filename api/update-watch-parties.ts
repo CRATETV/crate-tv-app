@@ -47,8 +47,13 @@ async function sendBlockReminders(db: FirebaseFirestore.Firestore, block: any, s
     const emails = await collectReminderRecipients(db, block.id);
     if (emails.length === 0) return;
 
+    // FIX (user report — reminder email showed "UTC" instead of a
+    // Philadelphia-relevant time): toLocaleString defaults to the
+    // server's own timezone (UTC on Vercel) unless a timeZone is given
+    // explicitly. Pinned to Eastern to match PWFF / Philadelphia.
     const timeStr = startTime.toLocaleString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+        weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+        timeZone: 'America/New_York', timeZoneName: 'short',
     });
     const watchPartyUrl = `${process.env.VITE_APP_URL || 'https://cratetv.net'}/watchparty/${block.id}`;
 
