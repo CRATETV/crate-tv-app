@@ -68,6 +68,7 @@ async function sendBlockReminders(db: FirebaseFirestore.Firestore, block: any, s
         <p style="margin:20px 0 0;font-size:12px;color:#999999;text-align:center;">${watchPartyUrl}</p>
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e5e5e5;">
             <p style="margin:0 0 12px;font-size:14px;">Jumping into the lobby now instead of waiting for showtime gets you the smoothest start — joining mid-film can take a little longer to catch up.</p>
+            <p style="margin:0 0 12px;font-size:14px;">Having trouble during the party? No worries — your film unlocks for you to watch on your own, anytime, right after the party ends.</p>
             <p style="margin:0;font-size:13px;color:#666666;">Your ticket is linked to your Crate TV account. Sign in at cratetv.net to join.</p>
         </div>
     `;
