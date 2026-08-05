@@ -204,27 +204,44 @@ export async function POST(request: Request) {
         }
     }
     else if (paymentType === 'block') {
-        // Look up the block's actual admin-configured price — this used to be
-        // hardcoded to a flat $10 for every block regardless of what was set
-        // in the Festival Hub, which either overcharged or undercharged
-        // customers depending on the block's real price. Same lookup pattern
-        // as the 'movie'/'watchPartyTicket' branch above.
         if (!db) throw new Error("Database offline.");
         if (!itemId) throw new Error("Missing block id.");
 
-        // Capacity is optional — most blocks have none set, meaning
-        // unlimited (the original, unchanged behavior). Only enforced when
-        // an admin has explicitly set a cap on this specific block. This
-        // check-and-reserve happens atomically, before the card is ever
-        // charged, so a sold-out block never takes anyone's money AND two
-        // simultaneous buyers can never both claim the last seat.
-        const reservation = await reserveBlockCapacity(db, itemId);
-        if (!reservation) throw new Error("Item record not found.");
-        const blockData = reservation.blockData;
-        releaseCapacityReservation = reservation.release;
+        if (itemId === 'full-festival-pass') {
+            // The "Buy Full Festival Pass" button (PwffPage.tsx) builds a
+            // synthetic block-shaped object client-side purely to reuse the
+            // existing ticket-purchase UI — it was never written to
+            // Firestore anywhere, so reserveBlockCapacity below could never
+            // find it and every single purchase attempt failed right here
+            // with "Item record not found," before the card was ever
+            // charged. This mirrors the exact price the client already
+            // shows, and skips capacity checking entirely since an
+            // all-access pass isn't tied to any one screening's seat count.
+            const settingsDoc = await db.collection('settings').doc('site').get();
+            const price = settingsDoc.data()?.pwffFullPassPrice || 50;
+            amountInCents = Math.round(price * 100);
+            note = 'PWFF Full Festival Pass';
+        } else {
+            // Look up the block's actual admin-configured price — this used to be
+            // hardcoded to a flat $10 for every block regardless of what was set
+            // in the Festival Hub, which either overcharged or undercharged
+            // customers depending on the block's real price. Same lookup pattern
+            // as the 'movie'/'watchPartyTicket' branch above.
+            //
+            // Capacity is optional — most blocks have none set, meaning
+            // unlimited (the original, unchanged behavior). Only enforced when
+            // an admin has explicitly set a cap on this specific block. This
+            // check-and-reserve happens atomically, before the card is ever
+            // charged, so a sold-out block never takes anyone's money AND two
+            // simultaneous buyers can never both claim the last seat.
+            const reservation = await reserveBlockCapacity(db, itemId);
+            if (!reservation) throw new Error("Item record not found.");
+            const blockData = reservation.blockData;
+            releaseCapacityReservation = reservation.release;
 
-        amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
-        note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
+            amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
+            note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
+        }
     }
     else if (staticPriceMap[paymentType]) {
         amountInCents = staticPriceMap[paymentType];
@@ -306,11 +323,13 @@ export async function POST(request: Request) {
                         movieTitle = movieData?.title || note;
                         if (movieData?.watchPartyStartTime) {
                             const startDate = new Date(movieData.watchPartyStartTime);
+                            // FIX (user report — reminder email showed "UTC"
+                            // instead of a Philadelphia-relevant time): same
+                            // missing-timeZone issue as the reminder emails.
                             watchPartyTime = startDate.toLocaleString('en-US', {
                                 weekday: 'long', year: 'numeric', month: 'long',
                                 day: 'numeric', hour: '2-digit', minute: '2-digit',
-                                timeZoneName: 'short',
-                                timeZone: 'America/New_York', // same fix as update-watch-parties.ts — server runs in UTC, festival is Eastern
+                                timeZone: 'America/New_York', timeZoneName: 'short'
                             });
                         }
                     }
