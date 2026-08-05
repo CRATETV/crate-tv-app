@@ -11,12 +11,12 @@ import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
 
 const trackPageView = async () => {
-    const db = getDbInstance();
-    if (!db) return;
-    db.collection('pwff_analytics').doc('views').set({
-        total: firebase.firestore.FieldValue.increment(1),
-        lastView: firebase.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    try {
+        await fetch('/api/track-pwff-view', { method: 'POST' });
+    } catch {
+        // Losing a single view-count increment isn't worth surfacing to
+        // anyone — deliberately silent.
+    }
 };
 
 // ─── EMAIL CAPTURE ────────────────────────────────────────────────────────────
