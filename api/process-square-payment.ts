@@ -217,7 +217,7 @@ export async function POST(request: Request) {
             // charged. This mirrors the exact price the client already
             // shows, and skips capacity checking entirely since an
             // all-access pass isn't tied to any one screening's seat count.
-            const settingsDoc = await db.collection('settings').doc('site').get();
+            const settingsDoc = await db.collection('content').doc('settings').get();
             const price = settingsDoc.data()?.pwffFullPassPrice || 50;
             amountInCents = Math.round(price * 100);
             note = 'PWFF Full Festival Pass';

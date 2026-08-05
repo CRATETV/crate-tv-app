@@ -98,7 +98,8 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       maintenanceMode: settings.maintenanceMode || false,
       businessEmail: settings.businessEmail || 'studio@cratetv.net',
       technicalEmail: settings.technicalEmail || 'cratetiv@gmail.com',
-      emailSignature: settings.emailSignature || "Best,\nThe Crate TV Studio Team"
+      emailSignature: settings.emailSignature || "Best,\nThe Crate TV Studio Team",
+      pwffFullPassPrice: settings.pwffFullPassPrice ?? 50
   });
 
   useEffect(() => {
@@ -243,6 +244,18 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                   <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-gray-600">Business Email — shown to customers on receipts and outgoing mail</label>
                       <input type="email" value={holidaySettings.businessEmail} onChange={(e) => setHolidaySettings({...holidaySettings, businessEmail: e.target.value})} placeholder="businessEmail" className="form-input !bg-black/40" />
+                  </div>
+                  <div className="pt-4 border-t border-white/5 space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-600">PWFF Full Festival Pass Price ($) — used for testing and for adjusting per-festival pricing (e.g. a smaller/lower-cost event)</label>
+                      <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={holidaySettings.pwffFullPassPrice ?? 50}
+                          onChange={(e) => setHolidaySettings({...holidaySettings, pwffFullPassPrice: parseFloat(e.target.value) || 0})}
+                          placeholder="50"
+                          className="form-input !bg-black/40"
+                      />
                   </div>
                   <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Commit Settings</button>
               </div>
