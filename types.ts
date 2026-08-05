@@ -228,6 +228,7 @@ export interface FilmBlock {
   price?: number;
   screeningStartTime?: string;  // When this block goes live for virtual viewers
   screeningEndTime?: string;    // When virtual access closes
+  releaseAfterScreening?: boolean; // If true, films release to the regular catalog once this block's watch party ends (checked by terminate-watch-party.ts / auto-end-watch-party.ts)
   watchPartyStartTime?: string;
   isWatchPartyEnabled?: boolean;
   /** Optional ticket cap for this block. Unset/0 = unlimited (default behavior). */

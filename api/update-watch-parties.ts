@@ -47,13 +47,15 @@ async function sendBlockReminders(db: FirebaseFirestore.Firestore, block: any, s
     const emails = await collectReminderRecipients(db, block.id);
     if (emails.length === 0) return;
 
-    // FIX (user report — reminder email showed "UTC" instead of a
-    // Philadelphia-relevant time): toLocaleString defaults to the
-    // server's own timezone (UTC on Vercel) unless a timeZone is given
-    // explicitly. Pinned to Eastern to match PWFF / Philadelphia.
+    // FIX (user report — the 30-minute reminder shows UTC instead of
+    // Eastern): toLocaleString with no timeZone option uses the server's
+    // own runtime timezone, which on Vercel is UTC — not wherever the
+    // festival actually is. Pinning this explicitly to America/New_York
+    // means it's correct regardless of what timezone the server happens to
+    // run in, and correctly shows EST/EDT depending on the time of year.
     const timeStr = startTime.toLocaleString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-        timeZone: 'America/New_York', timeZoneName: 'short',
+        weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+        timeZone: 'America/New_York',
     });
     const watchPartyUrl = `${process.env.VITE_APP_URL || 'https://cratetv.net'}/watchparty/${block.id}`;
 
@@ -68,7 +70,6 @@ async function sendBlockReminders(db: FirebaseFirestore.Firestore, block: any, s
         <p style="margin:20px 0 0;font-size:12px;color:#999999;text-align:center;">${watchPartyUrl}</p>
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e5e5e5;">
             <p style="margin:0 0 12px;font-size:14px;">Jumping into the lobby now instead of waiting for showtime gets you the smoothest start — joining mid-film can take a little longer to catch up.</p>
-            <p style="margin:0 0 12px;font-size:14px;">Having trouble during the party? No worries — your film unlocks for you to watch on your own, anytime, right after the party ends.</p>
             <p style="margin:0;font-size:13px;color:#666666;">Your ticket is linked to your Crate TV account. Sign in at cratetv.net to join.</p>
         </div>
     `;
@@ -149,15 +150,7 @@ export async function GET(request: Request) {
                                 isPlaying: true,
                                 currentTime: 0,
                                 actualStartTime: FieldValue.serverTimestamp(),
-                                // FIX (viewers stuck on "Connecting to Watch
-                                // Party" forever on auto-started blocks): this was a raw
-                                // string, which has no .toDate() — the client's sync engine
-                                // requires that method and silently gives up forever without
-                                // it. Wrapping in new Date(...) matches how
-                                // api/advance-block-film.ts already sets filmStartTime for
-                                // later films in the block; the Admin SDK auto-converts a JS
-                                // Date into a real Firestore Timestamp on write.
-                                filmStartTime: new Date(startTimeStr),
+                                filmStartTime: startTimeStr,
                                 lastUpdated: FieldValue.serverTimestamp(),
                                 backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
                             }, { merge: true });

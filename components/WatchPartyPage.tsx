@@ -454,6 +454,32 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         setHasStartedPlaying(true);
     }, []);
 
+    // ── SAFETY NET: catch genuine playback even if onCanPlay/onPlaying never fire ──
+    // FIX (user report — could hear the movie but not see it; screen stayed
+    // on the blurred poster backdrop): that backdrop is exactly what shows
+    // while hasStartedPlaying is still false, and it only ever flips true
+    // from the onCanPlay/onPlaying handlers below. Audio being audible
+    // means the video element genuinely WAS playing — so those events
+    // simply didn't fire, most likely because HLS.js's own internal
+    // error-recovery path (hls.recoverMediaError(), used when a stream hits
+    // a transient decode hiccup) doesn't reliably cause the browser to
+    // re-fire them even once it resumes actually rendering frames. Rather
+    // than chase that exact internal timing, this checks the real DOM state
+    // directly once a second — if the video is provably playing (not
+    // paused, has advanced, has real dimensions) but our state hasn't
+    // caught up, it reveals the video regardless of which event did or
+    // didn't fire. Harmless no-op once hasStartedPlaying is already true.
+    useEffect(() => {
+        if (hasStartedPlaying) return;
+        const interval = setInterval(() => {
+            const v = videoRef.current;
+            if (v && !v.paused && v.currentTime > 0.5 && v.videoWidth > 0) {
+                handleVideoCanPlay();
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [hasStartedPlaying, handleVideoCanPlay]);
+
     // Clear any pending buffering timer if the component unmounts mid-stall
     // (e.g. viewer navigates back to the catalog before onCanPlay ever
     // fires) — previously this timer was only ever cleared from inside

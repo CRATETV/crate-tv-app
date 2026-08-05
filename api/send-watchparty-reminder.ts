@@ -59,14 +59,11 @@ export async function POST(request: Request) {
             });
         }
 
-        // FIX (user report — reminder email showed "UTC" instead of a
-        // Philadelphia-relevant time): same missing-timeZone issue as
-        // update-watch-parties.ts. Pinned to Eastern to match PWFF.
         const timeStr = watchPartyStartTime
             ? new Date(watchPartyStartTime).toLocaleString('en-US', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-                timeZone: 'America/New_York', timeZoneName: 'short',
+                hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+                timeZone: 'America/New_York', // see update-watch-parties.ts — without this it shows the server's UTC time, not Eastern
             })
             : null;
         const watchPartyUrl = `${process.env.VITE_APP_URL || 'https://cratetv.net'}/watchparty/${itemId}`;
@@ -87,7 +84,6 @@ export async function POST(request: Request) {
                     <p style="margin:20px 0 0;font-size:12px;color:#999999;text-align:center;">Bookmark this link — ${watchPartyUrl}</p>
                     <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e5e5e5;">
                         <p style="margin:0 0 12px;font-size:14px;">Doors open a little before showtime — jumping in a few minutes early gets you the smoothest start, since joining mid-film can take a moment longer to catch up.</p>
-                        <p style="margin:0 0 12px;font-size:14px;">Having trouble during the party? No worries — your film unlocks for you to watch on your own, anytime, right after the party ends.</p>
                         <p style="margin:0;font-size:13px;color:#666666;">Your ticket is linked to your Crate TV account. Sign in at cratetv.net to access the lobby when it opens.</p>
                     </div>
                 `;

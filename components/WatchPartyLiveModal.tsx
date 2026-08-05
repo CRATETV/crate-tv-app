@@ -51,7 +51,8 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
                     // Check if user has access
                     const hasAccess = hasFestivalAllAccess || 
                         unlockedFestivalBlockIds.has(block.id) ||
-                        block.movieKeys.some(key => unlockedWatchPartyKeys.has(key));
+                        block.movieKeys.some(key => unlockedWatchPartyKeys.has(key)) ||
+                        !block.price || block.price === 0;
                     
                     parties.push({
                         block,
@@ -82,7 +83,8 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
                 if (existingIndex === -1) {
                     const hasAccess = hasFestivalAllAccess || 
                         unlockedFestivalBlockIds.has(parentBlock.id) ||
-                        unlockedWatchPartyKeys.has(movieKey);
+                        unlockedWatchPartyKeys.has(movieKey) ||
+                        !parentBlock.price || parentBlock.price === 0;
 
                     parties.push({
                         block: parentBlock,

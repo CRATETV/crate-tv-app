@@ -306,13 +306,11 @@ export async function POST(request: Request) {
                         movieTitle = movieData?.title || note;
                         if (movieData?.watchPartyStartTime) {
                             const startDate = new Date(movieData.watchPartyStartTime);
-                            // FIX (user report — reminder email showed "UTC"
-                            // instead of a Philadelphia-relevant time): same
-                            // missing-timeZone issue as the reminder emails.
                             watchPartyTime = startDate.toLocaleString('en-US', {
                                 weekday: 'long', year: 'numeric', month: 'long',
                                 day: 'numeric', hour: '2-digit', minute: '2-digit',
-                                timeZone: 'America/New_York', timeZoneName: 'short'
+                                timeZoneName: 'short',
+                                timeZone: 'America/New_York', // same fix as update-watch-parties.ts — server runs in UTC, festival is Eastern
                             });
                         }
                     }

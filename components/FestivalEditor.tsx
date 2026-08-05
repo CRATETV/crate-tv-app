@@ -408,6 +408,28 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                 )}
                             </div>
                         </div>
+
+                        {/* FEATURE (user report — films weren't reaching the regular
+                            catalog after their watch party ended): the backend already
+                            supported this (terminate-watch-party.ts / auto-end-watch-
+                            party.ts both check block.releaseAfterScreening), but there
+                            was never an actual control here to turn it on — so it
+                            silently defaulted to off for every block, regardless of
+                            intent. This is separate from the "stays available for 1
+                            week" window above, which only covers the watch-party
+                            replay page itself, not appearing as a normal catalog entry. */}
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={!!block.releaseAfterScreening}
+                                    onChange={e => handleBlockChange(dayIndex, blockIndex, 'releaseAfterScreening', e.target.checked)}
+                                    className="w-4 h-4 accent-red-600"
+                                />
+                                <span className="text-[8px] text-gray-500 font-black tracking-widest uppercase">Release films to the regular catalog once this block's watch party ends</span>
+                            </label>
+                            <p className="text-[8px] text-gray-700 mt-1 ml-6">Off by default — leave unchecked to keep these films exclusive to the watch party experience.</p>
+                        </div>
                    </div>
                    <div className="flex items-center gap-6 flex-shrink-0">
                      {data.length > 1 && (

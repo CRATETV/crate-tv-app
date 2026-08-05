@@ -588,7 +588,7 @@ const ProgrammeMode: React.FC = () => {
                         <div className="space-y-4">
                             {sortedDayBlocks.length > 0 ? sortedDayBlocks.map(block => {
                                 const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
-                                const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                                const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id) || !block.price || block.price === 0;
                                 // `activeParties` only ever contains docs with status==='live' (it's
                                 // filtered server-side), so once a party ends its doc simply disappears
                                 // from `activeParties` — leaving `partyState` undefined here, same as a
@@ -674,7 +674,7 @@ const ProgrammeMode: React.FC = () => {
                         partyState={activeParties[showLobbyFor]}
                         onPartyStart={() => { setShowLobbyFor(null); navigate(`/watchparty/${showLobbyFor}?skipLobby=1`); }}
                         user={user}
-                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor) || !!(lobbyBlock && (!lobbyBlock.price || lobbyBlock.price === 0))}
                         onBuyTicket={() => { const b = allBlocks.find(bl => bl.id === showLobbyFor); if (b) { setShowLobbyFor(null); setTicketFlowBlock(b); } }}
                         onClose={() => setShowLobbyFor(null)}
                         blockFilms={lobbyBlockFilms}
@@ -791,7 +791,10 @@ const PwffPage: React.FC = () => {
                         partyState={activeParties[showLobbyFor]}
                         onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
                         user={user}
-                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor) || (() => {
+                            const block = festivalData.flatMap(d => d.blocks || []).find(b => b.id === showLobbyFor);
+                            return !!block && (!block.price || block.price === 0);
+                        })()}
                         onBuyTicket={() => { if (liveBlock) { setShowLobbyFor(null); setTicketFlowBlock(liveBlock); } }}
                         onClose={() => setShowLobbyFor(null)}
                     />
@@ -830,7 +833,10 @@ const PwffPage: React.FC = () => {
                         partyState={activeParties[showLobbyFor]}
                         onPartyStart={() => { setShowLobbyFor(null); window.history.pushState({}, '', `/watchparty/${showLobbyFor}`); window.dispatchEvent(new Event('pushstate')); }}
                         user={user}
-                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor)}
+                        hasAccess={hasFestivalAllAccess || unlockedFestivalBlockIds.has(showLobbyFor) || unlockedWatchPartyKeys.has(showLobbyFor) || (() => {
+                            const block = festivalData.flatMap(d => d.blocks || []).find(b => b.id === showLobbyFor);
+                            return !!block && (!block.price || block.price === 0);
+                        })()}
                         onBuyTicket={() => { if (liveBlock) { setShowLobbyFor(null); setTicketFlowBlock(liveBlock); } }}
                         onClose={() => setShowLobbyFor(null)}
                     />

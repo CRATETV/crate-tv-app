@@ -236,6 +236,14 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                       <option value="gold">Anniversary Gold</option>
                       <option value="generic">Neutral Dark</option>
                   </select>
+                  <div className="pt-4 border-t border-white/5 space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-600">Alert Email — receives "New Sign-Up" and new film submission notifications</label>
+                      <input type="email" value={holidaySettings.technicalEmail} onChange={(e) => setHolidaySettings({...holidaySettings, technicalEmail: e.target.value})} placeholder="technicalEmail" className="form-input !bg-black/40" />
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-600">Business Email — shown to customers on receipts and outgoing mail</label>
+                      <input type="email" value={holidaySettings.businessEmail} onChange={(e) => setHolidaySettings({...holidaySettings, businessEmail: e.target.value})} placeholder="businessEmail" className="form-input !bg-black/40" />
+                  </div>
                   <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Commit Settings</button>
               </div>
           </div>
