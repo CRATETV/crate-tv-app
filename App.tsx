@@ -115,7 +115,12 @@ const App: React.FC = () => {
                 email: user.email,
                 lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                 currentPath: window.location.pathname
-            }, { merge: true });
+            }, { merge: true }).catch(() => {
+                // Presence is a nice-to-have "who's online" indicator, not
+                // anything customer-facing — a failed update here just
+                // means this tick doesn't register; the next one 30s later
+                // tries again. Not worth surfacing as an error anywhere.
+            });
         };
 
         updatePresence();
