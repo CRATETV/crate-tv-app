@@ -84,6 +84,22 @@ export async function GET(request: Request) {
             .where('timestamp', '>=', lookbackCutoff)
             .get();
 
+        // A lost ticket-sale record is worth flagging even once — this
+        // means someone was successfully charged but the sale didn't make
+        // it into festival_tickets, so the "Total Tickets Sold" dashboard
+        // is undercounting a real sale. Doesn't need to hit the general
+        // error-spike threshold below; even a single one matters here.
+        const ticketLoggingErrors = errorSnap.docs.filter(doc =>
+            (doc.data().source || '').includes('ticket-logging')
+        );
+        if (ticketLoggingErrors.length > 0) {
+            issues.push({
+                severity: 'critical',
+                summary: `${ticketLoggingErrors.length} ticket sale${ticketLoggingErrors.length === 1 ? '' : 's'} failed to record in the last ${ERROR_LOOKBACK_MINUTES} minutes`,
+                detail: `The customer was still charged successfully — this is only about the sale not showing up in your ticket count/revenue dashboard. Check the admin Error Log tab for the specific email/itemId and add it to festival_tickets manually if needed.`,
+            });
+        }
+
         const permissionErrors = errorSnap.docs.filter(doc => {
             const msg = (doc.data().message || '').toLowerCase();
             return msg.includes('permission') || msg.includes('unauthorized') || msg.includes('insufficient');

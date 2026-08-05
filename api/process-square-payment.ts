@@ -386,21 +386,34 @@ export async function POST(request: Request) {
 
     // --- LOG TICKET SALE FOR FESTIVAL REPORTING ---
     if (db && (paymentType === 'watchPartyTicket' || paymentType === 'block' || paymentType === 'movie')) {
+        const ticketRecord = {
+            itemId,
+            paymentType,
+            note,
+            amountPaid: amountInCents / 100,
+            email: email || null,
+            promoCode: promoCode || null,
+            purchasedAt: FieldValue.serverTimestamp(),
+            isWatchParty: paymentType === 'watchPartyTicket',
+            isFestivalBlock: paymentType === 'block',
+            uid: uid || null,
+        };
         try {
-            await db.collection('festival_tickets').add({
-                itemId,
-                paymentType,
-                note,
-                amountPaid: amountInCents / 100,
-                email: email || null,
-                promoCode: promoCode || null,
-                purchasedAt: FieldValue.serverTimestamp(),
-                isWatchParty: paymentType === 'watchPartyTicket',
-                isFestivalBlock: paymentType === 'block',
-                uid: uid || null,
-            });
-        } catch (e) {
-            console.error('[Payment API] Failed to log ticket sale:', e);
+            await db.collection('festival_tickets').add(ticketRecord);
+        } catch (firstError) {
+            // One retry — most failures at this point are transient
+            // (a brief Firestore hiccup), and the customer has already
+            // been successfully charged, so it's worth a second attempt
+            // before treating this as a real loss.
+            try {
+                await db.collection('festival_tickets').add(ticketRecord);
+                console.warn('[Payment API] Ticket sale logged on retry after initial failure.');
+            } catch (secondError) {
+                console.error('[Payment API] Failed to log ticket sale after retry:', secondError);
+                logServerError('api/process-square-payment:ticket-logging', secondError, {
+                    itemId, paymentType, amountPaid: ticketRecord.amountPaid, email: email || null,
+                });
+            }
         }
     }
 
