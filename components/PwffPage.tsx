@@ -659,7 +659,23 @@ const ProgrammeMode: React.FC = () => {
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
+                    onSuccess={() => {
+                        // FIX (user report — buying the full pass didn't
+                        // reliably lead anywhere): this used to always try
+                        // to open a watch-party lobby for whatever was just
+                        // purchased. For a real block that's correct, but
+                        // the full pass isn't tied to any single screening —
+                        // there's no lobby for it, so this silently did
+                        // nothing after a successful full-pass purchase,
+                        // leaving the buyer with no confirmation or next
+                        // step. Now it only opens a lobby for a real block;
+                        // the full pass just closes the flow so they can
+                        // browse the schedule and pick a screening normally.
+                        setTicketFlowBlock(null);
+                        if (ticketFlowBlock && ticketFlowBlock.id !== 'full-festival-pass') {
+                            setShowLobbyFor(ticketFlowBlock.id);
+                        }
+                    }}
                 />;
             })()}
 
@@ -781,7 +797,23 @@ const PwffPage: React.FC = () => {
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
+                    onSuccess={() => {
+                        // FIX (user report — buying the full pass didn't
+                        // reliably lead anywhere): this used to always try
+                        // to open a watch-party lobby for whatever was just
+                        // purchased. For a real block that's correct, but
+                        // the full pass isn't tied to any single screening —
+                        // there's no lobby for it, so this silently did
+                        // nothing after a successful full-pass purchase,
+                        // leaving the buyer with no confirmation or next
+                        // step. Now it only opens a lobby for a real block;
+                        // the full pass just closes the flow so they can
+                        // browse the schedule and pick a screening normally.
+                        setTicketFlowBlock(null);
+                        if (ticketFlowBlock && ticketFlowBlock.id !== 'full-festival-pass') {
+                            setShowLobbyFor(ticketFlowBlock.id);
+                        }
+                    }}
                 />;
             })()}
             {lobbyMovie && showLobbyFor && (
@@ -823,7 +855,23 @@ const PwffPage: React.FC = () => {
                 const bMovie: Movie = { key: ticketFlowBlock.id, title: ticketFlowBlock.title, isWatchPartyEnabled: true, isWatchPartyPaid: (ticketFlowBlock.price || 0) > 0, watchPartyPrice: ticketFlowBlock.price, poster: first?.poster || '', director: first?.director || 'Festival Event', synopsis: '', cast: [], trailer: '', fullMovie: first?.fullMovie || '', tvPoster: '', likes: 0 };
                 return <FestivalTicketFlow block={ticketFlowBlock} blockMovie={bMovie}
                     onClose={() => setTicketFlowBlock(null)}
-                    onSuccess={() => { setTicketFlowBlock(null); setShowLobbyFor(ticketFlowBlock.id); }}
+                    onSuccess={() => {
+                        // FIX (user report — buying the full pass didn't
+                        // reliably lead anywhere): this used to always try
+                        // to open a watch-party lobby for whatever was just
+                        // purchased. For a real block that's correct, but
+                        // the full pass isn't tied to any single screening —
+                        // there's no lobby for it, so this silently did
+                        // nothing after a successful full-pass purchase,
+                        // leaving the buyer with no confirmation or next
+                        // step. Now it only opens a lobby for a real block;
+                        // the full pass just closes the flow so they can
+                        // browse the schedule and pick a screening normally.
+                        setTicketFlowBlock(null);
+                        if (ticketFlowBlock && ticketFlowBlock.id !== 'full-festival-pass') {
+                            setShowLobbyFor(ticketFlowBlock.id);
+                        }
+                    }}
                 />;
             })()}
             {lobbyMovie && showLobbyFor && (

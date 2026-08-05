@@ -31,7 +31,7 @@ interface FestivalTicketFlowProps {
 }
 
 const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMovie, onClose, onSuccess }) => {
-    const { user, authInitialized, signIn, signUp, unlockFestivalBlock, unlockedFestivalBlockIds, hasFestivalAllAccess, sendPasswordReset } = useAuth();
+    const { user, authInitialized, signIn, signUp, unlockFestivalBlock, grantFestivalAllAccess, unlockedFestivalBlockIds, hasFestivalAllAccess, sendPasswordReset } = useAuth();
     const { activeParties } = useFestival();
 
     // ── STEP LOGIC ────────────────────────────────────────────────────────────
@@ -122,7 +122,22 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
     // ── PAYMENT HANDLERS ──────────────────────────────────────────────────────
     const handlePaymentSuccess = async (details: any) => {
         // Unlock the block in Firestore first
-        if (details.itemId) {
+        if (details.itemId === 'full-festival-pass') {
+            // FIX (user report — after buying the full pass, the "Get
+            // Ticket" prompt kept showing): this always called
+            // unlockFestivalBlock below, which is correct for a real
+            // block but meaningless for the synthetic full-pass ID — it
+            // never told local session state that hasFestivalAllAccess
+            // was now true. The server-side grant (process-square-payment.ts)
+            // was already correct, so the purchase itself worked, but the
+            // browser's own copy of "do I already have access" stayed
+            // stale until an unrelated full reload happened to catch up.
+            try {
+                await grantFestivalAllAccess();
+            } catch (err) {
+                console.error('[FestivalTicketFlow] grantFestivalAllAccess failed:', err);
+            }
+        } else if (details.itemId) {
             try {
                 await unlockFestivalBlock(details.itemId);
             } catch (err) {
