@@ -220,7 +220,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             return;
         }
         if (hlsRef.current) hlsRef.current.destroy();
-        const hls = new Hls({ maxBufferLength: 20, enableWorker: true });
+        const hls = new Hls({ maxBufferLength: 20, enableWorker: true, startLevel: 0 });
 
         hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
             if (!data?.fatal) return;

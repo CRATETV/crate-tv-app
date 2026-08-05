@@ -1121,7 +1121,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // connection (not festival-venue wifi), prefetching 30s ahead
             // burns data fast and stalls harder when it does run dry; 20s is
             // still enough runway to absorb normal network jitter.
-            const hls = new Hls({ maxBufferLength: 20, enableWorker: true });
+            const hls = new Hls({ maxBufferLength: 20, enableWorker: true, startLevel: 0 });
 
             // Previously nothing listened for hls.js errors at all — a fatal
             // network or media error (a dropped segment, a manifest hiccup,
