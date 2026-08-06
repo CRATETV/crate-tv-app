@@ -117,6 +117,14 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       // On every save, force-sync watchPartyStartTime to match screeningStartTime
       // for any block that has a screening time set. This self-heals even if
       // onChange didn't fire (e.g. user hit Save without changing the field).
+      //
+      // FIX: this used to also unconditionally force isWatchPartyEnabled to
+      // true here — meaning ANY save, even one completely unrelated to this
+      // block, would silently re-enable it, overriding any deliberate
+      // "disable this" action (including manually clearing a stuck watch
+      // party flag). Now it only defaults to true when the field has never
+      // been set at all (a genuinely new block with no explicit state yet);
+      // an explicit false is respected and left alone.
       const syncedData = data.map((day: any) => ({
           ...day,
           blocks: (day.blocks || []).map((block: any) => {
@@ -124,7 +132,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                   return {
                       ...block,
                       watchPartyStartTime: block.screeningStartTime,
-                      isWatchPartyEnabled: true,
+                      isWatchPartyEnabled: block.isWatchPartyEnabled === false ? false : true,
                       time: formatDisplayTime(block.screeningStartTime) || block.time,
                   };
               }
