@@ -4,7 +4,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
-import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
+import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -417,7 +417,47 @@ export async function POST(request: Request) {
         }
     }
 
-    // --- SERVER-SIDE UNLOCK — write access to user's Firestore doc ---
+    // --- NOTIFY SITE OWNER OF THE SALE ---
+    // FEATURE (user request — a notification every time someone buys a
+    // ticket): fires right here, at the same moment the sale is confirmed
+    // and logged, rather than depending on Square's webhook (which is
+    // reliable but asynchronous, and square-webhook.ts is deliberately
+    // scoped to refunds/disputes, not purchase confirmations — mixing
+    // both concerns there would make it a lot noisier for what that file
+    // needs to stay focused on). Fire-and-forget: a missed notification
+    // email is a minor inconvenience, not worth adding retry complexity
+    // or delay to the actual purchase flow for.
+    if (db) {
+        (async () => {
+            try {
+                const settingsDoc = await db.collection('content').doc('settings').get();
+                const technicalEmail = settingsDoc.data()?.technicalEmail || 'cratetiv@gmail.com';
+                await resend.emails.send({
+                    from: `Crate TV Sales <${fromEmail}>`,
+                    to: [technicalEmail],
+                    subject: `🎟️ Ticket sold: ${note} — $${(amountInCents / 100).toFixed(2)}`,
+                    html: renderBrandedEmail({
+                        title: 'New Ticket Sale',
+                        bodyHtml: `
+                            <p style="margin:0 0 16px;font-size:14px;">Someone just bought a ticket.</p>
+                            <div style="padding:16px;background:rgba(255,255,255,0.03);border-left:3px solid #22c55e;">
+                                <p style="margin:0 0 4px;"><strong>Item:</strong> ${note}</p>
+                                <p style="margin:0 0 4px;"><strong>Amount:</strong> $${(amountInCents / 100).toFixed(2)}</p>
+                                <p style="margin:0 0 4px;"><strong>Buyer email:</strong> ${email || '(not provided)'}</p>
+                                ${promoCode ? `<p style="margin:0;"><strong>Promo code used:</strong> ${promoCode}</p>` : ''}
+                            </div>
+                        `,
+                    }),
+                });
+            } catch (notifyError) {
+                console.error('[Payment API] Failed to send sale notification:', notifyError);
+                // Deliberately not calling logServerError — a missed
+                // notification email isn't worth an alert of its own.
+            }
+        })();
+    }
+
+
     // This is done server-side (Admin SDK) because Firestore security rules
     // block clients from writing payment/access fields directly.
     if (db && uid && paymentType === 'block' && itemId) {
