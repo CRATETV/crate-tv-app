@@ -25,23 +25,43 @@ const FestivalReportTab: React.FC = () => {
     const [viewers, setViewers] = useState<ViewerRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [printMode, setPrintMode] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     useEffect(() => {
         const password = sessionStorage.getItem('adminPassword');
-        if (!password) { setLoading(false); return; }
+        if (!password) {
+            setFetchError('No admin session found — try logging out and back into the admin panel.');
+            setLoading(false);
+            return;
+        }
 
         fetch('/api/get-festival-report', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password }),
         })
-            .then(res => res.json())
+            .then(async res => {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+                return data;
+            })
             .then(data => {
-                if (data.tickets) setTickets(data.tickets);
-                if (data.viewers) setViewers(data.viewers);
+                setTickets(data.tickets || []);
+                setViewers(data.viewers || []);
                 setLoading(false);
             })
-            .catch(() => setLoading(false));
+            .catch(err => {
+                // FIX (user report — tab still silently showed 0 after the
+                // first fix): that fix corrected the Firestore permission
+                // error, but if the fetch to the new endpoint itself fails
+                // for any reason (wrong/expired admin password, server
+                // error), this used to swallow that too and just leave
+                // everything at zero with zero indication why. Same class
+                // of silent failure, different spot — this tab shouldn't
+                // be able to fail quietly a second time.
+                setFetchError(err.message || 'Failed to load festival report data.');
+                setLoading(false);
+            });
     }, []);
 
     const totalRevenue = useMemo(() => tickets.reduce((sum, t) => sum + (t.amountPaid || 0), 0), [tickets]);
@@ -102,6 +122,17 @@ const FestivalReportTab: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-32" id="festival-report">
+
+            {fetchError && (
+                <div className="bg-red-950/40 border border-red-500/40 rounded-xl p-4 flex items-start gap-3">
+                    <span className="text-xl">⚠️</span>
+                    <div>
+                        <p className="font-black uppercase tracking-widest text-xs text-red-400 mb-1">Couldn't load report data</p>
+                        <p className="text-sm text-red-300/90">{fetchError}</p>
+                        <p className="text-xs text-gray-500 mt-2">The numbers below are not accurate while this error is showing — try logging out and back into the admin panel, then reopen this tab.</p>
+                    </div>
+                </div>
+            )}
 
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
