@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getDbInstance } from '../services/firebaseClient';
 
 interface TicketRecord {
     id: string;
@@ -28,22 +27,21 @@ const FestivalReportTab: React.FC = () => {
     const [printMode, setPrintMode] = useState(false);
 
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
+        const password = sessionStorage.getItem('adminPassword');
+        if (!password) { setLoading(false); return; }
 
-        Promise.all([
-            db.collection('festival_tickets').orderBy('purchasedAt', 'desc').get(),
-            db.collection('festival_viewers').orderBy('firstJoinedAt', 'desc').get(),
-        ]).then(([ticketSnap, viewerSnap]) => {
-            const t: TicketRecord[] = [];
-            ticketSnap.forEach(doc => t.push({ id: doc.id, ...doc.data() } as TicketRecord));
-            setTickets(t);
-
-            const v: ViewerRecord[] = [];
-            viewerSnap.forEach(doc => v.push({ id: doc.id, ...doc.data() } as ViewerRecord));
-            setViewers(v);
-            setLoading(false);
-        }).catch(() => setLoading(false));
+        fetch('/api/get-festival-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.tickets) setTickets(data.tickets);
+                if (data.viewers) setViewers(data.viewers);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
     }, []);
 
     const totalRevenue = useMemo(() => tickets.reduce((sum, t) => sum + (t.amountPaid || 0), 0), [tickets]);
