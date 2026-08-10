@@ -582,6 +582,7 @@ const ProgrammeMode: React.FC = () => {
                                 <li>🎟️ <strong className="text-white">Buy a ticket</strong> for any block below, or get the <strong className="text-white">Full Festival Pass</strong> for access to everything.</li>
                                 <li>⏰ <strong className="text-white">Come back at showtime</strong> — each screening streams live at its scheduled time (Eastern Time).</li>
                                 <li>📺 <strong className="text-white">Click "Enter Screening Lobby"</strong> on a block to join — films in that block play automatically, one after another.</li>
+                                <li>😌 <strong className="text-white">Missed a screening?</strong> No worries — most films move to the regular Crate TV catalog for a week afterward, so you can still catch up.</li>
                             </ul>
                             <p className="text-xs text-gray-500 mt-3">
                                 Having trouble? Email us at{' '}

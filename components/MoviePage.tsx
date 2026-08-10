@@ -146,7 +146,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // error on a film whose path didn't resolve correctly through the CDN,
   // even though a different film worked in manual testing. Reverted to
   // the direct URL until every film's CDN path is verified individually.
-  const playableUrl = movie?.fullMovie;
+  // ── EPISODE OVERRIDE ─────────────────────────────────────────────────
+  // FIX (user report — clicking a specific episode of a series still
+  // played the parent entry's own film): MovieDetailsModal.tsx has always
+  // tried to pass the clicked episode's own URL through via a `stream=`
+  // query param, but this page never actually read it — so every episode
+  // click silently fell back to whatever the parent movie's own fullMovie
+  // was (in practice, whichever episode was uploaded first). This reads
+  // that override when present; regular, non-series films are completely
+  // unaffected since they'll never have this param set.
+  const episodeStreamOverride = useMemo(() => {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('stream');
+      return raw ? decodeURIComponent(raw) : null;
+  }, []);
+
+  const playableUrl = episodeStreamOverride || movie?.fullMovie;
 
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked

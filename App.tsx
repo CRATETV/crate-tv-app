@@ -482,7 +482,7 @@ const App: React.FC = () => {
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
     // Handle movie playback navigation with instant-on logic (v1.1 - optimized for immediate playback)
-    const handlePlayMovie = (movie: Movie) => {
+    const handlePlayMovie = (movie: Movie, episodeUrl?: string) => {
         const partyState = activeParties[movie.key];
         const isActuallyLive = !!partyState && partyState.status === 'live';
 
@@ -491,7 +491,8 @@ const App: React.FC = () => {
             window.dispatchEvent(new Event('pushstate'));
         } else {
             // Always go to movie page with play=true for instant playback
-            window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+            const streamParam = episodeUrl ? `&stream=${encodeURIComponent(episodeUrl)}` : '';
+            window.history.pushState({}, '', `/movie/${movie.key}?play=true${streamParam}`);
             window.dispatchEvent(new Event('pushstate'));
         }
     };

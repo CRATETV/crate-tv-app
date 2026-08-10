@@ -18,7 +18,7 @@ interface MovieDetailsModalProps {
   onSubscribe?: () => void;
   isPremiumMovie?: boolean;
   isPremiumSubscriber?: boolean;
-  onPlayMovie?: (movie: Movie) => void;
+  onPlayMovie?: (movie: Movie, episodeUrl?: string) => void;
 }
 
 const EpisodeRow: React.FC<{ episode: Episode; onPlay: () => void }> = ({ episode, onPlay }) => (
@@ -88,7 +88,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           setShowPurchaseModal(true);
           return;
       }
-      if (onPlayMovie) onPlayMovie(movie);
+      if (onPlayMovie) onPlayMovie(movie, url);
       else {
           onClose();
           const targetUrl = url ? encodeURIComponent(url) : '';
