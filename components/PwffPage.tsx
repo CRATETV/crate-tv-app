@@ -371,6 +371,7 @@ const ProgrammeMode: React.FC = () => {
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<'programme' | 'directors'>('programme');
+    const [showFullPassSuccess, setShowFullPassSuccess] = useState(false);
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
     const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks || []), [festivalData]);
@@ -575,6 +576,21 @@ const ProgrammeMode: React.FC = () => {
 
                 {activeSection === 'programme' && (
                     <>
+                        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400 mb-3">How This Works</p>
+                            <ul className="space-y-2 text-sm text-gray-300">
+                                <li>🎟️ <strong className="text-white">Buy a ticket</strong> for any block below, or get the <strong className="text-white">Full Festival Pass</strong> for access to everything.</li>
+                                <li>⏰ <strong className="text-white">Come back at showtime</strong> — each screening streams live at its scheduled time (Eastern Time).</li>
+                                <li>📺 <strong className="text-white">Click "Enter Screening Lobby"</strong> on a block to join — films in that block play automatically, one after another.</li>
+                            </ul>
+                            <p className="text-xs text-gray-500 mt-3">
+                                Having trouble? Email us at{' '}
+                                <a href={`mailto:${settings?.businessEmail || 'studio@cratetv.net'}`} className="text-red-400 hover:text-red-300 underline">
+                                    {settings?.businessEmail || 'studio@cratetv.net'}
+                                </a>
+                                {' '}and we'll help you out.
+                            </p>
+                        </div>
                         {festivalData.length > 1 && (
                             <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
                                 {festivalData.map(day => (
@@ -671,9 +687,17 @@ const ProgrammeMode: React.FC = () => {
                         // step. Now it only opens a lobby for a real block;
                         // the full pass just closes the flow so they can
                         // browse the schedule and pick a screening normally.
+                        // FEATURE (enhancement — full pass buyers previously got no
+                        // confirmation of any kind, since there's no single lobby to
+                        // send them to the way a real block purchase has): show a real
+                        // "you're all set" moment instead of silently closing with
+                        // nothing on screen.
+                        const wasFullPass = ticketFlowBlock?.id === 'full-festival-pass';
                         setTicketFlowBlock(null);
-                        if (ticketFlowBlock && ticketFlowBlock.id !== 'full-festival-pass') {
+                        if (ticketFlowBlock && !wasFullPass) {
                             setShowLobbyFor(ticketFlowBlock.id);
+                        } else if (wasFullPass) {
+                            setShowFullPassSuccess(true);
                         }
                     }}
                 />;
@@ -735,6 +759,7 @@ const PwffPage: React.FC = () => {
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
+    const [showFullPassSuccess, setShowFullPassSuccess] = useState(false);
 
     useEffect(() => { trackPageView(); }, []);
 
@@ -809,9 +834,17 @@ const PwffPage: React.FC = () => {
                         // step. Now it only opens a lobby for a real block;
                         // the full pass just closes the flow so they can
                         // browse the schedule and pick a screening normally.
+                        // FEATURE (enhancement — full pass buyers previously got no
+                        // confirmation of any kind, since there's no single lobby to
+                        // send them to the way a real block purchase has): show a real
+                        // "you're all set" moment instead of silently closing with
+                        // nothing on screen.
+                        const wasFullPass = ticketFlowBlock?.id === 'full-festival-pass';
                         setTicketFlowBlock(null);
-                        if (ticketFlowBlock && ticketFlowBlock.id !== 'full-festival-pass') {
+                        if (ticketFlowBlock && !wasFullPass) {
                             setShowLobbyFor(ticketFlowBlock.id);
+                        } else if (wasFullPass) {
+                            setShowFullPassSuccess(true);
                         }
                     }}
                 />;
@@ -830,6 +863,24 @@ const PwffPage: React.FC = () => {
                         onBuyTicket={() => { if (liveBlock) { setShowLobbyFor(null); setTicketFlowBlock(liveBlock); } }}
                         onClose={() => setShowLobbyFor(null)}
                     />
+                </div>
+            )}
+            {showFullPassSuccess && (
+                <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowFullPassSuccess(false)}>
+                    <div className="bg-[#141414] border border-white/10 rounded-2xl p-8 max-w-md w-full text-center" onClick={e => e.stopPropagation()}>
+                        <div className="text-5xl mb-4">🎉</div>
+                        <h3 className="text-2xl font-black uppercase italic text-white mb-2">You're All Set!</h3>
+                        <p className="text-gray-400 text-sm mb-6">
+                            Your Full Festival Pass is active — you have access to every screening.
+                            Come back here at each showtime to join.
+                        </p>
+                        <button
+                            onClick={() => setShowFullPassSuccess(false)}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl uppercase text-xs tracking-widest transition-all"
+                        >
+                            Got It
+                        </button>
+                    </div>
                 </div>
             )}
             {/* This page renders standalone (outside <App>), so it never got the
@@ -867,9 +918,17 @@ const PwffPage: React.FC = () => {
                         // step. Now it only opens a lobby for a real block;
                         // the full pass just closes the flow so they can
                         // browse the schedule and pick a screening normally.
+                        // FEATURE (enhancement — full pass buyers previously got no
+                        // confirmation of any kind, since there's no single lobby to
+                        // send them to the way a real block purchase has): show a real
+                        // "you're all set" moment instead of silently closing with
+                        // nothing on screen.
+                        const wasFullPass = ticketFlowBlock?.id === 'full-festival-pass';
                         setTicketFlowBlock(null);
-                        if (ticketFlowBlock && ticketFlowBlock.id !== 'full-festival-pass') {
+                        if (ticketFlowBlock && !wasFullPass) {
                             setShowLobbyFor(ticketFlowBlock.id);
+                        } else if (wasFullPass) {
+                            setShowFullPassSuccess(true);
                         }
                     }}
                 />;
