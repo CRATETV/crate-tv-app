@@ -597,6 +597,21 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                 </button>
+
+                {/* More info — was completely missing from this sheet, meaning
+                    there was previously no way to reach the episode list from
+                    a phone or tablet at all. */}
+                {onShowDetails && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowMobileSheet(false); onShowDetails(movie); }}
+                    className={`flex items-center gap-1 p-3 rounded-full border border-white/20 bg-white/5 active:bg-white/15 transition-all ${movie.isSeries && movie.episodes?.length ? 'px-3.5' : ''}`}
+                  >
+                    {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{movie.episodes.length} EP</span>
+                    )}
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                )}
               </div>
             </div>
           </div>
