@@ -231,10 +231,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                             <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.producers}</p>
                         </div>
                     )}
-                    <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
-                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4">Official Accreditation</p>
-                        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-20 opacity-20" alt="Crate Official" />
-                    </div>
                 </div>
             </div>
         </div>

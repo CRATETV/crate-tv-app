@@ -252,6 +252,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           {isLeavingSoon  && !isActuallyComingSoon && <span className="bg-amber-600  text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">Leaving Soon</span>}
           {isNew          && !isActuallyComingSoon && <span className="bg-red-600    text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">NEW</span>}
           {(movie.isForSale || movie.isWatchPartyPaid) && <span className="bg-amber-700 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">PREMIER</span>}
+          {movie.isSeries && movie.episodes && movie.episodes.length > 0 && <span className="bg-purple-700 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">Series · {movie.episodes.length} EP</span>}
         </div>
 
         {/* Laurel */}
@@ -527,6 +528,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 <h2 className="text-white font-black text-lg uppercase tracking-tight leading-tight flex-1">{movie.title}</h2>
                 <div className="flex flex-col items-end gap-1 flex-shrink-0 pt-0.5">
                   {isNew     && <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded tracking-widest">NEW</span>}
+                  {movie.isSeries && movie.episodes && movie.episodes.length > 0 && <span className="text-[8px] font-black bg-purple-700 text-white px-2 py-0.5 rounded tracking-widest">{movie.episodes.length} EP</span>}
                   {isWatched && <span className="text-[8px] font-black bg-white/20 text-white px-2 py-0.5 rounded tracking-tighter">WATCHED</span>}
                 </div>
               </div>
