@@ -156,12 +156,51 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // that override when present; regular, non-series films are completely
   // unaffected since they'll never have this param set.
   const episodeStreamOverride = useMemo(() => {
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(currentSearch);
       const raw = params.get('stream');
       return raw ? decodeURIComponent(raw) : null;
-  }, []);
+  }, [currentSearch]);
 
   const playableUrl = episodeStreamOverride || movie?.fullMovie;
+
+  // FEATURE (user request — episodes should auto-advance like festival
+  // blocks do): finds the next episode after whichever one is currently
+  // playing, so onEnded below knows whether to advance or show the
+  // normal end-of-content screen.
+  const nextEpisode = useMemo(() => {
+      if (!movie?.isSeries || !movie.episodes || movie.episodes.length === 0) return null;
+      if (!episodeStreamOverride) return null; // playing the main entry itself, not a listed episode
+      const idx = movie.episodes.findIndex(ep => ep.url === episodeStreamOverride);
+      if (idx === -1 || idx >= movie.episodes.length - 1) return null; // not found, or already the last one
+      return movie.episodes[idx + 1];
+  }, [movie, episodeStreamOverride]);
+
+  // FEATURE (user request — a visible countdown before auto-advancing,
+  // not an instant jump): counts down from AUTO_ADVANCE_SECONDS once the
+  // current episode ends, showing "Episode X starts in N..." with a way
+  // to jump ahead immediately or cancel and stay on this screen instead.
+  const AUTO_ADVANCE_SECONDS = 8;
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
+
+  const advanceToEpisode = useCallback((url: string) => {
+      if (!movie?.key) return;
+      window.history.pushState({}, '', `/movie/${movie.key}?play=true&stream=${encodeURIComponent(url)}`);
+      setCurrentSearch(window.location.search);
+      setAutoAdvanceCountdown(null);
+      // isEnded is already false here and stays false — the effect above
+      // (keyed on currentSearch) picks up the URL change and calls
+      // playContent() for the new episode.
+  }, [movie?.key]);
+
+  useEffect(() => {
+      if (autoAdvanceCountdown === null) return;
+      if (autoAdvanceCountdown <= 0) {
+          if (nextEpisode) advanceToEpisode(nextEpisode.url);
+          return;
+      }
+      const timer = setTimeout(() => setAutoAdvanceCountdown(c => (c ?? 0) - 1), 1000);
+      return () => clearTimeout(timer);
+  }, [autoAdvanceCountdown, nextEpisode, advanceToEpisode]);
 
   // ── SESSION GUARD: protect festival/paid films from password sharing ────
   // A film needs protection if it's a paid watch party film the user has unlocked
@@ -438,7 +477,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         // runs was the other half of the race described above.
                         onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)}
                         onPlay={() => { setVideoError(false); !isEnded && playerMode === 'full' && setIsPaused(false); }} 
-                        onEnded={() => setIsEnded(true)} 
+                        onEnded={() => {
+                            setIsEnded(true);
+                            if (nextEpisode) setAutoAdvanceCountdown(AUTO_ADVANCE_SECONDS);
+                        }}
                         onError={() => setVideoError(true)}
                         controlsList="nodownload" 
                     />
@@ -472,7 +514,32 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     {/* Video rendered above, this div is for overlays */}
                                     <CastButton videoElement={videoRef.current} />
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-                                    {isEnded && (
+                                    {isEnded && nextEpisode && autoAdvanceCountdown !== null && (
+                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/60 backdrop-blur-sm">
+                                            <div className="max-w-lg w-full space-y-8">
+                                                <div>
+                                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Up Next</p>
+                                                    <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{nextEpisode.title}</h2>
+                                                </div>
+                                                <div className="relative w-20 h-20 mx-auto">
+                                                    <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
+                                                        <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+                                                        <circle cx="40" cy="40" r="36" fill="none" stroke="#dc2626" strokeWidth="4"
+                                                            strokeDasharray={2 * Math.PI * 36}
+                                                            strokeDashoffset={2 * Math.PI * 36 * (1 - autoAdvanceCountdown / AUTO_ADVANCE_SECONDS)}
+                                                            style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                                                    </svg>
+                                                    <div className="absolute inset-0 flex items-center justify-center text-2xl font-black">{autoAdvanceCountdown}</div>
+                                                </div>
+                                                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Starts automatically in {autoAdvanceCountdown}s</p>
+                                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                                                    <button onClick={() => advanceToEpisode(nextEpisode.url)} className="px-8 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-xs tracking-widest transition-all">Play Now</button>
+                                                    <button onClick={() => setAutoAdvanceCountdown(null)} className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {isEnded && !(nextEpisode && autoAdvanceCountdown !== null) && (
                                         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                             <div className="max-w-2xl w-full space-y-12">
                                                 <div>
@@ -630,6 +697,42 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         className="text-gray-300 text-base leading-relaxed mb-6"
                         dangerouslySetInnerHTML={{ __html: movie.synopsis }}
                     />
+
+                    {/* Episodes — FEATURE (user request, matching Netflix's always-open
+                        layout): previously episodes only existed inside a separate details
+                        modal, reachable via a small "More Info" arrow icon that's easy to
+                        never notice. This is right on the watch page itself, fully visible
+                        the moment someone lands here — no extra click needed. */}
+                    {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
+                        <div className="mb-8">
+                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-3">Episodes</p>
+                            <div className="space-y-3">
+                                {movie.episodes.map((ep, idx) => {
+                                    const isCurrentEpisode = episodeStreamOverride === ep.url;
+                                    return (
+                                        <button
+                                            key={ep.id}
+                                            onClick={() => {
+                                                window.history.pushState({}, '', `/movie/${movie.key}?play=true&stream=${encodeURIComponent(ep.url)}`);
+                                                setCurrentSearch(window.location.search);
+                                            }}
+                                            className={`w-full flex items-center gap-4 p-3 rounded-xl border text-left transition-all ${isCurrentEpisode ? 'bg-red-600/10 border-red-600/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                        >
+                                            <span className={`flex-shrink-0 w-8 text-center font-black text-lg ${isCurrentEpisode ? 'text-red-500' : 'text-gray-600'}`}>{idx + 1}</span>
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className={`text-sm font-bold uppercase tracking-tight truncate ${isCurrentEpisode ? 'text-white' : 'text-gray-300'}`}>{ep.title}</h4>
+                                                    {isCurrentEpisode && <span className="flex-shrink-0 text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded uppercase tracking-widest">Now Playing</span>}
+                                                </div>
+                                                <p className="text-xs text-gray-500 line-clamp-1">{ep.synopsis}</p>
+                                            </div>
+                                            {ep.duration && <span className="flex-shrink-0 text-[10px] font-bold text-gray-600">{ep.duration}m</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Cast */}
                     {movie.cast && movie.cast.length > 0 && (
