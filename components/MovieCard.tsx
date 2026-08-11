@@ -270,7 +270,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       {/* ── NETFLIX-STYLE EXPANDED CARD ─────────────────────────── */}
       {showExpanded && (
         <div
-          className="absolute z-50 w-[320px] md:w-[380px] rounded-xl overflow-hidden bg-[#141414] shadow-[0_30px_80px_rgba(0,0,0,0.95)] border border-white/10"
+          className="absolute z-50 w-[380px] md:w-[440px] lg:w-[480px] rounded-xl overflow-hidden bg-[#141414] shadow-[0_30px_80px_rgba(0,0,0,0.95)] border border-white/10"
           style={{
             top: '-8px',
             ...(expandAnchor === 'left'
@@ -335,101 +335,76 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           </div>
 
           {/* Info panel */}
-          <div className="px-4 pt-3 pb-4">
+          <div className="px-5 pt-4 pb-5">
 
             {/* Title + badges row */}
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="text-white font-black text-sm uppercase tracking-tight leading-tight">{movie.title}</h3>
+              <h3 className="text-white font-black text-base uppercase tracking-tight leading-tight">{movie.title}</h3>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                {isNew && <span className="text-[7px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded tracking-widest">NEW</span>}
-                {isWatched && <span className="text-[7px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded tracking-tighter">WATCHED</span>}
+                {isNew && <span className="text-[8px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded tracking-widest">NEW</span>}
+                {isWatched && <span className="text-[8px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded tracking-tighter">WATCHED</span>}
               </div>
             </div>
 
             {/* Meta — year · runtime · genre */}
-            <div className="flex items-center gap-1.5 flex-wrap mb-2">
+            <div className="flex items-center gap-1.5 flex-wrap mb-3">
               {movie.releaseDateTime && (
-                <span className="text-gray-400 text-[10px]">{new Date(movie.releaseDateTime).getFullYear()}</span>
+                <span className="text-gray-400 text-xs">{new Date(movie.releaseDateTime).getFullYear()}</span>
               )}
               {!!movie.durationInMinutes && (
                 <>
-                  <span className="text-gray-600 text-[9px]">·</span>
-                  <span className="text-gray-400 text-[10px]">{movie.durationInMinutes}m</span>
+                  <span className="text-gray-600 text-[10px]">·</span>
+                  <span className="text-gray-400 text-xs">{movie.durationInMinutes}m</span>
                 </>
               )}
               {genres && (
                 <>
-                  <span className="text-gray-600 text-[9px]">·</span>
-                  <span className="text-[#E50914] text-[10px] font-medium">{genres}</span>
+                  <span className="text-gray-600 text-[10px]">·</span>
+                  <span className="text-[#E50914] text-xs font-medium">{genres}</span>
                 </>
               )}
               {(movie.isForSale || movie.isWatchPartyPaid) && (
-                <span className="bg-amber-700/80 text-[7px] font-black text-white px-1.5 py-0.5 rounded tracking-widest ml-1">$4.99</span>
+                <span className="bg-amber-700/80 text-[8px] font-black text-white px-1.5 py-0.5 rounded tracking-widest ml-1">$4.99</span>
               )}
             </div>
 
             {/* Synopsis */}
             {movie.synopsis && (
-              <p className="text-gray-400 text-[10px] leading-relaxed line-clamp-2 mb-3">
+              <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-4">
                 {cleanSynopsis(movie.synopsis)}
               </p>
             )}
 
-            {/* Episodes — FEATURE (user report + screenshot): shown right here,
-                directly in this card, instead of only being reachable via the
-                "More info" chevron below — this is the actual first place
-                people look, so episodes need to be visible here, not hidden
-                behind another click. Kept compact (title + play only) given
-                this card's small width. */}
-            {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
-              <div className="mb-3 -mx-1">
-                <p className="text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1.5 px-1">{movie.episodes.length} Episodes</p>
-                <div className="max-h-[104px] overflow-y-auto space-y-1 pr-1">
-                  {movie.episodes.map((ep, idx) => (
-                    <button
-                      key={ep.id}
-                      onClick={e => { e.stopPropagation(); (onShowDetails ?? onSelectMovie)(movie); }}
-                      className="w-full flex items-center gap-2 bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1.5 transition-all text-left"
-                    >
-                      <span className="flex-shrink-0 w-4 text-center text-[9px] font-black text-gray-500">{idx + 1}</span>
-                      <span className="flex-grow text-[10px] font-bold text-white truncate">{ep.title}</span>
-                      <svg className="flex-shrink-0 w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Action buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               {/* Play */}
               <button
                 onClick={e => { e.stopPropagation(); onSelectMovie(movie); }}
-                className="flex items-center gap-1.5 bg-white hover:bg-gray-200 text-black font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors flex-1 justify-center"
+                className="flex items-center gap-2 bg-white hover:bg-gray-200 text-black font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-lg transition-colors flex-1 justify-center"
               >
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 Play
               </button>
 
               {/* Watchlist */}
               <button
                 onClick={e => { e.stopPropagation(); onToggleWatchlist?.(movie.key); }}
-                className="p-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 transition-all"
+                className="p-2.5 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 transition-all"
                 title={isOnWatchlist ? 'Remove from list' : 'Add to list'}
               >
                 {isOnWatchlist ? (
-                  <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                 ) : (
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                 )}
               </button>
 
               {/* Like */}
               <button
                 onClick={e => { e.stopPropagation(); setIsAnimatingLike(true); setTimeout(() => setIsAnimatingLike(false), 500); onToggleLike?.(movie.key); }}
-                className={`p-2 rounded-full border border-white/20 bg-white/5 hover:bg-red-600/30 transition-all ${isAnimatingLike ? 'animate-heartbeat' : ''}`}
+                className={`p-2.5 rounded-full border border-white/20 bg-white/5 hover:bg-red-600/30 transition-all ${isAnimatingLike ? 'animate-heartbeat' : ''}`}
               >
-                <svg className={`w-3.5 h-3.5 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className={`w-4 h-4 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </button>
@@ -437,10 +412,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               {/* More info */}
               <button
                 onClick={e => { e.stopPropagation(); (onShowDetails ?? onSelectMovie)(movie); }}
-                className="p-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 transition-all ml-auto"
-                title="More info"
+                className={`flex items-center gap-1 p-2.5 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 transition-all ${movie.isSeries && movie.episodes?.length ? 'px-3' : ''} ${!(movie.isSeries && movie.episodes?.length) ? 'ml-auto' : ''}`}
+                title={movie.isSeries && movie.episodes?.length ? `${movie.episodes.length} episodes` : 'More info'}
               >
-                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">{movie.episodes.length} EP</span>
+                )}
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
               </button>
             </div>
           </div>
