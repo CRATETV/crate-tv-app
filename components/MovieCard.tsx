@@ -375,6 +375,31 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               </p>
             )}
 
+            {/* Episodes — FEATURE (user report + screenshot): shown right here,
+                directly in this card, instead of only being reachable via the
+                "More info" chevron below — this is the actual first place
+                people look, so episodes need to be visible here, not hidden
+                behind another click. Kept compact (title + play only) given
+                this card's small width. */}
+            {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
+              <div className="mb-3 -mx-1">
+                <p className="text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1.5 px-1">{movie.episodes.length} Episodes</p>
+                <div className="max-h-[104px] overflow-y-auto space-y-1 pr-1">
+                  {movie.episodes.map((ep, idx) => (
+                    <button
+                      key={ep.id}
+                      onClick={e => { e.stopPropagation(); (onShowDetails ?? onSelectMovie)(movie); }}
+                      className="w-full flex items-center gap-2 bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1.5 transition-all text-left"
+                    >
+                      <span className="flex-shrink-0 w-4 text-center text-[9px] font-black text-gray-500">{idx + 1}</span>
+                      <span className="flex-grow text-[10px] font-bold text-white truncate">{ep.title}</span>
+                      <svg className="flex-shrink-0 w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex items-center gap-2">
               {/* Play */}
