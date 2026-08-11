@@ -520,10 +520,16 @@ const App: React.FC = () => {
         const bannerHeight = stableBannerType !== 'NONE'
             ? (isFestivalBanner && isMobile ? 112 : 48)
             : 0;
+        // FIX: the festival banner now adds env(safe-area-inset-top) padding
+        // to clear the iPhone notch/dynamic island (see the banner's own
+        // style prop above) — this needs to reserve that same extra space,
+        // or content ends up rendering partially hidden behind the now-
+        // taller banner on devices with a real notch.
+        const safeAreaExtra = stableBannerType !== 'NONE' && isFestivalBanner ? ' + env(safe-area-inset-top)' : '';
         const headerHeight = 64;
         const isHomePage = window.location.pathname === '/';
-        if (!isHomePage) return `${bannerHeight + headerHeight}px`;
-        return `${bannerHeight}px`;
+        if (!isHomePage) return `calc(${bannerHeight + headerHeight}px${safeAreaExtra})`;
+        return `calc(${bannerHeight}px${safeAreaExtra})`;
     }, [stableBannerType]);
 
     if (isLoading) return <LoadingSpinner />;
@@ -613,7 +619,10 @@ const App: React.FC = () => {
                 <div
                     onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '-philly2026'}`); window.dispatchEvent(new Event('pushstate')); }}
                     className="fixed top-0 left-0 right-0 z-[110] cursor-pointer shadow-xl"
-                    style={{ background: "linear-gradient(135deg, #1a0a00, #8B0000, #c50000)" }}
+                    style={{
+                        background: "linear-gradient(135deg, #1a0a00, #8B0000, #c50000)",
+                        paddingTop: 'env(safe-area-inset-top)',
+                    }}
                 >
                     {/* Mobile: tall, stacked, prominent */}
                     <div className="md:hidden px-4 py-3 text-white">
