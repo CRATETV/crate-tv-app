@@ -1166,17 +1166,28 @@ const WatchPartyManager: React.FC<{
     }, []);
 
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        const unsub = db.collection('watch_parties').onSnapshot(snapshot => {
-            const states: Record<string, WatchPartyState> = {};
-            snapshot.forEach(doc => {
-                states[doc.id] = doc.data() as WatchPartyState;
-            });
-            setPartyStates(states);
-            setPartyStatesLoaded(true);
-        });
-        return () => unsub();
+        const password = sessionStorage.getItem('adminPassword');
+        if (!password) return;
+
+        const fetchStates = () => {
+            fetch('/api/get-watch-party-states', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.states) {
+                        setPartyStates(data.states);
+                        setPartyStatesLoaded(true);
+                    }
+                })
+                .catch(() => {}); // next poll retries — no need to surface a transient miss
+        };
+
+        fetchStates();
+        const interval = setInterval(fetchStates, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const watchableItems = useMemo(() => {
