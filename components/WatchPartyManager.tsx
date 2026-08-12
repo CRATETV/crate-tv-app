@@ -1158,6 +1158,16 @@ const WatchPartyManager: React.FC<{
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
+        const unsub = db.collection('festival').doc('schedule').collection('days').onSnapshot(snapshot => {
+            const days: FestivalDay[] = snapshot.docs.map(doc => doc.data() as FestivalDay);
+            setLocalFestivalData(days);
+        });
+        return () => unsub();
+    }, []);
+
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
         const unsub = db.collection('watch_parties').onSnapshot(snapshot => {
             const states: Record<string, WatchPartyState> = {};
             snapshot.forEach(doc => {
