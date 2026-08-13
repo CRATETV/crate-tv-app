@@ -25,11 +25,13 @@ const EmailCapture: React.FC<{ source: 'teaser' | 'programme'; label?: string }>
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email.trim()) return;
         setLoading(true);
+        setError(false);
         try {
             const db = getDbInstance();
             if (!db) throw new Error();
@@ -40,7 +42,7 @@ const EmailCapture: React.FC<{ source: 'teaser' | 'programme'; label?: string }>
                 source,
             });
             setSubmitted(true);
-        } catch { } finally { setLoading(false); }
+        } catch { setError(true); } finally { setLoading(false); }
     };
 
     if (submitted) return (
@@ -51,13 +53,16 @@ const EmailCapture: React.FC<{ source: 'teaser' | 'programme'; label?: string }>
     );
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 w-full max-w-md">
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email" required className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50" />
-            <button type="submit" disabled={loading} className="flex-shrink-0 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all">
-                {loading ? '...' : (label || 'Notify Me')}
-            </button>
-        </form>
+        <div className="w-full max-w-md">
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50" />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email" required className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50" />
+                <button type="submit" disabled={loading} className="flex-shrink-0 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all">
+                    {loading ? '...' : (label || 'Notify Me')}
+                </button>
+            </form>
+            {error && <p className="text-red-400 text-xs mt-2">Something went wrong — mind trying again?</p>}
+        </div>
     );
 };
 
