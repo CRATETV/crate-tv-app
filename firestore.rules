@@ -173,6 +173,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── PWFF interest capture (public "Notify Me" form) ──────────────────
+    // FIX: this collection had no rule at all, meaning every submission
+    // silently failed against the deny-everything-else catch-all at the
+    // bottom of this file — with no error shown to the person submitting,
+    // since the form's catch block was empty. Anyone (signed in or not,
+    // since this is meant for visitors who aren't customers yet) can
+    // submit their interest; nothing can be read back or altered from
+    // the client, since this holds people's email addresses.
+    match /pwff_interest/{docId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+
     // ── Film submissions ────────────────────────────────────────────────
     match /movie_pipeline/{submissionId} {
       allow read: if isSignedIn()
