@@ -548,23 +548,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             hasUserInteractedRef.current = true;
             return;
         }
-
-        // FIX: attempt a MUTED play immediately, regardless of gesture state.
-        // Muted autoplay is reliably permitted by every major browser with no
-        // gesture required at all — it's only *unmuted* autoplay that
-        // actually needs one. Relying solely on the HTML autoplay attribute
-        // wasn't reliable enough for a video whose source gets attached
-        // dynamically via hls.js, which is exactly why playback was silently
-        // never starting until someone happened to tap something.
-        const mutedVideo = videoRef.current;
-        if (mutedVideo) {
-            mutedVideo.muted = true;
-            mutedVideo.play().catch(() => { /* will retry via the timers below if still paused */ });
-            [400, 1000, 2000].forEach(delay => {
-                setTimeout(() => { if (mutedVideo.paused) mutedVideo.play().catch(() => {}); }, delay);
-            });
-        }
-
         return onFirstUserGesture(() => {
             hasUserInteractedRef.current = true;
             setNeedsUserGesture(false);
@@ -987,16 +970,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         setLateJoinGaveUp({ reason: 'catchup-failed' });
                         return;
                     }
-                    // Force back to the lowest quality tier before retrying —
-                    // if playback had climbed to a higher bitrate during an
-                    // earlier good moment, retrying at that same demanding
-                    // quality on a now-struggling connection just repeats the
-                    // same failure. ABR climbs back up naturally once the
-                    // connection genuinely stabilizes; this only affects this
-                    // one recovery attempt, not the whole rest of playback.
-                    if (hlsRef.current) {
-                        try { hlsRef.current.currentLevel = 0; } catch { /* non-HLS source, ignore */ }
-                    }
                     // Clean reload: tears down whatever half-stuck state the
                     // decoder is in and retries the whole dance fresh, rather
                     // than continuing to poke at a pipeline that hasn't made
@@ -1216,17 +1189,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // never quietly slips back into muted playback that only the small
     // "Tap to Unmute" button could fix.
     useEffect(() => {
-        if (needsUserGesture) {
-            // No gesture yet — can't safely attempt unmuted playback here,
-            // but the film should still actually start (muted) rather than
-            // sitting frozen. Mirrors the same fix in the mount effect above.
-            const mutedVideo = videoRef.current;
-            if (mutedVideo && movie?.fullMovie) {
-                mutedVideo.muted = true;
-                mutedVideo.play().catch(() => {});
-            }
-            return;
-        }
+        if (needsUserGesture) return; // no gesture yet — first film still needs the button
         const video = videoRef.current;
         if (!video || !movie?.fullMovie) return;
         video.muted = false;
