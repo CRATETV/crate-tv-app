@@ -44,6 +44,18 @@ export async function POST(request: Request) {
       backstageKey: null
     });
 
+    // FIX (user report — the watch party banner stayed up even after
+    // ending the party): the homepage banner's highest-priority check
+    // (see the "PRIORITY 0" comment in contexts/FestivalContext.tsx) reads
+    // from this SEPARATE watch_party_schedule doc, not from watch_parties
+    // directly. It's written once when a party time is first set
+    // (api/schedule-watch-party.ts) but was never being cleared here —
+    // so it just sat there with isWatchPartyEnabled: true forever, and
+    // the banner had no way to know the party was actually over.
+    await db.collection('watch_party_schedule').doc(movieKey).update({
+      isWatchPartyEnabled: false
+    }).catch(() => {}); // fine if this doc doesn't exist for this party
+
     // Also clear watchPartyStartTime from the movie so the notification never reappears
     await db.collection('movies').doc(movieKey).update({
       watchPartyStartTime: null,
@@ -78,9 +90,14 @@ export async function POST(request: Request) {
         }
       }
       if (releaseAfterScreening && blockMovieKeys.length > 0) {
-        const updates: Record<string, any> = {};
-        for (const key of blockMovieKeys) updates[`${key}.isUnlisted`] = false;
-        await db.collection('data').doc('movies').update(updates);
+        // FIX: writing to data/movies here had zero real effect — the
+        // client-side listener for that document explicitly only copies a
+        // fixed set of unrelated watch-party fields, never isUnlisted. The
+        // real movies collection (used elsewhere in this same file, above)
+        // is what actually controls catalog visibility.
+        await Promise.all(blockMovieKeys.map(key =>
+          db.collection('movies').doc(key).update({ isUnlisted: false }).catch(() => {})
+        ));
         console.log(`[Festival] Released ${blockMovieKeys.length} films to catalog`);
       }
     } catch (e) { console.error('[Festival] Catalog release error:', e); }

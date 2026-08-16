@@ -125,6 +125,16 @@ export async function POST(request: Request) {
             endedAt: FieldValue.serverTimestamp(),
         });
 
+        // FIX (same gap found in terminate-watch-party.ts): this endpoint's
+        // own comment above claims to mirror that one's shutdown steps
+        // exactly, but this specific one — clearing the separate
+        // watch_party_schedule doc the homepage banner checks first —
+        // was missing from both. Added here too so an auto-ended party
+        // doesn't leave the banner stuck any more than a manually-ended one does.
+        await db.collection('watch_party_schedule').doc(partyId).update({
+            isWatchPartyEnabled: false
+        }).catch(() => {});
+
         await db.collection('movies').doc(partyId).update({
             watchPartyStartTime: null,
             isWatchPartyEnabled: false
@@ -145,9 +155,14 @@ export async function POST(request: Request) {
                     blocks[idx] = { ...blocks[idx], festivalEndTime: new Date().toISOString() };
                     await dayDoc.ref.update({ blocks });
                     if (releaseAfterScreening && blockMovieKeys && blockMovieKeys.length > 0) {
-                        const updates: Record<string, any> = {};
-                        for (const key of blockMovieKeys) updates[`${key}.isUnlisted`] = false;
-                        await db.collection('data').doc('movies').update(updates);
+                        // FIX: same real bug as terminate-watch-party.ts — writing to
+                        // data/movies had zero effect, since the catalog display's
+                        // listener for that document never reads isUnlisted from it.
+                        // The real movies collection is what actually controls
+                        // catalog visibility.
+                        await Promise.all(blockMovieKeys.map((key: string) =>
+                            db.collection('movies').doc(key).update({ isUnlisted: false }).catch(() => {})
+                        ));
                     }
                     break;
                 }
