@@ -15,6 +15,7 @@ import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
 import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
+import { reportClientError } from '../services/errorLogger';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -548,6 +549,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             hasUserInteractedRef.current = true;
             return;
         }
+
+        // FIX: attempt a MUTED play immediately, regardless of gesture state.
+        // Muted autoplay is reliably permitted by every major browser with no
+        // gesture required at all — it's only *unmuted* autoplay that
+        // actually needs one. Relying solely on the HTML autoplay attribute
+        // wasn't reliable enough for a video whose source gets attached
+        // dynamically via hls.js, which is exactly why playback was silently
+        // never starting until someone happened to tap something.
+        const mutedVideo = videoRef.current;
+        if (mutedVideo) {
+            mutedVideo.muted = true;
+            mutedVideo.play().catch(() => { /* will retry via the timers below if still paused */ });
+            [400, 1000, 2000].forEach(delay => {
+                setTimeout(() => { if (mutedVideo.paused) mutedVideo.play().catch(() => {}); }, delay);
+            });
+        }
+
         return onFirstUserGesture(() => {
             hasUserInteractedRef.current = true;
             setNeedsUserGesture(false);
@@ -692,6 +710,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const elapsedSec = (Date.now() - (startRef as any).toDate().getTime()) / 1000;
         if (elapsedSec <= BLOCK_WAIT_FOR_NEXT_FILM_THRESHOLD_SEC) { setLateJoinWaitInfo(null); return; }
 
+        // FIX (user report — audio was audible behind this "wait for next
+        // film" screen, defeating the entire point of skipping the current
+        // film for a late joiner): this decision previously only affected
+        // which UI showed, never actually silenced the video itself. If
+        // playback had already started before this ran, it just kept
+        // going, quietly, behind the black overlay.
+        const vid = videoRef.current;
+        if (vid) { vid.pause(); vid.muted = true; }
         setLateJoinWaitInfo({ currentFilmTitle: m?._activeFilmTitle || m?.title, nextIdx: currentIdx + 1 });
     }, [partyState, movie]);
 
@@ -759,8 +785,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         const sessionKey = `${partyState?.lastStartedAt || ''}|${movie?.fullMovie || ''}`;
         if (lastSessionKeyRef.current !== undefined && lastSessionKeyRef.current !== sessionKey) {
-            hasUserInteractedRef.current = false;
-            setNeedsUserGesture(true);
+            // FIX (targeted, iOS-safe): the original reset applied to every
+            // device, but the actual risk it protects against — iOS Safari
+            // not honoring a stale "already unlocked" state for a genuinely
+            // new video load — is iOS-specific. Desktop browsers don't share
+            // that same risk, so only iOS keeps the safe reset; everyone
+            // else keeps sound continuous across films within the block.
+            if (IS_IOS) {
+                hasUserInteractedRef.current = false;
+                setNeedsUserGesture(true);
+            }
             // Also reset the late-join catch-up budget — otherwise someone who
             // exhausted their 3 retry attempts on film 1 of a block would have
             // zero retries left when film 2 starts and they need to catch up
@@ -953,6 +987,35 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 watchdogTimer = setTimeout(() => {
                     if (cancelled || myGeneration !== seekGeneration) return;
                     v.removeEventListener('seeked', onSeeked);
+
+                    // DIAGNOSTIC (real, confirmed bug — iPhone gets stuck on
+                    // catch-up while desktop works fine on the same party;
+                    // no confident root cause yet, since iOS Safari's
+                    // built-in HLS player can't be inspected the way hls.js
+                    // on desktop can). Purely observational — doesn't change
+                    // any actual behavior below, just captures the real
+                    // technical state at the exact moment a seek attempt
+                    // timed out, so this shows up in error_logs with
+                    // something concrete to look at instead of a guess.
+                    try {
+                        const buffered: string[] = [];
+                        for (let i = 0; i < v.buffered.length; i++) {
+                            buffered.push(`${v.buffered.start(i).toFixed(1)}-${v.buffered.end(i).toFixed(1)}`);
+                        }
+                        reportClientError('watchparty-catchup-timeout', new Error('Seek did not complete within watchdog timeout'), {
+                            isIOS: IS_IOS,
+                            attemptNumber: catchUpAttemptsRef.current + 1,
+                            maxAttempts: CATCH_UP_MAX_ATTEMPTS,
+                            targetPosition: t.targetPosition,
+                            videoCurrentTime: v.currentTime,
+                            readyState: v.readyState,
+                            networkState: v.networkState,
+                            bufferedRanges: buffered,
+                            movieKey: movieRef.current?.key,
+                            watchdogTimeoutMs: CATCH_UP_WATCHDOG_TIMEOUT_MS,
+                        });
+                    } catch { /* diagnostics should never themselves cause a failure */ }
+
                     catchUpAttemptsRef.current += 1;
                     if (catchUpAttemptsRef.current >= CATCH_UP_MAX_ATTEMPTS) {
                         // Given it every reasonable shot — a plain reload-and-
@@ -969,6 +1032,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         setIsCatchingUpToLive(false);
                         setLateJoinGaveUp({ reason: 'catchup-failed' });
                         return;
+                    }
+                    // Force back to the lowest quality tier before retrying —
+                    // if playback had climbed to a higher bitrate during an
+                    // earlier good moment, retrying at that same demanding
+                    // quality on a now-struggling connection just repeats the
+                    // same failure. ABR climbs back up naturally once the
+                    // connection genuinely stabilizes; this only affects this
+                    // one recovery attempt, not the whole rest of playback.
+                    if (hlsRef.current) {
+                        try { hlsRef.current.currentLevel = 0; } catch { /* non-HLS source, ignore */ }
                     }
                     // Clean reload: tears down whatever half-stuck state the
                     // decoder is in and retries the whole dance fresh, rather
@@ -1189,7 +1262,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // never quietly slips back into muted playback that only the small
     // "Tap to Unmute" button could fix.
     useEffect(() => {
-        if (needsUserGesture) return; // no gesture yet — first film still needs the button
+        if (needsUserGesture) {
+            // No gesture yet — can't safely attempt unmuted playback here,
+            // but the film should still actually start (muted) rather than
+            // sitting frozen. Mirrors the same fix in the mount effect above.
+            const mutedVideo = videoRef.current;
+            if (mutedVideo && movie?.fullMovie) {
+                mutedVideo.muted = true;
+                mutedVideo.play().catch(() => {});
+            }
+            return;
+        }
         const video = videoRef.current;
         if (!video || !movie?.fullMovie) return;
         video.muted = false;
@@ -2333,6 +2416,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                 className="bg-white text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full active:scale-95 transition-all"
                                             >
                                                 Retry
+                                            </button>
+                                            <button
+                                                onClick={() => window.location.reload()}
+                                                className="text-[10px] font-black uppercase tracking-widest text-gray-500 active:text-white transition-colors"
+                                            >
+                                                Or reload the page
                                             </button>
                                         </div>
                                     )}
