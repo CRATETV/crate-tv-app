@@ -776,26 +776,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         const sessionKey = `${partyState?.lastStartedAt || ''}|${movie?.fullMovie || ''}`;
         if (lastSessionKeyRef.current !== undefined && lastSessionKeyRef.current !== sessionKey) {
-            // FEATURE (user report — repeated unmute taps on every new film
-            // interrupts viewing): try unmuted playback first, since the
-            // viewer already interacted with the page once this session —
-            // this usually just works. Only fall back to the muted+prompt
-            // flow (the original safety net below) if the browser actually
-            // refuses, rather than assuming it will and prompting regardless.
-            const v = videoRef.current;
-            if (v && hasUserInteractedRef.current) {
-                v.muted = false;
-                v.play().then(() => {
-                    // Unmuted playback succeeded — skip the prompt entirely.
-                }).catch(() => {
-                    // Genuinely refused — fall back to the safe path below.
-                    hasUserInteractedRef.current = false;
-                    setNeedsUserGesture(true);
-                });
-            } else {
-                hasUserInteractedRef.current = false;
-                setNeedsUserGesture(true);
-            }
+            hasUserInteractedRef.current = false;
+            setNeedsUserGesture(true);
             // Also reset the late-join catch-up budget — otherwise someone who
             // exhausted their 3 retry attempts on film 1 of a block would have
             // zero retries left when film 2 starts and they need to catch up
