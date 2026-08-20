@@ -2,6 +2,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
+import { assembleAndSyncMasterData } from './publish-data.js';
 
 export async function POST(request: Request) {
   try {
@@ -99,6 +100,18 @@ export async function POST(request: Request) {
           db.collection('movies').doc(key).update({ isUnlisted: false }).catch(() => {})
         ));
         console.log(`[Festival] Released ${blockMovieKeys.length} films to catalog`);
+
+        // FIX (user report — "Time to Leave" stayed off the live catalog
+        // after its block ended, even though isUnlisted was correctly set
+        // to false above): the live site never reads Firestore directly —
+        // it's served from a manifest snapshot on S3, which only changes
+        // when something explicitly republishes it (normally an admin
+        // Save in the dashboard, via /api/publish-data). Nothing in this
+        // release flow was doing that, so a correct Firestore write could
+        // sit invisible on the live site indefinitely. Republishing here
+        // makes the release actually reach real viewers.
+        try { await assembleAndSyncMasterData(db); }
+        catch (e) { console.error('[Festival] Post-release republish failed:', e); }
       }
     } catch (e) { console.error('[Festival] Catalog release error:', e); }
 

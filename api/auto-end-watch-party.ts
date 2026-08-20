@@ -2,6 +2,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
+import { assembleAndSyncMasterData } from './publish-data.js';
 
 // FEATURE (user request — "a few minutes after the movie ends can we
 // automatically end the party? that way it can get ready for the next
@@ -163,6 +164,18 @@ export async function POST(request: Request) {
                         await Promise.all(blockMovieKeys.map((key: string) =>
                             db.collection('movies').doc(key).update({ isUnlisted: false }).catch(() => {})
                         ));
+
+                        // FIX (same gap as terminate-watch-party.ts): the live
+                        // site is served from an S3 manifest snapshot, not
+                        // read from Firestore directly — so the isUnlisted
+                        // writes above are correct but invisible to real
+                        // viewers until something republishes that snapshot.
+                        // This path (automatic end-of-block) had no republish
+                        // trigger at all, so a block that auto-ended with no
+                        // admin nearby to save something else would leave its
+                        // films stuck off the catalog indefinitely.
+                        try { await assembleAndSyncMasterData(db); }
+                        catch (e) { console.error('[AUTO-END] Post-release republish failed:', e); }
                     }
                     break;
                 }
