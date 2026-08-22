@@ -438,7 +438,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const unlockWatchParty = async (movieKey: string) => {
         if (!user || unlockedWatchPartyKeys.has(movieKey)) return;
-        // Local-only optimistic update — see note above unlockFestivalBlock.
+        // FIX (overnight incident, Aug 21-22 2026): this used to ONLY do
+        // the local optimistic update below — it never actually saved
+        // anything to Firestore. unlockedWatchPartyKeys is a protected
+        // field (client writes correctly blocked by firestore.rules), so
+        // the unlock looked like it worked in the moment, but vanished on
+        // the next refresh/session. Now calls the server endpoint that
+        // does the real, verified, persisted grant first.
+        try {
+            const token = await getUserIdToken();
+            if (!token) throw new Error('Not signed in');
+            const res = await fetch('/api/unlock-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ movieKey }),
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || 'Failed to unlock watch party');
+            }
+        } catch (e) {
+            console.error('[unlockWatchParty] Server grant failed:', e);
+            return; // Don't update local state if the real save failed
+        }
         const newUnlocked = [...(user.unlockedWatchPartyKeys || []), movieKey];
         setUser(currentUser => currentUser ? ({ ...currentUser, unlockedWatchPartyKeys: newUnlocked }) : null);
     };
