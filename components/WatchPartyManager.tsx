@@ -310,16 +310,23 @@ const EmbeddedChat: React.FC<{
 // cheap even with many blocks in the schedule: most of them aren't live at
 // any given moment, so there's rarely more than a couple of these mounted.
 const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
-    const [count, setCount] = useState<number | null>(null);
+    const [emails, setEmails] = useState<string[] | null>(null);
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
         const unsub = db.collection('watch_parties').doc(itemId).collection('lobby_viewers')
-            .onSnapshot(snap => setCount(snap.size));
+            .onSnapshot(snap => setEmails(snap.docs.map(d => d.id)));
         return () => unsub();
     }, [itemId]);
-    if (count === null) return null;
-    return <span className="text-white font-black">{count} watching</span>;
+    if (emails === null) return null;
+    return (
+        <span>
+            <span className="text-white font-black">{emails.length} watching</span>
+            {emails.length > 0 && (
+                <span className="block text-[11px] text-gray-500 mt-0.5">{emails.join(', ')}</span>
+            )}
+        </span>
+    );
 };
 
 // ── FESTIVAL LIVE STATUS ────────────────────────────────────────────────
