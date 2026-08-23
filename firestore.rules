@@ -66,11 +66,11 @@ service cloud.firestore {
 
     // ── Watch parties — all subcollections allowed for signed-in users ─
     match /watch_parties/{partyId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if false; // server only
 
       match /messages/{messageId} {
-        allow read: if isSignedIn();
+        allow read: if true;
         allow create: if isSignedIn()
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.text is string
@@ -79,7 +79,7 @@ service cloud.firestore {
       }
 
       match /live_reactions/{reactionId} {
-        allow read: if isSignedIn();
+        allow read: if true;
         allow create: if isSignedIn();
         allow update, delete: if false;
       }
