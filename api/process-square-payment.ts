@@ -129,8 +129,6 @@ export async function POST(request: Request) {
       ? process.env.SQUARE_LOCATION_ID
       : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
-    console.log("[DEBUG] isProduction:", isProduction, "tokenLength:", accessToken?.length, "first6:", accessToken?.slice(0,6), "last6:", accessToken?.slice(-6));
-
     if (!accessToken || !locationId) {
       throw new Error(`Square configuration is missing on the server.`);
     }
