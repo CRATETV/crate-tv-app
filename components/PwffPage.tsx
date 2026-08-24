@@ -295,7 +295,7 @@ const BlockCard: React.FC<{
                             // parties, it doesn't replay them), so "Watch Now" needs to go
                             // straight to the actual on-demand catalog player for the first
                             // film, not back into the (now pointless) lobby.
-                            : isUnlocked
+                            : isEnded
                                 ? <button onClick={() => films[0] && onWatch(films[0].key)} disabled={films.length === 0} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">Watch Now</button>
                                 : block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
@@ -635,7 +635,7 @@ const ProgrammeMode: React.FC = () => {
                                         // Now" state once ended, never merely once live — this now
                                         // matches that exactly instead of jumping the gun during the
                                         // live window).
-                                        filmsWatchable={isUnlocked && isEnded}
+                                        filmsWatchable={isEnded}
                                         screeningStartTime={block.screeningStartTime}
                                         dayLabel={`Day ${activeDay}`}
                                         onBuyTicket={() => setTicketFlowBlock(block)}

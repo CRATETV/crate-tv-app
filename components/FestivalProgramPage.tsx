@@ -109,13 +109,14 @@ const BlockSection: React.FC<{
     films: Movie[];
     dayLabel: string;
     isUnlocked: boolean;
+    isEnded: boolean;
     isLive: boolean;
     hasWatchParty: boolean;
     watchPartyPrice?: number;
     onBuyTicket: () => void;
     onEnterLobby: () => void;
     onWatchFilm: (key: string) => void;
-}> = ({ block, films, dayLabel, isUnlocked, isLive, hasWatchParty, watchPartyPrice, onBuyTicket, onEnterLobby, onWatchFilm }) => {
+}> = ({ block, films, dayLabel, isUnlocked, isEnded, isLive, hasWatchParty, watchPartyPrice, onBuyTicket, onEnterLobby, onWatchFilm }) => {
     const totalRuntime = films.reduce((acc, m) => acc + (m.durationInMinutes || 0), 0);
 
     return (
@@ -194,7 +195,7 @@ const BlockSection: React.FC<{
                             key={film.key}
                             movie={film}
                             index={i}
-                            isBlockUnlocked={isUnlocked}
+                            isBlockUnlocked={isUnlocked || isEnded}
                             onWatchNow={() => onWatchFilm(film.key)}
                         />
                     ))
@@ -210,7 +211,7 @@ const BlockSection: React.FC<{
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const FestivalProgramPage: React.FC = () => {
-    const { festivalData, festivalConfig, movies, activeParties, isLoading, livePartyMovie } = useFestival();
+    const { festivalData, festivalConfig, movies, activeParties, allPartyStates, isLoading, livePartyMovie } = useFestival();
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, unlockWatchParty, user, authInitialized } = useAuth();
 
     const [activeDay, setActiveDay] = useState<number>(1);
@@ -361,6 +362,15 @@ const FestivalProgramPage: React.FC = () => {
                         <div className="space-y-6">
                             {sortedDayBlocks.map(block => {
                                 const films = (block.movieKeys || []).map(k => movies[k]).filter(Boolean) as Movie[];
+                                // Once this block's screening has actually ended, individual films
+                                // become purchasable one-by-one via their own movie page (which has its
+                                // own correct rentals-based access check) — but the "Watch Now" button
+                                // below was gated on block-level unlock only, so a viewer with a valid
+                                // individual film rental (bought after the block ended) had literally no
+                                // way to navigate to the movie page at all and got stuck on "Get Ticket"
+                                // forever. OR-ing in isEnded here means "Watch Now" is always reachable
+                                // post-screening, and MoviePage.tsx's own hasAccess takes it from there.
+                                const isEnded = allPartyStates[block.id]?.status === 'ended';
                                 const isUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id) || (!block.price || block.price === 0);
                                 const isLive = activeParties[block.id]?.status === 'live';
                                 const hasWatchParty = !!block.isWatchPartyEnabled;
@@ -372,6 +382,7 @@ const FestivalProgramPage: React.FC = () => {
                                         films={films}
                                         dayLabel={`Day ${currentDayData.day}`}
                                         isUnlocked={isUnlocked}
+                                        isEnded={isEnded}
                                         isLive={isLive}
                                         hasWatchParty={hasWatchParty}
                                         watchPartyPrice={block.price}

@@ -67,20 +67,19 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
     const loadCodes = async () => {
         setIsLoading(true);
         try {
-            const db = getDbInstance();
-            if (!db) {
-                setError('Database not available');
-                setIsLoading(false);
-                return;
+            // FIX: this used to getDocs() straight from Firestore in the browser.
+            // firestore.rules has no rule for `ticket_codes` (falls to the
+            // deny-all catch-all), so this always silently returned nothing —
+            // which is why the panel showed "No codes found" right after codes
+            // were actually generated. Routed through the Admin SDK instead,
+            // same as generation.
+            const password = sessionStorage.getItem('adminPassword') || '';
+            const res = await fetch('/api/manage-ticket-codes?password=' + encodeURIComponent(password));
+            const body = await res.json().catch(() => null);
+            if (!res.ok || !body?.success) {
+                throw new Error(body?.error || 'Failed to load codes');
             }
-            const codesRef = collection(db, 'ticket_codes');
-            const q = query(codesRef, orderBy('createdAt', 'desc'));
-            const snapshot = await getDocs(q);
-            const loadedCodes = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as TicketCode[];
-            setCodes(loadedCodes);
+            setCodes(body.codes as TicketCode[]);
         } catch (err) {
             console.error('Error loading codes:', err);
             setError('Failed to load codes');
@@ -107,15 +106,6 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
         setSuccess('');
 
         try {
-            const db = getDbInstance();
-            if (!db) {
-                setError('Database not available');
-                setIsGenerating(false);
-                return;
-            }
-            const codesRef = collection(db, 'ticket_codes');
-            const generatedCodes: string[] = [];
-
             // Find block title if block type
             let blockTitle = '';
             if (newCodeType === 'block' && selectedBlockId) {
@@ -128,25 +118,32 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
                 }
             }
 
-            for (let i = 0; i < codeCount; i++) {
-                const codeString = generateCodeString(newCodeType);
-                generatedCodes.push(codeString);
-
-                const codeData: Omit<TicketCode, 'id'> = {
-                    code: codeString,
-                    type: newCodeType,
-                    isRedeemed: false,
-                    createdAt: new Date().toISOString(),
-                    createdBy: 'admin', // Could be actual admin email
-                    ...(newCodeType === 'day_pass' && { dayNumber: selectedDay }),
-                    ...(newCodeType === 'block' && { blockId: selectedBlockId, blockTitle }),
-                    ...(recipientEmail && codeCount === 1 && { recipientEmail }),
-                    ...(recipientName && codeCount === 1 && { recipientName }),
-                    ...(notes && codeCount === 1 && { notes }),
-                };
-
-                await addDoc(codesRef, codeData);
+            // FIX: this used to addDoc() straight to Firestore from the browser.
+            // firestore.rules has no rule for `ticket_codes` at all (falls to the
+            // deny-all catch-all), so every code generation silently failed with
+            // "Failed to generate codes." Routed through a real server endpoint
+            // using the Admin SDK, matching the pattern every other admin write
+            // in this app already uses.
+            const res = await fetch('/api/generate-ticket-codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password: sessionStorage.getItem('adminPassword') || '',
+                    codeType: newCodeType,
+                    codeCount,
+                    selectedDay,
+                    selectedBlockId,
+                    blockTitle,
+                    recipientEmail,
+                    recipientName,
+                    notes,
+                }),
+            });
+            const body = await res.json().catch(() => null);
+            if (!res.ok || !body?.success) {
+                throw new Error(body?.error || 'Failed to generate codes');
             }
+            const generatedCodes: string[] = body.codes;
 
             // Send email if requested and single code
             if (sendEmail && codeCount === 1 && recipientEmail) {
@@ -239,12 +236,16 @@ const TicketCodesTab: React.FC<TicketCodesTabProps> = ({ festivalDays = [] }) =>
         if (!confirm('Are you sure you want to delete this code?')) return;
         
         try {
-            const db = getDbInstance();
-            if (!db) {
-                setError('Database not available');
-                return;
+            const password = sessionStorage.getItem('adminPassword') || '';
+            const res = await fetch('/api/manage-ticket-codes', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, codeId }),
+            });
+            const body = await res.json().catch(() => null);
+            if (!res.ok || !body?.success) {
+                throw new Error(body?.error || 'Failed to delete code');
             }
-            await deleteDoc(doc(db, 'ticket_codes', codeId));
             setCodes(codes.filter(c => c.id !== codeId));
             setSuccess('Code deleted');
         } catch (err) {
