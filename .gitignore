@@ -28,3 +28,11 @@ dist-ssr
 !.firebaserc
 service-account.json
 .vercel
+
+# One-off diagnostic/debug scripts run from the terminal — not part of
+# the deployed app, so they shouldn't clutter git history or status.
+/*.cjs
+/*.sh
+crate-allaccess-purchasers.csv
+film-urls.txt
+s3-cors-config.json
