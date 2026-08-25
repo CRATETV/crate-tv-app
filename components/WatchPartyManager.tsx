@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FestivalDay, CrateFestConfig, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
+import { getBlockViewershipStats, BlockViewershipStats } from '../services/watchPartyAdminStats';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
@@ -326,6 +327,60 @@ const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
                 <span className="block text-[11px] text-gray-500 mt-0.5">{emails.join(', ')}</span>
             )}
         </span>
+    );
+};
+
+// ── VIEWERSHIP STATS ─────────────────────────────────────────────────────
+// Aggregates the heartbeat docs useWatchHeartbeat writes to `watchSessions`
+// (from the viewer-facing player in WatchPartyPage) into the numbers shown
+// here. Refreshes on an interval while the party is live so the admin
+// doesn't have to reload the page to see updated counts.
+const WatchPartyViewershipStats: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId, isLive }) => {
+    const [stats, setStats] = useState<BlockViewershipStats | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const result = await getBlockViewershipStats(itemId);
+                if (!cancelled) { setStats(result); setError(null); }
+            } catch (err) {
+                if (!cancelled) setError((err as Error).message);
+            }
+        };
+        load();
+        const interval = isLive ? setInterval(load, 30000) : null;
+        return () => { cancelled = true; if (interval) clearInterval(interval); };
+    }, [itemId, isLive]);
+
+    if (error) {
+        return <p className="text-xs text-red-400 mt-4">Couldn't load viewership stats: {error}</p>;
+    }
+    if (!stats) return null;
+
+    return (
+        <div className="mt-4 bg-black/40 rounded-2xl border border-white/10 p-5">
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Viewership</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                    <div className="text-2xl font-black text-white tabular-nums">{stats.uniqueViewers}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Unique Viewers</div>
+                </div>
+                <div>
+                    <div className="text-2xl font-black text-white tabular-nums">{stats.averageWatchMinutes}m</div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Avg Watch Time</div>
+                </div>
+                <div>
+                    <div className="text-2xl font-black text-white tabular-nums">{stats.peakDeviceSplit.mobile}/{stats.peakDeviceSplit.desktop}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Mobile / Desktop</div>
+                </div>
+                <div>
+                    <div className="text-2xl font-black text-white tabular-nums">{stats.sessionsUnder2Min}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Quick Bounces</div>
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -1005,6 +1060,8 @@ const WatchPartyControlRoom: React.FC<{
                                         </>
                                     )}
                                 </div>
+
+                                <WatchPartyViewershipStats itemId={item.id} isLive={isLive} />
                             </div>
                         </div>
                     </div>

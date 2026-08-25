@@ -14,6 +14,7 @@ import WatchPartyCredits from './WatchPartyCredits';
 import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
+import { useWatchHeartbeat } from '../hooks/useWatchHeartbeat';
 import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
 import { reportClientError } from '../services/errorLogger';
 
@@ -531,6 +532,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // fix — it used to bail out before ever setting this ref if the gesture
     // had already happened before this component mounted.
     const hasUserInteractedRef = useRef<boolean>(hasUserGestured()); // mobile autoplay gate
+
+    // Records viewership (unique viewers, watch time, device split) for the
+    // admin dashboard's WatchPartyViewershipStats card.
+    useWatchHeartbeat({
+        blockId: movieKey,
+        userId: user?.uid || '',
+        videoRef,
+    });
 
     // ── AUTO-UNMUTE ON FIRST INTERACTION ─────────────────────────────────
     // Backs up the lazy needsUserGesture initializer above for the case

@@ -38,3 +38,4 @@ film-urls.txt
 s3-cors-config.json
 /*.py
 square-report-raw.txt
+.env*

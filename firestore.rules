@@ -182,6 +182,40 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── Watch sessions (viewership heartbeat, admin dashboard aggregation) ──
+    match /watchSessions/{sessionId} {
+      // Anyone signed in can read (admin dashboard needs to aggregate across all users)
+      allow read: if isSignedIn();
+
+      // A user can only create/update a session doc that has their own userId on it
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      // No deletes from the client — sessions are historical data
+      allow delete: if false;
+    }
+
+    // ── Watch party comments ────────────────────────────────────────────
+    match /comments/{blockId}/messages/{commentId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() < 500; // basic length cap, anti-spam
+
+      // Users can delete their own comments; admin deletes go through the
+      // existing server-side admin API pattern (Admin SDK), not a client rule.
+      allow delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow update: if false; // comments aren't editable, keep it simple
+    }
+
     // ── Deny everything else ───────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
