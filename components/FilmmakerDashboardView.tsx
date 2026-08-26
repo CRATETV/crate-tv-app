@@ -55,8 +55,6 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                         <div className="space-y-2 min-w-0">
                             <h3 className="font-black text-2xl md:text-4xl text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors break-words">{film.title}</h3>
                             <div className="flex items-center gap-3">
-                                <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">AESTHETIC_ID: {movie.key.substring(0,8)}</p>
-                                <div className="h-px w-8 bg-white/10"></div>
                                 <p className="text-[9px] text-red-500/60 font-black uppercase tracking-widest">{movie.durationInMinutes} MINS</p>
                             </div>
                         </div>
@@ -102,7 +100,6 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                                     <div className="w-1.5 h-1.5 rounded-full bg-red-600"></div>
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Audience Engagement Map</h4>
                                 </div>
-                                <span className="text-[8px] font-mono text-gray-700">REALTIME_STREAM_V2</span>
                             </div>
                             <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
                                 <HypeMap sentiment={film.sentimentData || []} duration={movie.durationInMinutes ? movie.durationInMinutes * 60 : 3600} />
@@ -198,8 +195,10 @@ const FilmmakerDashboardView: React.FC = () => {
         }
     };
 
+    const MINIMUM_PAYOUT_CENTS = 500; // $5.00 — keep in sync with api/request-payout.ts
+
     const handlePayoutRequest = async () => {
-        if (!analytics || analytics.balance < 100 || !user) return;
+        if (!analytics || analytics.balance < MINIMUM_PAYOUT_CENTS || !user) return;
         
         setPayoutStatus('submitting');
         try {
@@ -290,13 +289,19 @@ const FilmmakerDashboardView: React.FC = () => {
 
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-6 rounded-2xl text-center font-black uppercase tracking-widest text-xs">{error}</div>}
 
+            {analytics && analytics.balance >= MINIMUM_PAYOUT_CENTS && (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-6 rounded-2xl text-center font-black uppercase tracking-widest text-xs">
+                    You've crossed {formatCurrency(MINIMUM_PAYOUT_CENTS)} in available balance — request your payout below.
+                </div>
+            )}
+
             {analytics && analytics.films.length > 0 ? (
                 <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                        <StatCard title="Available to Authorize" value={formatCurrency(analytics.balance)} color="text-green-500" />
-                        <StatCard title="Total Dispatched" value={formatCurrency(analytics.totalPaidOut)} />
-                        <StatCard title="Ticket Yield (70%)" value={formatCurrency(analytics.totalAdRevenue)} color="text-indigo-400" />
-                        <StatCard title="Community Tips (70%)" value={formatCurrency(analytics.totalDonations)} color="text-emerald-400" />
+                        <StatCard title="Available Balance" value={formatCurrency(analytics.balance)} color="text-green-500" />
+                        <StatCard title="Total Paid Out" value={formatCurrency(analytics.totalPaidOut)} />
+                        <StatCard title="Ticket Revenue (Your 70%)" value={formatCurrency(analytics.totalAdRevenue)} color="text-indigo-400" />
+                        <StatCard title="Tips Received (Your 70%)" value={formatCurrency(analytics.totalDonations)} color="text-emerald-400" />
                     </div>
 
                     <div className="bg-[#0f0f0f] border border-white/5 p-6 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl relative overflow-hidden group/payout">
@@ -306,31 +311,29 @@ const FilmmakerDashboardView: React.FC = () => {
                         <div className="relative z-10">
                             <div className="flex justify-between items-center mb-6 md:mb-10">
                                 <div>
-                                    <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none">Net Entitlement</h2>
-                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-3">Authorized withdrawal node // SECURE_ACCESS_V4</p>
+                                    <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none">Your Balance</h2>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-3">What you can request as a payout right now</p>
                                 </div>
                             </div>
                             <div className="space-y-8 md:space-y-10">
-                                <p className="text-gray-400 text-sm md:text-xl leading-relaxed font-medium max-w-2xl">Your balance reflects your <span className="text-white font-bold">70% net share</span> of all tickets and donations. Crate TV retains 30% for infrastructure and global distribution overhead.</p>
+                                <p className="text-gray-400 text-sm md:text-xl leading-relaxed font-medium max-w-2xl">Your balance is your <span className="text-white font-bold">70% share</span> of all ticket sales and tips. Crate TV keeps 30% to cover hosting and distribution. Once your balance reaches {formatCurrency(MINIMUM_PAYOUT_CENTS)}, you can request a payout.</p>
                                 <div className="flex flex-col sm:flex-row gap-4">
-                                    <button 
-                                        disabled={analytics.balance < 100 || payoutStatus === 'submitting' || payoutStatus === 'success'}
+                                    <button
+                                        disabled={analytics.balance < MINIMUM_PAYOUT_CENTS || payoutStatus === 'submitting' || payoutStatus === 'success'}
                                         className={`bg-white text-black font-black px-8 md:px-14 py-5 md:py-7 rounded-2xl md:rounded-3xl uppercase tracking-[0.2em] text-xs md:text-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-20 shadow-[0_20px_50px_rgba(255,255,255,0.1)] ${payoutStatus === 'success' ? 'bg-green-500 text-white shadow-[0_20px_50px_rgba(34,197,94,0.3)]' : ''}`}
                                         onClick={handlePayoutRequest}
                                     >
-                                        {payoutStatus === 'submitting' ? 'Processing...' : 
-                                         payoutStatus === 'success' ? 'Request Sent!' : 
+                                        {payoutStatus === 'submitting' ? 'Sending Request...' :
+                                         payoutStatus === 'success' ? 'Request Sent!' :
                                          payoutStatus === 'error' ? 'Error. Try Again' :
-                                         `Authorize ${formatCurrency(analytics.balance)} Disbursement`}
-                                    </button>
-                                    <button className="bg-white/5 border border-white/10 text-white font-black px-8 md:px-14 py-5 md:py-7 rounded-2xl md:rounded-3xl uppercase tracking-[0.2em] text-xs md:text-sm hover:bg-white/10 transition-all">
-                                        View Payout History
+                                         analytics.balance < MINIMUM_PAYOUT_CENTS ? `Request Payout (min. ${formatCurrency(MINIMUM_PAYOUT_CENTS)})` :
+                                         `Request ${formatCurrency(analytics.balance)} Payout`}
                                     </button>
                                 </div>
                                 {payoutStatus === 'success' && (
                                     <div className="flex items-center gap-3 animate-pulse">
                                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                        <p className="text-green-500 text-[10px] font-black uppercase tracking-widest">Payout request received. Review in progress.</p>
+                                        <p className="text-green-500 text-[10px] font-black uppercase tracking-widest">Payout request received. We'll review and send your payment soon.</p>
                                     </div>
                                 )}
                             </div>

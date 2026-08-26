@@ -15,6 +15,10 @@
     {
       "path": "/api/health-check-cron",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/notify-payout-threshold-cron",
+      "schedule": "0 */2 * * *"
     }
   ],
   "rewrites": [

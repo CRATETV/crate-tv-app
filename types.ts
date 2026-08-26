@@ -511,8 +511,13 @@ export interface PayoutRequest {
   id: string;
   directorName: string;
   amount: number;
-  payoutMethod: string;
-  payoutDetails: string;
+  // Only set for admin-issued voucher keys (generate-payout-key.ts) — the
+  // filmmaker self-service flow (request-payout.ts) never collects these,
+  // it writes `email`/`filmTitles` instead.
+  payoutMethod?: string;
+  payoutDetails?: string;
+  email?: string;
+  filmTitles?: string[];
   status: 'pending' | 'completed' | 'ACTIVE';
   requestDate: any;
   completionDate?: any;

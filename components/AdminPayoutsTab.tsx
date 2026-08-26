@@ -4,11 +4,21 @@ import LoadingSpinner from './LoadingSpinner';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
+// firebase-admin's Timestamp.toJSON() serializes as {_seconds, _nanoseconds}
+// over the wire, not {seconds, nanoseconds} — this was silently producing
+// "---" for every completed payout's date before this fix (confirmed via a
+// real request/response during implementation, not just a suspicion).
+const formatTimestamp = (ts: any): string => {
+    const seconds = ts?._seconds ?? ts?.seconds;
+    return seconds ? new Date(seconds * 1000).toLocaleString() : '---';
+};
+
 const AdminPayoutsTab: React.FC = () => {
     const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [processingId, setProcessingId] = useState<string | null>(null);
     
     // Key Generator State
     const [targetName, setTargetName] = useState('');
@@ -68,7 +78,28 @@ const AdminPayoutsTab: React.FC = () => {
         fetchPayouts();
     };
 
+    const handleCompletePayout = async (requestId: string) => {
+        if (!window.confirm('Are you sure you have sent this payment? This action cannot be undone.')) return;
+        setProcessingId(requestId);
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const res = await fetch('/api/complete-payout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId, password }),
+            });
+            if (!res.ok) throw new Error('Failed to mark payout as paid.');
+            await fetchPayouts();
+        } catch (e) {
+            alert(e instanceof Error ? e.message : 'Failed to mark payout as paid.');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
     if (isLoading) return <LoadingSpinner />;
+
+    const pendingRequests = payouts.filter(p => p.status === 'pending');
 
     return (
         <div className="space-y-12 pb-32 animate-[fadeIn_0.5s_ease-out]">
@@ -171,7 +202,56 @@ const AdminPayoutsTab: React.FC = () => {
                     </div>
                 </section>
             </div>
-            
+
+            <div className="bg-[#0f0f0f] border border-white/5 p-12 rounded-[4rem] shadow-2xl">
+                 <div className="flex justify-between items-center mb-10 border-b border-white/5 pb-8">
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Pending Payout Requests</h2>
+                    <span className="text-[9px] font-black bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full uppercase">Awaiting Action</span>
+                 </div>
+                 <div className="bg-black border border-white/10 rounded-[2.5rem] overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                        <thead className="bg-white/5 text-gray-700 uppercase font-black tracking-widest">
+                            <tr>
+                                <th className="p-6">Entity Identity</th>
+                                <th className="p-6">Amount Requested</th>
+                                <th className="p-6">Contact</th>
+                                <th className="p-6">Requested</th>
+                                <th className="p-6 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {pendingRequests.length === 0 ? (
+                                <tr><td colSpan={5} className="p-20 text-center text-gray-800 font-black uppercase tracking-[0.5em] italic">No pending requests</td></tr>
+                            ) : pendingRequests.map(p => (
+                                <tr key={p.id} className="hover:bg-white/[0.01] transition-colors">
+                                    <td className="p-6">
+                                        <p className="font-black text-white uppercase text-base">{p.directorName}</p>
+                                    </td>
+                                    <td className="p-6">
+                                        <p className="text-amber-400 font-black text-xl italic tracking-tighter">{formatCurrency(p.amount)}</p>
+                                    </td>
+                                    <td className="p-6 text-gray-400">
+                                        {p.payoutDetails || `Contact: ${p.email || '—'}`}
+                                    </td>
+                                    <td className="p-6 text-gray-500 font-mono">
+                                        {formatTimestamp(p.requestDate)}
+                                    </td>
+                                    <td className="p-6 text-right">
+                                        <button
+                                            onClick={() => handleCompletePayout(p.id)}
+                                            disabled={processingId === p.id}
+                                            className="text-[10px] font-black uppercase text-black bg-white hover:bg-green-500 hover:text-white transition-colors px-4 py-2 rounded-xl disabled:opacity-40"
+                                        >
+                                            {processingId === p.id ? 'Processing...' : 'Mark as Paid'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                 </div>
+            </div>
+
             <div className="bg-[#0f0f0f] border border-white/5 p-12 rounded-[4rem] shadow-2xl">
                  <div className="flex justify-between items-center mb-10 border-b border-white/5 pb-8">
                     <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Disbursement History</h2>
@@ -205,7 +285,7 @@ const AdminPayoutsTab: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="p-6 text-right text-gray-500 font-mono">
-                                        {p.completionDate?.seconds ? new Date(p.completionDate.seconds * 1000).toLocaleString() : '---'}
+                                        {formatTimestamp(p.completionDate)}
                                     </td>
                                 </tr>
                             ))}

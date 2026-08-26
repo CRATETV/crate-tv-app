@@ -3,6 +3,7 @@
 // Path: /api/filmmaker-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Movie } from '../types.js';
+import { findCreditMatch } from './_lib/creditMatch.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -40,19 +41,9 @@ export async function POST(request: Request) {
 
     // --- Step 1: Verify filmmaker name exists in movies DB ---
     const moviesSnapshot = await db.collection('movies').get();
-    let personFound = false;
+    const movies = moviesSnapshot.docs.map(d => ({ key: d.id, ...d.data() } as Movie));
     const trimmedName = name.trim().toLowerCase();
-
-    moviesSnapshot.forEach(movieDoc => {
-        const movieData = movieDoc.data() as Movie;
-        // Split by commas to handle multi-director/producer strings
-        const directors = (movieData.director || '').toLowerCase().split(',').map(d => d.trim());
-        const producers = (movieData.producers || '').toLowerCase().split(',').map(p => p.trim());
-        
-        if (directors.includes(trimmedName) || producers.includes(trimmedName)) {
-            personFound = true;
-        }
-    });
+    const personFound = !!findCreditMatch(movies, name);
 
     if (!personFound) {
       return new Response(JSON.stringify({ error: "Name not found in our records as a director or producer. Please ensure it matches the film credits exactly." }), { status: 404, headers: {'Content-Type': 'application/json'} });

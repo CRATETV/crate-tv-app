@@ -1,5 +1,8 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { FieldValue } from 'firebase-admin/firestore';
+
+const MINIMUM_PAYOUT_CENTS = 500; // $5.00
 
 export async function POST(request: Request) {
     try {
@@ -7,6 +10,9 @@ export async function POST(request: Request) {
 
         if (!directorName || !amount || !email) {
             return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
+        }
+        if (typeof amount !== 'number' || amount < MINIMUM_PAYOUT_CENTS) {
+            return new Response(JSON.stringify({ error: 'Minimum payout amount is $5.00' }), { status: 400 });
         }
 
         const initError = getInitializationError();
@@ -21,7 +27,11 @@ export async function POST(request: Request) {
             filmTitles: filmTitles || [],
             status: 'pending',
             timestamp: new Date().toISOString(),
-            requestedAt: new Date()
+            // get-payouts.ts orders by this field — without it, requests
+            // written here were silently excluded from that query entirely,
+            // not just unrendered (Firestore's orderBy skips docs missing
+            // the ordered field).
+            requestDate: FieldValue.serverTimestamp(),
         };
 
         await db.collection('payout_requests').add(payoutRequest);

@@ -9,6 +9,7 @@ import {
 } from '../services/firebaseClient';
 import { User } from '../types';
 import firebase from 'firebase/compat/app';
+import { toast } from '../components/Toast';
 
 interface AuthContextType {
     user: User | null;
@@ -60,6 +61,22 @@ export const useAuth = () => {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
+};
+
+// Fire-and-forget — never blocks or fails signup on error.
+const notifyIfCreditedFilmmaker = (name: string) => {
+    fetch('/api/check-credit-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data?.matched) {
+                toast.info(`Heads up — "${name}" matches a director/producer credit on "${data.filmTitle}". If that's you, verify your Filmmaker Dashboard at /filmmaker-signup.`);
+            }
+        })
+        .catch(() => {});
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -214,6 +231,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await createUserProfile(result.user.uid, email, name);
             await writeSessionToken(result.user.uid);
             await grantInviteAccessIfEligible(result.user);
+            // Purely a discovery nudge — never blocks/fails signup, and never
+            // grants filmmaker access itself. If the typed name matches a
+            // film's director/producer credit, point them at the real
+            // verification page (/filmmaker-signup), which requires typing
+            // the same name again as the actual security gate.
+            notifyIfCreditedFilmmaker(name);
         }
     };
     

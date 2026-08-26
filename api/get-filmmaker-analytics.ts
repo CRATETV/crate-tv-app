@@ -1,43 +1,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
-
-const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
-const PARTNER_SHARE = 0.70;
-
-interface SquarePayment {
-  amount_money: { amount: number };
-  note?: string;
-}
-
-const parseNote = (note: string | undefined): { type: string, title?: string } => {
-    if (!note) return { type: 'unknown' };
-    const donationMatch = note.match(/Support for film: "(.*)"/);
-    if (donationMatch) return { type: 'donation', title: donationMatch[1].trim() };
-    const ticketMatch = note.match(/Watch Party Ticket: (.*)/) || note.match(/Live Screening Pass: (.*)/);
-    if (ticketMatch) return { type: 'watchPartyTicket', title: ticketMatch[1].trim() };
-    return { type: 'other' };
-};
-
-async function fetchAllRelevantPayments(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
-    const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
-    let allPayments: SquarePayment[] = [];
-    let cursor: string | undefined = undefined;
-    do {
-        const url = new URL(`${squareUrlBase}/v2/payments`);
-        url.searchParams.append('begin_time', SYSTEM_RESET_DATE);
-        if (locationId) url.searchParams.append('location_id', locationId);
-        if (cursor) url.searchParams.append('cursor', cursor);
-        const res = await fetch(url.toString(), {
-            method: 'GET',
-            headers: { 'Square-Version': '2024-05-15', 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        });
-        if (!res.ok) throw new Error('Square Link Fail');
-        const data = await res.json();
-        if (data.payments) allPayments.push(...data.payments);
-        cursor = data.cursor;
-    } while (cursor);
-    return allPayments;
-}
+import { PARTNER_SHARE, parseNote, fetchAllRelevantPayments, getSquareCredentials } from './_lib/filmmakerBalance.js';
+import { findAllCreditMatches } from './_lib/creditMatch.js';
 
 export async function POST(request: Request) {
     try {
@@ -70,9 +34,7 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ error: 'Invalid or expired session.' }), { status: 401 });
         }
 
-        const isProduction = process.env.VERCEL_ENV === 'production';
-        const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
-        const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
+        const { accessToken, locationId } = getSquareCredentials();
 
         const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, rokuEventsSnapshot] = await Promise.all([
             accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([]),
@@ -101,12 +63,7 @@ export async function POST(request: Request) {
             if (u.watchlist) u.watchlist.forEach(k => watchlistCounts[k] = (watchlistCounts[k] || 0) + 1);
         });
 
-        const normalizedTarget = directorName.trim().toLowerCase();
-        const filmmakerFilms = Object.values(allMovies).filter(movie => {
-            const directors = (movie.director || '').toLowerCase().split(',').map(d => d.trim());
-            const producers = (movie.producers || '').toLowerCase().split(',').map(p => p.trim());
-            return directors.includes(normalizedTarget) || producers.includes(normalizedTarget);
-        });
+        const filmmakerFilms = findAllCreditMatches(Object.values(allMovies), directorName);
 
         const revenueByFilm: Record<string, { donations: number, tickets: number }> = {};
         allPayments.forEach(p => {
