@@ -39,7 +39,7 @@
       "destination": "/api/zine-preview?id=:id"
     },
     {
-      "source": "/((?!api/|.*\\..*).*)",
+      "source": "/((?!api/|@|.*\\..*).*)",
       "destination": "/index.html"
     }
   ],
