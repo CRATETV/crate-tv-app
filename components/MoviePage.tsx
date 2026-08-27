@@ -435,6 +435,38 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
   }, [playerMode, hasAccess, playContent, currentSearch]);
 
+  // Registers this video as real OS-level "Now Playing" media. Without
+  // this, iOS has no way to recognize the video specifically when casting
+  // via Control Center — it falls back to mirroring the whole phone screen,
+  // which is why leaving the page or locking the phone appeared to "cut
+  // off" AirPlay instead of continuing independently on the TV.
+  useEffect(() => {
+      if (playerMode !== 'full' || !movie || !('mediaSession' in navigator)) return;
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+          title: movie.title,
+          artist: 'Crate TV',
+          artwork: movie.poster ? [{ src: movie.poster, sizes: '512x512', type: 'image/jpeg' }] : [],
+      });
+
+      const video = videoRef.current;
+      navigator.mediaSession.setActionHandler('play', () => video?.play());
+      navigator.mediaSession.setActionHandler('pause', () => video?.pause());
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          if (video) video.currentTime = Math.max(0, video.currentTime - (details.seekOffset || 10));
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          if (video) video.currentTime = Math.min(video.duration || Infinity, video.currentTime + (details.seekOffset || 10));
+      });
+
+      return () => {
+          navigator.mediaSession.setActionHandler('play', null);
+          navigator.mediaSession.setActionHandler('pause', null);
+          navigator.mediaSession.setActionHandler('seekbackward', null);
+          navigator.mediaSession.setActionHandler('seekforward', null);
+      };
+  }, [playerMode, movie]);
+
   if (isDataLoading || !authInitialized) return <LoadingSpinner />;
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
   // useSessionGuard was being called but its result was never rendered here,
@@ -475,8 +507,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         // that calls .play(). Having the browser's native autoplay
                         // ALSO try to start this same element right as that effect
                         // runs was the other half of the race described above.
-                        onPause={() => !isEnded && playerMode === 'full' && setIsPaused(true)}
-                        onPlay={() => { setVideoError(false); !isEnded && playerMode === 'full' && setIsPaused(false); }} 
+                        onPause={() => {
+                            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+                            !isEnded && playerMode === 'full' && setIsPaused(true);
+                        }}
+                        onPlay={() => {
+                            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+                            setVideoError(false); !isEnded && playerMode === 'full' && setIsPaused(false);
+                        }}
                         onEnded={() => {
                             setIsEnded(true);
                             if (nextEpisode) setAutoAdvanceCountdown(AUTO_ADVANCE_SECONDS);

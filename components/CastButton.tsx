@@ -10,8 +10,19 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement }) => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [connectionState, setConnectionState] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
 
-  // FIX: The component was using a deprecated and non-standard 'remote.availability' property, which caused a TypeScript error. 
-  // This has been updated to use the standard 'remote.watchAvailability()' method from the Remote Playback API. 
+  // Safari's Remote Playback API (`remote.watchAvailability`) has a long
+  // history of just never resolving `true` even when AirPlay devices are
+  // genuinely on the network — it's the standard API, but unreliable
+  // specifically on WebKit. Safari separately exposes its own AirPlay-only
+  // API (`webkitShowPlaybackTargetPicker`) that doesn't require an
+  // availability check at all — tapping it opens the native picker, which
+  // shows whatever's actually available at that moment. Detecting that API
+  // directly means the button always shows on Safari/iOS regardless of
+  // whether the generic Remote Playback availability check ever fires.
+  const hasNativeAirPlay = !!videoElement && typeof (videoElement as any).webkitShowPlaybackTargetPicker === 'function';
+
+  // FIX: The component was using a deprecated and non-standard 'remote.availability' property, which caused a TypeScript error.
+  // This has been updated to use the standard 'remote.watchAvailability()' method from the Remote Playback API.
   // This modern approach correctly watches for cast device availability and is compliant with web standards.
   useEffect(() => {
     // Check if the Remote Playback API is supported by the browser
@@ -61,11 +72,37 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement }) => {
     };
   }, [videoElement]);
 
+  // Track native AirPlay connection state separately — this fires
+  // regardless of whether the generic Remote Playback API ever reported
+  // availability, since it's tied to webkitShowPlaybackTargetPicker's own
+  // wireless-playback-target mechanism, not remote.state.
+  useEffect(() => {
+    if (!videoElement || !hasNativeAirPlay) return;
+
+    const handleWirelessChange = () => {
+      setConnectionState((videoElement as any).webkitCurrentPlaybackTargetIsWireless ? 'connected' : 'disconnected');
+    };
+    handleWirelessChange();
+
+    videoElement.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', handleWirelessChange);
+    return () => videoElement.removeEventListener('webkitcurrentplaybacktargetiswirelesschanged', handleWirelessChange);
+  }, [videoElement, hasNativeAirPlay]);
+
   const handleCast = () => {
-    if (!videoElement || !('remote' in videoElement)) {
+    if (!videoElement) return;
+
+    // Prefer Safari's native AirPlay picker when available — it's the
+    // more reliable route on iOS (see hasNativeAirPlay above).
+    if (hasNativeAirPlay) {
+      try {
+        (videoElement as any).webkitShowPlaybackTargetPicker();
+      } catch (err) {
+        console.error("Error opening AirPlay picker:", err);
+      }
       return;
     }
 
+    if (!('remote' in videoElement)) return;
     (videoElement as any).remote.prompt().catch((err: Error) => {
       // AbortError is expected if the user cancels the prompt.
       if (err.name !== 'AbortError') {
@@ -74,8 +111,8 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement }) => {
     });
   };
 
-  // Do not render the button if the API is not available or no devices are found
-  if (!isAvailable) {
+  // Do not render the button if neither casting route is available
+  if (!isAvailable && !hasNativeAirPlay) {
     return null;
   }
   
