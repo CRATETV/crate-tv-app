@@ -48,6 +48,17 @@ export async function POST(request: Request) {
 
         const profile: any = profileSnap.exists ? profileSnap.data() : {};
 
+        // Resolve watched movie keys to titles for display — the User doc
+        // only stores keys, so a support view showing just a count isn't
+        // useful for spotting "did they already watch the film they say
+        // won't load."
+        const watchedKeys: string[] = profile?.watchedMovies || [];
+        const watchedMovieDocs = await Promise.all(watchedKeys.map((key: string) => db.collection('movies').doc(key).get()));
+        const watchedMovies = watchedMovieDocs.map((doc, i) => ({
+            key: watchedKeys[i],
+            title: doc.exists ? (doc.data()?.title || watchedKeys[i]) : `${watchedKeys[i]} (deleted)`,
+        }));
+
         // A ticket can be found by uid, by email, or both (guest checkouts
         // only have email) — dedupe by doc id since either query might
         // return the same document.
@@ -99,7 +110,7 @@ export async function POST(request: Request) {
             },
             activity: {
                 watchlistCount: (profile?.watchlist || []).length,
-                watchedMoviesCount: (profile?.watchedMovies || []).length,
+                watchedMovies,
                 likedMoviesCount: (profile?.likedMovies || []).length,
                 rokuDeviceId: profile?.rokuDeviceId || null,
             },

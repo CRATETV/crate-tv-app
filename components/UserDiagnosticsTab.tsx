@@ -29,7 +29,7 @@ interface DiagnosticsResult {
     };
     activity?: {
         watchlistCount: number;
-        watchedMoviesCount: number;
+        watchedMovies: { key: string; title: string }[];
         likedMoviesCount: number;
         rokuDeviceId: string | null;
     };
@@ -203,12 +203,25 @@ const UserDiagnosticsTab: React.FC = () => {
                     </Card>
 
                     <Card title="Activity">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm mb-2">
                             <div><span className="text-gray-500 block text-xs uppercase">Watchlist</span><span className="text-white font-bold text-lg">{result.activity?.watchlistCount ?? 0}</span></div>
-                            <div><span className="text-gray-500 block text-xs uppercase">Watched</span><span className="text-white font-bold text-lg">{result.activity?.watchedMoviesCount ?? 0}</span></div>
+                            <div><span className="text-gray-500 block text-xs uppercase">Watched</span><span className="text-white font-bold text-lg">{result.activity?.watchedMovies.length ?? 0}</span></div>
                             <div><span className="text-gray-500 block text-xs uppercase">Liked</span><span className="text-white font-bold text-lg">{result.activity?.likedMoviesCount ?? 0}</span></div>
                             <div><span className="text-gray-500 block text-xs uppercase">Roku Linked</span><span className="text-white font-bold text-lg">{result.activity?.rokuDeviceId ? 'Yes' : 'No'}</span></div>
                         </div>
+                        {(result.activity?.watchedMovies.length ?? 0) > 0 && (
+                            <div className="pt-4 border-t border-white/5">
+                                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Films Watched</p>
+                                <p className="text-xs text-gray-600 mb-2 italic">No timestamps available — this only shows which films, not when.</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {result.activity?.watchedMovies.map(m => (
+                                        <span key={m.key} className="bg-white/5 border border-white/10 text-gray-300 text-xs px-3 py-1.5 rounded-lg">
+                                            {m.title}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 </div>
             )}
