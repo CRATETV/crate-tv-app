@@ -33,6 +33,7 @@ import TicketCodesTab from './TicketCodesTab';
 import MonthlySpotlightTab from './MonthlySpotlightTab';
 import HeroEditor from './HeroEditor';
 import HeroManager from './HeroManager';
+import UserDiagnosticsTab from './UserDiagnosticsTab';
 
 const ALL_TABS: Record<string, string> = {
     hero: '🏠 Hero Section',
@@ -42,6 +43,7 @@ const ALL_TABS: Record<string, string> = {
     mail: '✉️ Studio Mail',
     dispatch: '🛰️ Dispatch',
     intel: '🧠 User Intel',
+    accountLookup: '🔍 Account Lookup',
     editorial: '✍️ Editorial Lab',
     watchParty: '🍿 Watch Party',
     discovery: '🔬 Research Lab',
@@ -117,7 +119,7 @@ const AdminPage: React.FC = () => {
 
         // These tabs are NEVER visible to non-master admins regardless of
         // what is stored in Firestore — hard-coded security boundary
-        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport'];
+        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
 
         const specificTabs = permissions[role];
         // Only the pulse dashboard is always visible — everything else must be explicitly granted
@@ -625,6 +627,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'festivalReport' && <FestivalReportTab />}
                     {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'errorLog' && <ErrorLogTab />}
+                    {activeTab === 'accountLookup' && <UserDiagnosticsTab />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                     </>)}
