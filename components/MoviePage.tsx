@@ -333,14 +333,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // browsers tend to tolerate that; iOS Safari can sit on readyState 0
   // indefinitely with no error, no progress, nothing, which looks exactly
   // like a permanently frozen poster with zero explanation. This gives
-  // real playback 20 seconds to begin before surfacing the same
-  // error-and-retry overlay used for hard failures.
+  // real playback time to begin before surfacing the same error-and-retry
+  // overlay used for hard failures.
+  //
+  // FIX (user report — someone said the film "won't play," then seconds
+  // later said it's actually playing): that's this timer racing a video
+  // that just needed a little more than 20s to start — weaker wifi, a
+  // slow first connection to the video host, a large/high-bitrate file.
+  // The 20s cutoff was firing an alarming "Playback Error" for loads that
+  // were genuinely still in progress and about to succeed on their own
+  // (onPlay already clears the error once real playback begins, which is
+  // exactly why it "started working seconds later" — the load caught up
+  // right after the false alarm). Raised to 40s so normal slow starts
+  // don't get flagged as failures; still short enough to catch content
+  // that's genuinely stuck.
   useEffect(() => {
     if (playerMode !== 'full' || !playableUrl) return;
     const timer = setTimeout(() => {
         const video = videoRef.current;
         if (video && video.readyState === 0) setVideoError(true);
-    }, 20000);
+    }, 40000);
     return () => clearTimeout(timer);
   }, [playerMode, playableUrl]);
 
