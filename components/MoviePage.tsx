@@ -58,6 +58,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTrackedViewRef = useRef(false);
+  // Set by the Watch button handlers right before they call play()
+  // synchronously themselves (see those handlers below) — tells
+  // playContent()'s effect-driven call to skip its own seek+play for this
+  // launch. Two play()/currentTime triggers on the same element, with the
+  // second landing while the first is still pending, is exactly what the
+  // comment a few lines below warns about aborting playback.
+  const manualLaunchRef = useRef(false);
   // FIX (user report — "when we try to replay the film from the catalog...
   // it says playback error"): WatchPartyPage.tsx has always attached
   // hls.js for .m3u8 sources (needed on Android Chrome and other
@@ -388,24 +395,38 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const playContent = useCallback(async () => {
     if (videoRef.current && movie?.key) {
-        try {
-            // Always start from beginning
-            videoRef.current.currentTime = 0;
-            markAsWatched(movie.key);
-            if (!hasTrackedViewRef.current) {
-                hasTrackedViewRef.current = true;
-                const token = await getUserIdToken();
-                if (token) {
-                    fetch('/api/track-view', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ movieKey: movie.key }),
-                    }).catch(() => {});
-                }
+        // iOS Safari only trusts a video's play() call as a genuine user
+        // gesture when it fires immediately, with nothing async ahead of
+        // it — otherwise it can silently refuse to even start loading the
+        // video's data (readyState stays 0 indefinitely, no error, until
+        // the stall-timeout above eventually surfaces "Playback Error").
+        // This used to await a Firebase token fetch (for view tracking)
+        // BEFORE calling play() on every single call, which is exactly
+        // that async gap. play() now goes first (skipped here entirely if
+        // a Watch button already did it synchronously — see
+        // manualLaunchRef); tracking is fire-and-forget afterward so it
+        // can never delay or block it.
+        if (!manualLaunchRef.current) {
+            try {
+                videoRef.current.currentTime = 0;
+                await videoRef.current.play();
+            } catch (e) {
+                setIsPaused(true);
             }
-            await videoRef.current.play();
-        } catch (e) {
-            setIsPaused(true);
+        }
+        manualLaunchRef.current = false;
+
+        markAsWatched(movie.key);
+        if (!hasTrackedViewRef.current) {
+            hasTrackedViewRef.current = true;
+            getUserIdToken().then(token => {
+                if (!token) return;
+                fetch('/api/track-view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ movieKey: movie.key }),
+                }).catch(() => {});
+            }).catch(() => {});
         }
     }
   }, [movie, getUserIdToken, markAsWatched]);
@@ -621,7 +642,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     /* POSTER MODE hero — clean image, lock icon for premium, play circle for accessible */
                     <div
                         className="relative w-full h-full cursor-pointer"
-                        onClick={() => hasAccess && isMovieReleased(movie) && setPlayerMode('full')}
+                        onClick={() => {
+                            if (!hasAccess || !isMovieReleased(movie)) return;
+                            // Fire play() synchronously, in the same tap, before
+                            // the setPlayerMode/useEffect chain gets a chance to
+                            // — see the comment on playContent() above for why
+                            // that gap matters specifically on iOS Safari.
+                            // manualLaunchRef tells playContent() not to also
+                            // seek+play once its effect fires a moment later.
+                            manualLaunchRef.current = true;
+                            if (videoRef.current) videoRef.current.currentTime = 0;
+                            videoRef.current?.play().catch(() => setIsPaused(true));
+                            setPlayerMode('full');
+                        }}
                     >
                         {/* Blurred backdrop */}
                         <img src={movie.poster} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" />
@@ -691,7 +724,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     {/* ── PRIMARY CTA ── */}
                     {hasAccess ? (
                         <button
-                            onClick={() => isMovieReleased(movie) ? setPlayerMode('full') : setIsDetailsModalOpen(true)}
+                            onClick={() => {
+                                if (!isMovieReleased(movie)) { setIsDetailsModalOpen(true); return; }
+                                manualLaunchRef.current = true;
+                                if (videoRef.current) videoRef.current.currentTime = 0;
+                                videoRef.current?.play().catch(() => setIsPaused(true));
+                                setPlayerMode('full');
+                            }}
                             className="w-full flex items-center justify-center gap-2 bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm shadow-xl hover:bg-gray-100 active:scale-95 transition-all mb-3"
                         >
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
