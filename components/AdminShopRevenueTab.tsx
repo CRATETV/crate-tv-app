@@ -5,6 +5,8 @@ import { ShopAttribution, ShopRevenueByFilmmaker } from '../types';
 
 const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
+const UNCATEGORIZED = 'Uncategorized';
+
 const AdminShopRevenueTab: React.FC = () => {
     const [products, setProducts] = useState<FourthwallProduct[]>([]);
     const [productsError, setProductsError] = useState('');
@@ -13,8 +15,11 @@ const AdminShopRevenueTab: React.FC = () => {
     const [openApiConfigured, setOpenApiConfigured] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [drafts, setDrafts] = useState<Record<string, { filmmakerName: string; sharePercent: string; category: string; sortOrder: string }>>({});
+    const [drafts, setDrafts] = useState<Record<string, { filmmakerName: string; sharePercent: string; category: string }>>({});
     const [savingSlug, setSavingSlug] = useState<string | null>(null);
+    const [reorderGroups, setReorderGroups] = useState<Record<string, FourthwallProduct[]>>({});
+    const [dragInfo, setDragInfo] = useState<{ category: string; index: number } | null>(null);
+    const [savingCategory, setSavingCategory] = useState<string | null>(null);
 
     const fetchAll = async () => {
         setIsLoading(true);
@@ -39,17 +44,32 @@ const AdminShopRevenueTab: React.FC = () => {
             setOpenApiConfigured(summaryRes.openApiConfigured !== false);
             setProducts(productsData.results || []);
 
-            const initialDrafts: Record<string, { filmmakerName: string; sharePercent: string; category: string; sortOrder: string }> = {};
+            const initialDrafts: Record<string, { filmmakerName: string; sharePercent: string; category: string }> = {};
             (productsData.results || []).forEach((p: FourthwallProduct) => {
                 const existing = (summaryRes.attributions || []).find((a: ShopAttribution) => a.productSlug === p.slug);
                 initialDrafts[p.slug] = {
                     filmmakerName: existing?.filmmakerName || '',
                     sharePercent: typeof existing?.sharePercent === 'number' ? String(Math.round(existing.sharePercent * 100)) : '',
                     category: existing?.category || '',
-                    sortOrder: typeof existing?.sortOrder === 'number' ? String(existing.sortOrder) : '',
                 };
             });
             setDrafts(initialDrafts);
+
+            const orderBySlug = new Map((summaryRes.attributions || []).map((a: ShopAttribution) => [a.productSlug, a]));
+            const byCategory: Record<string, { product: FourthwallProduct; sortOrder: number }[]> = {};
+            (productsData.results || []).forEach((p: FourthwallProduct) => {
+                const info = orderBySlug.get(p.slug) as ShopAttribution | undefined;
+                const category = info?.category || UNCATEGORIZED;
+                const sortOrder = typeof info?.sortOrder === 'number' ? info.sortOrder : Infinity;
+                if (!byCategory[category]) byCategory[category] = [];
+                byCategory[category].push({ product: p, sortOrder });
+            });
+            const groups: Record<string, FourthwallProduct[]> = {};
+            Object.entries(byCategory).forEach(([cat, items]) => {
+                items.sort((a, b) => a.sortOrder - b.sortOrder);
+                groups[cat] = items.map(i => i.product);
+            });
+            setReorderGroups(groups);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
@@ -60,7 +80,7 @@ const AdminShopRevenueTab: React.FC = () => {
     useEffect(() => { fetchAll(); }, []);
 
     const handleSave = async (product: FourthwallProduct) => {
-        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '', category: '', sortOrder: '' };
+        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '', category: '' };
         const hasFilmmakerInput = draft.filmmakerName.trim() || draft.sharePercent.trim();
 
         let sharePercentValue: number | undefined;
@@ -71,16 +91,6 @@ const AdminShopRevenueTab: React.FC = () => {
                 return;
             }
             sharePercentValue = pct / 100;
-        }
-
-        let sortOrderValue: number | undefined;
-        if (draft.sortOrder.trim()) {
-            const n = parseInt(draft.sortOrder, 10);
-            if (isNaN(n)) {
-                alert('Order must be a whole number.');
-                return;
-            }
-            sortOrderValue = n;
         }
 
         setSavingSlug(product.slug);
@@ -96,7 +106,6 @@ const AdminShopRevenueTab: React.FC = () => {
                         ? { filmmakerName: draft.filmmakerName.trim(), sharePercent: sharePercentValue }
                         : { removeAttribution: true }),
                     category: draft.category.trim(),
-                    sortOrder: sortOrderValue ?? null,
                     password,
                 }),
             });
@@ -106,6 +115,35 @@ const AdminShopRevenueTab: React.FC = () => {
             alert(e instanceof Error ? e.message : 'Failed to save.');
         } finally {
             setSavingSlug(null);
+        }
+    };
+
+    const handleDrop = async (category: string, dropIndex: number) => {
+        if (!dragInfo || dragInfo.category !== category || dragInfo.index === dropIndex) {
+            setDragInfo(null);
+            return;
+        }
+        const list = [...(reorderGroups[category] || [])];
+        const [moved] = list.splice(dragInfo.index, 1);
+        list.splice(dropIndex, 0, moved);
+        setReorderGroups(prev => ({ ...prev, [category]: list }));
+        setDragInfo(null);
+
+        setSavingCategory(category);
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const items = list.map((p, i) => ({ productSlug: p.slug, productName: p.name, sortOrder: i * 10 }));
+            const res = await fetch('/api/reorder-shop-products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items, password }),
+            });
+            if (!res.ok) throw new Error('Failed to save order.');
+            await fetchAll();
+        } catch (e) {
+            alert(e instanceof Error ? e.message : 'Failed to save order.');
+        } finally {
+            setSavingCategory(null);
         }
     };
 
@@ -168,15 +206,15 @@ const AdminShopRevenueTab: React.FC = () => {
 
             <div className="bg-[#0f0f0f] border border-white/5 p-12 rounded-[4rem] shadow-2xl">
                 <div className="mb-10 border-b border-white/5 pb-8">
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Product Attribution &amp; Display</h2>
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">Group products (e.g. "Hats"), set display order within a group, and tag which filmmaker/share applies</p>
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Product Attribution</h2>
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">Group products (e.g. "Hats"), and tag which filmmaker/share applies — drag to reorder within a group below</p>
                 </div>
                 {productsError && <p className="text-red-400 text-sm mb-6">Couldn't load products from Fourthwall: {productsError}</p>}
                 <div className="space-y-4">
                     {products.length === 0 ? (
                         <p className="text-gray-600 text-center py-12 uppercase font-black tracking-widest text-xs">No products found in the shop yet</p>
                     ) : products.map(product => {
-                        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '', category: '', sortOrder: '' };
+                        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '', category: '' };
                         const isAttributed = attributions.some(a => a.productSlug === product.slug);
                         return (
                             <div key={product.id} className="bg-black border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row md:items-center gap-4 flex-wrap">
@@ -192,14 +230,6 @@ const AdminShopRevenueTab: React.FC = () => {
                                     onChange={(e) => setDrafts(d => ({ ...d, [product.slug]: { ...d[product.slug], category: e.target.value } }))}
                                     placeholder="Category (e.g. Hats)"
                                     className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-500 transition-all md:w-40"
-                                />
-                                <input
-                                    type="number"
-                                    value={draft.sortOrder}
-                                    onChange={(e) => setDrafts(d => ({ ...d, [product.slug]: { ...d[product.slug], sortOrder: e.target.value } }))}
-                                    placeholder="Order"
-                                    title="Lower numbers show first within their category"
-                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm w-20 focus:outline-none focus:border-red-500 transition-all"
                                 />
                                 <div className="w-px self-stretch bg-white/5 hidden md:block" />
                                 <input
@@ -242,6 +272,43 @@ const AdminShopRevenueTab: React.FC = () => {
                             </div>
                         );
                     })}
+                </div>
+            </div>
+
+            <div className="bg-[#0f0f0f] border border-white/5 p-12 rounded-[4rem] shadow-2xl">
+                <div className="mb-10 border-b border-white/5 pb-8">
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Reorder Products</h2>
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">Drag an item to change its position — saves automatically</p>
+                </div>
+                <div className="space-y-10">
+                    {Object.keys(reorderGroups).length === 0 ? (
+                        <p className="text-gray-600 text-center py-12 uppercase font-black tracking-widest text-xs">No products to reorder yet</p>
+                    ) : Object.entries(reorderGroups).map(([category, items]) => (
+                        <div key={category}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-white">{category}</h3>
+                                {savingCategory === category && <span className="text-[10px] text-gray-500 uppercase font-bold">Saving…</span>}
+                            </div>
+                            <div className="bg-black border border-white/10 rounded-2xl divide-y divide-white/5">
+                                {items.map((product, index) => (
+                                    <div
+                                        key={product.id}
+                                        draggable
+                                        onDragStart={() => setDragInfo({ category, index })}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={() => handleDrop(category, index)}
+                                        className={`flex items-center gap-4 p-4 cursor-grab active:cursor-grabbing transition-colors hover:bg-white/[0.02] ${dragInfo?.category === category && dragInfo?.index === index ? 'opacity-40' : ''}`}
+                                    >
+                                        <span className="text-gray-600 text-lg select-none">⠿</span>
+                                        {product.images?.[0] && (
+                                            <img src={product.images[0].url} alt={product.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                        )}
+                                        <p className="text-sm text-white truncate flex-1">{product.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
