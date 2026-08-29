@@ -78,6 +78,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                     <h3 className="font-bold text-white mb-4">Company</h3>
                     <ul className="space-y-2">
                     <li><a href="/about" onClick={(e) => handleNavigate(e, '/about')} className="hover:text-white transition">About Us</a></li>
+                    <li><a href="/shop" onClick={(e) => handleNavigate(e, '/shop')} className="hover:text-white transition">Shop</a></li>
                     <li><a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact</a></li>
                     <li><a href="https://www.instagram.com/cratetv_net/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Instagram</a></li>
                     </ul>

@@ -1,20 +1,25 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
+import SEO from './SEO';
+import { getProductsByCollection, FourthwallProduct } from '../services/fourthwall';
+import { useCart } from '../contexts/CartContext';
 
-// Was a live page with exactly one product (a single tee linking out to an
-// external store) — sparse enough that it read as unfinished rather than
-// "not open yet." Replaced with an actual "Coming Soon" announcement in the
-// same dramatic, single-focal-point spirit as Netflix's premiere reveal
-// cards: dark, minimal, one bold idea on screen at a time. The email
-// capture reuses the same /api/subscribe-newsletter endpoint the Zine page
-// already uses, so a "notify me" list actually gets built in the meantime.
+// Check Settings > Collections in the Fourthwall dashboard if products
+// don't show up — "all" is Fourthwall's default catalog-wide slug for most
+// shops, but a shop can rename or restructure this.
+const CATALOG_COLLECTION_SLUG = 'all';
+
 const MerchPage: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+    const [products, setProducts] = useState<FourthwallProduct[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [notConfigured, setNotConfigured] = useState(false);
+    const { addItem, itemCount, checkoutUrl, loading: cartLoading } = useCart();
+    const [addedId, setAddedId] = useState<string | null>(null);
 
     const handleSearch = (query: string) => {
         window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
@@ -26,29 +31,43 @@ const MerchPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleNotifyMe = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email.trim()) return;
-        setStatus('loading');
-        try {
-            const res = await fetch('/api/subscribe-newsletter', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.toLowerCase().trim() }),
-            });
-            if (res.ok) {
-                setStatus('success');
-                setEmail('');
-            } else {
-                setStatus('idle');
-            }
-        } catch {
-            setStatus('idle');
+    useEffect(() => {
+        if (!import.meta.env.VITE_FOURTHWALL_STOREFRONT_TOKEN) {
+            setNotConfigured(true);
+            setLoading(false);
+            return;
         }
-    };
+        let active = true;
+        getProductsByCollection(CATALOG_COLLECTION_SLUG)
+            .then((data) => {
+                if (active) setProducts(data.results || []);
+            })
+            .catch((err) => {
+                if (active) setError(err.message);
+            })
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    async function handleAddToCart(product: FourthwallProduct) {
+        const variant = product.variants?.[0];
+        if (!variant) return;
+        await addItem(variant.id, 1);
+        setAddedId(product.id);
+        setTimeout(() => setAddedId((cur) => (cur === product.id ? null : cur)), 1600);
+    }
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
+            <SEO
+                title="Shop"
+                description="Festival posters, tees, and prints straight from the films you watched on Crate TV — a share of every sale goes back to the filmmakers."
+            />
+
             <Header
                 searchQuery=""
                 onSearch={handleSearch}
@@ -56,62 +75,104 @@ const MerchPage: React.FC = () => {
                 onMobileSearchClick={handleMobileSearch}
             />
 
-            <main className="flex-grow flex items-center justify-center relative overflow-hidden py-32 px-6">
-                {/* Ambient glow — no product photography exists yet, so the
-                    drama comes from typography and light rather than an
-                    image, same trick the reveal-card reference uses. */}
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140vw] h-[140vw] max-w-[900px] max-h-[900px] bg-red-600/10 rounded-full blur-[120px]" />
-                    <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
-                </div>
+            <main className="flex-grow pt-24 pb-24 md:pb-16 px-6 md:px-12">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-white/5 pb-10">
+                        <div className="space-y-4">
+                            <span className="inline-block bg-red-600 text-white font-black uppercase text-[10px] tracking-[0.4em] px-4 py-2 rounded-full">
+                                The Crate Shop
+                            </span>
+                            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-[0.85]">
+                                Wear The<br />Stories.
+                            </h1>
+                            <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-md">
+                                Every purchase supports the filmmakers behind the films you love — a share of each sale goes directly back to them.
+                            </p>
+                        </div>
 
-                <div className="relative z-10 max-w-xl w-full text-center space-y-8 animate-[fadeIn_1s_ease-out]">
-                    <span className="inline-block bg-red-600 text-white font-black uppercase text-[10px] tracking-[0.4em] px-4 py-2 rounded-full">
-                        The Crate Shop
-                    </span>
-                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] italic">
-                        Coming<br />Soon
-                    </h1>
-                    <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-md mx-auto">
-                        Festival posters, printed on real things — tees, mugs, prints, and more, straight from the films you watched here. We're building it now.
-                    </p>
-
-                    <form onSubmit={handleNotifyMe} className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm mx-auto">
-                        {status === 'success' ? (
-                            <p className="text-red-400 font-bold text-sm">You're on the list — we'll let you know.</p>
-                        ) : (
-                            <>
-                                <input
-                                    type="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Your email"
-                                    className="w-full sm:flex-1 bg-white/5 border border-white/15 rounded-full px-5 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={status === 'loading'}
-                                    className="w-full sm:w-auto bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] px-6 py-3 rounded-full hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 whitespace-nowrap"
-                                >
-                                    {status === 'loading' ? 'Sending...' : 'Notify Me'}
-                                </button>
-                            </>
+                        {checkoutUrl && itemCount > 0 && (
+                            <a
+                                href={checkoutUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center gap-2 bg-white text-black font-black uppercase text-xs tracking-[0.2em] px-8 py-4 rounded-full hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-xl whitespace-nowrap"
+                            >
+                                Checkout ({itemCount})
+                            </a>
                         )}
-                    </form>
-                </div>
+                    </div>
 
-                <style>{`
-                    @keyframes fadeIn {
-                        from { opacity: 0; transform: translateY(12px); }
-                        to { opacity: 1; transform: translateY(0); }
-                    }
-                `}</style>
+                    {notConfigured && (
+                        <div className="text-center py-24 space-y-4">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter text-gray-500">Shop not connected yet</h2>
+                            <p className="text-gray-600 max-w-md mx-auto">Add your Fourthwall storefront token and shop subdomain to bring the catalog online.</p>
+                        </div>
+                    )}
+
+                    {!notConfigured && loading && (
+                        <p className="text-gray-500 text-center py-24">Loading products…</p>
+                    )}
+
+                    {!notConfigured && error && (
+                        <p className="text-red-400 text-center py-24 max-w-md mx-auto">
+                            Couldn't load the shop right now ({error}). Double-check the Storefront token and collection slug.
+                        </p>
+                    )}
+
+                    {!notConfigured && !loading && !error && products.length === 0 && (
+                        <p className="text-gray-500 text-center py-24">No products found yet — check back soon.</p>
+                    )}
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                        {products.map((product) => {
+                            const image = product.images?.[0];
+                            const variant = product.variants?.[0];
+                            const price = variant
+                                ? new Intl.NumberFormat('en-US', {
+                                      style: 'currency',
+                                      currency: variant.unitPrice.currency,
+                                  }).format(variant.unitPrice.value)
+                                : '';
+                            const isAdded = addedId === product.id;
+
+                            return (
+                                <div
+                                    key={product.id}
+                                    className="bg-[#0a0a0a] border border-white/5 rounded-2xl overflow-hidden flex flex-col group"
+                                >
+                                    <div className="aspect-square bg-[#141414] overflow-hidden">
+                                        {image && (
+                                            <img
+                                                src={image.url}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                        )}
+                                    </div>
+                                    <div className="p-5 flex-1 flex flex-col">
+                                        <div className="text-sm font-bold mb-1">{product.name}</div>
+                                        <div className="text-sm text-red-500 font-black mb-4">{price}</div>
+                                        <button
+                                            onClick={() => handleAddToCart(product)}
+                                            disabled={cartLoading || !variant}
+                                            className={`mt-auto border rounded-full py-2.5 text-[11px] font-black uppercase tracking-widest transition-all ${
+                                                isAdded
+                                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                                    : 'bg-transparent border-white/20 text-white hover:border-red-600 hover:text-red-500'
+                                            } ${cartLoading ? 'cursor-default opacity-60' : 'cursor-pointer'}`}
+                                        >
+                                            {isAdded ? 'Added ✓' : 'Add to Cart'}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </main>
 
             <Footer />
             <BackToTopButton />
-
             <BottomNavBar onSearchClick={handleMobileSearch} />
         </div>
     );

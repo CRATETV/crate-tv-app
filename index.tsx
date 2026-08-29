@@ -4,6 +4,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FestivalProvider, useFestival } from './contexts/FestivalContext';
+import { CartProvider } from './contexts/CartContext';
 import { inject } from '@vercel/analytics';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
@@ -183,6 +184,8 @@ const AppRouter: React.FC = () => {
       return <InstitutionalGatewayPage />;
     case '/zine':
       return <ZinePage />;
+    case '/shop':
+      return <MerchPage />;
     case '/jury':
         return <JuryRoomPage />;
     case '/account':
@@ -281,12 +284,14 @@ const AppRouter: React.FC = () => {
 const MainApp: React.FC = () => (
   <AuthProvider>
     <FestivalProvider>
-      <GlobalErrorBoundary>
-        <Suspense fallback={<div className="min-h-screen bg-[#050505]" />}>
-          <AppRouter />
-        </Suspense>
-        <ToastContainer />
-      </GlobalErrorBoundary>
+      <CartProvider>
+        <GlobalErrorBoundary>
+          <Suspense fallback={<div className="min-h-screen bg-[#050505]" />}>
+            <AppRouter />
+          </Suspense>
+          <ToastContainer />
+        </GlobalErrorBoundary>
+      </CartProvider>
     </FestivalProvider>
   </AuthProvider>
 );
