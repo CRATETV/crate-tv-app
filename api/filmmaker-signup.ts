@@ -77,10 +77,16 @@ export async function POST(request: Request) {
     
     await auth.setCustomUserClaims(userRecord.uid, newClaims);
     
-    await db.collection('users').doc(userRecord.uid).set({ 
-        name, 
-        email, 
-        ...newClaims
+    await db.collection('users').doc(userRecord.uid).set({
+        name,
+        email,
+        ...newClaims,
+        // Deliberately separate from `name` (which the account owner can
+        // freely change later via AuthContext.updateName) — this is the
+        // identity get-filmmaker-analytics.ts trusts for showing earnings,
+        // set once at the moment it's actually verified against a real
+        // film credit and never touched again.
+        verifiedFilmmakerName: name,
     }, { merge: true });
 
     // --- Step 4: Return response ---

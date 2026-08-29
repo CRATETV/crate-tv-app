@@ -1,48 +1,76 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
-import { PARTNER_SHARE, parseNote, fetchAllRelevantPayments, getSquareCredentials } from './_lib/filmmakerBalance.js';
-import { findAllCreditMatches } from './_lib/creditMatch.js';
+import { PARTNER_SHARE, parseNote, fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE } from './_lib/filmmakerBalance.js';
+import { findAllCreditMatches, normalize } from './_lib/creditMatch.js';
+import { computeShopRevenueByFilmmaker } from './_lib/shopRevenue.js';
 
 export async function POST(request: Request) {
     try {
-        const { directorName, idToken } = await request.json();
-        if (!directorName) return new Response(JSON.stringify({ error: 'Name required' }), { status: 400 });
+        const { idToken } = await request.json();
 
         const initError = getInitializationError();
         if (initError) throw new Error(initError);
         const db = getAdminDb();
         if (!db) throw new Error("DB fail");
 
-        // This previously accepted directorName with no authentication at
-        // all — meaning anyone (no login required) could POST any name and
-        // pull that filmmaker's full private earnings, donation totals, and
-        // payout balance, just from a name that's publicly visible on every
-        // movie page ("Directed by X"). Requiring a verified session at
-        // least closes the "anyone on the internet, zero login" version of
-        // this hole. It doesn't yet stop one signed-in filmmaker from
-        // looking up another's numbers by name — films aren't tagged with
-        // an owning account, only a free-text director/producer credit, so
-        // there's currently no clean way to restrict this to "your own
-        // films only" without a larger data-model change.
+        // This endpoint used to trust a client-supplied `directorName` for
+        // BOTH identity and authorization — any signed-in account (even a
+        // plain viewer, never verified as any filmmaker) could POST any name
+        // and pull that person's full private earnings/balance, since the
+        // only check was "is this a valid session," not "does this session
+        // belong to this filmmaker." The name itself is never secret — it's
+        // printed on every movie page as "Directed by X."
+        //
+        // Fixed by deriving the director name server-side from the caller's
+        // own verified identity instead of trusting anything the client
+        // sends. `verifiedFilmmakerName` is written once by
+        // filmmaker-signup.ts at the moment a name is confirmed against a
+        // real film credit, and is deliberately a SEPARATE field from the
+        // general-purpose `name` (which AuthContext.updateName lets any user
+        // freely change) — otherwise a verified filmmaker could rename their
+        // own account to another filmmaker's credited name post-verification
+        // and this endpoint would happily hand over that person's numbers.
         const auth = getAdminAuth();
         if (!idToken || !auth) {
             return new Response(JSON.stringify({ error: 'Sign in required.' }), { status: 401 });
         }
+        let uid: string;
         try {
-            await auth.verifyIdToken(idToken);
+            const decoded = await auth.verifyIdToken(idToken);
+            uid = decoded.uid;
         } catch {
             return new Response(JSON.stringify({ error: 'Invalid or expired session.' }), { status: 401 });
         }
 
+        const userDoc = await db.collection('users').doc(uid).get();
+        const userData = userDoc.data();
+        if (!userData?.isFilmmaker) {
+            return new Response(JSON.stringify({ error: 'This account is not a verified filmmaker.' }), { status: 403 });
+        }
+
+        // Self-heal accounts verified before this field existed: their
+        // current `name` at the time of first read after this fix ships is
+        // exactly what filmmaker-signup.ts would have written, since nothing
+        // had a chance to rename it away from the verified value yet.
+        let directorName: string | undefined = userData.verifiedFilmmakerName;
+        if (!directorName && userData.name) {
+            directorName = userData.name;
+            await db.collection('users').doc(uid).set({ verifiedFilmmakerName: directorName }, { merge: true });
+        }
+        if (!directorName) {
+            return new Response(JSON.stringify({ error: 'No verified filmmaker name on this account.' }), { status: 403 });
+        }
+
         const { accessToken, locationId } = getSquareCredentials();
 
-        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, rokuEventsSnapshot] = await Promise.all([
+        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, rokuEventsSnapshot, shopRevenueByName] = await Promise.all([
             accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
             db.collection('payout_requests').where('directorName', '==', directorName.trim()).where('status', '==', 'completed').get(),
-            db.collection('traffic_events').where('platform', '==', 'ROKU').get()
+            db.collection('traffic_events').where('platform', '==', 'ROKU').get(),
+            computeShopRevenueByFilmmaker(db, SYSTEM_RESET_DATE).catch(() => new Map()),
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -97,11 +125,13 @@ export async function POST(request: Request) {
         }));
 
         const totalPaidOut = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-        const totalEarnings = filmPerformances.reduce((sum, f) => sum + f.totalEarnings, 0);
+        const totalShopRevenue = shopRevenueByName.get(normalize(directorName))?.cents || 0;
+        const totalEarnings = filmPerformances.reduce((sum, f) => sum + f.totalEarnings, 0) + totalShopRevenue;
 
         const analytics: FilmmakerAnalytics = {
             totalDonations: filmPerformances.reduce((s, f) => s + f.netDonationEarnings, 0),
             totalAdRevenue: filmPerformances.reduce((s, f) => s + f.netAdEarnings, 0),
+            totalShopRevenue,
             totalPaidOut,
             balance: Math.max(0, totalEarnings - totalPaidOut),
             films: filmPerformances.sort((a,b) => b.views - a.views),

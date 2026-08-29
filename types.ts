@@ -527,6 +527,18 @@ export interface PayoutRequest {
   completionDate?: any;
 }
 
+export interface ShopAttribution {
+  productSlug: string;
+  productName: string;
+  filmmakerName: string;
+  sharePercent: number;
+}
+
+export interface ShopRevenueByFilmmaker {
+  directorName: string;
+  cents: number;
+}
+
 export interface ShopRequest {
   id: string;
   directorName: string;
@@ -557,6 +569,7 @@ export interface FilmmakerFilmPerformance {
 export interface FilmmakerAnalytics {
   totalDonations: number;
   totalAdRevenue: number;
+  totalShopRevenue: number;
   totalPaidOut: number;
   balance: number;
   films: FilmmakerFilmPerformance[];

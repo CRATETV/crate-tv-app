@@ -1,6 +1,7 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { Movie } from '../../types.js';
 import { getCreditedNames, normalize } from './creditMatch.js';
+import { computeShopRevenueByFilmmaker } from './shopRevenue.js';
 
 export const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
 export const PARTNER_SHARE = 0.70;
@@ -65,10 +66,11 @@ export interface FilmmakerBalanceSummary {
 export async function computeAllFilmmakerBalances(db: Firestore): Promise<Map<string, FilmmakerBalanceSummary>> {
     const { accessToken, locationId } = getSquareCredentials();
 
-    const [allPayments, moviesSnapshot, completedPayoutsSnapshot] = await Promise.all([
+    const [allPayments, moviesSnapshot, completedPayoutsSnapshot, shopRevenueByName] = await Promise.all([
         accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([]),
         db.collection('movies').get(),
         db.collection('payout_requests').where('status', '==', 'completed').get(),
+        computeShopRevenueByFilmmaker(db, SYSTEM_RESET_DATE).catch(() => new Map()),
     ]);
 
     const movies: Movie[] = moviesSnapshot.docs.map(d => ({ key: d.id, ...d.data() } as Movie));
@@ -103,6 +105,12 @@ export async function computeAllFilmmakerBalances(db: Firestore): Promise<Map<st
             if (existing) existing.totalEarnings += filmEarnings;
             else earningsByName.set(key, { directorName: rawName, totalEarnings: filmEarnings });
         }
+    }
+
+    for (const [key, { directorName, cents }] of shopRevenueByName) {
+        const existing = earningsByName.get(key);
+        if (existing) existing.totalEarnings += cents;
+        else earningsByName.set(key, { directorName, totalEarnings: cents });
     }
 
     const balances = new Map<string, FilmmakerBalanceSummary>();

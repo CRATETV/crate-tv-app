@@ -23,6 +23,7 @@ import JuryRoomTab from './JuryRoomTab';
 import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
 import AdminShopRequestsTab from './AdminShopRequestsTab';
+import AdminShopRevenueTab from './AdminShopRevenueTab';
 import PwffAdminTab from './PwffAdminTab';
 import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
@@ -53,6 +54,7 @@ const ALL_TABS: Record<string, string> = {
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
     shopRequests: '🛍️ Shop Requests',
+    shopRevenue: '🏷️ Shop Revenue',
     ticketCodes: '🎟️ Ticket Codes',
     // festHub removed — its whole job (editing festivalData/festivalConfig, the
     // real film schedule) is now inside the pwff tab below, since that's the
@@ -121,7 +123,7 @@ const AdminPage: React.FC = () => {
 
         // These tabs are NEVER visible to non-master admins regardless of
         // what is stored in Firestore — hard-coded security boundary
-        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
+        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'shopRevenue', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
 
         const specificTabs = permissions[role];
         // Only the pulse dashboard is always visible — everything else must be explicitly granted
@@ -573,6 +575,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'shopRequests' && <AdminShopRequestsTab />}
+                    {activeTab === 'shopRevenue' && <AdminShopRevenueTab />}
                     {activeTab === 'ticketCodes' && (
                         <TicketCodesTab festivalDays={festivalData} />
                     )}

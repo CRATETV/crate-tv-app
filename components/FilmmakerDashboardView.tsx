@@ -145,58 +145,45 @@ const FilmmakerDashboardView: React.FC = () => {
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [searchName, setSearchName] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
     const [payoutStatus, setPayoutStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
     const [shopRequestDescription, setShopRequestDescription] = useState('');
     const [shopRequestFilm, setShopRequestFilm] = useState('');
     const [shopRequestStatus, setShopRequestStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
-    const fetchAnalyticsData = async (name: string) => {
-        if (!name) return;
+    const fetchAnalyticsData = async () => {
         setIsLoading(true);
         setError('');
         try {
-            // This endpoint used to accept any directorName with zero auth —
-            // meaning anyone could pull up any filmmaker's private earnings,
-            // donation totals, and payout balance just by typing a name that's
-            // publicly visible on every movie page ("Directed by X"). It now
-            // requires a verified signed-in session.
+            // This endpoint no longer accepts a client-supplied name at all —
+            // it derives the filmmaker identity server-side from the caller's
+            // own verified account, so there's no way (typing a name, editing
+            // a request) to view another filmmaker's private earnings, donation
+            // totals, or payout balance. See get-filmmaker-analytics.ts.
             const idToken = await getUserIdToken();
             const analyticsRes = await fetch('/api/get-filmmaker-analytics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ directorName: name, idToken }),
+                body: JSON.stringify({ idToken }),
             });
 
             if (!analyticsRes.ok) throw new Error('Failed to load analytics.');
             const analyticsData = await analyticsRes.json();
             setAnalytics(analyticsData.analytics);
-            
+
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
             setIsLoading(false);
-            setIsSearching(false);
         }
     };
 
     useEffect(() => {
-        if (user?.name) {
-            setSearchName(user.name);
-            fetchAnalyticsData(user.name);
+        if (user) {
+            fetchAnalyticsData();
         } else {
             setIsLoading(false);
         }
     }, [user]);
-
-    const handleManualSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (searchName.trim()) {
-            setIsSearching(true);
-            fetchAnalyticsData(searchName.trim());
-        }
-    };
 
     const MINIMUM_PAYOUT_CENTS = 500; // $5.00 — keep in sync with api/request-payout.ts
 
@@ -210,7 +197,7 @@ const FilmmakerDashboardView: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    directorName: searchName || user.name,
+                    directorName: user.name,
                     amount: analytics.balance,
                     email: user.email,
                     filmTitles
@@ -219,10 +206,10 @@ const FilmmakerDashboardView: React.FC = () => {
 
             if (!res.ok) throw new Error('Payout request failed.');
             setPayoutStatus('success');
-            
+
             // Refresh analytics after a short delay to show updated balance (though the API might not reflect it immediately if it only counts 'completed' payouts)
             setTimeout(() => {
-                fetchAnalyticsData(searchName || user.name);
+                fetchAnalyticsData();
                 setPayoutStatus('idle');
             }, 3000);
 
@@ -242,7 +229,7 @@ const FilmmakerDashboardView: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    directorName: searchName || user.name,
+                    directorName: user.name,
                     email: user.email,
                     filmTitle: shopRequestFilm.trim() || undefined,
                     description: shopRequestDescription.trim(),
@@ -284,30 +271,12 @@ const FilmmakerDashboardView: React.FC = () => {
                             Performance <span className="text-red-600">Report</span>
                         </h2>
                         <p className="text-gray-500 font-black uppercase text-[10px] tracking-[0.4em]">
-                            Real-time analytics for <span className="text-white">{searchName || user?.name}</span>
+                            Real-time analytics for <span className="text-white">{user?.name}</span>
                         </p>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                        {/* Manual Search Override */}
-                        <form onSubmit={handleManualSearch} className="flex gap-2 w-full md:w-auto">
-                            <input 
-                                type="text"
-                                value={searchName}
-                                onChange={(e) => setSearchName(e.target.value)}
-                                placeholder="Search Director/Producer Name"
-                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-red-500 transition-all flex-grow md:w-64"
-                            />
-                            <button 
-                                type="submit"
-                                disabled={isSearching}
-                                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
-                            >
-                                {isSearching ? '...' : 'Sync'}
-                            </button>
-                        </form>
-                        
-                        <button 
+                        <button
                             onClick={handleShare}
                             className="bg-white/5 border border-white/10 text-gray-400 hover:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                         >
@@ -328,11 +297,12 @@ const FilmmakerDashboardView: React.FC = () => {
 
             {analytics && analytics.films.length > 0 ? (
                 <>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
                         <StatCard title="Available Balance" value={formatCurrency(analytics.balance)} color="text-green-500" />
                         <StatCard title="Total Paid Out" value={formatCurrency(analytics.totalPaidOut)} />
                         <StatCard title="Ticket Revenue (Your 70%)" value={formatCurrency(analytics.totalAdRevenue)} color="text-indigo-400" />
                         <StatCard title="Tips Received (Your 70%)" value={formatCurrency(analytics.totalDonations)} color="text-emerald-400" />
+                        <StatCard title="Shop Revenue" value={formatCurrency(analytics.totalShopRevenue)} color="text-amber-400" />
                     </div>
 
                     <div className="bg-[#0f0f0f] border border-white/5 p-6 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl relative overflow-hidden group/payout">
@@ -431,19 +401,17 @@ const FilmmakerDashboardView: React.FC = () => {
                     <div className="text-6xl mb-4">🔍</div>
                     <h3 className="text-2xl font-black uppercase italic tracking-tighter">No Films Detected</h3>
                     <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
-                        We couldn't find any films associated with the name "<span className="text-white">{searchName}</span>". 
-                        Please ensure your name matches exactly how it appears in the film's credits, or try searching for a different variation.
+                        We couldn't find any films credited to "<span className="text-white">{user?.name}</span>".
+                        This has to match exactly how your name appears in a film's credits — if it doesn't, contact us and we'll help sort it out.
                     </p>
                     <div className="flex justify-center pt-4">
-                        <button 
-                            onClick={() => {
-                                setSearchName('');
-                                setAnalytics(null);
-                            }}
+                        <a
+                            href="/contact"
+                            onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/contact'); window.dispatchEvent(new Event('pushstate')); }}
                             className="text-red-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors"
                         >
-                            Clear Search and Try Again
-                        </button>
+                            Contact Us
+                        </a>
                     </div>
                 </div>
             )}
