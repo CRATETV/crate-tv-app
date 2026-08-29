@@ -82,6 +82,16 @@ const AboutPage: React.FC = () => {
                         </div>
                     </section>
 
+                    {/* FOUNDER */}
+                    <section className="bg-[#0a0a0a] border border-white/10 rounded-[4rem] p-12 md:p-20 flex flex-col md:flex-row items-center md:items-start gap-12">
+                        <img src="/favicon-192x192.png" alt="Crate TV" className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0" />
+                        <div className="space-y-6">
+                            <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">Founded By</p>
+                            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none">Salome Denoon</h2>
+                            <p className="text-gray-400 text-lg md:text-xl leading-relaxed max-w-3xl">Crate TV was founded by Salome Denoon in 2014, out of a simple belief: independent films deserve a permanent home, not a one-week festival run. What began as a way to keep great stories alive after the festival lights go down has grown into a platform built filmmaker-first—home to the Playhouse West Film Festival and a home for the work that major platforms overlook.</p>
+                        </div>
+                    </section>
+
                     {/* CALL TO ACTION */}
                     <section className="bg-white/5 p-12 md:p-24 rounded-[4rem] border border-white/5 text-center space-y-12 relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.03)_0%,transparent_70%)]"></div>
