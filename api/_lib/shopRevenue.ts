@@ -5,9 +5,14 @@ import { normalize } from './creditMatch.js';
 export interface ShopAttribution {
     productSlug: string;
     productName: string;
-    filmmakerName: string;
-    sharePercent: number; // 0–1, admin-set per product — merch margins vary
+    // Revenue fields are optional — a product can carry only display
+    // grouping (category/sortOrder, set via the same doc) with no filmmaker
+    // attribution at all, e.g. generic Crate-branded merch.
+    filmmakerName?: string;
+    sharePercent?: number; // 0–1, admin-set per product — merch margins vary
     // by product, unlike the fixed 70% split used for ticket/tip revenue.
+    category?: string;
+    sortOrder?: number;
 }
 
 export async function getShopAttributions(db: Firestore): Promise<ShopAttribution[]> {
@@ -39,7 +44,7 @@ export async function computeShopRevenueByFilmmaker(db: Firestore, sinceIso: str
         if (order.status === 'CANCELLED') continue;
         for (const offer of order.offers || []) {
             const attribution = attributionBySlug.get(offer.slug);
-            if (!attribution) continue;
+            if (!attribution || !attribution.filmmakerName || typeof attribution.sharePercent !== 'number') continue;
             const priceValue = offer.variant?.price?.value;
             if (typeof priceValue !== 'number') continue;
             const shareCents = Math.round(priceValue * 100 * attribution.sharePercent);

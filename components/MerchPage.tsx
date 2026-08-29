@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
@@ -7,14 +7,20 @@ import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
 import { getProductsByCollection, FourthwallProduct } from '../services/fourthwall';
 import { useCart } from '../contexts/CartContext';
+import { ShopDisplayOrderItem } from '../types';
 
 // Check Settings > Collections in the Fourthwall dashboard if products
 // don't show up — "all" is Fourthwall's default catalog-wide slug for most
 // shops, but a shop can rename or restructure this.
 const CATALOG_COLLECTION_SLUG = 'all';
 
+// Products without an admin-set category land here, always last, so
+// nothing silently disappears from the shop before it's been organized.
+const UNCATEGORIZED = 'More';
+
 const MerchPage: React.FC = () => {
     const [products, setProducts] = useState<FourthwallProduct[]>([]);
+    const [displayOrder, setDisplayOrder] = useState<ShopDisplayOrderItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [notConfigured, setNotConfigured] = useState(false);
@@ -38,9 +44,14 @@ const MerchPage: React.FC = () => {
             return;
         }
         let active = true;
-        getProductsByCollection(CATALOG_COLLECTION_SLUG)
-            .then((data) => {
-                if (active) setProducts(data.results || []);
+        Promise.all([
+            getProductsByCollection(CATALOG_COLLECTION_SLUG),
+            fetch('/api/get-shop-display-order').then(r => r.json()).catch(() => ({ items: [] })),
+        ])
+            .then(([productsData, orderData]) => {
+                if (!active) return;
+                setProducts(productsData.results || []);
+                setDisplayOrder(orderData.items || []);
             })
             .catch((err) => {
                 if (active) setError(err.message);
@@ -52,6 +63,41 @@ const MerchPage: React.FC = () => {
             active = false;
         };
     }, []);
+
+    // Group by admin-set category, sorted within each group by sortOrder
+    // (unset order sinks to the bottom of its group). Categories themselves
+    // are ordered by the lowest sortOrder among their products — give the
+    // items you want leading a low number and the group follows. Anything
+    // never tagged with a category falls into "More" at the very end.
+    const groupedProducts = useMemo(() => {
+        const orderBySlug = new Map(displayOrder.map(d => [d.productSlug, d]));
+        const groups = new Map<string, { product: FourthwallProduct; sortOrder: number }[]>();
+
+        for (const product of products) {
+            const info = orderBySlug.get(product.slug);
+            const category = info?.category || UNCATEGORIZED;
+            const sortOrder = typeof info?.sortOrder === 'number' ? info.sortOrder : Infinity;
+            if (!groups.has(category)) groups.set(category, []);
+            groups.get(category)!.push({ product, sortOrder });
+        }
+
+        for (const items of groups.values()) {
+            items.sort((a, b) => a.sortOrder - b.sortOrder);
+        }
+
+        const entries = Array.from(groups.entries())
+            .filter(([category]) => category !== UNCATEGORIZED)
+            .sort((a, b) => a[1][0].sortOrder - b[1][0].sortOrder);
+
+        if (groups.has(UNCATEGORIZED)) {
+            entries.push([UNCATEGORIZED, groups.get(UNCATEGORIZED)!]);
+        }
+
+        return entries.map(([category, items]) => ({
+            category,
+            products: items.map(i => i.product),
+        }));
+    }, [products, displayOrder]);
 
     async function handleAddToCart(product: FourthwallProduct) {
         const variant = product.variants?.[0];
@@ -123,50 +169,61 @@ const MerchPage: React.FC = () => {
                         <p className="text-gray-500 text-center py-24">No products found yet — check back soon.</p>
                     )}
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-                        {products.map((product) => {
-                            const image = product.images?.[0];
-                            const variant = product.variants?.[0];
-                            const price = variant
-                                ? new Intl.NumberFormat('en-US', {
-                                      style: 'currency',
-                                      currency: variant.unitPrice.currency,
-                                  }).format(variant.unitPrice.value)
-                                : '';
-                            const isAdded = addedId === product.id;
+                    <div className="space-y-16">
+                        {groupedProducts.map(({ category, products: groupProducts }) => (
+                            <div key={category}>
+                                {(groupedProducts.length > 1) && (
+                                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic mb-6 border-b border-white/5 pb-4">
+                                        {category}
+                                    </h2>
+                                )}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                                    {groupProducts.map((product) => {
+                                        const image = product.images?.[0];
+                                        const variant = product.variants?.[0];
+                                        const price = variant
+                                            ? new Intl.NumberFormat('en-US', {
+                                                  style: 'currency',
+                                                  currency: variant.unitPrice.currency,
+                                              }).format(variant.unitPrice.value)
+                                            : '';
+                                        const isAdded = addedId === product.id;
 
-                            return (
-                                <div
-                                    key={product.id}
-                                    className="bg-[#0a0a0a] border border-white/5 rounded-2xl overflow-hidden flex flex-col group"
-                                >
-                                    <div className="aspect-square bg-[#141414] overflow-hidden">
-                                        {image && (
-                                            <img
-                                                src={image.url}
-                                                alt={product.name}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="p-5 flex-1 flex flex-col">
-                                        <div className="text-sm font-bold mb-1">{product.name}</div>
-                                        <div className="text-sm text-red-500 font-black mb-4">{price}</div>
-                                        <button
-                                            onClick={() => handleAddToCart(product)}
-                                            disabled={cartLoading || !variant}
-                                            className={`mt-auto border rounded-full py-2.5 text-[11px] font-black uppercase tracking-widest transition-all ${
-                                                isAdded
-                                                    ? 'bg-emerald-600 border-emerald-600 text-white'
-                                                    : 'bg-transparent border-white/20 text-white hover:border-red-600 hover:text-red-500'
-                                            } ${cartLoading ? 'cursor-default opacity-60' : 'cursor-pointer'}`}
-                                        >
-                                            {isAdded ? 'Added ✓' : 'Add to Cart'}
-                                        </button>
-                                    </div>
+                                        return (
+                                            <div
+                                                key={product.id}
+                                                className="bg-[#0a0a0a] border border-white/5 rounded-2xl overflow-hidden flex flex-col group"
+                                            >
+                                                <div className="aspect-square bg-[#141414] overflow-hidden">
+                                                    {image && (
+                                                        <img
+                                                            src={image.url}
+                                                            alt={product.name}
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="p-5 flex-1 flex flex-col">
+                                                    <div className="text-sm font-bold mb-1">{product.name}</div>
+                                                    <div className="text-sm text-red-500 font-black mb-4">{price}</div>
+                                                    <button
+                                                        onClick={() => handleAddToCart(product)}
+                                                        disabled={cartLoading || !variant}
+                                                        className={`mt-auto border rounded-full py-2.5 text-[11px] font-black uppercase tracking-widest transition-all ${
+                                                            isAdded
+                                                                ? 'bg-emerald-600 border-emerald-600 text-white'
+                                                                : 'bg-transparent border-white/20 text-white hover:border-red-600 hover:text-red-500'
+                                                        } ${cartLoading ? 'cursor-default opacity-60' : 'cursor-pointer'}`}
+                                                    >
+                                                        {isAdded ? 'Added ✓' : 'Add to Cart'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            );
-                        })}
+                            </div>
+                        ))}
                     </div>
                 </div>
             </main>

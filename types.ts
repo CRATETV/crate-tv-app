@@ -530,8 +530,16 @@ export interface PayoutRequest {
 export interface ShopAttribution {
   productSlug: string;
   productName: string;
-  filmmakerName: string;
-  sharePercent: number;
+  filmmakerName?: string;
+  sharePercent?: number;
+  category?: string;
+  sortOrder?: number;
+}
+
+export interface ShopDisplayOrderItem {
+  productSlug: string;
+  category?: string;
+  sortOrder?: number;
 }
 
 export interface ShopRevenueByFilmmaker {

@@ -13,7 +13,7 @@ const AdminShopRevenueTab: React.FC = () => {
     const [openApiConfigured, setOpenApiConfigured] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [drafts, setDrafts] = useState<Record<string, { filmmakerName: string; sharePercent: string }>>({});
+    const [drafts, setDrafts] = useState<Record<string, { filmmakerName: string; sharePercent: string; category: string; sortOrder: string }>>({});
     const [savingSlug, setSavingSlug] = useState<string | null>(null);
 
     const fetchAll = async () => {
@@ -39,12 +39,14 @@ const AdminShopRevenueTab: React.FC = () => {
             setOpenApiConfigured(summaryRes.openApiConfigured !== false);
             setProducts(productsData.results || []);
 
-            const initialDrafts: Record<string, { filmmakerName: string; sharePercent: string }> = {};
+            const initialDrafts: Record<string, { filmmakerName: string; sharePercent: string; category: string; sortOrder: string }> = {};
             (productsData.results || []).forEach((p: FourthwallProduct) => {
                 const existing = (summaryRes.attributions || []).find((a: ShopAttribution) => a.productSlug === p.slug);
                 initialDrafts[p.slug] = {
                     filmmakerName: existing?.filmmakerName || '',
-                    sharePercent: existing ? String(Math.round(existing.sharePercent * 100)) : '',
+                    sharePercent: typeof existing?.sharePercent === 'number' ? String(Math.round(existing.sharePercent * 100)) : '',
+                    category: existing?.category || '',
+                    sortOrder: typeof existing?.sortOrder === 'number' ? String(existing.sortOrder) : '',
                 };
             });
             setDrafts(initialDrafts);
@@ -58,12 +60,29 @@ const AdminShopRevenueTab: React.FC = () => {
     useEffect(() => { fetchAll(); }, []);
 
     const handleSave = async (product: FourthwallProduct) => {
-        const draft = drafts[product.slug];
-        const pct = parseFloat(draft?.sharePercent || '');
-        if (!draft?.filmmakerName.trim() || isNaN(pct) || pct < 0 || pct > 100) {
-            alert('Enter a filmmaker name and a share percent between 0 and 100.');
-            return;
+        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '', category: '', sortOrder: '' };
+        const hasFilmmakerInput = draft.filmmakerName.trim() || draft.sharePercent.trim();
+
+        let sharePercentValue: number | undefined;
+        if (hasFilmmakerInput) {
+            const pct = parseFloat(draft.sharePercent);
+            if (!draft.filmmakerName.trim() || isNaN(pct) || pct < 0 || pct > 100) {
+                alert('Enter both a filmmaker name and a share percent between 0 and 100 (or leave both blank).');
+                return;
+            }
+            sharePercentValue = pct / 100;
         }
+
+        let sortOrderValue: number | undefined;
+        if (draft.sortOrder.trim()) {
+            const n = parseInt(draft.sortOrder, 10);
+            if (isNaN(n)) {
+                alert('Order must be a whole number.');
+                return;
+            }
+            sortOrderValue = n;
+        }
+
         setSavingSlug(product.slug);
         const password = sessionStorage.getItem('adminPassword');
         try {
@@ -73,8 +92,11 @@ const AdminShopRevenueTab: React.FC = () => {
                 body: JSON.stringify({
                     productSlug: product.slug,
                     productName: product.name,
-                    filmmakerName: draft.filmmakerName.trim(),
-                    sharePercent: pct / 100,
+                    ...(hasFilmmakerInput
+                        ? { filmmakerName: draft.filmmakerName.trim(), sharePercent: sharePercentValue }
+                        : { removeAttribution: true }),
+                    category: draft.category.trim(),
+                    sortOrder: sortOrderValue ?? null,
                     password,
                 }),
             });
@@ -88,7 +110,7 @@ const AdminShopRevenueTab: React.FC = () => {
     };
 
     const handleRemove = async (productSlug: string) => {
-        if (!window.confirm('Remove this product\'s filmmaker attribution?')) return;
+        if (!window.confirm('Clear this product\'s category, order, and filmmaker attribution?')) return;
         setSavingSlug(productSlug);
         const password = sessionStorage.getItem('adminPassword');
         try {
@@ -146,19 +168,19 @@ const AdminShopRevenueTab: React.FC = () => {
 
             <div className="bg-[#0f0f0f] border border-white/5 p-12 rounded-[4rem] shadow-2xl">
                 <div className="mb-10 border-b border-white/5 pb-8">
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Product Attribution</h2>
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">Tag which filmmaker each product belongs to, and their share %</p>
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Product Attribution &amp; Display</h2>
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">Group products (e.g. "Hats"), set display order within a group, and tag which filmmaker/share applies</p>
                 </div>
                 {productsError && <p className="text-red-400 text-sm mb-6">Couldn't load products from Fourthwall: {productsError}</p>}
                 <div className="space-y-4">
                     {products.length === 0 ? (
                         <p className="text-gray-600 text-center py-12 uppercase font-black tracking-widest text-xs">No products found in the shop yet</p>
                     ) : products.map(product => {
-                        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '' };
+                        const draft = drafts[product.slug] || { filmmakerName: '', sharePercent: '', category: '', sortOrder: '' };
                         const isAttributed = attributions.some(a => a.productSlug === product.slug);
                         return (
-                            <div key={product.id} className="bg-black border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row md:items-center gap-4">
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div key={product.id} className="bg-black border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row md:items-center gap-4 flex-wrap">
+                                <div className="flex items-center gap-4 flex-1 min-w-0 basis-full md:basis-auto">
                                     {product.images?.[0] && (
                                         <img src={product.images[0].url} alt={product.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
                                     )}
@@ -166,10 +188,26 @@ const AdminShopRevenueTab: React.FC = () => {
                                 </div>
                                 <input
                                     type="text"
+                                    value={draft.category}
+                                    onChange={(e) => setDrafts(d => ({ ...d, [product.slug]: { ...d[product.slug], category: e.target.value } }))}
+                                    placeholder="Category (e.g. Hats)"
+                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-500 transition-all md:w-40"
+                                />
+                                <input
+                                    type="number"
+                                    value={draft.sortOrder}
+                                    onChange={(e) => setDrafts(d => ({ ...d, [product.slug]: { ...d[product.slug], sortOrder: e.target.value } }))}
+                                    placeholder="Order"
+                                    title="Lower numbers show first within their category"
+                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm w-20 focus:outline-none focus:border-red-500 transition-all"
+                                />
+                                <div className="w-px self-stretch bg-white/5 hidden md:block" />
+                                <input
+                                    type="text"
                                     value={draft.filmmakerName}
                                     onChange={(e) => setDrafts(d => ({ ...d, [product.slug]: { ...d[product.slug], filmmakerName: e.target.value } }))}
                                     placeholder="Filmmaker name"
-                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-500 transition-all md:w-56"
+                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-500 transition-all md:w-48"
                                 />
                                 <div className="flex items-center gap-2">
                                     <input
