@@ -65,7 +65,7 @@ const MerchPage: React.FC = () => {
         <div className="flex flex-col min-h-screen bg-black text-white">
             <SEO
                 title="Shop"
-                description="Festival posters, tees, and prints straight from the films you watched on Crate TV — a share of every sale goes back to the filmmakers."
+                description="Festival posters, tees, and prints straight from the films you watched on Crate TV — buy artwork from a film and a share goes back to the filmmaker who made it."
             />
 
             <Header
@@ -86,7 +86,7 @@ const MerchPage: React.FC = () => {
                                 Wear The<br />Stories.
                             </h1>
                             <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-md">
-                                Every purchase supports the filmmakers behind the films you love — a share of each sale goes directly back to them.
+                                Buy artwork from a film you love and a share goes straight back to the filmmaker who made it.
                             </p>
                         </div>
 
