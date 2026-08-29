@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
 import MovieCarousel from './MovieCarousel';
 import { Movie, Category, HeroConfig } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import AuthModal from './AuthModal';
-import CollapsibleFooter from './CollapsibleFooter';
+import Footer from './Footer';
 import SEO from './SEO';
 import { HERO_DEFAULTS } from './HeroEditor';
 
@@ -22,6 +22,62 @@ const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ t
         </div>
     </div>
 );
+
+// Counts up from 0 to `value` once it scrolls into view, easing out so it
+// settles rather than ticking to a stop.
+const AnimatedStat: React.FC<{ value: number; suffix?: string; label: string }> = ({ value, suffix = '', label }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const [displayValue, setDisplayValue] = useState(0);
+    const hasAnimated = useRef(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            if (!entry.isIntersecting || hasAnimated.current) return;
+            hasAnimated.current = true;
+            const duration = 1400;
+            const start = performance.now();
+            const step = (now: number) => {
+                const progress = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                setDisplayValue(Math.round(value * eased));
+                if (progress < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        }, { threshold: 0.4 });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [value]);
+
+    return (
+        <div ref={ref} className="text-center space-y-3">
+            <p className="text-5xl md:text-7xl font-black italic text-white tracking-tighter">
+                {displayValue.toLocaleString()}{suffix}
+            </p>
+            <p className="text-gray-500 font-black uppercase text-[10px] md:text-xs tracking-[0.3em]">{label}</p>
+        </div>
+    );
+};
+
+// Infinite-scrolling strip of film titles — the content is duplicated once
+// so the CSS animation can loop seamlessly at the halfway point.
+const Marquee: React.FC<{ items: string[] }> = ({ items }) => {
+    if (items.length === 0) return null;
+    const track = [...items, ...items];
+    return (
+        <div className="relative overflow-hidden border-y border-white/10 bg-black py-5">
+            <div className="flex whitespace-nowrap animate-marquee w-max">
+                {track.map((title, i) => (
+                    <span key={i} className="mx-8 flex items-center gap-8 text-lg md:text-2xl font-black uppercase italic tracking-tight text-white/70">
+                        {title}
+                        <span className="text-red-600">★</span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const FaqItem: React.FC<{ question: string; answer: React.ReactNode }> = ({ question, answer }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -86,6 +142,15 @@ const LandingPage: React.FC = () => {
             .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .slice(0, 10);
     }, [movies, viewCounts, categories]);
+
+    const marqueeTitles = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter(m => !!m.title && !m.isUnlisted)
+            .map(m => m.title)
+            .slice(0, 20);
+    }, [movies]);
+
+    const totalFilmCount = useMemo(() => Object.keys(movies).length, [movies]);
 
     const openAuthModal = (view: 'login' | 'signup') => {
         setInitialAuthView(view);
@@ -153,6 +218,19 @@ const LandingPage: React.FC = () => {
                                 </button>
                             </form>
                         </div>
+                    </div>
+                </section>
+
+                {/* SECTION 1.5: TITLE MARQUEE */}
+                <Marquee items={marqueeTitles} />
+
+                {/* SECTION 1.6: BY THE NUMBERS */}
+                <section className="py-24 px-6 bg-[#050505]">
+                    <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6">
+                        <AnimatedStat value={totalFilmCount} suffix="+" label="Films Streaming" />
+                        <AnimatedStat value={70} suffix="%" label="Goes To Filmmakers" />
+                        <AnimatedStat value={3} label="Ways To Watch — Web, Roku, Cast" />
+                        <AnimatedStat value={2014} label="Founded" />
                     </div>
                 </section>
 
@@ -268,7 +346,7 @@ const LandingPage: React.FC = () => {
                 </section>
             </main>
 
-            <CollapsibleFooter />
+            <Footer />
             {isAuthModalOpen && (
                 <AuthModal 
                     initialView={initialAuthView} 
