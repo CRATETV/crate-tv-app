@@ -143,6 +143,34 @@ export async function POST(request: Request) {
     const initError = getInitializationError();
     const db = !initError ? getAdminDb() : null;
 
+    // --- DUPLICATE RENTAL GUARD ---
+    // FIX (real customer overcharge — Bret Sperry was charged 3x for one
+    // "Tino" rental): a client-side bug let the checkout modal be dismissed
+    // right after a successful payment but before the app learned about it,
+    // so the film still looked locked and he reasonably paid again. That
+    // client bug is fixed separately (SquarePaymentModal.tsx), but this is
+    // the actual backstop: if the signed-in user already has a non-expired
+    // rental for this exact film, don't charge them again no matter what
+    // the client thinks the state is.
+    if (db && uid && paymentType === 'movie' && itemId) {
+        try {
+            const userDoc = await db.collection('users').doc(uid).get();
+            const existingExpiry = userDoc.data()?.rentals?.[itemId];
+            if (existingExpiry && new Date(existingExpiry) > new Date()) {
+                return new Response(JSON.stringify({
+                    error: "You already have access to this film — no need to pay again.",
+                    alreadyRented: true,
+                }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+            }
+        } catch (e) {
+            // If this check itself fails, fall through and let the payment
+            // proceed rather than blocking a legitimate first-time rental —
+            // this guard should only ever prevent a charge, never cause one
+            // to be wrongly rejected.
+            console.error('[Payment API] Duplicate rental check failed (proceeding):', e);
+        }
+    }
+
     // --- PROMO CODE INTEGRITY CHECK ---
     if (promoCode && db) {
         const promoRef = db.collection('promo_codes').doc(promoCode.toUpperCase().trim());

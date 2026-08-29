@@ -274,7 +274,19 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         // PwffPage fix that stops leaving that lobby mounted; this is the
         // belt-and-suspenders half — checkout should never end up hidden
         // behind another screen even if something else is left mounted.
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[600] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
+        <div
+            className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[600] p-4 animate-[fadeIn_0.3s_ease-out]"
+            // FIX (real customer overcharge — Bret Sperry, "Tino", charged 3x
+            // for one rental): after a successful payment this waits 2s
+            // before calling onPaymentSuccess (see handlePayment above), but
+            // the backdrop stayed clickable-to-close that whole time. An
+            // accidental tap outside the card form during that window closed
+            // the modal before the app ever learned the payment succeeded —
+            // the movie still looked locked, so the customer reasonably paid
+            // again. Once payment succeeds, nothing should be able to
+            // dismiss this until onPaymentSuccess has actually fired.
+            onClick={(paymentSuccess || isProcessing) ? undefined : onClose}
+        >
             {/* max-h-[90vh] + overflow-y-auto — every other modal in this app
                 (AuthModal, FinancialOnboardingModal, etc.) scrolls internally
                 when its content is taller than the viewport. This one didn't,
@@ -289,7 +301,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                         <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Secure Checkout</h2>
                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">Verified Node Terminal</p>
                     </div>
-                    {!paymentSuccess && (
+                    {!paymentSuccess && !isProcessing && (
                         <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
                             <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
