@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,10 @@ import Header from './Header';
 import BottomNavBar from './BottomNavBar';
 import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
+
+// How long a block stays visible on the public festival page after its
+// watch party ends. See isBlockExpired in the main component.
+const FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const trackPageView = async () => {
     try {
@@ -374,7 +378,20 @@ const ProgrammeMode: React.FC = () => {
     const [showFullPassSuccess, setShowFullPassSuccess] = useState(false);
 
     const currentDay = useMemo(() => festivalData.find(d => d.day === activeDay) || festivalData[0], [festivalData, activeDay]);
-    const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks || []), [festivalData]);
+    // Films are meant to disappear from the public festival page a week
+    // after their block's watch party ended — festivalEndTime is already
+    // stamped by terminate-watch-party.ts/auto-end-watch-party.ts for
+    // exactly this purpose, but nothing ever consumed it (confirmed via a
+    // real case: "Tino" sat on this page a week past its screening until
+    // manually removed). A live check here, evaluated fresh on every page
+    // load, is simpler and can't silently fail the way a cron could.
+    const isBlockExpired = useCallback((block: FilmBlock): boolean => {
+        if (!block.festivalEndTime) return false; // never ended yet — not expired
+        const endTime = new Date(block.festivalEndTime).getTime();
+        if (isNaN(endTime)) return false;
+        return Date.now() - endTime > FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS;
+    }, []);
+    const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks || []).filter(b => !isBlockExpired(b)), [festivalData, isBlockExpired]);
     // Blocks are stored in whatever order they were added in the Festival
     // Manager admin (see FestivalEditor's addBlock, which just pushes onto
     // the array) — that's insertion order, not screening order, so a block
@@ -384,14 +401,14 @@ const ProgrammeMode: React.FC = () => {
     // the end (rather than the top) so an unscheduled block doesn't jump
     // ahead of everything that IS scheduled.
     const sortedDayBlocks = useMemo(() => {
-        const blocks = currentDay?.blocks || [];
+        const blocks = (currentDay?.blocks || []).filter(b => !isBlockExpired(b));
         const getTime = (b: FilmBlock) => {
             const t = b.screeningStartTime || b.watchPartyStartTime;
             const parsed = t ? new Date(t).getTime() : NaN;
             return isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
         };
         return [...blocks].sort((a, b) => getTime(a) - getTime(b));
-    }, [currentDay]);
+    }, [currentDay, isBlockExpired]);
     const allFestivalFilms = useMemo(() => allBlocks.flatMap(b => (b.movieKeys || []).map(k => movies[k]).filter(Boolean)) as Movie[], [allBlocks, movies]);
     const filmsWithNotes = useMemo(() => allFestivalFilms.filter(m => m.festivalDirectorNote || m.festivalFilmmakerBio || m.festivalQuote), [allFestivalFilms]);
 

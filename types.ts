@@ -235,6 +235,10 @@ export interface FilmBlock {
   capacity?: number;
   /** Server-maintained count of tickets sold — only meaningful when capacity is set. */
   ticketsSold?: number;
+  /** Stamped by terminate-watch-party.ts / auto-end-watch-party.ts when this
+   * block's watch party ends. PwffPage.tsx uses this to hide the block from
+   * the public festival page once EXPIRY_WINDOW_MS has passed since then. */
+  festivalEndTime?: string;
 }
 
 export interface FestivalDay {
