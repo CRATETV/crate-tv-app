@@ -385,9 +385,18 @@ const ProgrammeMode: React.FC = () => {
     // real case: "Tino" sat on this page a week past its screening until
     // manually removed). A live check here, evaluated fresh on every page
     // load, is simpler and can't silently fail the way a cron could.
+    //
+    // FIX: festivalEndTime only gets stamped by the watch-party-ending code
+    // paths, so any block with isWatchPartyEnabled false (a plain ticketed
+    // screening, no live watch party) never gets one and was staying visible
+    // forever — confirmed live: two Aug 22 blocks still showing a week later
+    // with festivalEndTime never set. screeningStartTime is populated on
+    // every block regardless of watch-party status, so it's the fallback
+    // reference point when there's no watch-party end stamp.
     const isBlockExpired = useCallback((block: FilmBlock): boolean => {
-        if (!block.festivalEndTime) return false; // never ended yet — not expired
-        const endTime = new Date(block.festivalEndTime).getTime();
+        const referenceTime = block.festivalEndTime || block.screeningStartTime;
+        if (!referenceTime) return false; // no signal at all — can't determine, don't hide
+        const endTime = new Date(referenceTime).getTime();
         if (isNaN(endTime)) return false;
         return Date.now() - endTime > FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS;
     }, []);
