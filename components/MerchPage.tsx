@@ -129,7 +129,7 @@ const MerchPage: React.FC = () => {
                                 The Crate Shop
                             </span>
                             <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-[0.85]">
-                                Wear The<br />Stories.
+                                Rep The<br />Underground.
                             </h1>
                             <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-md">
                                 Buy artwork from a film you love and a share goes straight back to the filmmaker who made it.
