@@ -419,7 +419,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
 
                             <div className="mt-40 pt-32 border-t border-zinc-200 text-center flex flex-col items-center gap-16">
-                                <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" className="w-72 opacity-80" alt="Crate TV" />
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-72 opacity-80" alt="Crate TV" />
                                 <div className="space-y-10">
                                     <button onClick={() => handleNavigate(null)} className="bg-zinc-900 text-white font-black px-24 py-8 rounded-[3rem] uppercase tracking-[0.5em] text-sm hover:bg-red-600 transition-all transform hover:scale-105 active:scale-95 shadow-lg">Return to Hub</button>
                                 </div>

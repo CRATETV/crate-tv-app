@@ -297,7 +297,7 @@ const GrowthAnalyticsTab: React.FC = () => {
                 </div>
                 <div ref={snapshotRef} className="printable-area bg-white text-black p-12 rounded-3xl shadow-2xl">
                      <div className="flex justify-between items-center mb-12">
-                        <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo+with+background+removed+.png" alt="Crate TV" className="w-48 h-auto invert" />
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-48 h-auto invert" />
                         <div className="text-right">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Performance Audit</h2>
                             <p className="text-gray-500 font-bold">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>

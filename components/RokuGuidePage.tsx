@@ -94,7 +94,7 @@ const RokuGuidePage: React.FC = () => {
                                 </ul>
                             </div>
                             <div className="hidden md:block w-48 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-                                <img src="https://d3jhtrl1gnrh4b.cloudfront.net/logo%20with%20background%20removed%20.png" alt="Crate TV Logo" className="w-full h-auto" />
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV Logo" className="w-full h-auto" />
                             </div>
                         </div>
                     </div>
