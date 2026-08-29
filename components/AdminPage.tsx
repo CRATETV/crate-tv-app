@@ -22,6 +22,7 @@ import DiscoveryEngine from './DiscoveryEngine';
 import JuryRoomTab from './JuryRoomTab';
 import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
+import AdminShopRequestsTab from './AdminShopRequestsTab';
 import PwffAdminTab from './PwffAdminTab';
 import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
@@ -51,6 +52,7 @@ const ALL_TABS: Record<string, string> = {
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
+    shopRequests: '🛍️ Shop Requests',
     ticketCodes: '🎟️ Ticket Codes',
     // festHub removed — its whole job (editing festivalData/festivalConfig, the
     // real film schedule) is now inside the pwff tab below, since that's the
@@ -570,6 +572,7 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
+                    {activeTab === 'shopRequests' && <AdminShopRequestsTab />}
                     {activeTab === 'ticketCodes' && (
                         <TicketCodesTab festivalDays={festivalData} />
                     )}

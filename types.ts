@@ -527,6 +527,18 @@ export interface PayoutRequest {
   completionDate?: any;
 }
 
+export interface ShopRequest {
+  id: string;
+  directorName: string;
+  email: string;
+  filmTitle?: string;
+  description: string;
+  status: 'pending' | 'added' | 'declined';
+  requestDate: any;
+  resolvedDate?: any;
+  adminNote?: string;
+}
+
 export interface FilmmakerFilmPerformance {
   key: string;
   title: string;

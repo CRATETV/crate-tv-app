@@ -148,6 +148,9 @@ const FilmmakerDashboardView: React.FC = () => {
     const [searchName, setSearchName] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [payoutStatus, setPayoutStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+    const [shopRequestDescription, setShopRequestDescription] = useState('');
+    const [shopRequestFilm, setShopRequestFilm] = useState('');
+    const [shopRequestStatus, setShopRequestStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
     const fetchAnalyticsData = async (name: string) => {
         if (!name) return;
@@ -226,6 +229,34 @@ const FilmmakerDashboardView: React.FC = () => {
         } catch (err) {
             setPayoutStatus('error');
             setTimeout(() => setPayoutStatus('idle'), 3000);
+        }
+    };
+
+    const handleShopRequest = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!shopRequestDescription.trim() || !user) return;
+
+        setShopRequestStatus('submitting');
+        try {
+            const res = await fetch('/api/request-shop-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    directorName: searchName || user.name,
+                    email: user.email,
+                    filmTitle: shopRequestFilm.trim() || undefined,
+                    description: shopRequestDescription.trim(),
+                }),
+            });
+
+            if (!res.ok) throw new Error('Request failed.');
+            setShopRequestStatus('success');
+            setShopRequestDescription('');
+            setShopRequestFilm('');
+            setTimeout(() => setShopRequestStatus('idle'), 3000);
+        } catch (err) {
+            setShopRequestStatus('error');
+            setTimeout(() => setShopRequestStatus('idle'), 3000);
         }
     };
 
@@ -338,6 +369,49 @@ const FilmmakerDashboardView: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    <div className="bg-[#0f0f0f] border border-white/5 p-6 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl">
+                        <div className="mb-6 md:mb-10">
+                            <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none">Shop Request</h2>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-3">Ask us to add something to the Crate Shop</p>
+                        </div>
+                        <form onSubmit={handleShopRequest} className="space-y-6">
+                            <p className="text-gray-400 text-sm md:text-base leading-relaxed max-w-2xl">
+                                Want a poster, tee, or print from one of your films in the shop? Tell us what you have in mind and we'll follow up.
+                            </p>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 block mb-2">Film (optional)</label>
+                                <input
+                                    type="text"
+                                    value={shopRequestFilm}
+                                    onChange={(e) => setShopRequestFilm(e.target.value)}
+                                    placeholder="Which film is this for?"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 block mb-2">What would you like added?</label>
+                                <textarea
+                                    value={shopRequestDescription}
+                                    onChange={(e) => setShopRequestDescription(e.target.value)}
+                                    required
+                                    rows={4}
+                                    placeholder="e.g. A poster print of the theatrical one-sheet, a tee with the title treatment..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-all resize-none"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={!shopRequestDescription.trim() || shopRequestStatus === 'submitting' || shopRequestStatus === 'success'}
+                                className={`bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-20 ${shopRequestStatus === 'success' ? 'bg-green-500 text-white' : ''}`}
+                            >
+                                {shopRequestStatus === 'submitting' ? 'Sending...' :
+                                 shopRequestStatus === 'success' ? 'Request Sent!' :
+                                 shopRequestStatus === 'error' ? 'Error. Try Again' :
+                                 'Submit Request'}
+                            </button>
+                        </form>
                     </div>
 
                     <div className="space-y-10">
