@@ -310,6 +310,36 @@ const EmbeddedChat: React.FC<{
 // are actually live right now (see FestivalLiveStatus below), so this stays
 // cheap even with many blocks in the schedule: most of them aren't live at
 // any given moment, so there's rarely more than a couple of these mounted.
+// The actual "watching right now" number — heartbeat-based (only counts
+// while the video is playing and the tab is visible), unlike the lobby
+// count below. Polls every 15s for the at-a-glance dashboard row; the
+// detailed per-party view (WatchPartyViewershipStats) shows the same
+// number alongside cumulative stats.
+const LiveWatchingNow: React.FC<{ itemId: string }> = ({ itemId }) => {
+    const [count, setCount] = useState<number | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const result = await getBlockViewershipStats(itemId);
+                if (!cancelled) setCount(result.watchingNow);
+            } catch {
+                // Quick-glance row — fail silently, detailed view below still shows the error.
+            }
+        };
+        load();
+        const interval = setInterval(load, 15000);
+        return () => { cancelled = true; clearInterval(interval); };
+    }, [itemId]);
+    if (count === null) return null;
+    return (
+        <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-white font-black">{count} watching</span>
+        </span>
+    );
+};
+
 // NOTE: this counts presence in the lobby doc (written the moment someone
 // lands on the watch-party page — see WatchPartyLobby.tsx), which fires
 // whether or not the party has started or they're actually watching. It
@@ -370,7 +400,14 @@ const WatchPartyViewershipStats: React.FC<{ itemId: string; isLive: boolean }> =
     return (
         <div className="mt-4 bg-black/40 rounded-2xl border border-white/10 p-5">
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Viewership</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <div>
+                    <div className="text-2xl font-black text-white tabular-nums flex items-center gap-2">
+                        {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+                        {stats.watchingNow}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Watching Now</div>
+                </div>
                 <div>
                     <div className="text-2xl font-black text-white tabular-nums">{stats.uniqueViewers}</div>
                     <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Unique Viewers</div>
@@ -431,7 +468,10 @@ const FestivalLiveStatus: React.FC<{
                             <div key={item.id} className="flex items-center justify-between gap-3 bg-red-600/10 border border-red-500/20 rounded-xl px-4 py-3 flex-wrap">
                                 <div>
                                     <p className="font-bold text-white text-sm">{item.title}</p>
-                                    <p className="text-xs text-gray-500"><LiveViewerCount itemId={item.id} /></p>
+                                    <p className="text-xs text-gray-500 flex items-center gap-3 flex-wrap">
+                                        <LiveWatchingNow itemId={item.id} />
+                                        <LiveViewerCount itemId={item.id} />
+                                    </p>
                                 </div>
                                 <button onClick={() => onSelect(item.id)} className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all">
                                     Manage

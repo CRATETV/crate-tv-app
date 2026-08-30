@@ -4,12 +4,21 @@
 
 import { getDbInstance } from './firebaseClient';
 
+// A session counts as "watching right now" only if its most recent
+// heartbeat landed within this window. useWatchHeartbeat sends one every
+// 20s (and only while the video is actually playing and the tab is
+// visible — see its own comments), so 2x that plus a little slack covers
+// one missed beat from a slow connection without letting someone who
+// paused/left minutes ago still read as "watching."
+const LIVE_WINDOW_MS = 45000;
+
 export interface BlockViewershipStats {
   uniqueViewers: number;
   totalWatchMinutes: number;
   averageWatchMinutes: number;
   peakDeviceSplit: { mobile: number; desktop: number };
   sessionsUnder2Min: number; // quick bounces — people who clicked but barely watched
+  watchingNow: number; // live count — heartbeat within the last LIVE_WINDOW_MS
 }
 
 export async function getBlockViewershipStats(blockId: string): Promise<BlockViewershipStats> {
@@ -25,6 +34,8 @@ export async function getBlockViewershipStats(blockId: string): Promise<BlockVie
   let mobileCount = 0;
   let desktopCount = 0;
   let bounces = 0;
+  let watchingNow = 0;
+  const now = Date.now();
 
   snapshot.forEach((docSnap) => {
     const data = docSnap.data();
@@ -35,6 +46,11 @@ export async function getBlockViewershipStats(blockId: string): Promise<BlockVie
     else desktopCount++;
 
     if ((data.watchSeconds || 0) < 120) bounces++;
+
+    const lastHeartbeatMs = data.lastHeartbeat?.toMillis?.();
+    if (lastHeartbeatMs && !data.endedAt && now - lastHeartbeatMs < LIVE_WINDOW_MS) {
+      watchingNow++;
+    }
   });
 
   const uniqueViewers = seenUsers.size;
@@ -47,6 +63,7 @@ export async function getBlockViewershipStats(blockId: string): Promise<BlockVie
     averageWatchMinutes,
     peakDeviceSplit: { mobile: mobileCount, desktop: desktopCount },
     sessionsUnder2Min: bounces,
+    watchingNow,
   };
 }
 
