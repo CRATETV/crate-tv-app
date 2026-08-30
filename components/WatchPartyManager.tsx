@@ -310,6 +310,14 @@ const EmbeddedChat: React.FC<{
 // are actually live right now (see FestivalLiveStatus below), so this stays
 // cheap even with many blocks in the schedule: most of them aren't live at
 // any given moment, so there's rarely more than a couple of these mounted.
+// NOTE: this counts presence in the lobby doc (written the moment someone
+// lands on the watch-party page — see WatchPartyLobby.tsx), which fires
+// whether or not the party has started or they're actually watching. It
+// used to be labeled "N watching," which overstated real viewership — a
+// person just sitting on the countdown/banner screen counted the same as
+// someone actually mid-stream. Relabeled "in lobby" to say what it really
+// measures. WatchPartyViewershipStats below (heartbeat-based, gated on the
+// video actually playing) is the accurate "who's really watching" number.
 const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
     const [emails, setEmails] = useState<string[] | null>(null);
     useEffect(() => {
@@ -322,7 +330,7 @@ const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
     if (emails === null) return null;
     return (
         <span>
-            <span className="text-white font-black">{emails.length} watching</span>
+            <span className="text-white font-black">{emails.length} in lobby</span>
             {emails.length > 0 && (
                 <span className="block text-[11px] text-gray-500 mt-0.5">{emails.join(', ')}</span>
             )}
