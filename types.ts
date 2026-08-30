@@ -162,6 +162,10 @@ export interface Movie {
   mainPageExpiry?: string;
   autoReleaseDate?: string;
   isUnlisted?: boolean;
+  /** Exempts this film from the auto-unlist-after-a-week-past-festival cron
+   * (api/auto-unlist-expired-festival-films.ts) — for films the festival
+   * wants to keep in the paid catalog permanently, e.g. LUNA. */
+  keepInCatalogAfterFestival?: boolean;
   isSeries?: boolean;
   isEpisode?: boolean;
   episodes?: Episode[];
@@ -782,3 +786,9 @@ export interface AnalyticsData {
     viewsByMovie: Record<string, number>;
   };
 }
+
+// Shared between the client (PwffPage.tsx, hiding expired blocks from the
+// festival page) and the server (api/auto-unlist-expired-festival-films.ts,
+// unlisting their films from the catalog) so both sides agree on exactly
+// when a block counts as "past its week" — one value, no drift.
+export const FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Movie, FilmBlock } from '../types';
+import { Movie, FilmBlock, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getDbInstance } from '../services/firebaseClient';
@@ -11,8 +11,9 @@ import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
 
 // How long a block stays visible on the public festival page after its
-// watch party ends. See isBlockExpired in the main component.
-const FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+// watch party ends. See isBlockExpired in the main component. The window
+// itself now lives in types.ts, shared with the server-side cron that
+// unlists these same films from the catalog on the same schedule.
 
 const trackPageView = async () => {
     try {

@@ -19,6 +19,10 @@
     {
       "path": "/api/notify-payout-threshold-cron",
       "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/auto-unlist-expired-festival-films",
+      "schedule": "0 */6 * * *"
     }
   ],
   "rewrites": [

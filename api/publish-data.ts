@@ -75,19 +75,35 @@ export const assembleAndSyncMasterData = async (db: Firestore) => {
         let region = process.env.AWS_S3_REGION || 'us-east-1';
         if (region === 'global') region = 'us-east-1';
 
+        // @aws-sdk/client-s3 is pinned to an exact 3.700.0 in package.json
+        // (not a ^range) — versions past ~3.729.0 changed the default
+        // checksum behavior in a way this bucket/endpoint can't handle,
+        // surfacing as an opaque "MaxMessageLengthExceeded" error instead
+        // of the real cause. Confirmed live: this was silently breaking
+        // the publish step for weeks — the catch below logs and swallows
+        // the error, so the endpoint reported success while S3 never
+        // actually got updated. requestChecksumCalculation:'WHEN_REQUIRED'
+        // below is the documented mitigation but did NOT fix it alone in
+        // this bucket's case; the version pin is what actually did.
         const s3Client = new S3Client({
             region,
             credentials: {
                 accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
                 secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
             },
+            // Kept even though it didn't turn out to be the fix (see
+            // package.json's pinned @aws-sdk/client-s3 version for the real
+            // one) — this is still the documented, correct setting to avoid
+            // the newer SDK default of always calculating a request
+            // checksum via a chunked trailer, so leaving it set.
+            requestChecksumCalculation: 'WHEN_REQUIRED',
         });
 
         // CRITICAL: Block until S3 update is finished to guarantee next-fetch consistency
         await s3Client.send(new PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
-            Body: JSON.stringify(liveData, null, 2),
+            Body: Buffer.from(JSON.stringify(liveData, null, 2)),
             ContentType: 'application/json',
             CacheControl: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
         }));
