@@ -1,13 +1,18 @@
 import { Firestore } from 'firebase-admin/firestore';
+import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../../types.js';
 
-// While the festival is running, individual VOD rental revenue for a
+// While the festival is running — which, for revenue purposes, includes
+// the full on-demand rewatch week after the live screenings end, not
+// just the live weekend itself — individual VOD rental revenue for a
 // festival film goes to Crate/Playhouse West (via the separate
 // process-festival-payout.ts flow for passes/blocks — rentals aren't
 // currently attributed anywhere during this window, so they're just
-// Crate's). Only once the WHOLE multi-day festival has concluded — every
-// block across every day has ended, not just that film's own block —
-// does an individual rental start counting toward the filmmaker. Tips
-// are the one explicit exception: they count immediately regardless.
+// Crate's). Only once that ENTIRE window has closed — every block across
+// every day has ended, AND the 7-day rewatch window past the last one
+// has elapsed — does an individual rental start counting toward the
+// filmmaker. Tips are the one explicit exception: they count immediately
+// regardless. Confirmed explicitly: "its after the additional week that
+// the money starts going to filmmakers."
 //
 // Returns null if the festival hasn't fully concluded yet (any block
 // still lacks both a festivalEndTime AND a screeningStartTime), or there
@@ -39,5 +44,8 @@ export async function getFestivalConclusionTime(db: Firestore): Promise<Date | n
     }
 
     if (blockCount === 0 || latestMs === null) return null;
-    return new Date(latestMs);
+    // The last block's own end time is only when the LIVE screening
+    // ended — filmmaker eligibility doesn't start until the rewatch
+    // week built on top of that has also fully elapsed.
+    return new Date(latestMs + FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
 }

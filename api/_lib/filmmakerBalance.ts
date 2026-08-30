@@ -79,7 +79,8 @@ export async function computeRevenueByFilm(
     movies: Movie[]
 ): Promise<Record<string, FilmRevenue>> {
     const festivalConclusionTime = await getFestivalConclusionTime(db);
-    const movieByTitle = new Map(movies.map(m => [m.title, m]));
+    // Trimmed both sides — see matching note in revenueAttribution.ts.
+    const movieByTitle = new Map(movies.map(m => [(m.title || '').trim(), m]));
 
     const revenueByFilm: Record<string, FilmRevenue> = {};
     const add = (title: string, field: keyof FilmRevenue, amount: number) => {

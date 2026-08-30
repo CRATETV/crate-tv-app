@@ -38,7 +38,14 @@ export interface RevenueAttribution {
 
 export async function computeRevenueAttribution(db: Firestore, payments: SquarePayment[], movies: Movie[]): Promise<RevenueAttribution> {
     const festivalConclusionTime = await getFestivalConclusionTime(db);
-    const movieByTitle = new Map(movies.map(m => [m.title, m]));
+    // Trimmed on both sides of the lookup — parseNote() trims the title it
+    // extracts from the payment note, but a movie's own title field can
+    // have stray leading/trailing whitespace (confirmed live: "Tino " with
+    // a trailing space), which made the lookup silently miss and fall
+    // through to the "not a festival film" default — meaning that film's
+    // rentals bypassed festival-conclusion timing entirely regardless of
+    // its real isFestival status.
+    const movieByTitle = new Map(movies.map(m => [(m.title || '').trim(), m]));
 
     let passRevenueCents = 0, passCount = 0;
     let blockRevenueCents = 0, blockCount = 0;
