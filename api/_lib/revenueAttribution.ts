@@ -28,6 +28,7 @@ export interface RevenueAttribution {
     // -> Filmmakers, always (regardless of festival timing)
     tipRevenueCents: number;
     tipCount: number;
+    tips: { title: string; filmmakerName: string | null; amountCents: number; date: string }[];
 
     // -> Filmmakers, only because the festival has concluded (or the film
     // was never/no-longer festival-gated at all)
@@ -43,6 +44,7 @@ export async function computeRevenueAttribution(db: Firestore, payments: SquareP
     let blockRevenueCents = 0, blockCount = 0;
     let duringFestivalRentalCents = 0, duringFestivalRentalCount = 0;
     let tipRevenueCents = 0, tipCount = 0;
+    const tips: { title: string; filmmakerName: string | null; amountCents: number; date: string }[] = [];
     let postFestivalRentalCents = 0, postFestivalRentalCount = 0;
 
     for (const p of payments) {
@@ -65,6 +67,13 @@ export async function computeRevenueAttribution(db: Firestore, payments: SquareP
         const details = parseNote(note);
         if (details.type === 'donation') {
             tipRevenueCents += amt; tipCount++;
+            const movie = details.title ? movieByTitle.get(details.title) : undefined;
+            tips.push({
+                title: details.title || note,
+                filmmakerName: movie?.director?.trim() || null,
+                amountCents: amt,
+                date: p.created_at || '',
+            });
         } else if (details.type === 'vodRental' && details.title) {
             const movie = movieByTitle.get(details.title);
             let qualifiesForFilmmaker = true;
@@ -91,6 +100,7 @@ export async function computeRevenueAttribution(db: Firestore, payments: SquareP
         blockRevenueCents, blockCount,
         duringFestivalRentalCents, duringFestivalRentalCount,
         tipRevenueCents, tipCount,
+        tips: tips.sort((a, b) => (b.date || '').localeCompare(a.date || '')),
         postFestivalRentalCents, postFestivalRentalCount,
     };
 }

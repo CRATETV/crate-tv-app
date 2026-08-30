@@ -12,6 +12,7 @@ interface RevenueAttribution {
     duringFestivalRentalCount: number;
     tipRevenueCents: number;
     tipCount: number;
+    tips: { title: string; filmmakerName: string | null; amountCents: number; date: string }[];
     postFestivalRentalCents: number;
     postFestivalRentalCount: number;
 }
@@ -92,6 +93,22 @@ const AdminRevenueFlowTab: React.FC = () => {
                     <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase tracking-widest text-emerald-500">Straight To Filmmakers</h3>
                         <FlowRow label="Tips" count={data.tipCount} cents={data.tipRevenueCents} destination="Filmmaker (always)" destinationColor="text-emerald-400" />
+                        {data.tips.length > 0 && (
+                            <div className="bg-black/40 border border-white/5 rounded-2xl p-4 space-y-2">
+                                {data.tips.map((tip, i) => (
+                                    <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                                        <div>
+                                            <p className="font-bold text-white">{tip.title}</p>
+                                            <p className="text-gray-500">
+                                                {tip.filmmakerName || 'Filmmaker not on file'}
+                                                {tip.date && ` · ${new Date(tip.date).toLocaleDateString()}`}
+                                            </p>
+                                        </div>
+                                        <p className="font-black text-emerald-400 tabular-nums">{formatCurrency(tip.amountCents)}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <FlowRow label="Individual Rentals (post-conclusion)" count={data.postFestivalRentalCount} cents={data.postFestivalRentalCents} destination="Filmmaker" destinationColor="text-emerald-400" />
                         <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-2xl p-6 text-center">
                             <p className="text-3xl font-black text-white tabular-nums">{formatCurrency(filmmakerTotal)}</p>
