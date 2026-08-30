@@ -1,17 +1,30 @@
 // api/auto-unlist-expired-festival-films.ts
 //
-// Runs on a schedule (see vercel.json) and unlists films from the catalog
-// once their festival block has been off the public festival page for a
-// week — PwffPage.tsx already hides expired blocks from /pwff-philly2026
-// itself (client-side filter), but nothing was removing those films from
-// the regular catalog (Library, homepage, search) once that happened, so
-// they kept showing up indefinitely after their week was up. This closes
-// that gap, and does it generically against whatever festival is
-// currently in festival/schedule/days — so it applies to future festivals
-// automatically, not just the current one.
+// Runs on a schedule (see vercel.json) once a festival block has been off
+// the public festival page for a week — PwffPage.tsx already hides expired
+// blocks from /pwff-philly2026 itself (client-side filter), but nothing
+// updated the underlying data once that happened. This closes that gap,
+// and does it generically against whatever festival is currently in
+// festival/schedule/days — so it applies to future festivals automatically,
+// not just the current one. Two different things happen depending on the
+// film:
 //
-// A film can opt permanently out of this via
-// movies/{key}.keepInCatalogAfterFestival === true (e.g. LUNA).
+// - Ordinary festival films: unlisted from the regular catalog
+//   (movies/{key}.isUnlisted = true) once their block expires, so they
+//   stop showing up in Library/homepage/search indefinitely.
+//
+// - Films marked movies/{key}.keepInCatalogAfterFestival === true (e.g.
+//   LUNA): meant to KEEP showing, as a normal standalone catalog title,
+//   once their block expires — so instead of unlisting, this detaches them
+//   from the block itself (removes the key from that block's movieKeys).
+//   That matters beyond just the festival page: MoviePage.tsx's access
+//   gating treats any movie still linked to a block as block-gated
+//   regardless of its own isForSale/salePrice fields, so a film meant to
+//   go on individual sale after the festival needs to actually be detached
+//   — not just left in place — for that sale to take effect. Doing this
+//   detachment by hand ahead of the real 7-day mark (rather than letting
+//   this cron do it) pulls the film out of the festival lineup early,
+//   which is exactly the mistake to avoid.
 //
 // Configure in vercel.json:
 //   { "path": "/api/auto-unlist-expired-festival-films", "schedule": "0 */6 * * *" }
@@ -37,48 +50,72 @@ export async function GET(request: Request) {
         const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
 
         const now = Date.now();
+        // dayId -> that day's blocks, with expired-block flag per block
+        const dayBlocks = new Map<string, { blocks: FilmBlock[]; expired: boolean[] }>();
         const expiredMovieKeys = new Set<string>();
 
         daysSnap.forEach(doc => {
             const blocks: FilmBlock[] = doc.data().blocks || [];
-            for (const block of blocks) {
+            const expired = blocks.map(block => {
                 const referenceTime = block.festivalEndTime || block.screeningStartTime;
-                if (!referenceTime) continue;
+                if (!referenceTime) return false;
                 const refMs = new Date(referenceTime).getTime();
-                if (isNaN(refMs)) continue;
-                if (now - refMs > FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS) {
-                    for (const key of block.movieKeys || []) expiredMovieKeys.add(key);
-                }
-            }
+                if (isNaN(refMs)) return false;
+                const isExpired = now - refMs > FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS;
+                if (isExpired) for (const key of block.movieKeys || []) expiredMovieKeys.add(key);
+                return isExpired;
+            });
+            dayBlocks.set(doc.id, { blocks, expired });
         });
 
         if (expiredMovieKeys.size === 0) {
-            return new Response(JSON.stringify({ success: true, unlisted: [], message: 'No expired blocks found.' }), { status: 200 });
+            return new Response(JSON.stringify({ success: true, unlisted: [], detached: [], message: 'No expired blocks found.' }), { status: 200 });
         }
 
         const movieDocs = await Promise.all(
             Array.from(expiredMovieKeys).map(key => db.collection('movies').doc(key).get())
         );
+        const movieByKey = new Map<string, Movie>();
+        movieDocs.forEach(doc => { if (doc.exists) movieByKey.set(doc.id, doc.data() as Movie); });
 
         const batch = db.batch();
         const unlisted: string[] = [];
-        movieDocs.forEach(doc => {
-            if (!doc.exists) return;
-            const movie = doc.data() as Movie;
+        const detachedKeys = new Set<string>();
+
+        movieByKey.forEach((movie, key) => {
+            if (movie.keepInCatalogAfterFestival) {
+                detachedKeys.add(key); // handled via block rewrite below
+                return;
+            }
             if (movie.isUnlisted) return; // already done, nothing to write
-            if (movie.keepInCatalogAfterFestival) return; // exempt, e.g. LUNA
-            batch.set(doc.ref, { isUnlisted: true }, { merge: true });
-            unlisted.push(movie.title || doc.id);
+            batch.set(db.collection('movies').doc(key), { isUnlisted: true }, { merge: true });
+            unlisted.push(movie.title || key);
         });
 
-        if (unlisted.length === 0) {
-            return new Response(JSON.stringify({ success: true, unlisted: [], message: 'All expired films already unlisted or exempt.' }), { status: 200 });
+        const detached: string[] = [];
+        for (const [dayId, { blocks, expired }] of dayBlocks) {
+            let changed = false;
+            const newBlocks = blocks.map((block, i) => {
+                if (!expired[i]) return block;
+                const keysToRemove = (block.movieKeys || []).filter(k => detachedKeys.has(k));
+                if (keysToRemove.length === 0) return block;
+                changed = true;
+                for (const k of keysToRemove) detached.push(movieByKey.get(k)?.title || k);
+                return { ...block, movieKeys: (block.movieKeys || []).filter(k => !detachedKeys.has(k)) };
+            });
+            if (changed) {
+                batch.set(db.collection('festival').doc('schedule').collection('days').doc(dayId), { blocks: newBlocks }, { merge: true });
+            }
+        }
+
+        if (unlisted.length === 0 && detached.length === 0) {
+            return new Response(JSON.stringify({ success: true, unlisted: [], detached: [], message: 'All expired films already handled.' }), { status: 200 });
         }
 
         await batch.commit();
         await assembleAndSyncMasterData(db);
 
-        return new Response(JSON.stringify({ success: true, unlisted }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, unlisted, detached }), { status: 200 });
 
     } catch (error) {
         console.error('[auto-unlist-expired-festival-films] Error:', error);
