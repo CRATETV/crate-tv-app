@@ -3,6 +3,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
+import { sendWatchPartyReport } from './_lib/sendWatchPartyReport.js';
 
 // FEATURE (user request — "a few minutes after the movie ends can we
 // automatically end the party? that way it can get ready for the next
@@ -68,10 +69,11 @@ export async function POST(request: Request) {
         // about which film or how long it runs.
         const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
         let blockMovieKeys: string[] | null = null;
+        let blockTitle = '';
         for (const dayDoc of daysSnap.docs) {
             const blocks = (dayDoc.data().blocks || []) as any[];
             const match = blocks.find(b => b.id === partyId);
-            if (match) { blockMovieKeys = match.movieKeys || []; break; }
+            if (match) { blockMovieKeys = match.movieKeys || []; blockTitle = match.title || ''; break; }
         }
 
         let activeFilmKey: string;
@@ -125,6 +127,15 @@ export async function POST(request: Request) {
             backstageKey: null,
             endedAt: FieldValue.serverTimestamp(),
         });
+
+        // Same post-party report as terminate-watch-party.ts's manual path —
+        // an auto-ended party deserves the same engagement email a
+        // manually-ended one gets, not a silent gap just because no admin
+        // was there to click End Party.
+        if (blockMovieKeys && blockMovieKeys.length > 0) {
+            sendWatchPartyReport(db, partyId, blockTitle, blockMovieKeys)
+                .catch(e => console.error('[AUTO-END] Watch party report email failed:', e));
+        }
 
         // FIX (same gap found in terminate-watch-party.ts): this endpoint's
         // own comment above claims to mirror that one's shutdown steps

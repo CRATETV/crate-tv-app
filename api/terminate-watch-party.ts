@@ -3,6 +3,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
+import { sendWatchPartyReport } from './_lib/sendWatchPartyReport.js';
 
 export async function POST(request: Request) {
   try {
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     try {
       const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
       let blockMovieKeys: string[] = [];
+      let blockTitle = '';
       let releaseAfterScreening = false; // opt-in — default is NOT to release
       for (const dayDoc of daysSnap.docs) {
         const day = dayDoc.data();
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
         const matched = blocks.find((b: any) => b.id === movieKey);
         if (matched) {
           blockMovieKeys = matched.movieKeys || [];
+          blockTitle = matched.title || '';
           releaseAfterScreening = !!matched.releaseAfterScreening;
           // Stamp festivalEndTime so cron can auto-hide after 7 days
           const idx = blocks.findIndex((b: any) => b.id === movieKey);
@@ -90,6 +93,12 @@ export async function POST(request: Request) {
           break;
         }
       }
+
+      // Post-party engagement report to any verified filmmaker credited on
+      // this block's films — unrelated to releaseAfterScreening, so it
+      // fires for every ended party regardless of catalog-release settings.
+      sendWatchPartyReport(db, movieKey, blockTitle, blockMovieKeys)
+        .catch(e => console.error('[Festival] Watch party report email failed:', e));
       if (releaseAfterScreening && blockMovieKeys.length > 0) {
         // FIX: writing to data/movies here had zero real effect — the
         // client-side listener for that document explicitly only copies a

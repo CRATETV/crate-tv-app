@@ -400,13 +400,17 @@ const WatchPartyViewershipStats: React.FC<{ itemId: string; isLive: boolean }> =
     return (
         <div className="mt-4 bg-black/40 rounded-2xl border border-white/10 p-5">
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Viewership</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
                 <div>
                     <div className="text-2xl font-black text-white tabular-nums flex items-center gap-2">
                         {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
                         {stats.watchingNow}
                     </div>
                     <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Watching Now</div>
+                </div>
+                <div>
+                    <div className="text-2xl font-black text-white tabular-nums">{stats.peakConcurrentViewers}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Peak Concurrent</div>
                 </div>
                 <div>
                     <div className="text-2xl font-black text-white tabular-nums">{stats.uniqueViewers}</div>
