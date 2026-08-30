@@ -11,12 +11,14 @@ interface PwffAdminTabProps {
     pwffDescription: string;
     pwffTagline: string;
     pwffYear: string;
+    pwffAnnualNumber: string;
     onToggleVisible: (val: boolean) => void;
     onChangeDate: (val: string) => void;
     onChangeName: (val: string) => void;
     onChangeDescription: (val: string) => void;
     onChangeTagline: (val: string) => void;
     onChangeYear: (val: string) => void;
+    onChangeAnnualNumber: (val: string) => void;
     onSave: () => void;
     isSaving: boolean;
     // ── Programme / schedule — previously a completely separate "Festival Hub"
@@ -35,8 +37,8 @@ interface PwffAdminTabProps {
 }
 
 const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
-    pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline, pwffYear, pwffBlocks = [],
-    onToggleVisible, onChangeDate, onChangeName, onChangeDescription, onChangeTagline, onChangeYear,
+    pwffVisible, pwffDate, pwffName, pwffDescription, pwffTagline, pwffYear, pwffAnnualNumber, pwffBlocks = [],
+    onToggleVisible, onChangeDate, onChangeName, onChangeDescription, onChangeTagline, onChangeYear, onChangeAnnualNumber,
     onSave, isSaving,
     allMovies, festivalData, festivalConfig, onFestivalDataChange, onFestivalConfigChange, onSaveFestival, isSavingFestival
 }) => {
@@ -263,6 +265,24 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500"
                     />
                     <p className="text-[10px] text-gray-600">Short line under the festival name. Changes every year.</p>
+                </div>
+
+                {/* Annual edition number */}
+                <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Annual Edition Number</label>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={pwffAnnualNumber}
+                        onChange={e => onChangeAnnualNumber(e.target.value)}
+                        placeholder="Auto (leave blank)"
+                        maxLength={3}
+                        className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-pink-500"
+                    />
+                    <p className="text-[10px] text-gray-600">
+                        Drives the "{pwffAnnualNumber || 'Nth'} Annual" badge on the page. Leave blank to auto-calculate from the Programme's festival start date
+                        (PWFF was founded in 2014, so 2026 = 13th, 2027 = 14th). Only set this to override the auto-calculation.
+                    </p>
                 </div>
 
                 {/* URL Year */}
