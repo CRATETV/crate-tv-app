@@ -61,7 +61,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
                 {currentMovie.customLaurelUrl ? (
                     <img src={currentMovie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
                 ) : (currentMovie.awardName && currentMovie.awardYear) ? (
-                    <LaurelPreview awardName={currentMovie.awardName} year={currentMovie.awardYear} color="#FFFFFF" />
+                    <LaurelPreview awardName={currentMovie.awardName} year={currentMovie.awardYear} color="gradient" />
                 ) : null}
             </div>
         )}
