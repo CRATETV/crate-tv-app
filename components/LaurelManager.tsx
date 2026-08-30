@@ -19,7 +19,6 @@ const PRESET_CATEGORIES = [
 ];
 
 const PRESET_FINISHES = [
-    { name: 'Gradient', val: 'gradient' },
     { name: 'White', val: '#FFFFFF' },
     { name: 'Gold', val: '#FFD700' },
     { name: 'Silver', val: '#C0C0C0' },
@@ -31,7 +30,7 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     const [selectedMovieKey, setSelectedMovieKey] = useState('');
     const [award, setAward] = useState('Official Selection');
     const [year, setYear] = useState(new Date().getFullYear().toString());
-    const [color, setColor] = useState('gradient');
+    const [color, setColor] = useState('#FFFFFF');
     const [isDownloading, setIsDownloading] = useState(false);
     const [isKitGenerating, setIsKitGenerating] = useState(false);
     const [isApplying, setIsApplying] = useState(false);
@@ -55,16 +54,12 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
         clonedSvg.setAttribute('width', size.toString());
         clonedSvg.setAttribute('height', size.toString());
         
-        // Update all paths/texts to the target color — except "gradient",
-        // whose per-leaf rainbow fills are already baked into the source
-        // SVG by LaurelPreview and must be left alone.
-        if (fillColor !== 'gradient') {
-            const elements = clonedSvg.querySelectorAll('path, text');
-            elements.forEach(el => {
-                if (el.tagName === 'path') el.setAttribute('fill', fillColor);
-                if (el.tagName === 'text') el.setAttribute('fill', fillColor);
-            });
-        }
+        // Update all paths/texts to the target color
+        const elements = clonedSvg.querySelectorAll('path, text');
+        elements.forEach(el => {
+            if (el.tagName === 'path') el.setAttribute('fill', fillColor);
+            if (el.tagName === 'text') el.setAttribute('fill', fillColor);
+        });
 
         const canvas = document.createElement('canvas');
         canvas.width = size;
@@ -283,14 +278,11 @@ Accreditation provided by Crate TV Studio V4.
                             </div>
                             <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
                                 {PRESET_FINISHES.map(f => (
-                                    <button
+                                    <button 
                                         key={f.val}
                                         onClick={() => setColor(f.val)}
-                                        title={f.name}
                                         className={`w-4 h-4 rounded-full border border-white/20 transition-transform ${color === f.val ? 'scale-150 ring-2 ring-red-500/50' : 'hover:scale-125'}`}
-                                        style={f.val === 'gradient'
-                                            ? { background: 'conic-gradient(#2DD9C9, #2E86C1, #8E44AD, #C0339B, #E8651C, #E63328, #2DD9C9)' }
-                                            : { backgroundColor: f.val }}
+                                        style={{ backgroundColor: f.val }}
                                     />
                                 ))}
                             </div>

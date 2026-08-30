@@ -261,7 +261,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             {movie.customLaurelUrl ? (
               <img src={movie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
             ) : (movie.awardName && movie.awardYear) ? (
-              <LaurelPreview awardName={movie.awardName} year={movie.awardYear} color="gradient" />
+              <LaurelPreview awardName={movie.awardName} year={movie.awardYear} color="#FFFFFF" />
             ) : null}
           </div>
         )}
