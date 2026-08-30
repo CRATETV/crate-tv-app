@@ -87,11 +87,10 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
             const rot     = 90 + a;
             const sc      = (1.25 - t * 0.73).toFixed(3);
             const opacity = i % 2 === 0 ? 0.95 : 0.80;
-            const fill    = isGradient ? rainbowColorAt(t) : color;
             return (
                 <g key={`${side}-${i}`} transform={`translate(${lx.toFixed(1)},${ly.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${sc})`}>
-                    <path d={LEAF} fill={fill} opacity={opacity} />
-                    <path d="M0,-1 L0,-53" stroke={isGradient ? '#000000' : color} strokeWidth="1.3" fill="none" opacity={isGradient ? 0.15 : 0.20} />
+                    <path d={LEAF} fill={color} opacity={opacity} />
+                    <path d="M0,-1 L0,-53" stroke={color} strokeWidth="1.3" fill="none" opacity="0.20" />
                 </g>
             );
         });
@@ -106,33 +105,41 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
         <div className="flex items-center justify-center w-full h-full p-4 pointer-events-none select-none">
             <svg width="100%" height="100%" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
 
-                {/* Branches */}
-                {makeBranch('left')}
-                {makeBranch('right')}
+                {isGradient ? (
+                    // The actual illustrated wreath artwork (public/laurel-wreath.png),
+                    // background removed. Text renders on top, same as every other mode.
+                    <image href="/laurel-wreath.png" x="0" y="0" width="1000" height="1000" preserveAspectRatio="xMidYMid meet" />
+                ) : (
+                    <>
+                        {/* Branches */}
+                        {makeBranch('left')}
+                        {makeBranch('right')}
 
-                {/* 7-leaf top fan */}
-                <g transform={`translate(${CX},${topY})`}>
-                    {fanLeaves.map(([angle, scale], i) => (
-                        <g key={i} transform={`rotate(${angle}) translate(0,-10) scale(${scale})`}>
-                            <path d={LEAF} fill={isGradient ? rainbowColorAt(0.05) : color} opacity="0.92" />
+                        {/* 7-leaf top fan */}
+                        <g transform={`translate(${CX},${topY})`}>
+                            {fanLeaves.map(([angle, scale], i) => (
+                                <g key={i} transform={`rotate(${angle}) translate(0,-10) scale(${scale})`}>
+                                    <path d={LEAF} fill={color} opacity="0.92" />
+                                </g>
+                            ))}
                         </g>
-                    ))}
-                </g>
-                {/* Apex gem */}
-                <circle cx={CX} cy={topY - 2} r="4" fill={isGradient ? rainbowColorAt(0) : color} opacity="0.85" />
+                        {/* Apex gem */}
+                        <circle cx={CX} cy={topY - 2} r="4" fill={color} opacity="0.85" />
 
-                {/* Bottom 3-leaf tie */}
-                <g transform={`translate(${CX},${botY}) rotate(180)`}>
-                    {tieLeaves.map(([angle, scale], i) => (
-                        <g key={i} transform={`rotate(${angle}) translate(0,-8) scale(${scale})`}>
-                            <path d={LEAF} fill={isGradient ? rainbowColorAt(1) : color} opacity="0.62" />
+                        {/* Bottom 3-leaf tie */}
+                        <g transform={`translate(${CX},${botY}) rotate(180)`}>
+                            {tieLeaves.map(([angle, scale], i) => (
+                                <g key={i} transform={`rotate(${angle}) translate(0,-8) scale(${scale})`}>
+                                    <path d={LEAF} fill={color} opacity="0.62" />
+                                </g>
+                            ))}
                         </g>
-                    ))}
-                </g>
 
-                {/* Art Deco double inner ring */}
-                <circle cx={CX} cy={CY} r="163" fill="none" stroke={ringColor} strokeWidth="0.75" opacity="0.22" />
-                <circle cx={CX} cy={CY} r="156" fill="none" stroke={ringColor} strokeWidth="0.35" opacity="0.14" />
+                        {/* Art Deco double inner ring */}
+                        <circle cx={CX} cy={CY} r="163" fill="none" stroke={ringColor} strokeWidth="0.75" opacity="0.22" />
+                        <circle cx={CX} cy={CY} r="156" fill="none" stroke={ringColor} strokeWidth="0.35" opacity="0.14" />
+                    </>
+                )}
 
                 {/* Typography */}
                 <g textAnchor="middle" fill={textColor} fontFamily="Georgia, 'Times New Roman', serif">

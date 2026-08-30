@@ -87,10 +87,9 @@ export async function GET(request: Request) {
         `<g transform="rotate(${a}) translate(0,-8) scale(${s})"><path d="${LEAF}" fill="${tieColor}" opacity="0.62"/></g>`
     ).join('\n');
 
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="1000" height="1000" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
-
-<!-- Left branch -->
+    const wreathSvg = isGradient
+        ? `<image href="https://cratetv.net/laurel-wreath.png" x="0" y="0" width="1000" height="1000" preserveAspectRatio="xMidYMid meet"/>`
+        : `<!-- Left branch -->
 ${buildBranch('left')}
 
 <!-- Right branch -->
@@ -101,7 +100,7 @@ ${buildBranch('right')}
 ${fanSvg}
 </g>
 <!-- Apex gem -->
-<circle cx="${CX}" cy="${topY - 2}" r="4" fill="${isGradient ? rainbowColorAt(0) : color}" opacity="0.85"/>
+<circle cx="${CX}" cy="${topY - 2}" r="4" fill="${color}" opacity="0.85"/>
 
 <!-- Bottom tie -->
 <g transform="translate(${CX},${botY}) rotate(180)">
@@ -110,7 +109,12 @@ ${tieSvg}
 
 <!-- Art Deco double inner ring -->
 <circle cx="${CX}" cy="${CY}" r="163" fill="none" stroke="${color}" stroke-width="0.75" opacity="0.22"/>
-<circle cx="${CX}" cy="${CY}" r="156" fill="none" stroke="${color}" stroke-width="0.35" opacity="0.14"/>
+<circle cx="${CX}" cy="${CY}" r="156" fill="none" stroke="${color}" stroke-width="0.35" opacity="0.14"/>`;
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1000" height="1000" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+
+${wreathSvg}
 
 <!-- Typography -->
 <g text-anchor="middle" fill="${color}" font-family="Georgia, 'Times New Roman', serif">
