@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Movie, AnalyticsData, Category, GrantApplication } from '../types';
-import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 import PartnershipFinder from './PartnershipFinder';
 import GrantWriter from './GrantWriter';
@@ -22,16 +21,30 @@ const GrantLedger: React.FC = () => {
     const [grants, setGrants] = useState<GrantApplication[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Reads through a password-gated server endpoint instead of a direct
+    // client Firestore listener — grant_ledger has no (and shouldn't have)
+    // a client rule, since this app's admin access is a plain password
+    // check with no Firebase-Auth-based role to gate a rule against. See
+    // api/get-grant-ledger.ts.
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        const unsub = db.collection('grant_ledger').orderBy('dateApplied', 'desc').onSnapshot(snap => {
-            const fetched: GrantApplication[] = [];
-            snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as GrantApplication));
-            setGrants(fetched);
-            setIsLoading(false);
-        });
-        return () => unsub();
+        const fetchGrants = async () => {
+            try {
+                const password = sessionStorage.getItem('adminPassword');
+                const res = await fetch('/api/get-grant-ledger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+                const json = await res.json();
+                if (json.error) throw new Error(json.error);
+                setGrants(json.grants as GrantApplication[]);
+            } catch (e) {
+                console.error('Failed to load grant ledger:', e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchGrants();
     }, []);
 
     if (isLoading) return <LoadingSpinner />;

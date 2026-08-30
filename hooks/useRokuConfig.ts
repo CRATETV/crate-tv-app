@@ -1,8 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { getDbInstance } from '../services/firebaseClient';
 import { RokuConfig } from '../types';
-import firebase from 'firebase/compat/app';
 
 const DEFAULT_CONFIG: RokuConfig = {
   _version: 0,
@@ -21,59 +19,68 @@ const DEFAULT_CONFIG: RokuConfig = {
   },
 };
 
+// Fetches/saves roku/config through admin-password-gated server endpoints
+// instead of a direct client Firestore listener — that collection has no
+// (and shouldn't have) a client security rule, since this app's admin
+// access is a plain password check with no Firebase-Auth-based role to
+// gate a rule against. See api/get-roku-config.ts and
+// api/save-roku-config.ts. This trades the old real-time listener for a
+// fetch-on-load + refetch-after-save pattern, matching the rest of the
+// admin dashboard's data tabs.
 export function useRokuConfig() {
   const [config, setConfig] = useState<RokuConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const db = getDbInstance();
-    if (!db) return;
-
-    const unsubscribe = db.collection('roku').doc('config').onSnapshot(
-      (snapshot) => {
-        if (snapshot.exists) {
-          setConfig({ ...DEFAULT_CONFIG, ...snapshot.data() } as RokuConfig);
-        } else {
-          setConfig(DEFAULT_CONFIG);
-        }
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Config listener error:", err);
-        setError("Failed to establish real-time config link.");
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchConfig = useCallback(async () => {
+    try {
+      const password = sessionStorage.getItem('adminPassword');
+      const res = await fetch('/api/get-roku-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setConfig(json.config as RokuConfig);
+      setError(null);
+    } catch (err) {
+      console.error("Config fetch error:", err);
+      setError("Failed to load Roku config.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const saveConfig = useCallback(async (updates: Partial<RokuConfig>) => {
-    const db = getDbInstance();
-    if (!db) return;
+  useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
+  const saveConfig = useCallback(async (updates: Partial<RokuConfig>) => {
     setSaving(true);
     setError(null);
 
-    const newConfig = {
-      ...config,
-      ...updates,
-      _version: (config._version || 0) + 1,
-      _lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-      _updatedBy: sessionStorage.getItem('operatorName') || 'admin'
-    };
-
     try {
-      await db.collection('roku').doc('config').set(newConfig, { merge: true });
+      const password = sessionStorage.getItem('adminPassword');
+      const res = await fetch('/api/save-roku-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password,
+          updates,
+          currentVersion: config._version || 0,
+          operatorName: sessionStorage.getItem('operatorName') || 'admin',
+        }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      await fetchConfig();
     } catch (err) {
       console.error("Save failed:", err);
       setError("Failed to synchronize manifest.");
     } finally {
       setSaving(false);
     }
-  }, [config]);
+  }, [config, fetchConfig]);
 
   const showAllContent = async () => {
     if (!window.confirm("RESET PROTOCOL: This will clear all hidden lists and restore all categories. Proceed?")) return;

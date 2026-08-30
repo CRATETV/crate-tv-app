@@ -1,9 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MoviePipelineEntry, JuryVerdict } from '../types';
-import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
-import firebase from 'firebase/compat/app';
 
 interface JuryRoomTabProps {
     pipeline: MoviePipelineEntry[];
@@ -53,6 +51,7 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [existingVotes, setExistingVotes] = useState<Record<string, any>>({});
     const [communityVotes, setCommunityVotes] = useState<Record<string, JuryVerdict[]>>({});
+    const [isLoading, setIsLoading] = useState(true);
     const [vote, setVote] = useState<JuryVote>({
         direction: 5,
         performance: 5,
@@ -62,30 +61,32 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
         comments: ''
     });
 
-    useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        
-        const unsubscribe = db.collection('jury_reviews').onSnapshot(snapshot => {
-            const votes: Record<string, any> = {};
-            snapshot.forEach(doc => {
-                votes[doc.id] = doc.data();
+    // Reads through a password-gated server endpoint instead of a direct
+    // client Firestore listener — jury_reviews and guest_judging have no
+    // (and shouldn't have) a client rule that lets an unfiltered admin
+    // read happen safely, since this app's admin access is a plain
+    // password check with no Firebase-Auth-based role to gate a rule
+    // against. See api/get-jury-dashboard-data.ts.
+    const fetchDashboard = useCallback(async () => {
+        try {
+            const password = sessionStorage.getItem('adminPassword');
+            const res = await fetch('/api/get-jury-dashboard-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
             });
-            setExistingVotes(votes);
-        });
-
-        const unsubCommunity = db.collection('guest_judging').onSnapshot(snapshot => {
-            const votes: Record<string, JuryVerdict[]> = {};
-            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
-                const data = doc.data() as JuryVerdict & { filmId: string };
-                if (!votes[data.filmId]) votes[data.filmId] = [];
-                votes[data.filmId].push(data);
-            });
-            setCommunityVotes(votes);
-        });
-
-        return () => { unsubscribe(); unsubCommunity(); };
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            setExistingVotes(json.juryReviews);
+            setCommunityVotes(json.guestJudging);
+        } catch (e) {
+            console.error('Failed to load jury dashboard data:', e);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
+
+    useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
     useEffect(() => {
         if (selectedFilm && existingVotes[selectedFilm.id]) {
@@ -112,15 +113,16 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
         if (!selectedFilm) return;
         setIsSubmitting(true);
         try {
-            const db = getDbInstance();
-            if (!db) throw new Error("DB not initialized");
-
-            await db.collection('jury_reviews').doc(selectedFilm.id).set({
-                ...vote,
-                filmTitle: selectedFilm.title,
-                lastUpdated: new Date()
+            const password = sessionStorage.getItem('adminPassword');
+            const res = await fetch('/api/save-jury-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, filmId: selectedFilm.id, filmTitle: selectedFilm.title, vote }),
             });
-            
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+
+            await fetchDashboard();
             alert(`Verdict recorded for "${selectedFilm.title}"`);
             setSelectedFilm(null);
         } catch (error) {
@@ -130,6 +132,8 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
             setIsSubmitting(false);
         }
     };
+
+    if (isLoading) return <LoadingSpinner />;
 
     return (
         <div className="space-y-10 animate-[fadeIn_0.5s_ease-out]">

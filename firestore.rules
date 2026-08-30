@@ -198,6 +198,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Guest/jury-pass film judging ────────────────────────────────────
+    // Written by JuryRoomPage — real signed-in users with a paid jury pass
+    // AND unauthenticated "guest adjudicators" (identified only by a
+    // localStorage email, not real Firebase Auth — request.auth is null
+    // for them, so isSignedIn() can't gate this at all). This collection
+    // had NO rule prior to this fix, meaning every single verdict
+    // submission — paid or guest — was silently rejected with "Missing or
+    // insufficient permissions." The admin aggregate view (JuryRoomTab,
+    // AcademyIntelTab) reads this server-side instead (see
+    // get-jury-dashboard-data.ts), not through this client rule.
+    match /guest_judging/{docId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.userId is string
+        && request.resource.data.filmId is string
+        && docId == request.resource.data.userId + '_' + request.resource.data.filmId;
+      allow delete: if false;
+    }
+
     // ── Watch party comments ────────────────────────────────────────────
     match /comments/{blockId}/messages/{commentId} {
       allow read: if isSignedIn();

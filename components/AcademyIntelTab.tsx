@@ -1,9 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { MoviePipelineEntry, JuryVerdict, Movie } from '../types';
-import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
-import firebase from 'firebase/compat/app';
 
 interface AcademyIntelTabProps {
     pipeline: MoviePipelineEntry[];
@@ -15,28 +13,29 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
     const [guestVerdicts, setGuestVerdicts] = useState<Record<string, JuryVerdict[]>>({});
     const [isLoading, setIsLoading] = useState(true);
 
+    // Reads through a password-gated server endpoint instead of a direct
+    // client Firestore listener — see api/get-jury-dashboard-data.ts and
+    // the matching note in JuryRoomTab.tsx.
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-
-        const unsubAdmin = db.collection('jury_reviews').onSnapshot(snap => {
-            const votes: Record<string, any> = {};
-            snap.forEach(doc => votes[doc.id] = doc.data());
-            setAdminVerdicts(votes);
-        });
-
-        const unsubGuest = db.collection('guest_judging').onSnapshot(snap => {
-            const votes: Record<string, JuryVerdict[]> = {};
-            snap.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
-                const data = doc.data() as JuryVerdict & { filmId: string };
-                if (!votes[data.filmId]) votes[data.filmId] = [];
-                votes[data.filmId].push(data);
-            });
-            setGuestVerdicts(votes);
-            setIsLoading(false);
-        });
-
-        return () => { unsubAdmin(); unsubGuest(); };
+        const fetchDashboard = async () => {
+            try {
+                const password = sessionStorage.getItem('adminPassword');
+                const res = await fetch('/api/get-jury-dashboard-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+                const json = await res.json();
+                if (json.error) throw new Error(json.error);
+                setAdminVerdicts(json.juryReviews);
+                setGuestVerdicts(json.guestJudging);
+            } catch (e) {
+                console.error('Failed to load jury dashboard data:', e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchDashboard();
     }, []);
 
     const rankedFilms = useMemo(() => {

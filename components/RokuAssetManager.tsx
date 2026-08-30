@@ -1,10 +1,8 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Movie, RokuAsset } from '../types';
-import { getDbInstance } from '../services/firebaseClient';
 import PublicS3Uploader from './PublicS3Uploader';
 import LoadingSpinner from './LoadingSpinner';
-import firebase from 'firebase/compat/app';
 
 interface RokuAssetManagerProps {
     allMovies: Movie[];
@@ -31,17 +29,25 @@ const RokuAssetManager: React.FC<RokuAssetManagerProps> = ({ allMovies }) => {
     // Editor State
     const [tempAsset, setTempAsset] = useState<Partial<RokuAsset>>({});
 
-    useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        const unsub = db.collection('roku_assets').onSnapshot(snap => {
-            const fetched: Record<string, RokuAsset> = {};
-            snap.forEach(doc => { fetched[doc.id] = doc.data() as RokuAsset; });
-            setAssets(fetched);
+    const fetchAssets = useCallback(async () => {
+        try {
+            const password = sessionStorage.getItem('adminPassword');
+            const res = await fetch('/api/get-roku-assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            setAssets(json.assets as Record<string, RokuAsset>);
+        } catch (e) {
+            console.error('Failed to load Roku assets:', e);
+        } finally {
             setIsLoading(false);
-        });
-        return () => unsub();
+        }
     }, []);
+
+    useEffect(() => { fetchAssets(); }, [fetchAssets]);
 
     const handleOpenEditor = (movie: Movie) => {
         setSelectedMovie(movie);
@@ -51,17 +57,17 @@ const RokuAssetManager: React.FC<RokuAssetManagerProps> = ({ allMovies }) => {
     const handleCommit = async () => {
         if (!selectedMovie) return;
         setIsSaving(true);
-        const db = getDbInstance();
-        if (!db) return;
-
         try {
-            await db.collection('roku_assets').doc(selectedMovie.key).set({
-                ...tempAsset,
-                movieKey: selectedMovie.key,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-            
-            await db.collection('roku').doc('config').update({ _version: firebase.firestore.FieldValue.increment(1) });
+            const password = sessionStorage.getItem('adminPassword');
+            const res = await fetch('/api/save-roku-asset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, movieKey: selectedMovie.key, asset: tempAsset }),
+            });
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+
+            await fetchAssets();
             setSelectedMovie(null);
             alert("Elite assets synchronized.");
         } catch (e) { alert("Sync Failure."); } finally { setIsSaving(false); }
