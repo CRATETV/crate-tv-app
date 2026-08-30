@@ -22,6 +22,7 @@ import DiscoveryEngine from './DiscoveryEngine';
 import JuryRoomTab from './JuryRoomTab';
 import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
+import AdminRevenueFlowTab from './AdminRevenueFlowTab';
 import AdminShopRequestsTab from './AdminShopRequestsTab';
 import AdminShopRevenueTab from './AdminShopRevenueTab';
 import PwffAdminTab from './PwffAdminTab';
@@ -53,6 +54,7 @@ const ALL_TABS: Record<string, string> = {
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
+    revenueFlow: '💸 Revenue Flow',
     shopRequests: '🛍️ Shop Requests',
     shopRevenue: '🏷️ Shop Revenue',
     ticketCodes: '🎟️ Ticket Codes',
@@ -123,7 +125,7 @@ const AdminPage: React.FC = () => {
 
         // These tabs are NEVER visible to non-master admins regardless of
         // what is stored in Firestore — hard-coded security boundary
-        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'shopRevenue', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
+        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'revenueFlow', 'shopRevenue', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
 
         const specificTabs = permissions[role];
         // Only the pulse dashboard is always visible — everything else must be explicitly granted
@@ -574,6 +576,7 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
+                    {activeTab === 'revenueFlow' && <AdminRevenueFlowTab />}
                     {activeTab === 'shopRequests' && <AdminShopRequestsTab />}
                     {activeTab === 'shopRevenue' && <AdminShopRevenueTab />}
                     {activeTab === 'ticketCodes' && (

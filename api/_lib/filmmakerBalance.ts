@@ -2,6 +2,7 @@ import { Firestore } from 'firebase-admin/firestore';
 import { Movie } from '../../types.js';
 import { getCreditedNames, normalize } from './creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './shopRevenue.js';
+import { getFestivalConclusionTime } from './festivalTiming.js';
 
 export const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
 export const PARTNER_SHARE = 0.70;
@@ -9,6 +10,7 @@ export const PARTNER_SHARE = 0.70;
 export interface SquarePayment {
     amount_money: { amount: number };
     note?: string;
+    created_at?: string;
 }
 
 export const parseNote = (note: string | undefined): { type: string, title?: string } => {
@@ -17,6 +19,16 @@ export const parseNote = (note: string | undefined): { type: string, title?: str
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim() };
     const ticketMatch = note.match(/Watch Party Ticket: (.*)/) || note.match(/Live Screening Pass: (.*)/);
     if (ticketMatch) return { type: 'watchPartyTicket', title: ticketMatch[1].trim() };
+    // FIX: real Square notes for individual on-demand rentals are "VOD
+    // Rental: X" — never recognized here before, so this revenue was
+    // silently excluded from every filmmaker's balance. Confirmed live
+    // against real payment data (LUNA, Unremarkable, Charlie's Sister,
+    // etc. all use this exact format). Gated by festival timing in
+    // computeRevenueByFilm below — a festival film's rentals only count
+    // once the whole festival has concluded, per an explicit business
+    // rule (until then that money is Crate/Playhouse West's).
+    const vodMatch = note.match(/VOD Rental: (.*)/);
+    if (vodMatch) return { type: 'vodRental', title: vodMatch[1].trim() };
     return { type: 'other' };
 };
 
@@ -49,6 +61,56 @@ export async function fetchAllRelevantPayments(accessToken: string, locationId: 
     return allPayments;
 }
 
+export interface FilmRevenue {
+    donations: number;
+    tickets: number;
+    vodRentals: number;
+}
+
+// Shared by computeAllFilmmakerBalances (below) and
+// api/get-filmmaker-analytics.ts, so both apply the exact same festival
+// timing rule instead of two copies drifting apart. One
+// getFestivalConclusionTime call regardless of how many payments/movies —
+// callers already have `movies` loaded, so it's passed in rather than
+// refetched here.
+export async function computeRevenueByFilm(
+    db: Firestore,
+    allPayments: SquarePayment[],
+    movies: Movie[]
+): Promise<Record<string, FilmRevenue>> {
+    const festivalConclusionTime = await getFestivalConclusionTime(db);
+    const movieByTitle = new Map(movies.map(m => [m.title, m]));
+
+    const revenueByFilm: Record<string, FilmRevenue> = {};
+    const add = (title: string, field: keyof FilmRevenue, amount: number) => {
+        if (!revenueByFilm[title]) revenueByFilm[title] = { donations: 0, tickets: 0, vodRentals: 0 };
+        revenueByFilm[title][field] += amount;
+    };
+
+    for (const p of allPayments) {
+        const details = parseNote(p.note);
+        if (!details.title) continue;
+
+        if (details.type === 'donation') {
+            add(details.title, 'donations', p.amount_money.amount);
+        } else if (details.type === 'watchPartyTicket') {
+            add(details.title, 'tickets', p.amount_money.amount);
+        } else if (details.type === 'vodRental') {
+            const movie = movieByTitle.get(details.title);
+            if (movie?.isFestival) {
+                // Still an active/unresolved festival film — its individual
+                // rentals aren't the filmmaker's yet.
+                if (!festivalConclusionTime) continue;
+                const paidAtMs = p.created_at ? new Date(p.created_at).getTime() : 0;
+                if (paidAtMs < festivalConclusionTime.getTime()) continue;
+            }
+            add(details.title, 'vodRentals', p.amount_money.amount);
+        }
+    }
+
+    return revenueByFilm;
+}
+
 export interface FilmmakerBalanceSummary {
     directorName: string; // first-seen display casing from movie credits
     totalEarnings: number;
@@ -75,15 +137,7 @@ export async function computeAllFilmmakerBalances(db: Firestore): Promise<Map<st
 
     const movies: Movie[] = moviesSnapshot.docs.map(d => ({ key: d.id, ...d.data() } as Movie));
 
-    const revenueByFilm: Record<string, { donations: number, tickets: number }> = {};
-    allPayments.forEach(p => {
-        const details = parseNote(p.note);
-        if (details.title) {
-            if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
-            if (details.type === 'donation') revenueByFilm[details.title].donations += p.amount_money.amount;
-            if (details.type === 'watchPartyTicket') revenueByFilm[details.title].tickets += p.amount_money.amount;
-        }
-    });
+    const revenueByFilm = await computeRevenueByFilm(db, allPayments, movies);
 
     const paidOutByName: Record<string, number> = {};
     completedPayoutsSnapshot.forEach(doc => {
@@ -96,7 +150,7 @@ export async function computeAllFilmmakerBalances(db: Firestore): Promise<Map<st
     for (const movie of movies) {
         const rev = revenueByFilm[movie.title];
         if (!rev) continue;
-        const filmEarnings = Math.round((rev.donations + rev.tickets) * PARTNER_SHARE);
+        const filmEarnings = Math.round((rev.donations + rev.tickets + rev.vodRentals) * PARTNER_SHARE);
         if (filmEarnings <= 0) continue;
         for (const rawName of getCreditedNames(movie)) {
             const key = normalize(rawName);

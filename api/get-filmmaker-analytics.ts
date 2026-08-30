@@ -1,6 +1,6 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
-import { PARTNER_SHARE, parseNote, fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE } from './_lib/filmmakerBalance.js';
+import { PARTNER_SHARE, fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE, computeRevenueByFilm } from './_lib/filmmakerBalance.js';
 import { findAllCreditMatches, normalize } from './_lib/creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './_lib/shopRevenue.js';
 
@@ -93,18 +93,10 @@ export async function POST(request: Request) {
 
         const filmmakerFilms = findAllCreditMatches(Object.values(allMovies), directorName);
 
-        const revenueByFilm: Record<string, { donations: number, tickets: number }> = {};
-        allPayments.forEach(p => {
-            const details = parseNote(p.note);
-            if (details.title) {
-                if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
-                if (details.type === 'donation') revenueByFilm[details.title].donations += p.amount_money.amount;
-                if (details.type === 'watchPartyTicket') revenueByFilm[details.title].tickets += p.amount_money.amount;
-            }
-        });
+        const revenueByFilm = await computeRevenueByFilm(db, allPayments, Object.values(allMovies));
 
         const filmPerformances: FilmmakerFilmPerformance[] = await Promise.all(filmmakerFilms.map(async film => {
-            const rev = revenueByFilm[film.title] || { donations: 0, tickets: 0 };
+            const rev = revenueByFilm[film.title] || { donations: 0, tickets: 0, vodRentals: 0 };
             const sentimentSnap = await db.collection('movies').doc(film.key).collection('sentiment').orderBy('timestamp', 'asc').get();
             const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);
 
@@ -117,9 +109,11 @@ export async function POST(request: Request) {
                 rokuViews: rokuViewsByMovie[film.key] || 0,
                 grossDonations: rev.donations,
                 grossAdRevenue: rev.tickets, // Displaying tickets in the "Ad Revenue" slot for filmmaker view
+                grossRentalRevenue: rev.vodRentals,
                 netDonationEarnings: Math.round(rev.donations * PARTNER_SHARE),
                 netAdEarnings: Math.round(rev.tickets * PARTNER_SHARE),
-                totalEarnings: Math.round((rev.donations + rev.tickets) * PARTNER_SHARE),
+                netRentalEarnings: Math.round(rev.vodRentals * PARTNER_SHARE),
+                totalEarnings: Math.round((rev.donations + rev.tickets + rev.vodRentals) * PARTNER_SHARE),
                 sentimentData
             };
         }));
@@ -131,6 +125,7 @@ export async function POST(request: Request) {
         const analytics: FilmmakerAnalytics = {
             totalDonations: filmPerformances.reduce((s, f) => s + f.netDonationEarnings, 0),
             totalAdRevenue: filmPerformances.reduce((s, f) => s + f.netAdEarnings, 0),
+            totalRentalRevenue: filmPerformances.reduce((s, f) => s + f.netRentalEarnings, 0),
             totalShopRevenue,
             totalPaidOut,
             balance: Math.max(0, totalEarnings - totalPaidOut),

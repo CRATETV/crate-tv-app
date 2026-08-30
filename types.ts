@@ -162,6 +162,11 @@ export interface Movie {
   mainPageExpiry?: string;
   autoReleaseDate?: string;
   isUnlisted?: boolean;
+  /** Marks this as a festival film — gates individual VOD rental revenue
+   * behind the whole-festival-concluded rule in computeRevenueByFilm
+   * (api/_lib/filmmakerBalance.ts) until cleared (e.g. LUNA, once detached
+   * from its festival block and made a standalone for-sale catalog item). */
+  isFestival?: boolean;
   /** Exempts this film from the auto-unlist-after-a-week-past-festival cron
    * (api/auto-unlist-expired-festival-films.ts) — for films the festival
    * wants to keep in the paid catalog permanently, e.g. LUNA. */
@@ -572,8 +577,10 @@ export interface FilmmakerFilmPerformance {
   rokuViews?: number;
   grossDonations: number;
   grossAdRevenue: number;
+  grossRentalRevenue: number;
   netDonationEarnings: number;
   netAdEarnings: number;
+  netRentalEarnings: number;
   totalEarnings: number;
   sentimentData?: SentimentPoint[];
 }
@@ -581,6 +588,7 @@ export interface FilmmakerFilmPerformance {
 export interface FilmmakerAnalytics {
   totalDonations: number;
   totalAdRevenue: number;
+  totalRentalRevenue: number;
   totalShopRevenue: number;
   totalPaidOut: number;
   balance: number;

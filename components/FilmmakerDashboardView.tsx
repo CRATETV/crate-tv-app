@@ -297,10 +297,11 @@ const FilmmakerDashboardView: React.FC = () => {
 
             {analytics && analytics.films.length > 0 ? (
                 <>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 md:gap-6">
                         <StatCard title="Available Balance" value={formatCurrency(analytics.balance)} color="text-green-500" />
                         <StatCard title="Total Paid Out" value={formatCurrency(analytics.totalPaidOut)} />
                         <StatCard title="Ticket Revenue (Your 70%)" value={formatCurrency(analytics.totalAdRevenue)} color="text-indigo-400" />
+                        <StatCard title="Rental Revenue (Your 70%)" value={formatCurrency(analytics.totalRentalRevenue)} color="text-sky-400" />
                         <StatCard title="Tips Received (Your 70%)" value={formatCurrency(analytics.totalDonations)} color="text-emerald-400" />
                         <StatCard title="Shop Revenue" value={formatCurrency(analytics.totalShopRevenue)} color="text-amber-400" />
                     </div>
