@@ -25,7 +25,7 @@ const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ t
 
 // Counts up from 0 to `value` once it scrolls into view, easing out so it
 // settles rather than ticking to a stop.
-const AnimatedStat: React.FC<{ value: number; suffix?: string; label: string }> = ({ value, suffix = '', label }) => {
+const AnimatedStat: React.FC<{ value: number; suffix?: string; label: string; plainNumber?: boolean }> = ({ value, suffix = '', label, plainNumber = false }) => {
     const ref = useRef<HTMLDivElement>(null);
     const [displayValue, setDisplayValue] = useState(0);
     const hasAnimated = useRef(false);
@@ -53,7 +53,7 @@ const AnimatedStat: React.FC<{ value: number; suffix?: string; label: string }> 
     return (
         <div ref={ref} className="text-center space-y-3">
             <p className="text-5xl md:text-7xl font-black italic text-white tracking-tighter">
-                {displayValue.toLocaleString()}{suffix}
+                {plainNumber ? displayValue : displayValue.toLocaleString()}{suffix}
             </p>
             <p className="text-gray-500 font-black uppercase text-[10px] md:text-xs tracking-[0.3em]">{label}</p>
         </div>
@@ -230,7 +230,7 @@ const LandingPage: React.FC = () => {
                         <AnimatedStat value={totalFilmCount} suffix="+" label="Films Streaming" />
                         <AnimatedStat value={70} suffix="%" label="Goes To Filmmakers" />
                         <AnimatedStat value={3} label="Ways To Watch — Web, Roku, Cast" />
-                        <AnimatedStat value={2014} label="Founded" />
+                        <AnimatedStat value={2014} label="Founded" plainNumber />
                     </div>
                 </section>
 
