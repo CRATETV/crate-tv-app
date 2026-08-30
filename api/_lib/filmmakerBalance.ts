@@ -11,6 +11,14 @@ export interface SquarePayment {
     amount_money: { amount: number };
     note?: string;
     created_at?: string;
+    processing_fee?: { amount_money?: { amount: number } }[];
+}
+
+// Internal shape used only while fetching, before failed/refunded amounts
+// are stripped back out to the public SquarePayment shape.
+interface RawSquarePayment extends SquarePayment {
+    status?: string;
+    refunded_money?: { amount: number };
 }
 
 export const parseNote = (note: string | undefined): { type: string, title?: string } => {
@@ -42,7 +50,7 @@ export function getSquareCredentials(): { accessToken: string | undefined, locat
 
 export async function fetchAllRelevantPayments(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
     const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
-    let allPayments: SquarePayment[] = [];
+    let allPayments: RawSquarePayment[] = [];
     let cursor: string | undefined = undefined;
     do {
         const url = new URL(`${squareUrlBase}/v2/payments`);
@@ -58,7 +66,34 @@ export async function fetchAllRelevantPayments(accessToken: string, locationId: 
         if (data.payments) allPayments.push(...data.payments);
         cursor = data.cursor;
     } while (cursor);
-    return allPayments;
+
+    // This endpoint returns every payment regardless of outcome — FAILED
+    // and CANCELED attempts included — with no filter applied anywhere
+    // downstream. Confirmed live: 9 FAILED payments ($245.00) were being
+    // counted as real revenue in a partner sales report before this was
+    // caught. Only a payment that actually succeeded is real money.
+    //
+    // Refunds are a separate concern: Square doesn't revert a payment's
+    // own status when it's refunded (it stays COMPLETED) — the refund is
+    // tracked via refunded_money on the same payment instead. A payment
+    // refunded in full isn't real revenue either (confirmed live: 6 fully
+    // refunded payments, $60.00, all still showing COMPLETED). This nets
+    // the refunded amount back out of amount_money here, at the single
+    // shared source every revenue calculation in the app reads from,
+    // rather than requiring every caller to remember to handle it.
+    return allPayments
+        .filter(p => p.status === 'COMPLETED')
+        .map(p => {
+            const refunded = p.refunded_money?.amount || 0;
+            if (refunded <= 0) return { amount_money: p.amount_money, note: p.note, created_at: p.created_at, processing_fee: p.processing_fee };
+            return {
+                amount_money: { amount: Math.max(0, p.amount_money.amount - refunded) },
+                note: p.note,
+                created_at: p.created_at,
+                processing_fee: p.processing_fee,
+            };
+        })
+        .filter(p => p.amount_money.amount > 0); // fully-refunded payments contribute nothing
 }
 
 export interface FilmRevenue {
