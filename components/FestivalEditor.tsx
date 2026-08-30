@@ -289,6 +289,11 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                   <label className="form-label">Festival End Date (Calendar)</label>
                   <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleConfigChange} className="form-input bg-black/40" />
               </div>
+              <div>
+                  <label className="form-label">Next Festival Start Date</label>
+                  <input type="datetime-local" name="nextFestivalStartDate" value={formatISOForInput(config.nextFestivalStartDate || '')} onChange={handleConfigChange} className="form-input bg-black/40" />
+                  <p className="text-[8px] text-gray-700 uppercase font-bold mt-2">Shown as a countdown on /pwff-philly2026 once this year's blocks have all concluded. Update this each year so the countdown-to-next-festival cycle keeps working without a code change.</p>
+              </div>
               <div className="flex items-center justify-between gap-4 bg-black/20 p-6 rounded-2xl border border-white/5 md:col-span-2">
                 <div>
                     <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Portal Access</span>

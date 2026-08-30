@@ -500,6 +500,22 @@ const ProgrammeMode: React.FC = () => {
         return upcoming[0] ? { block: upcoming[0].block, isLive: false, start: upcoming[0].start } : null;
     }, [allBlocks, activeParties, liveOrNextTick]);
 
+    // ── NEXT-FESTIVAL COUNTDOWN ────────────────────────────────────────────
+    // Once this year's festival has actually wrapped (admin has flipped
+    // isFestivalLive off — not just a gap between blocks mid-festival,
+    // which would also show no live/upcoming block) AND next year's date
+    // has been set in the Festival Editor, this replaces the opening-night
+    // countdown with one counting down to next year's festival instead —
+    // durable across every future festival without a code change, as long
+    // as nextFestivalStartDate gets set once each year.
+    const nextFestivalDate = useMemo(() => {
+        if (festivalConfig?.isFestivalLive) return null; // festival still running/upcoming
+        if (liveOrNextBlock) return null; // something in this festival is still live or scheduled
+        const d = festivalConfig?.nextFestivalStartDate;
+        if (!d || new Date(d).getTime() <= Date.now()) return null;
+        return d;
+    }, [festivalConfig, liveOrNextBlock]);
+
     return (
         <div className="min-h-screen bg-[#050505] text-white">
 
@@ -533,6 +549,15 @@ const ProgrammeMode: React.FC = () => {
                             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Opening Night In</p>
                             <div className="flex justify-center">
                                 <Countdown targetDate={openingNightDate} />
+                            </div>
+                        </div>
+                    )}
+
+                    {nextFestivalDate && (
+                        <div className="mb-10">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Next Festival In</p>
+                            <div className="flex justify-center">
+                                <Countdown targetDate={nextFestivalDate} />
                             </div>
                         </div>
                     )}

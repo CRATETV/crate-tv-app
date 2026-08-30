@@ -263,7 +263,12 @@ export interface FestivalConfig {
   description: string;
   startDate: string;
   endDate: string;
-  payoutRecipientId?: string; 
+  // Set once per year, ahead of time — once the current festival's blocks
+  // have all concluded, PwffPage shows a countdown to this date instead
+  // of the opening-night countdown, so the "countdown to next year" cycle
+  // is durable across festivals without a code change each time.
+  nextFestivalStartDate?: string;
+  payoutRecipientId?: string;
   payoutCardId?: string;
   payoutLastLinked?: any;
 }
