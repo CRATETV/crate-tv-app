@@ -337,7 +337,8 @@ const TeaserMode: React.FC<{
     name?: string;
     description?: string;
     tagline?: string;
-}> = ({ date, name, description, tagline }) => (
+    countdownDate?: string;
+}> = ({ date, name, description, tagline, countdownDate }) => (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center px-4 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto space-y-8 pt-32 pb-16">
@@ -351,6 +352,15 @@ const TeaserMode: React.FC<{
                 <div className="bg-white/5 border border-white/8 rounded-2xl px-8 py-5 inline-block">
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600 mb-1">Festival Date</p>
                     <p className="text-2xl font-black text-white">{date}</p>
+                </div>
+            )}
+
+            {countdownDate && new Date(countdownDate) > new Date() && (
+                <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Next Festival In</p>
+                    <div className="flex justify-center">
+                        <Countdown targetDate={countdownDate} />
+                    </div>
                 </div>
             )}
             {description && (
@@ -807,7 +817,7 @@ function ordinal(n: number): string {
 }
 
 const PwffPage: React.FC = () => {
-    const { settings, isLoading, livePartyMovie, activeParties, allPartyStates, festivalData, movies } = useFestival();
+    const { settings, isLoading, livePartyMovie, activeParties, allPartyStates, festivalData, movies, festivalConfig } = useFestival();
     const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user, authInitialized } = useAuth();
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
@@ -869,6 +879,7 @@ const PwffPage: React.FC = () => {
                 name={settings?.pwffFestivalName}
                 description={settings?.pwffTeaserDescription}
                 tagline={settings?.pwffTeaserTagline}
+                countdownDate={festivalConfig?.nextFestivalStartDate}
             />
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];

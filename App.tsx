@@ -206,15 +206,6 @@ const App: React.FC = () => {
         const isPwffPromoWindow = new Date() <= PWFF_END;
         if (isPwffPromoWindow && !dismissedBannerKeys.has('pwff-promo')) return 'GENERAL_FESTIVAL';
 
-        // ── PWFF REPLAY BANNER ──────────────────────────────────────────
-        // Once the live festival weekend itself is over, films move into the
-        // on-demand catalog for a limited rewatch window. This gives
-        // departed visitors a reason to come back and a direct path to the
-        // program, separate from the (now-expired) live-event promo above.
-        const REPLAY_END = new Date('2026-08-30T23:59:59-04:00'); // 7 days from festival end
-        const isReplayWindow = new Date() > PWFF_END && new Date() <= REPLAY_END;
-        if (isReplayWindow && !dismissedBannerKeys.has('pwff-replay')) return 'FESTIVAL_REPLAY';
-
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, dismissedBannerKeys, activeParties, allPartyStates]);
 
@@ -525,7 +516,7 @@ const App: React.FC = () => {
     const mainPaddingTop = useMemo(() => {
         const isMobile = window.innerWidth < 768;
         // Only the festival banner is tall on mobile — watch party banner is always slim 48px
-        const isFestivalBanner = stableBannerType === 'GENERAL_FESTIVAL' || stableBannerType === 'FESTIVAL_REPLAY';
+        const isFestivalBanner = stableBannerType === 'GENERAL_FESTIVAL';
         const bannerHeight = stableBannerType !== 'NONE'
             ? (isFestivalBanner && isMobile ? 112 : 48)
             : 0;
@@ -675,62 +666,11 @@ const App: React.FC = () => {
                 );
             })()}
 
-            {activeBannerType === 'FESTIVAL_REPLAY' && (() => {
-                const festName = settings?.pwffFestivalName || 'Playhouse West Film Festival — Philadelphia 2026';
-                return (
-                    <div
-                        onClick={() => { window.history.pushState({}, '', `/pwff${settings?.pwffUrlYear || '-philly2026'}`); window.dispatchEvent(new Event('pushstate')); }}
-                        className="fixed top-0 left-0 right-0 z-[110] cursor-pointer shadow-xl"
-                        style={{
-                            background: "linear-gradient(135deg, #3d2c00, #b45309, #f59e0b)",
-                            paddingTop: 'env(safe-area-inset-top)',
-                        }}
-                    >
-                        {/* Mobile: tall, stacked, prominent */}
-                        <div className="md:hidden px-4 py-3 text-white">
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                    <span className="relative flex h-3 w-3 flex-shrink-0 mt-0.5">
-                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                                    </span>
-                                    <div className="min-w-0">
-                                        <p className="font-black uppercase text-[10px] tracking-widest text-white/70 leading-none mb-1">Now In Catalog</p>
-                                        <p className="font-black text-base leading-tight text-white">Experience The Festival Again</p>
-                                    </div>
-                                </div>
-                                <button onClick={(e) => { e.stopPropagation(); dismissBanner('pwff-replay'); }} className="text-white/50 hover:text-white text-2xl leading-none flex-shrink-0 -mt-1">&times;</button>
-                            </div>
-                            <button className="mt-3 w-full bg-white text-amber-900 font-black py-2.5 rounded-xl text-sm uppercase tracking-widest shadow-md">
-                                Explore The Program →
-                            </button>
-                        </div>
-
-                        {/* Desktop: slim single row */}
-                        <div className="hidden md:flex items-center justify-between px-8 h-12 text-white">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                                </span>
-                                <span className="font-black uppercase text-[10px] tracking-widest truncate">
-                                    Experience The Festival Again — {festName}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <button className="bg-white text-amber-900 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-md whitespace-nowrap">
-                                    Explore The Program →
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); dismissBanner('pwff-replay'); }} className="text-white/50 hover:text-white text-xl leading-none ml-1">&times;</button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()}
-
             <Header 
                 searchQuery={searchQuery} 
                 onSearch={onSearch} 
                 onMobileSearchClick={handleSearchClick} 
-                topOffset={stableBannerType !== 'NONE' ? ((stableBannerType === 'GENERAL_FESTIVAL' || stableBannerType === 'FESTIVAL_REPLAY') && window.innerWidth < 768 ? '7rem' : '3rem') : '0px'}
+                topOffset={stableBannerType !== 'NONE' ? (stableBannerType === 'GENERAL_FESTIVAL' && window.innerWidth < 768 ? '7rem' : '3rem') : '0px'}
                 hideLiveSpotlight={stableBannerType !== 'NONE'}
             />
 
