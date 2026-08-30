@@ -83,6 +83,16 @@ export async function computeRevenueAttribution(db: Firestore, payments: SquareP
             });
         } else if (details.type === 'vodRental' && details.title) {
             const movie = movieByTitle.get(details.title);
+            // This report is specifically about festival money — an
+            // ordinary catalog rental for a non-festival title (confirmed
+            // live: "A Fool And His Money", a public-domain classic,
+            // rented months before this festival even existed) isn't
+            // festival revenue at all and was being swept into the
+            // festival total by default, since qualifiesForFilmmaker
+            // defaults true whenever a title isn't recognized as a
+            // festival film. Skip it entirely instead — it doesn't belong
+            // in ANY of this report's buckets, festival or filmmaker.
+            if (!movie?.isFestival) continue;
             let qualifiesForFilmmaker = true;
             if (movie?.isFestival) {
                 if (!festivalConclusionTime) {
