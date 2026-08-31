@@ -67,7 +67,11 @@ export async function GET(request: Request) {
     
     // Transform the application's movie data into the format Roku Direct Publisher requires
     const rokuMovies = (Object.values(moviesData) as Movie[])
-      .filter((movie): movie is Movie => !!movie && isReleased(movie) && !!movie.fullMovie)
+      // SECURITY: this feed is submitted to Roku's public channel-store search index — no
+      // auth/device concept at all, so a paid title has no session to gate against. It used
+      // to expose every released movie's raw fullMovie URL regardless of price. Excluding
+      // paid titles entirely; they remain available (properly gated) through roku-feed.ts.
+      .filter((movie): movie is Movie => !!movie && isReleased(movie) && !!movie.fullMovie && !movie.isForSale && !movie.isWatchPartyPaid)
       .map((movie: Movie) => {
         const releaseDate = toDate(movie.releaseDateTime) || new Date();
         return {
