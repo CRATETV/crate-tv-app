@@ -498,10 +498,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   };
 
   useEffect(() => {
-      if (playerMode === 'full' && videoRef.current && hasAccess) {
+      // SECURITY follow-on: playableUrl used to be synchronously available
+      // (movie.fullMovie) the instant hasAccess/playerMode flipped, so this
+      // effect firing immediately always had something to play(). Now that it's
+      // an async-fetched signed URL, firing before it resolves would call
+      // play() on a <video> with no src yet — it fails silently (readyState 0),
+      // and since nothing else re-triggers playContent(), playback could just
+      // never start even once the src does arrive (no autoPlay attribute is
+      // set on purpose, see the comment below). Guarding on playableUrl too.
+      if (playerMode === 'full' && videoRef.current && hasAccess && playableUrl) {
           playContent();
       }
-  }, [playerMode, hasAccess, playContent, currentSearch]);
+  }, [playerMode, hasAccess, playableUrl, playContent, currentSearch]);
 
   // Registers this video as real OS-level "Now Playing" media. Without
   // this, iOS has no way to recognize the video specifically when casting
@@ -695,9 +703,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             // that gap matters specifically on iOS Safari.
                             // manualLaunchRef tells playContent() not to also
                             // seek+play once its effect fires a moment later.
-                            manualLaunchRef.current = true;
-                            if (videoRef.current) videoRef.current.currentTime = 0;
-                            videoRef.current?.play().catch(() => setIsPaused(true));
+                            //
+                            // SECURITY follow-on: only do this if playableUrl is
+                            // already resolved — a click landing before the signed
+                            // URL fetch finishes has no src to play() yet, so that
+                            // call would fail silently. Claiming manualLaunchRef
+                            // anyway would tell playContent()'s effect (which fires
+                            // again once the URL arrives) to skip its own play()
+                            // too, on the assumption this one already succeeded —
+                            // leaving the video stuck on a loaded-but-never-played
+                            // frame. Falling through to setPlayerMode('full') alone
+                            // lets that effect do the seek+play once there's
+                            // actually something to play.
+                            if (playableUrl) {
+                                manualLaunchRef.current = true;
+                                if (videoRef.current) videoRef.current.currentTime = 0;
+                                videoRef.current?.play().catch(() => setIsPaused(true));
+                            }
                             setPlayerMode('full');
                         }}
                     >
@@ -771,9 +793,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <button
                             onClick={() => {
                                 if (!isMovieReleased(movie)) { setIsDetailsModalOpen(true); return; }
-                                manualLaunchRef.current = true;
-                                if (videoRef.current) videoRef.current.currentTime = 0;
-                                videoRef.current?.play().catch(() => setIsPaused(true));
+                                // See the matching comment on the poster-mode click handler above —
+                                // only claim manualLaunchRef when there's actually a signed URL to play.
+                                if (playableUrl) {
+                                    manualLaunchRef.current = true;
+                                    if (videoRef.current) videoRef.current.currentTime = 0;
+                                    videoRef.current?.play().catch(() => setIsPaused(true));
+                                }
                                 setPlayerMode('full');
                             }}
                             className="w-full flex items-center justify-center gap-2 bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm shadow-xl hover:bg-gray-100 active:scale-95 transition-all mb-3"
