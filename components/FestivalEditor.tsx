@@ -11,6 +11,10 @@ interface MovieSelectorModalProps {
 const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, onSave, onClose }) => {
   const [selectedKeys, setSelectedKeys] = useState(new Set(initialSelectedKeys));
   const [searchTerm, setSearchTerm] = useState('');
+  // Clicking the "N Selected" pill filters the list down to just the
+  // selected films — previously the only way to see what was already
+  // checked was scrolling/searching the entire catalog by eye.
+  const [showOnlySelected, setShowOnlySelected] = useState(false);
 
   const toggleSelection = (key: string) => {
     const newSelection = new Set(selectedKeys);
@@ -28,6 +32,7 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 
   const filteredMovies = allMovies
     .filter(movie => (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(movie => !showOnlySelected || selectedKeys.has(movie.key))
     .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
   return (
@@ -36,7 +41,13 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
         <div className="p-8 border-b border-white/5">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Program Works</h3>
-            <span className="text-[10px] font-black bg-red-600/20 text-red-500 px-3 py-1 rounded-full uppercase">{selectedKeys.size} Selected</span>
+            <button
+              onClick={() => setShowOnlySelected(prev => !prev)}
+              className={`text-[10px] font-black px-3 py-1 rounded-full uppercase transition-all ${showOnlySelected ? 'bg-red-600 text-white' : 'bg-red-600/20 text-red-500 hover:bg-red-600/30'}`}
+              title={showOnlySelected ? 'Showing selected only — click to show all' : 'Click to show only selected films'}
+            >
+              {selectedKeys.size} Selected
+            </button>
           </div>
           <input
             type="text"
@@ -47,6 +58,9 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
           />
         </div>
         <div className="p-6 overflow-y-auto scrollbar-hide space-y-2">
+            {filteredMovies.length === 0 && showOnlySelected && (
+              <p className="text-center text-gray-600 text-xs uppercase tracking-widest font-black py-10">No films selected yet</p>
+            )}
             {filteredMovies.map(movie => (
               <label key={movie.key} className={`flex items-center space-x-4 p-4 rounded-2xl transition-all border cursor-pointer ${selectedKeys.has(movie.key) ? 'bg-red-600/10 border-red-500/30' : 'bg-white/5 border-transparent hover:border-white/10'}`}>
                 <input
