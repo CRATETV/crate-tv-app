@@ -1,10 +1,12 @@
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
+import { Firestore } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
+import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -16,6 +18,53 @@ const staticPriceMap: Record<string, number> = {
   crateFestPass: 1500,
   juryPass: 2500,
 };
+
+// A regular catalog rental gets a flat 7 days from purchase. A festival
+// film is different: access is meant to end when the festival's own
+// rewatch window closes, not a fresh week from whenever within that
+// window someone happened to buy it — confirmed explicitly: "access to
+// film festival films except LUNA expire today [when the festival's week
+// is over]. it dosen't stay live a week from when they bought it. it
+// stays live a week after the festival." A film exempted via
+// keepInCatalogAfterFestival (e.g. LUNA) is a normal standalone catalog
+// title once detached from its block, so it keeps the flat 7-day rule.
+async function computeRentalExpiry(db: Firestore, movieKey: string): Promise<Date> {
+    const flatWeek = new Date();
+    flatWeek.setDate(flatWeek.getDate() + 7);
+
+    try {
+        const movieDoc = await db.collection('movies').doc(movieKey).get();
+        const movie = movieDoc.data();
+        if (!movie?.isFestival || movie?.keepInCatalogAfterFestival) return flatWeek;
+
+        const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+        let blockCutoffMs: number | null = null;
+        daysSnap.forEach(dayDoc => {
+            for (const block of (dayDoc.data().blocks || [])) {
+                if (!(block.movieKeys || []).includes(movieKey)) continue;
+                const ref = block.festivalEndTime || block.screeningStartTime;
+                if (!ref) continue;
+                const t = new Date(ref).getTime();
+                if (isNaN(t)) continue;
+                const cutoff = t + FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS;
+                if (blockCutoffMs === null || cutoff > blockCutoffMs) blockCutoffMs = cutoff;
+            }
+        });
+
+        // No block found (already detached, or data gap) — fall back to
+        // the flat week rather than granting an unintentionally-permanent
+        // rental.
+        if (blockCutoffMs === null) return flatWeek;
+        // Never grant MORE than the flat week even if the festival cutoff
+        // is somehow further out (e.g. someone buying right as the
+        // festival opens) — this only ever shortens the window, never
+        // extends it.
+        return new Date(Math.min(blockCutoffMs, flatWeek.getTime()));
+    } catch (e) {
+        console.error('[Payment API] computeRentalExpiry fallback to flat week:', e);
+        return flatWeek;
+    }
+}
 
 // Atomically reserves one capacity slot for a block, if the block has a
 // capacity set. This used to be a plain read ("is ticketsSold >= capacity?")
@@ -567,12 +616,11 @@ export async function POST(request: Request) {
     // VOD rental — unlock individual film
     if (db && uid && paymentType === 'movie' && itemId) {
         try {
-            const rentalExpiry = new Date();
-            rentalExpiry.setDate(rentalExpiry.getDate() + 7); // 7 days
+            const rentalExpiry = await computeRentalExpiry(db, itemId);
             await db.collection('users').doc(uid).set({
                 rentals: { [itemId]: rentalExpiry.toISOString() }
             }, { merge: true });
-            console.log(`[Payment API] Unlocked rental ${itemId} for user ${uid}`);
+            console.log(`[Payment API] Unlocked rental ${itemId} for user ${uid}, expires ${rentalExpiry.toISOString()}`);
         } catch (e) {
             console.error('[Payment API] Failed to unlock rental:', e);
         }
