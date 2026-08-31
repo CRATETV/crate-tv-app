@@ -19,23 +19,31 @@ const staticPriceMap: Record<string, number> = {
   juryPass: 2500,
 };
 
-// A regular catalog rental gets a flat 7 days from purchase. A festival
-// film is different: access is meant to end when the festival's own
-// rewatch window closes, not a fresh week from whenever within that
-// window someone happened to buy it — confirmed explicitly: "access to
-// film festival films except LUNA expire today [when the festival's week
-// is over]. it dosen't stay live a week from when they bought it. it
-// stays live a week after the festival." A film exempted via
-// keepInCatalogAfterFestival (e.g. LUNA) is a normal standalone catalog
-// title once detached from its block, so it keeps the flat 7-day rule.
+// A regular standalone catalog rental (e.g. LUNA once detached from its
+// festival block) is a short 2-day window from purchase, not a full
+// week — confirmed explicitly: "titles that customers pay for like Luna
+// its available for 2 days. after 2 days they have to repay to watch.
+// that way we can keep generating revenue." Applies sitewide to every
+// standalone paid title, present and future, not just LUNA specifically.
+//
+// A festival film still on its block is different: access is meant to
+// end when the festival's own rewatch window closes, not a fresh window
+// from whenever within that period someone happened to buy it —
+// confirmed explicitly: "access to film festival films except LUNA
+// expire today [when the festival's week is over]. it dosen't stay live
+// a week from when they bought it. it stays live a week after the
+// festival." A film exempted via keepInCatalogAfterFestival (e.g. LUNA)
+// is a normal standalone catalog title once detached from its block, so
+// it gets the standard 2-day rule like any other regular rental.
+const STANDARD_RENTAL_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
+
 async function computeRentalExpiry(db: Firestore, movieKey: string): Promise<Date> {
-    const flatWeek = new Date();
-    flatWeek.setDate(flatWeek.getDate() + 7);
+    const standard = new Date(Date.now() + STANDARD_RENTAL_WINDOW_MS);
 
     try {
         const movieDoc = await db.collection('movies').doc(movieKey).get();
         const movie = movieDoc.data();
-        if (!movie?.isFestival || movie?.keepInCatalogAfterFestival) return flatWeek;
+        if (!movie?.isFestival || movie?.keepInCatalogAfterFestival) return standard;
 
         const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
         let blockCutoffMs: number | null = null;
@@ -52,17 +60,17 @@ async function computeRentalExpiry(db: Firestore, movieKey: string): Promise<Dat
         });
 
         // No block found (already detached, or data gap) — fall back to
-        // the flat week rather than granting an unintentionally-permanent
-        // rental.
-        if (blockCutoffMs === null) return flatWeek;
-        // Never grant MORE than the flat week even if the festival cutoff
-        // is somehow further out (e.g. someone buying right as the
+        // the standard window rather than granting an unintentionally-
+        // permanent rental.
+        if (blockCutoffMs === null) return standard;
+        // Never grant MORE than the standard window even if the festival
+        // cutoff is somehow further out (e.g. someone buying right as the
         // festival opens) — this only ever shortens the window, never
         // extends it.
-        return new Date(Math.min(blockCutoffMs, flatWeek.getTime()));
+        return new Date(Math.min(blockCutoffMs, standard.getTime()));
     } catch (e) {
-        console.error('[Payment API] computeRentalExpiry fallback to flat week:', e);
-        return flatWeek;
+        console.error('[Payment API] computeRentalExpiry fallback to standard window:', e);
+        return standard;
     }
 }
 
