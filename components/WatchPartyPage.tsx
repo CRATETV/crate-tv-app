@@ -1949,8 +1949,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="absolute inset-0 bg-black/80" />
                     </div>
                 )}
-                {/* Hidden preload — buffers film while waiting */}
-                {movie.fullMovie && (
+                {/* Hidden preload — buffers film while waiting.
+                    SECURITY: gated on hasAccess, same as the real player below — this element
+                    used to buffer the raw file for anyone on this screen regardless of payment. */}
+                {hasAccess && movie.fullMovie && (
                     <video src={movie.fullMovie} preload="auto" muted playsInline
                         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
                         aria-hidden="true"

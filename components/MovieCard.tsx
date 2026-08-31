@@ -69,7 +69,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     !!(movie.autoReleaseDate && new Date(movie.autoReleaseDate) > now && (movie.isForSale || movie.isWatchPartyPaid)),
   [movie.autoReleaseDate, movie.isForSale, movie.isWatchPartyPaid]);
 
-  const videoSrc = !isActuallyComingSoon ? movie.fullMovie : '';
+  // SECURITY: hover/preview playback must never use the full paid movie file — it has
+  // no access check at all here, so it would stream the entire film to any visitor just
+  // from hovering a locked poster. Use the dedicated trailer clip instead.
+  const videoSrc = !isActuallyComingSoon ? movie.trailer : '';
 
   const cleanSynopsis = (html: string) =>
     new DOMParser().parseFromString(html, 'text/html').body.textContent || '';
@@ -89,12 +92,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       else setExpandAnchor('center');
     }
 
-    if (movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube'))
-      window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.fullMovie }));
+    if (movie.trailer && !movie.trailer.includes('vimeo') && !movie.trailer.includes('youtube'))
+      window.dispatchEvent(new CustomEvent('preloadVideo', { detail: movie.trailer }));
 
     // Start preloading video immediately — don't wait for card to open
-    if (preloadRef.current && movie.fullMovie && !movie.fullMovie.includes('vimeo') && !movie.fullMovie.includes('youtube')) {
-      preloadRef.current.src = movie.fullMovie;
+    if (preloadRef.current && movie.trailer && !movie.trailer.includes('vimeo') && !movie.trailer.includes('youtube')) {
+      preloadRef.current.src = movie.trailer;
       preloadRef.current.load();
     }
 
