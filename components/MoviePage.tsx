@@ -148,11 +148,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // blank/generic "Unlock Now" with no number attached.
   const displayPrice = movie?.salePrice ?? (parentFestivalBlock ? 5 : undefined);
 
-  // ── CDN DELIVERY — REVERTED AGAIN ──────────────────────────────────────
-  // See the long note in WatchPartyPage.tsx — a live test hit a format
-  // error on a film whose path didn't resolve correctly through the CDN,
-  // even though a different film worked in manual testing. Reverted to
-  // the direct URL until every film's CDN path is verified individually.
   // ── EPISODE OVERRIDE ─────────────────────────────────────────────────
   // FIX (user report — clicking a specific episode of a series still
   // played the parent entry's own film): MovieDetailsModal.tsx has always
@@ -162,13 +157,53 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // was (in practice, whichever episode was uploaded first). This reads
   // that override when present; regular, non-series films are completely
   // unaffected since they'll never have this param set.
+  //
+  // NOTE: episode playback still uses the raw, unsigned URL below — it was
+  // deliberately left out of the signed-URL migration (see SECURITY comment
+  // on signedUrl below) as its own follow-up, not silently carried over.
   const episodeStreamOverride = useMemo(() => {
       const params = new URLSearchParams(currentSearch);
       const raw = params.get('stream');
       return raw ? decodeURIComponent(raw) : null;
   }, [currentSearch]);
 
-  const playableUrl = episodeStreamOverride || movie?.fullMovie;
+  const embedUrl = movie ? getEmbedUrl(movie.fullMovie) : null;
+
+  // SECURITY: the real movie file used to be read directly off movie.fullMovie —
+  // a permanent, unsigned URL handed to every visitor regardless of payment (see
+  // the security plan). Once hasAccess is real, fetch a short-lived signed URL
+  // from the server (which re-checks entitlement itself, independent of this
+  // client's own hasAccess) instead of using the raw file. Fetched once per
+  // access grant and never swapped back in mid-playback — see the long-standing
+  // CDN-delivery incident notes in WatchPartyPage.tsx for exactly why a live
+  // src swap on an already-playing element is the thing to avoid here. A
+  // session that outlives the signed URL's TTL is a known, accepted gap for
+  // now, not silently handled.
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  useEffect(() => {
+      setSignedUrl(null);
+      if (!hasAccess || !movie || embedUrl || episodeStreamOverride) return;
+      let cancelled = false;
+      (async () => {
+          try {
+              const idToken = await getUserIdToken();
+              if (!idToken) return;
+              const res = await fetch('/api/get-stream-url', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ movieKey, mode: 'ondemand', idToken }),
+              });
+              if (!res.ok) { console.error('[MoviePage] get-stream-url failed:', res.status); return; }
+              const data = await res.json();
+              if (!cancelled) setSignedUrl(data.url);
+          } catch (e) {
+              console.error('[MoviePage] failed to fetch signed stream URL:', e);
+          }
+      })();
+      return () => { cancelled = true; };
+  }, [hasAccess, movie, movieKey, embedUrl, episodeStreamOverride, getUserIdToken]);
+
+  const playableUrl = episodeStreamOverride || signedUrl || undefined;
 
   // FEATURE (user request — episodes should auto-advance like festival
   // blocks do): finds the next episode after whichever one is currently
@@ -507,8 +542,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // pages — only on WatchPartyPage, which does render this. Wiring it up so
   // paid content is actually protected everywhere it's checked.
   if (sessionKicked) return <SessionKickedScreen reason={kickReason} otherSessionAt={otherSessionAt} />;
-
-  const embedUrl = getEmbedUrl(movie.fullMovie);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050505] text-white">

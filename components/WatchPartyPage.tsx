@@ -665,6 +665,81 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
 
+    const hasAccess = useMemo(() => {
+        if (isControllerMode || isBackstageVerified) return true;
+        if (!movie) return false;
+        if (unlockedWatchPartyKeys.has(movieKey)) return true;
+        if (hasFestivalAllAccess) return true;
+        if (unlockedFestivalBlockIds.has(movieKey)) return true;
+
+        // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's
+        // (same || [] guard as the movie useMemo above — see that comment)
+        const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.movieKeys.includes(movieKey));
+        if (parentBlock) {
+            if (unlockedFestivalBlockIds.has(parentBlock.id)) return true;
+            // SECURITY: if block price is not set, default to PAID (not free)
+            // Admin must explicitly set price to 0 to make a block free
+            // This prevents accidental free access from missing price config
+            if (parentBlock.price === 0) return true;
+            const exp = rentals[movieKey];
+            if (exp && new Date(exp) > new Date()) return true;
+            return false;
+        }
+
+        if (!movie.isWatchPartyPaid) return true;
+        const exp = rentals[movieKey];
+        return !!(exp && new Date(exp) > new Date());
+    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
+
+    // SECURITY: this used to read movie.fullMovie directly — a permanent, unsigned
+    // URL handed to every visitor regardless of payment (see the security plan).
+    // Once hasAccess is real, fetch a short-lived signed URL from the server
+    // (which independently re-checks entitlement, matching this page's own
+    // hasAccess rules exactly — see api/_lib/entitlements.ts's 'live' mode)
+    // instead. Fetched once per access grant and never swapped back in
+    // mid-playback — the CDN-delivery incident this exact page used to carry a
+    // long comment about (see git history: a live party hit MEDIA_ELEMENT_ERROR
+    // on a film whose rewritten URL didn't resolve, even though a different
+    // film worked in manual testing) is exactly the failure mode a live src
+    // swap on an already-playing element would risk repeating.
+    //
+    // Declared early (right after movie/hasAccess, before every effect below
+    // that reads playableUrl) rather than near where hasAccess used to live
+    // further down — those effects reference it in their dependency arrays,
+    // which are evaluated eagerly on every render, so it has to exist before
+    // they run or React throws on the temporal-dead-zone reference.
+    //
+    // isControllerMode never reaches this (it returns its own remote-control UI
+    // below, before any video renders) and isBackstageVerified — a director/
+    // filmmaker doing a live Q&A via a shared backstage key, not a real
+    // rental/pass — has no Firestore-backed entitlement to check, so it keeps
+    // using the raw URL rather than 403ing a trusted host out of their own event.
+    const [signedUrl, setSignedUrl] = useState<string | null>(null);
+    useEffect(() => {
+        setSignedUrl(null);
+        if (!hasAccess || !movie || isBackstageVerified || movie.isLiveStream) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const idToken = await getUserIdToken();
+                if (!idToken) return;
+                const res = await fetch('/api/get-stream-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieKey, mode: 'live', idToken }),
+                });
+                if (!res.ok) { console.error('[WatchPartyPage] get-stream-url failed:', res.status); return; }
+                const data = await res.json();
+                if (!cancelled) setSignedUrl(data.url);
+            } catch (e) {
+                console.error('[WatchPartyPage] failed to fetch signed stream URL:', e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [hasAccess, movie, movieKey, isBackstageVerified, getUserIdToken]);
+
+    const playableUrl = isBackstageVerified ? movie?.fullMovie : (signedUrl || undefined);
+
     // ── LATE JOIN INTO A BLOCK, WITH ANOTHER FILM STILL TO COME ──────────
     // The catch-up watchdog above (search CATCH_UP_LATE_JOIN_THRESHOLD_SEC)
     // recovers from a bad seek by retrying, but it's still gambling on an
@@ -1184,7 +1259,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // ── HLS.JS ATTACHMENT — Android Chrome doesn't support HLS natively ──────
     useEffect(() => {
         const video = videoRef.current;
-        const src = movie?.fullMovie;
+        // SECURITY: must be playableUrl (the signed URL), not the raw movie.fullMovie —
+        // hls.attachMedia() below takes over the element's actual source via MediaSource
+        // Extensions, so attaching hls.js to the raw URL would silently undo the signed-
+        // URL fix above for any HLS-hosted title (there is at least one live today).
+        const src = playableUrl;
         if (!video || !src || !src.includes('.m3u8')) return;
 
         // iOS Safari supports HLS natively — skip hls.js
@@ -1257,7 +1336,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return () => {
             if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
         };
-    }, [movie?.fullMovie]);
+    }, [playableUrl]);
 
     // ── CARRY "UNMUTED" THROUGH TO THE NEXT FILM ──────────────────────────
     // Once a viewer has unmuted, they should never be asked to do it again
@@ -1276,14 +1355,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // but the film should still actually start (muted) rather than
             // sitting frozen. Mirrors the same fix in the mount effect above.
             const mutedVideo = videoRef.current;
-            if (mutedVideo && movie?.fullMovie) {
+            if (mutedVideo && playableUrl) {
                 mutedVideo.muted = true;
                 mutedVideo.play().catch(() => {});
             }
             return;
         }
         const video = videoRef.current;
-        if (!video || !movie?.fullMovie) return;
+        if (!video || !playableUrl) return;
         video.muted = false;
 
         // A gesture happening ANYWHERE earlier on the page (tapping "Join
@@ -1312,7 +1391,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setTimeout(() => { if (video.paused) tryPlay(); }, delay)
         );
         return () => { cancelled = true; retries.forEach(clearTimeout); };
-    }, [movie?.fullMovie, needsUserGesture]);
+    }, [playableUrl, needsUserGesture]);
 
     // ── STALLED-FOREVER DETECTION ──────────────────────────────────────────
     // A video that never fires a single error event can still just hang
@@ -1327,7 +1406,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // surfaces the same error-and-retry overlay used for hard failures
     // instead of leaving the viewer staring at a silent blank screen.
     useEffect(() => {
-        if (!movie?.fullMovie) return;
+        if (!playableUrl) return;
         const timer = setTimeout(() => {
             const video = videoRef.current;
             if (video && video.readyState === 0) {
@@ -1335,7 +1414,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             }
         }, 20000);
         return () => clearTimeout(timer);
-    }, [movie?.fullMovie]);
+    }, [playableUrl]);
 
     // ── HARD STOP WHEN ADMIN ENDS THE PARTY ───────────────────────────────
     // Ending the party swaps the JSX to the "Session Ended" screen, which
@@ -1679,42 +1758,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return false;
     }, [partyState, showLobby, movie]);
 
-    const hasAccess = useMemo(() => {
-        if (isControllerMode || isBackstageVerified) return true;
-        if (!movie) return false;
-        if (unlockedWatchPartyKeys.has(movieKey)) return true;
-        if (hasFestivalAllAccess) return true;
-        if (unlockedFestivalBlockIds.has(movieKey)) return true;
-
-        // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's
-        // (same || [] guard as the movie useMemo above — see that comment)
-        const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.movieKeys.includes(movieKey));
-        if (parentBlock) {
-            if (unlockedFestivalBlockIds.has(parentBlock.id)) return true;
-            // SECURITY: if block price is not set, default to PAID (not free)
-            // Admin must explicitly set price to 0 to make a block free
-            // This prevents accidental free access from missing price config
-            if (parentBlock.price === 0) return true;
-            const exp = rentals[movieKey];
-            if (exp && new Date(exp) > new Date()) return true;
-            return false;
-        }
-
-        if (!movie.isWatchPartyPaid) return true;
-        const exp = rentals[movieKey];
-        return !!(exp && new Date(exp) > new Date());
-    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, unlockedFestivalBlockIds, festivalData]);
-
-    // ── CDN DELIVERY — REVERTED AGAIN ───────────────────────────────────────
-    // Attempted re-enable (see git history) after a manual browser test of
-    // ONE film's rewritten URL worked. Turned out that didn't generalize —
-    // a live watch party hit MEDIA_ELEMENT_ERROR (format error, code 4) on
-    // a different film, meaning that film's path doesn't resolve correctly
-    // through this CloudFront distribution even though the manually-tested
-    // one did. Reverted to the direct S3 URL (the reliable path) until every
-    // film's CDN path has actually been verified individually, not just one.
-    const playableUrl = movie?.fullMovie;
-
     // ── LIVE-VIEW PRESENCE — keeps a viewer counted as "watching" past the lobby ──
     // WatchPartyLobby writes its own presence doc into `lobby_viewers` and
     // deletes it the moment IT unmounts — which is exactly the moment a
@@ -1950,10 +1993,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                 )}
                 {/* Hidden preload — buffers film while waiting.
-                    SECURITY: gated on hasAccess, same as the real player below — this element
-                    used to buffer the raw file for anyone on this screen regardless of payment. */}
-                {hasAccess && movie.fullMovie && (
-                    <video src={movie.fullMovie} preload="auto" muted playsInline
+                    SECURITY: uses the same signed playableUrl as the real player below, not the
+                    raw movie.fullMovie — this element used to buffer the raw file for anyone on
+                    this screen regardless of payment. */}
+                {hasAccess && playableUrl && (
+                    <video src={playableUrl} preload="auto" muted playsInline
                         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}
                         aria-hidden="true"
                     />
