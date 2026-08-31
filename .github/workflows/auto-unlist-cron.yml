@@ -1,0 +1,22 @@
+name: Auto-Unlist Expired Festival Films
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call auto-unlist-expired-festival-films
+        run: |
+          status=$(curl -s -o response.json -w "%{http_code}" \
+            -X GET "https://cratetv.net/api/auto-unlist-expired-festival-films" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP status: $status"
+          cat response.json
+          if [ "$status" -ne 200 ]; then
+            echo "::error::auto-unlist-expired-festival-films returned $status"
+            exit 1
+          fi
