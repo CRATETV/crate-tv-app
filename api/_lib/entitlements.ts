@@ -46,6 +46,10 @@ interface FestivalBlock { id: string; price: number; movieKeys: string[]; }
  * (crate_guest_jury_active) has no server-side equivalent and is not checked here — an
  * internal preview/testing mechanism, not a real entitlement, so a guest-jury tester's
  * client will show a play button that this endpoint won't yet honor.
+ *
+ * One deliberate exception to "mirror the client exactly": mode 'live' for a standalone
+ * (non-block) movie does NOT mirror WatchPartyPage.tsx's `if (!movie.isWatchPartyPaid)
+ * return true` fallback as-is — see the inline comment at that branch below for why.
  */
 export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKey, mode }: MovieAccessCheck): Promise<MovieAccessResult> {
     const resolvedUid = uid || (deviceId ? await resolveUidFromDeviceId(db, deviceId) : undefined);
@@ -100,8 +104,23 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
             if (isBlockUnlocked(parentBlock.id)) granted = true;
             else if (parentBlock.price === 0) granted = true;
             else granted = isRented(movieKey);
-        } else if (!movieData.isWatchPartyPaid) granted = true;
-        else granted = isRented(movieKey);
+        } else if (movieData.isWatchPartyEnabled && !movieData.isWatchPartyPaid) {
+            // A genuinely free watch-party title.
+            granted = true;
+        } else if (movieData.isWatchPartyPaid) {
+            granted = isRented(movieKey);
+        }
+        // SECURITY: deliberately NOT mirroring WatchPartyPage.tsx's own client-side
+        // `if (!movie.isWatchPartyPaid) return true;` fallback here. On the client
+        // that's low-stakes (real navigation never reaches a non-watch-party movie
+        // via /watchparty/, and fullMovie used to be public anyway) — but this is
+        // now the real authoritative gate, and `isWatchPartyPaid` is undefined/false
+        // for EVERY plain VOD movie regardless of isForSale, which would silently
+        // hand out a free signed URL for any paid rental via mode:'live'. Confirmed
+        // live against a real $7.99 paid title before this fix (isForSale: true,
+        // isWatchPartyEnabled: false) — the check above returned granted:true. A
+        // movie that isn't watch-party content at all has no legitimate grant path
+        // through mode 'live' — falls through to the granted:false default instead.
 
         return { granted, filmKey: movieKey };
     }
