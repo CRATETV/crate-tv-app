@@ -44,8 +44,15 @@ export async function POST(request: Request): Promise<Response> {
             const isLastFilm = nextIndex >= totalFilms;
 
             if (isLastFilm) {
+                // isPlaying: false here too — this used to leave it true, which is
+                // harmless for real viewers (status: 'ended' alone stops playback
+                // client-side) but left a stale, misleading isPlaying:true sitting
+                // on ended documents, indistinguishable at a glance from a party
+                // that's actually stuck mid-'waiting' with isPlaying wrongly true
+                // (see the WatchPartyManager.tsx preview-sync fix this shipped with).
                 tx.update(partyRef, {
                     status: 'ended',
+                    isPlaying: false,
                     endedAt: FieldValue.serverTimestamp(),
                 });
                 return { kind: 'ended' };

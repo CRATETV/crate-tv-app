@@ -177,7 +177,15 @@ const AdminPage: React.FC = () => {
         setIsLoading(true);
         try {
             const [liveDataRes, pipelineRes, analyticsRes, permsRes] = await Promise.all([
-                fetch(`/api/get-live-data?noCache=true&t=${Date.now()}`),
+                // POST, not the plain public GET — the GET strips fullMovie/episode URLs for
+                // paid titles (see get-live-data.ts), which would otherwise silently break
+                // every paid title's admin preview (movie editor, watch-party Control Room).
+                // This authenticated equivalent returns the real, unfiltered data.
+                fetch('/api/get-live-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: adminPassword, noCache: true }),
+                }),
                 fetch('/api/get-pipeline-data', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

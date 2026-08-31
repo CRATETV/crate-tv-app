@@ -518,20 +518,34 @@ const WatchPartyControlRoom: React.FC<{
     const { user } = useAuth();
     const lastSyncTime = useRef(0);
 
-    const handlePlay = () => onSyncState({ isPlaying: true });
-    const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
+    // SAFETY: this <video> element is always mounted once an admin selects an item to
+    // look at — including hours before its scheduled start, just to check the file — and
+    // its native play/pause/seek events are wired directly to onSyncState, which writes
+    // straight to the real, viewer-facing watch_parties document. None of these writes
+    // include `status`, which is the ONLY field viewers' clients actually gate the lobby
+    // on (see WatchPartyLobby.tsx/WatchPartyPage.tsx) — so an admin innocently previewing
+    // a film before its real start could silently set isPlaying:true on the live document
+    // with status left at 'waiting', stranding anyone already in that block's lobby with
+    // no visible sign anything was wrong. Confirmed this exact, argument-for-argument state
+    // on a real watch_parties document from the actual festival's opening night. Gating
+    // every sync-out on the party already being genuinely live makes this preview truly
+    // local/inert until "Start Watch Party" has actually been pressed — after that, these
+    // controls correctly become the live sync surface, same as before.
+    const isPartyLive = partyState?.status === 'live';
+    const handlePlay = () => { if (isPartyLive) onSyncState({ isPlaying: true }); };
+    const handlePause = () => { if (isPartyLive && videoRef.current) onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime }); };
     const handleSeeked = () => {
         if (isProgrammaticSeekRef.current) {
             isProgrammaticSeekRef.current = false;
             return; // don't write back — this was our own seek, not the admin's
         }
-        videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+        if (isPartyLive && videoRef.current) onSyncState({ currentTime: videoRef.current.currentTime });
     };
-    
+
     // Periodically sync time while playing to keep viewers in check
     const handleTimeUpdate = () => {
         const video = videoRef.current;
-        if (video && !video.paused && (Date.now() - lastSyncTime.current > 5000)) {
+        if (isPartyLive && video && !video.paused && (Date.now() - lastSyncTime.current > 5000)) {
             lastSyncTime.current = Date.now();
             onSyncState({ currentTime: video.currentTime });
         }
@@ -933,17 +947,24 @@ const WatchPartyControlRoom: React.FC<{
                                     </div>
                                 </div>
                             ) : currentMovie ? (
-                                <video
-                                    ref={videoRef}
-                                    src={currentMovie.fullMovie}
-                                    onLoadedMetadata={handleLoadedMetadata}
-                                    onPlay={handlePlay}
-                                    onPause={handlePause}
-                                    onSeeked={handleSeeked}
-                                    onTimeUpdate={handleTimeUpdate}
-                                    controls
-                                    className="w-full h-full"
-                                />
+                                <>
+                                    {!isPartyLive && (
+                                        <div className="absolute top-3 left-3 z-10 bg-black/70 border border-white/20 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                            Preview only — not synced to viewers yet
+                                        </div>
+                                    )}
+                                    <video
+                                        ref={videoRef}
+                                        src={currentMovie.fullMovie}
+                                        onLoadedMetadata={handleLoadedMetadata}
+                                        onPlay={handlePlay}
+                                        onPause={handlePause}
+                                        onSeeked={handleSeeked}
+                                        onTimeUpdate={handleTimeUpdate}
+                                        controls
+                                        className="w-full h-full"
+                                    />
+                                </>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-gray-500">
                                     <div className="text-center">
