@@ -4,6 +4,7 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
+import { signStreamUrl } from './_lib/signStreamUrl.js';
 
 function toDate(val: any): Date | null {
     if (!val) return null;
@@ -14,17 +15,27 @@ function toDate(val: any): Date | null {
 }
 
 // Helper function to format a single movie for Roku
-const formatMovieForRoku = (movie: Movie, categoriesData: Record<string, Category>, isUnlocked: boolean = false) => {
+const formatMovieForRoku = async (movie: Movie, categoriesData: Record<string, Category>, isUnlocked: boolean = false) => {
     const genres = Object.values(categoriesData)
         .filter(cat => cat && Array.isArray(cat.movieKeys) && cat.movieKeys.includes(movie.key))
         .map(cat => cat.title);
 
     let description = (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
-    
+
     if (!isUnlocked && (movie.isForSale || movie.isWatchPartyPaid)) {
         const price = movie.salePrice || movie.watchPartyPrice || 0;
         const priceStr = price > 0 ? ` [$${price.toFixed(2)}]` : '';
         description = `Visit cratetv.net to unlock this title${priceStr}. ${description}`;
+    }
+
+    // SECURITY: once unlocked, this used to hand back movie.fullMovie as-is — a permanent
+    // URL, same issue as roku-feed.ts (see the comment there). Signs it instead; falls back
+    // to the raw URL if signing fails, since entitlement (isUnlocked) is the real gate here,
+    // not the signature — availability over the marginal expiry improvement.
+    let streamUrl = movie.trailer || '';
+    if (isUnlocked && movie.fullMovie) {
+        const signed = await signStreamUrl(movie.fullMovie);
+        streamUrl = signed ? signed.url : movie.fullMovie;
     }
 
     // Ensure all fields are strings to prevent crashes on 'invalid' data in BrightScript
@@ -34,7 +45,7 @@ const formatMovieForRoku = (movie: Movie, categoriesData: Record<string, Categor
         description: description,
         SDPosterUrl: movie.poster || movie.tvPoster || '',
         HDPosterUrl: movie.poster || movie.tvPoster || '',
-        streamUrl: isUnlocked ? (movie.fullMovie || '') : (movie.trailer || ''),
+        streamUrl,
         director: movie.director || '',
         actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
         genres: genres,
@@ -101,7 +112,7 @@ export async function GET(request: Request) {
         }
     }
     
-    const rokuMovie = formatMovieForRoku(movie, categoriesData, isUnlocked);
+    const rokuMovie = await formatMovieForRoku(movie, categoriesData, isUnlocked);
 
     return new Response(JSON.stringify(rokuMovie, null, 2), {
       status: 200,
