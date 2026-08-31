@@ -22,12 +22,15 @@ export async function POST(request: Request) {
         try { uid = (await auth.verifyIdToken(idToken)).uid; }
         catch { return new Response(JSON.stringify({ error: 'Invalid session.' }), { status: 401, headers: { 'Content-Type': 'application/json' } }); }
 
-        const hasAccess = await resolveMovieAccess(db, { uid, movieKey, mode: resolvedMode });
-        if (!hasAccess) return new Response(JSON.stringify({ error: 'Access denied.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        const { granted, filmKey } = await resolveMovieAccess(db, { uid, movieKey, mode: resolvedMode });
+        if (!granted || !filmKey) return new Response(JSON.stringify({ error: 'Access denied.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
 
+        // NOTE: filmKey, not movieKey — for a festival block watch party (mode 'live'),
+        // movieKey is the block's own id, and filmKey is whichever film within it is
+        // actually "active" right now, resolved server-side by resolveMovieAccess.
         const { getApiData } = await import('./_lib/data.js');
         const data = await getApiData({ noCache: false });
-        const rawUrl: string | undefined = data.movies?.[movieKey]?.fullMovie;
+        const rawUrl: string | undefined = data.movies?.[filmKey]?.fullMovie;
         if (!rawUrl) return new Response(JSON.stringify({ error: 'Film not found.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 
         const signed = await signStreamUrl(rawUrl);
