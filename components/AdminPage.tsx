@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData, HeroConfig } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import MovieEditor from './MovieEditor';
@@ -13,7 +13,7 @@ import SaveStatusToast from './SaveStatusToast';
 import LaurelManager from './LaurelManager';
 import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
-import { MoviePipelineTab } from './MoviePipelineTab';
+import { MoviePipelineTab, isNewSubmission } from './MoviePipelineTab';
 import CrateFestEditor from './CrateFestEditor';
 import PromoCodeManager from './PromoCodeManager';
 import PermissionsManager from './PermissionsManager';
@@ -37,6 +37,7 @@ import MonthlySpotlightTab from './MonthlySpotlightTab';
 import HeroEditor from './HeroEditor';
 import HeroManager from './HeroManager';
 import UserDiagnosticsTab from './UserDiagnosticsTab';
+import ContractsTab from './ContractsTab';
 
 const ALL_TABS: Record<string, string> = {
     hero: '🏠 Hero Section',
@@ -49,7 +50,8 @@ const ALL_TABS: Record<string, string> = {
     accountLookup: '🔍 Account Lookup',
     editorial: '✍️ Editorial Lab',
     watchParty: '🍿 Watch Party',
-    discovery: '🔬 Research Lab',
+    discovery: '🔬 Grants & Research',
+    contracts: '📄 Contracts',
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
@@ -126,7 +128,7 @@ const AdminPage: React.FC = () => {
 
         // These tabs are NEVER visible to non-master admins regardless of
         // what is stored in Firestore — hard-coded security boundary
-        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'revenueFlow', 'shopRevenue', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
+        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'contracts', 'revenueFlow', 'shopRevenue', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
 
         const specificTabs = permissions[role];
         // Only the pulse dashboard is always visible — everything else must be explicitly granted
@@ -173,8 +175,9 @@ const AdminPage: React.FC = () => {
         }
     }, [activeTab, isAuthenticated]);
 
-    const fetchAllData = useCallback(async (adminPassword: string) => {
-        setIsLoading(true);
+    // `silent` skips the full-page spinner, so refreshing from inside a tab doesn't unmount it.
+    const fetchAllData = useCallback(async (adminPassword: string, silent = false) => {
+        if (!silent) setIsLoading(true);
         try {
             const [liveDataRes, pipelineRes, analyticsRes, permsRes] = await Promise.all([
                 // POST, not the plain public GET — the GET strips fullMovie/episode URLs for
@@ -258,6 +261,79 @@ const AdminPage: React.FC = () => {
             setIsLoading(false);
         }
     }, []);
+
+    // ── Film submissions: "NEW" badge, mark-as-seen, and background check ──
+    const newSubmissionCount = useMemo(() => pipeline.filter(isNewSubmission).length, [pipeline]);
+    const knownPipelineIds = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        knownPipelineIds.current = new Set(pipeline.map(p => p.id));
+    }, [pipeline]);
+
+    // Reloads only the submissions list (fetchAllData would flash the full-page spinner).
+    const refreshPipeline = useCallback(async () => {
+        const pass = sessionStorage.getItem('adminPassword');
+        if (!pass) return;
+        try {
+            const res = await fetch('/api/get-pipeline-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setPipeline(data.pipeline || []);
+            }
+        } catch { /* non-fatal — the next check will retry */ }
+    }, []);
+
+    const markSubmissionViewed = useCallback(async (id: string) => {
+        // Optimistic: clear the badge immediately, reconcile with the server if the call fails.
+        setPipeline(prev => prev.map(e => e.id === id && !e.viewedAt ? { ...e, viewedAt: { seconds: Math.floor(Date.now() / 1000) } } : e));
+        try {
+            const res = await fetch('/api/mark-submission-viewed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: sessionStorage.getItem('adminPassword'), submissionId: id }),
+            });
+            if (!res.ok) refreshPipeline();
+        } catch { refreshPipeline(); }
+    }, [refreshPipeline]);
+
+    const markAllSubmissionsViewed = useCallback(async () => {
+        setPipeline(prev => prev.map(e => isNewSubmission(e) ? { ...e, viewedAt: { seconds: Math.floor(Date.now() / 1000) } } : e));
+        try {
+            const res = await fetch('/api/mark-submission-viewed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: sessionStorage.getItem('adminPassword'), all: true }),
+            });
+            if (!res.ok) refreshPipeline();
+        } catch { refreshPipeline(); }
+    }, [refreshPipeline]);
+
+    // While the admin panel is open, check once a minute for a submission we haven't
+    // loaded yet. The check reads a single document (see get-pipeline-data `latestOnly`),
+    // and only pulls the full list when something new has actually arrived.
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const checkForNewSubmissions = async () => {
+            if (document.visibilityState !== 'visible') return;
+            const pass = sessionStorage.getItem('adminPassword');
+            if (!pass) return;
+            try {
+                const res = await fetch('/api/get-pipeline-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pass, latestOnly: true }),
+                });
+                if (!res.ok) return;
+                const { latestId } = await res.json();
+                if (latestId && !knownPipelineIds.current.has(latestId)) refreshPipeline();
+            } catch { /* non-fatal */ }
+        };
+        const timer = setInterval(checkForNewSubmissions, 60_000);
+        return () => clearInterval(timer);
+    }, [isAuthenticated, refreshPipeline]);
 
     const handleLogin = async (e?: React.FormEvent | null) => {
         e?.preventDefault();
@@ -493,6 +569,11 @@ const AdminPage: React.FC = () => {
                             className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
                         >
                             {label as string}
+                            {tabId === 'pipeline' && newSubmissionCount > 0 && (
+                                <span className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] leading-none animate-pulse" aria-label={`${newSubmissionCount} new submissions`}>
+                                    {newSubmissionCount}
+                                </span>
+                            )}
                         </button>
                     ))}
                     </div>
@@ -508,7 +589,7 @@ const AdminPage: React.FC = () => {
                         </button>
                         {showMoreTools && (
                             <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['outreach','🎯 Outreach'],['festivalReport','📋 Festival Report'],['audit','📜 Audit Log'],['errorLog','🚨 Error Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
+                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['contracts','📄 Contracts'],['discovery','🔬 Grants & Research'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest (future)'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['outreach','🎯 Outreach'],['festivalReport','📋 Festival Report'],['audit','📜 Audit Log'],['errorLog','🚨 Error Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
                                 <button
                                     key={tabId}
                                     onClick={() => navigateTo(tabId as string)}
@@ -578,7 +659,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
-                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => navigateTo('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => navigateTo('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!, true)} onViewed={markSubmissionViewed} onMarkAllViewed={markAllSubmissionsViewed} />}
                     {activeTab === 'jury' && (
                         <div className="space-y-16">
                             <JuryRoomTab pipeline={pipeline} />
@@ -586,6 +667,7 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
+                    {activeTab === 'contracts' && <ContractsTab />}
                     {activeTab === 'revenueFlow' && <AdminRevenueFlowTab />}
                     {activeTab === 'shopRequests' && <AdminShopRequestsTab />}
                     {activeTab === 'shopRevenue' && <AdminShopRevenueTab />}

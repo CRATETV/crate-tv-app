@@ -1,21 +1,30 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { FieldValue } from 'firebase-admin/firestore';
 
+const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+// Firestore document ids only — anything with a "/" would point at a different path.
+const SAFE_ID = /^[A-Za-z0-9._-]{1,200}$/;
+
+/** Deletes one chat message from a watch party. */
 export async function POST(request: Request) {
   try {
     const { movieKey, messageId, adminPassword } = await request.json();
 
     if (!movieKey || !messageId || !adminPassword) {
-      return new Response(JSON.stringify({ error: 'MovieKey, messageId, and Password required.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ error: 'MovieKey, messageId, and Password required.' }, 400);
     }
 
-    if (adminPassword !== process.env.ADMIN_PASSWORD && adminPassword !== process.env.ADMIN_MASTER_PASSWORD) {
-      return new Response(JSON.stringify({ error: 'Invalid admin password.' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // Any valid admin key may moderate chat — the two main passwords, ADMIN_PASSWORD_*
+    // keys and collaborator keys. This used to accept only the first two, so anyone
+    // signed in with another kind of key got "Invalid admin password" on every delete.
+    if (!(await verifyAdminPassword(adminPassword))) {
+      return json({ error: 'Invalid admin password.' }, 401);
+    }
+    if (!SAFE_ID.test(String(movieKey)) || !SAFE_ID.test(String(messageId))) {
+      return json({ error: 'Invalid movieKey or messageId.' }, 400);
     }
 
     const initError = getInitializationError();
@@ -28,23 +37,26 @@ export async function POST(request: Request) {
     const snap = await messageRef.get();
 
     if (!snap.exists) {
-      return new Response(JSON.stringify({ success: true, message: 'Message already gone.' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ success: true, message: 'Message already gone.' });
     }
 
+    const removed = snap.data() || {};
     await messageRef.delete();
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Moderation trail: who said what, and that an admin removed it.
+    await db.collection('audit_logs').add({
+      action: 'CHAT_MESSAGE_DELETED',
+      type: 'MUTATION',
+      role: 'admin',
+      details: `Removed a chat message by ${String(removed.userName || 'unknown').slice(0, 80)} in watch party "${movieKey}": "${String(removed.text || '').slice(0, 120)}"`,
+      timestamp: FieldValue.serverTimestamp(),
+      ip: '',
+      metadata: { movieKey, messageId, userId: removed.userId || null },
+    }).catch(err => console.warn('audit log for chat delete failed:', err));
+
+    return json({ success: true });
   } catch (error) {
     console.error('Delete Chat Message Error:', error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: (error as Error).message }, 500);
   }
 }

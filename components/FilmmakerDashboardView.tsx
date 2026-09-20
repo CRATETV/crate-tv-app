@@ -146,6 +146,7 @@ const FilmmakerDashboardView: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [payoutStatus, setPayoutStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+    const [payoutError, setPayoutError] = useState('');
     const [shopRequestDescription, setShopRequestDescription] = useState('');
     const [shopRequestFilm, setShopRequestFilm] = useState('');
     const [shopRequestStatus, setShopRequestStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -193,18 +194,20 @@ const FilmmakerDashboardView: React.FC = () => {
         setPayoutStatus('submitting');
         try {
             const filmTitles = analytics.films.map(f => f.title);
+            // Identity and the amount are decided by the server from this sign-in — the
+            // request no longer carries a name, email or amount that could be changed.
+            const idToken = await getUserIdToken();
             const res = await fetch('/api/request-payout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    directorName: user.name,
-                    amount: analytics.balance,
-                    email: user.email,
-                    filmTitles
-                }),
+                body: JSON.stringify({ idToken, filmTitles }),
             });
 
-            if (!res.ok) throw new Error('Payout request failed.');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Payout request failed.');
+            }
+            setPayoutError('');
             setPayoutStatus('success');
 
             // Refresh analytics after a short delay to show updated balance (though the API might not reflect it immediately if it only counts 'completed' payouts)
@@ -214,8 +217,9 @@ const FilmmakerDashboardView: React.FC = () => {
             }, 3000);
 
         } catch (err) {
+            setPayoutError(err instanceof Error ? err.message : 'Payout request failed.');
             setPayoutStatus('error');
-            setTimeout(() => setPayoutStatus('idle'), 3000);
+            setTimeout(() => setPayoutStatus('idle'), 8000);
         }
     };
 
@@ -332,6 +336,9 @@ const FilmmakerDashboardView: React.FC = () => {
                                          `Request ${formatCurrency(analytics.balance)} Payout`}
                                     </button>
                                 </div>
+                                {payoutStatus === 'error' && payoutError && (
+                                    <p role="alert" className="text-red-400 text-[10px] font-black uppercase tracking-widest">{payoutError}</p>
+                                )}
                                 {payoutStatus === 'success' && (
                                     <div className="flex items-center gap-3 animate-pulse">
                                         <div className="w-2 h-2 rounded-full bg-green-500"></div>

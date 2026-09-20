@@ -66,6 +66,7 @@ const ArchiveScoutTab: React.FC = () => {
                     posterUrl: 'https://d3jhtrl1gnrh4b.cloudfront.net/placeholder-poster.png',
                     movieUrl: film.sourceUrl,
                     source: 'AI_SCOUTED',
+                    password: sessionStorage.getItem('adminPassword') || '',
                     website_url_check: '' // Honeypot bypass
                 })
             });

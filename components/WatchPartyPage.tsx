@@ -98,6 +98,27 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [showQABanner, setShowQABanner] = useState(false);
 
+    // Moderation: only present when this browser is also signed into the admin panel.
+    // It only decides whether to SHOW the Delete button — the server re-checks the key on every delete.
+    const adminPassword = (() => { try { return sessionStorage.getItem('adminPassword'); } catch { return null; } })();
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const handleAdminDelete = async (messageId: string) => {
+        if (!adminPassword || !window.confirm('Delete this message for everyone?')) return;
+        setDeletingId(messageId);
+        try {
+            const res = await fetch('/api/delete-chat-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: partyKey, messageId, adminPassword }),
+            });
+            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not delete the message.');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Could not delete the message.');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     // Show Q&A banner animation when Q&A goes live
     useEffect(() => {
         if (isQALive) {
@@ -219,7 +240,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                             className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${msg.isVerifiedDirector ? 'bg-gradient-to-r from-red-600/10 to-purple-600/10 -mx-4 px-4 py-3 border-l-2 border-red-500' : ''}`}
                         >
                             <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 ${msg.isVerifiedDirector ? 'border-2 border-red-500 bg-red-900/50' : 'border border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-grow">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <p className={`font-black text-[11px] uppercase tracking-tighter ${msg.isVerifiedDirector ? 'text-red-400' : 'text-red-500'}`}>{msg.userName}</p>
                                     {msg.isVerifiedDirector && (
@@ -230,6 +251,18 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                                 </div>
                                 <p className={`text-sm break-words leading-snug ${msg.isVerifiedDirector ? 'text-white font-medium' : 'text-gray-300'}`}>{msg.text}</p>
                             </div>
+                            {adminPassword && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleAdminDelete(msg.id)}
+                                    disabled={deletingId === msg.id}
+                                    aria-label={`Delete message from ${msg.userName}`}
+                                    title="Admin: delete this message for everyone"
+                                    className="flex-shrink-0 text-[9px] font-black uppercase tracking-wider text-gray-500 hover:text-red-500 focus:text-red-500 transition-colors px-1 py-0.5 disabled:opacity-50"
+                                >
+                                    {deletingId === msg.id ? '…' : 'Delete'}
+                                </button>
+                            )}
                         </div>
                     )
                 ))}

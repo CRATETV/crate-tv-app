@@ -174,12 +174,14 @@ service cloud.firestore {
     }
 
     // ── Film submissions ────────────────────────────────────────────────
+    // Server only. Submissions are written by api/submit-film-to-pipeline.ts (Admin SDK,
+    // which bypasses these rules) after validation, and read by the admin panel through
+    // api/get-pipeline-data.ts. This used to allow any signed-in visitor — including
+    // anonymous sign-ins — to create documents here directly, skipping every server-side
+    // check (URL validation, length caps, rate limits) and letting them plant arbitrary
+    // fields such as status: 'approved' or javascript: links.
     match /movie_pipeline/{submissionId} {
-      allow read: if isSignedIn()
-        && (resource == null || resource.data.submitterUid == request.auth.uid);
-      allow create: if isSignedIn()
-        && request.resource.data.submitterUid == request.auth.uid;
-      allow update, delete: if false;
+      allow read, write: if false;
     }
 
     // ── Watch sessions (viewership heartbeat, admin dashboard aggregation) ──

@@ -313,9 +313,28 @@ export interface MoviePipelineEntry {
   website?: string;
   instagram?: string;
   submitterName?: string;
+  contentType?: 'short' | 'feature' | 'series';
+  isSeries?: boolean;
+  episodeCount?: string;
+  episodeLinks?: string;
   isReviewed?: boolean;
   isApproved?: boolean;
   reviewNotes?: string;
+  /** Set (server timestamp) the first time an admin opens the submission — unset means "NEW". */
+  viewedAt?: any;
+  /** File safety checks, written by the submit endpoint and (for `scan`) the antivirus scanner. */
+  security?: {
+    /** Server confirmed the files really are an image / video ('unverified' = couldn't check). */
+    typeCheck?: 'passed' | 'unverified';
+    filmKind?: string;
+    posterKind?: string;
+    filmSize?: number;
+    posterSize?: number;
+    /** Antivirus result. 'not_configured' = no scanner deployed (nothing is blocked). */
+    scan?: 'not_configured' | 'pending' | 'clean' | 'infected' | 'error';
+    scannedAt?: any;
+    threat?: string;
+  };
 }
 
 export interface WatchPartyState {

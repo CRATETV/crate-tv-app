@@ -6,6 +6,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { addPipelineEntryToCatalog } from './_lib/addToCatalog.js';
+import { publishBlockReason } from './_lib/publishGate.js';
 import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 
 export async function POST(request: Request) {
@@ -73,6 +74,14 @@ export async function POST(request: Request) {
 
         const data = docSnap.data()!;
         const { title, director, email } = data;
+
+        // Don't publish anything the virus scan flagged, or hasn't cleared yet.
+        const blockReason = publishBlockReason(data);
+        if (blockReason) {
+            return new Response(JSON.stringify({ error: blockReason }), {
+                status: 409, headers: { 'Content-Type': 'application/json' },
+            });
+        }
 
         // Update Firestore status
         await docRef.update({
