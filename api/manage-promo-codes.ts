@@ -2,6 +2,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { promoCodesData } from '../constants.js';
 import { PromoCode } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // PromoCodeManager.tsx used to create/delete/restore voucher codes by
 // writing straight to Firestore from the browser. firestore.rules blocks
@@ -14,16 +15,16 @@ import { PromoCode } from '../types.js';
 // because it was: nothing it did ever actually reached the database.
 // Routed server-side, using the Admin SDK, same pattern as
 // unlockFestivalBlock and every other access grant in this codebase.
-const checkAuth = (request: Request) => {
+const checkAuth = async (request: Request) => {
     const authHeader = request.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    const token = await resolveAdminCredential(authHeader?.replace('Bearer ', '') || '');
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     return Boolean((primaryAdminPassword && token === primaryAdminPassword) || (masterPassword && token === masterPassword));
 };
 
 export async function POST(request: Request) {
-    if (!checkAuth(request)) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    if (!(await checkAuth(request))) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     try {
         const body = await request.json();
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-    if (!checkAuth(request)) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    if (!(await checkAuth(request))) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');

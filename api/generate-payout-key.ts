@@ -1,5 +1,6 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const generateKey = () => {
     return 'PAY-' + Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -7,7 +8,8 @@ const generateKey = () => {
 
 export async function POST(request: Request) {
   try {
-    const { password, targetName, type } = await request.json();
+    const { password: __raw_password, targetName, type } = await request.json();
+    const password = await resolveAdminCredential(__raw_password);
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

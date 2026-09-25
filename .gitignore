@@ -39,3 +39,16 @@ s3-cors-config.json
 /*.py
 square-report-raw.txt
 .env*
+
+# added in the admin/security update — secrets & customer data
+node_modules/
+dist/
+.vercel/
+.env
+.env.*
+!.env.example
+*service-account*.json
+*.pem
+*.csv
+__MACOSX/
+_write_test.txt

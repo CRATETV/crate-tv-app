@@ -13,6 +13,8 @@ const formatTimestamp = (ts: any): string => {
     return seconds ? new Date(seconds * 1000).toLocaleString() : '---';
 };
 
+const displayName = (p: PayoutRequest) => p.directorName || '—';
+
 const AdminPayoutsTab: React.FC = () => {
     const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -97,9 +99,30 @@ const AdminPayoutsTab: React.FC = () => {
         }
     };
 
+    const handleDeclinePayout = async (p: PayoutRequest) => {
+        const reason = window.prompt(`Decline ${displayName(p)}'s request for ${formatCurrency(p.amount)}?\n\nOptional: add a short note they'll see in their dashboard.`, '');
+        if (reason === null) return; // cancelled
+        setProcessingId(p.id);
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const res = await fetch('/api/complete-payout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId: p.id, password, action: 'decline', declineReason: reason }),
+            });
+            if (!res.ok) throw new Error('Failed to decline payout.');
+            await fetchPayouts();
+        } catch (e) {
+            alert(e instanceof Error ? e.message : 'Failed to decline payout.');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
     if (isLoading) return <LoadingSpinner />;
 
     const pendingRequests = payouts.filter(p => p.status === 'pending');
+    const historyRequests = payouts.filter(p => p.status === 'completed' || p.status === 'declined');
 
     return (
         <div className="space-y-12 pb-32 animate-[fadeIn_0.5s_ease-out]">
@@ -212,37 +235,50 @@ const AdminPayoutsTab: React.FC = () => {
                     <table className="w-full text-left text-xs">
                         <thead className="bg-white/5 text-gray-700 uppercase font-black tracking-widest">
                             <tr>
-                                <th className="p-6">Entity Identity</th>
+                                <th className="p-6">Who</th>
                                 <th className="p-6">Amount Requested</th>
-                                <th className="p-6">Contact</th>
+                                <th className="p-6">For</th>
+                                <th className="p-6">Pay To</th>
                                 <th className="p-6">Requested</th>
                                 <th className="p-6 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {pendingRequests.length === 0 ? (
-                                <tr><td colSpan={5} className="p-20 text-center text-gray-800 font-black uppercase tracking-[0.5em] italic">No pending requests</td></tr>
+                                <tr><td colSpan={6} className="p-20 text-center text-gray-800 font-black uppercase tracking-[0.5em] italic">No pending requests</td></tr>
                             ) : pendingRequests.map(p => (
                                 <tr key={p.id} className="hover:bg-white/[0.01] transition-colors">
                                     <td className="p-6">
-                                        <p className="font-black text-white uppercase text-base">{p.directorName}</p>
+                                        <p className="font-black text-white uppercase text-base">{displayName(p)}</p>
                                     </td>
                                     <td className="p-6">
                                         <p className="text-amber-400 font-black text-xl italic tracking-tighter">{formatCurrency(p.amount)}</p>
                                     </td>
+                                    <td className="p-6 text-gray-400 max-w-xs">
+                                        {p.filmTitles && p.filmTitles.length ? p.filmTitles.join(', ') : '—'}
+                                    </td>
                                     <td className="p-6 text-gray-400">
-                                        {p.payoutDetails || `Contact: ${p.email || '—'}`}
+                                        {p.payoutMethod && p.payoutMethod !== 'festival' && p.payoutMethod !== 'filmmaker' ? <p className="text-white font-bold">{p.payoutMethod}</p> : null}
+                                        <p>{p.payoutDetails || '—'}</p>
+                                        <p className="text-gray-600">{p.email || ''}</p>
                                     </td>
                                     <td className="p-6 text-gray-500 font-mono">
                                         {formatTimestamp(p.requestDate)}
                                     </td>
-                                    <td className="p-6 text-right">
+                                    <td className="p-6 text-right space-y-2">
                                         <button
                                             onClick={() => handleCompletePayout(p.id)}
                                             disabled={processingId === p.id}
-                                            className="text-[10px] font-black uppercase text-black bg-white hover:bg-green-500 hover:text-white transition-colors px-4 py-2 rounded-xl disabled:opacity-40"
+                                            className="block w-full text-[10px] font-black uppercase text-black bg-white hover:bg-green-500 hover:text-white transition-colors px-4 py-2 rounded-xl disabled:opacity-40"
                                         >
                                             {processingId === p.id ? 'Processing...' : 'Mark as Paid'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeclinePayout(p)}
+                                            disabled={processingId === p.id}
+                                            className="block w-full text-[10px] font-black uppercase text-gray-500 bg-white/5 hover:bg-red-600/20 hover:text-red-400 transition-colors px-4 py-2 rounded-xl disabled:opacity-40"
+                                        >
+                                            Decline
                                         </button>
                                     </td>
                                 </tr>
@@ -261,28 +297,29 @@ const AdminPayoutsTab: React.FC = () => {
                     <table className="w-full text-left text-xs">
                         <thead className="bg-white/5 text-gray-700 uppercase font-black tracking-widest">
                             <tr>
-                                <th className="p-6">Entity Identity</th>
-                                <th className="p-6">Yield Paid (70%)</th>
-                                <th className="p-6">Node Protocol</th>
-                                <th className="p-6 text-right">Sync Date</th>
+                                <th className="p-6">Who</th>
+                                <th className="p-6">Amount</th>
+                                <th className="p-6">Outcome</th>
+                                <th className="p-6 text-right">Date</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {payouts.filter(p => p.status === 'completed').length === 0 ? (
-                                <tr><td colSpan={4} className="p-20 text-center text-gray-800 font-black uppercase tracking-[0.5em] italic">Handshake archive empty</td></tr>
-                            ) : payouts.filter(p => p.status === 'completed').map(p => (
-                                <tr key={p.id} className="hover:bg-white/[0.01] transition-colors">
+                            {historyRequests.length === 0 ? (
+                                <tr><td colSpan={4} className="p-20 text-center text-gray-800 font-black uppercase tracking-[0.5em] italic">No payouts yet</td></tr>
+                            ) : historyRequests.map(p => (
+                                <tr key={p.id} className={`hover:bg-white/[0.01] transition-colors ${p.status === 'declined' ? 'opacity-50' : ''}`}>
                                     <td className="p-6">
-                                        <p className="font-black text-white uppercase text-base">{p.directorName}</p>
-                                        <p className="text-[8px] text-gray-600 uppercase mt-1 tracking-widest">VERIFIED_DISPATCH</p>
+                                        <p className="font-black text-white uppercase text-base">{displayName(p)}</p>
                                     </td>
                                     <td className="p-6">
-                                        <p className="text-green-500 font-black text-xl italic tracking-tighter">{formatCurrency(p.amount)}</p>
+                                        <p className={`${p.status === 'declined' ? 'text-gray-500 line-through' : 'text-green-500'} font-black text-xl italic tracking-tighter`}>{formatCurrency(p.amount)}</p>
                                     </td>
                                     <td className="p-6">
-                                        <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${p.payoutMethod === 'festival' ? 'bg-indigo-600/10 border-indigo-500/20 text-indigo-400' : 'bg-red-600/10 border-red-500/20 text-red-400'}`}>
-                                            {p.payoutMethod || 'Filmmaker'} Handshake
-                                        </span>
+                                        {p.status === 'declined' ? (
+                                            <span className="text-[9px] font-black uppercase px-3 py-1 rounded-full border bg-gray-600/10 border-gray-500/20 text-gray-400" title={p.declineReason || ''}>Declined</span>
+                                        ) : (
+                                            <span className="text-[9px] font-black uppercase px-3 py-1 rounded-full border bg-green-600/10 border-green-500/20 text-green-400">Paid</span>
+                                        )}
                                     </td>
                                     <td className="p-6 text-right text-gray-500 font-mono">
                                         {formatTimestamp(p.completionDate)}

@@ -2,10 +2,12 @@
 // Admin sets which film is featured next month
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { password, movieKey } = await request.json();
+        const { password: __raw_password, movieKey } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primary = process.env.ADMIN_PASSWORD;
         const master  = process.env.ADMIN_MASTER_PASSWORD;

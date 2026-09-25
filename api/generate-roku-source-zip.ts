@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
 import { Buffer } from 'buffer';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // Helper to recursively read a directory, ignoring dotfiles
 async function readDirectory(dirPath: string): Promise<string[]> {
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
     let isAuthenticated = false;
     const host = request.headers.get('host');
     try {
-        const { password } = await request.json();
+        const { password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
         // No password needed for localhost or if no passwords are set
     }
     const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
-    if (host?.startsWith('localhost') || !anyPasswordSet) {
+    if (host?.startsWith('localhost') && process.env.VERCEL !== '1') {
         isAuthenticated = true;
     }
     if (!isAuthenticated) {

@@ -1,8 +1,10 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
+    const { password: __raw_password } = await request.json();
+    const password = await resolveAdminCredential(__raw_password);
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
@@ -20,7 +22,9 @@ export async function POST(request: Request) {
     }
 
     const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
-    if (!anyPasswordSet) isAuthenticated = true;
+    // SECURITY: removed "setup mode" — a missing ADMIN_PASSWORD env var used to
+    // unlock this endpoint for everyone. Now a missing password just means locked.
+    void anyPasswordSet;
 
     if (!isAuthenticated) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });

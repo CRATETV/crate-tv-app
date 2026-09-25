@@ -1,8 +1,10 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, adminPassword } = await request.json();
+    const { movieKey, adminPassword: __raw_adminPassword } = await request.json();
+    const adminPassword = await resolveAdminCredential(__raw_adminPassword);
 
     if (!movieKey || !adminPassword) {
       return new Response(JSON.stringify({ error: 'MovieKey and Password required.' }), {

@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
@@ -24,7 +25,8 @@ const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
 // never show up under one specific itemId.
 export async function POST(request: Request) {
     try {
-        const { itemId, title, watchPartyStartTime, adminPassword } = await request.json();
+        const { itemId, title, watchPartyStartTime, adminPassword: __raw_adminPassword } = await request.json();
+        const adminPassword = await resolveAdminCredential(__raw_adminPassword);
 
         if (adminPassword !== process.env.ADMIN_PASSWORD && adminPassword !== process.env.ADMIN_MASTER_PASSWORD) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });

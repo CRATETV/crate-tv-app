@@ -1,6 +1,7 @@
 
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig, AdminPayout, BillSavingsTransaction } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
@@ -70,7 +71,8 @@ async function fetchAllSquarePayments(accessToken: string, locationId: string | 
 export async function POST(request: Request) {
     const errors: { square: string | null, firebase: string | null, critical: string | null } = { square: null, firebase: null, critical: null };
     try {
-        const { password } = await request.json();
+        const { password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

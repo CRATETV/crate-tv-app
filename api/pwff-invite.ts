@@ -13,10 +13,12 @@ import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { password, emails, festivalName, festivalYear, accessType, blockId, blockTitle } = await request.json();
+        const { password: __raw_password, emails, festivalName, festivalYear, accessType, blockId, blockTitle } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         // accessType: 'full' = full festival pass, 'block' = specific block only
 
         const ip = getIP(request);

@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
@@ -13,7 +14,8 @@ const LOGO_URL = 'https://cratetv.net/logo-tagline.png';
 
 export async function POST(request: Request) {
     try {
-        const { password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey } = await request.json();
+        const { password: __raw_password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         // 1. Initialize DB first to check dynamic permissions
         const initError = getInitializationError();

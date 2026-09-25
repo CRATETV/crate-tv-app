@@ -1,13 +1,32 @@
 import { Resend } from 'resend';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
+import { isValidAdminKey } from './_lib/adminAuth.js';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { festivalName, festivalUrl, bannerImageUrl } = await request.json();
+        const { festivalName, festivalUrl, bannerImageUrl, password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const db = getAdminDb();
         if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
+
+        // SECURITY: this emails the entire PWFF interest list. It had no auth
+        // at all, and the link + banner image come from the request body — so
+        // anyone could blast a phishing email to your audience from Crate's
+        // own address. Admin key required, and links must point at Crate.
+        if (!(await isValidAdminKey(password, db))) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+        const isCrateUrl = (u: unknown) => typeof u === 'string' && /^https:\/\/(www\.)?cratetv\.net(\/|$)/i.test(u);
+        const isSafeImage = (u: unknown) => typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u);
+        if (festivalUrl && !isCrateUrl(festivalUrl)) {
+            return new Response(JSON.stringify({ error: 'Festival link must be a cratetv.net URL.' }), { status: 400 });
+        }
+        if (bannerImageUrl && !isSafeImage(bannerImageUrl)) {
+            return new Response(JSON.stringify({ error: 'Banner image must be an https:// link.' }), { status: 400 });
+        }
 
         const resendApiKey = process.env.RESEND_API_KEY;
         if (!resendApiKey) return new Response(JSON.stringify({ error: 'No email key' }), { status: 500 });

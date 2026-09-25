@@ -322,6 +322,8 @@ export interface MoviePipelineEntry {
   reviewNotes?: string;
   /** Set (server timestamp) the first time an admin opens the submission — unset means "NEW". */
   viewedAt?: any;
+  /** Normalized by get-pipeline-data.ts — epoch ms of whichever timestamp field the writer used */
+  submittedAtMs?: number;
   /** File safety checks, written by the submit endpoint and (for `scan`) the antivirus scanner. */
   security?: {
     /** Server confirmed the files really are an image / video ('unverified' = couldn't check). */
@@ -555,7 +557,8 @@ export interface PayoutRequest {
   payoutDetails?: string;
   email?: string;
   filmTitles?: string[];
-  status: 'pending' | 'completed' | 'ACTIVE';
+  declineReason?: string;
+  status: 'pending' | 'completed' | 'declined' | 'ACTIVE';
   requestDate: any;
   completionDate?: any;
 }

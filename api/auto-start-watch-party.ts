@@ -25,6 +25,17 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
     }
 
+    // SECURITY: this route is public (every viewer's lobby calls it when its
+    // countdown hits zero), so without a server-side time check anyone could
+    // POST a movieKey and start a scheduled party hours early. Allow a
+    // 2-minute tolerance for viewers whose device clocks run a little fast.
+    if (movie?.watchPartyStartTime) {
+      const scheduled = Date.parse(movie.watchPartyStartTime);
+      if (!isNaN(scheduled) && Date.now() < scheduled - 2 * 60_000) {
+        return new Response(JSON.stringify({ error: 'Too early — this watch party has not started yet.', startsAt: movie.watchPartyStartTime }), { status: 425 });
+      }
+    }
+
     // Every viewer's lobby independently calls this the moment its local
     // countdown hits 0 (and retries every few seconds until it sees
     // status==='live'), so this route can receive many near-simultaneous

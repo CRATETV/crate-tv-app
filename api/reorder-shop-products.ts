@@ -1,8 +1,10 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { items, password } = await request.json();
+        const { items, password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

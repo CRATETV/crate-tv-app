@@ -1,9 +1,11 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { password } = await request.json();
+        const { password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const initError = getInitializationError();
         if (initError) throw new Error(initError);

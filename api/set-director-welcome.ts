@@ -1,4 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // Sets (or clears) the "welcome message from the director" shown to viewers
 // in the watch party lobby. This used to be a direct client write to
@@ -10,7 +11,8 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 // every other privileged watch-party action.
 export async function POST(request: Request) {
   try {
-    const { movieKey, message, password } = await request.json();
+    const { movieKey, message, password: __raw_password } = await request.json();
+    const password = await resolveAdminCredential(__raw_password);
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

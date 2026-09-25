@@ -138,6 +138,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
+                    password: sessionStorage.getItem('adminPassword'),
                     festivalName: 'Playhouse West Film Festival 2026', 
                     festivalUrl: 'https://cratetv.net/pwff-philly2026',
                     bannerImageUrl: notifyImageUrl || null

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData, HeroConfig } from '../types';
 import LoadingSpinner from './LoadingSpinner';
+import { useAuth } from '../contexts/AuthContext';
 import MovieEditor from './MovieEditor';
 import CategoryEditor from './CategoryEditor';
 import WatchPartyManager from './WatchPartyManager';
@@ -13,12 +14,14 @@ import SaveStatusToast from './SaveStatusToast';
 import LaurelManager from './LaurelManager';
 import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
-import { MoviePipelineTab, isNewSubmission } from './MoviePipelineTab';
+import SubmissionsTab from './SubmissionsTab';
+import { isNewSubmission } from './MoviePipelineTab';
+import ContractsTab from './ContractsTab';
+import DiscoveryEngine from './DiscoveryEngine';
 import CrateFestEditor from './CrateFestEditor';
 import PromoCodeManager from './PromoCodeManager';
 import PermissionsManager from './PermissionsManager';
 import EditorialManager from './EditorialManager';
-import DiscoveryEngine from './DiscoveryEngine';
 import JuryRoomTab from './JuryRoomTab';
 import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
@@ -37,50 +40,70 @@ import MonthlySpotlightTab from './MonthlySpotlightTab';
 import HeroEditor from './HeroEditor';
 import HeroManager from './HeroManager';
 import UserDiagnosticsTab from './UserDiagnosticsTab';
-import ContractsTab from './ContractsTab';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB MAP — consolidated Sept 2026.
+// 31 tabs (5 of which had no button at all) → 22, grouped by what you're doing.
+// Each merged tab renders the old tools stacked inside it, so nothing was lost.
+// ─────────────────────────────────────────────────────────────────────────────
 const ALL_TABS: Record<string, string> = {
-    hero: '🏠 Hero Section',
-    heroSpotlight: '🎬 Hero Spotlight',
-    spotlight: '✨ Monthly Spotlight',
-    pulse: '⚡ Daily Pulse',
-    mail: '✉️ Studio Mail',
-    dispatch: '🛰️ Dispatch',
-    intel: '🧠 User Intel',
-    accountLookup: '🔍 Account Lookup',
-    editorial: '✍️ Editorial Lab',
-    watchParty: '🍿 Watch Party',
-    discovery: '🔬 Grants & Research',
-    contracts: '📄 Contracts',
+    pulse: '⚡ Dashboard',
+    submissions: '📥 Submissions',
     movies: '🎞️ Catalog',
-    pipeline: '📥 Pipeline',
-    jury: '⚖️ Jury Hub',
-    payouts: '💰 Payouts',
-    revenueFlow: '💸 Revenue Flow',
-    shopRequests: '🛍️ Shop Requests',
-    shopRevenue: '🏷️ Shop Revenue',
-    ticketCodes: '🎟️ Ticket Codes',
-    // festHub removed — its whole job (editing festivalData/festivalConfig, the
-    // real film schedule) is now inside the pwff tab below, since that's the
-    // only festival this data has ever actually been for. Having it as its
-    // own generically-named tab, separate from the PWFF tab that displayed a
-    // read-only summary of the same data, was exactly the kind of disconnected
-    // admin experience this cleanup pass is fixing.
-    crateFestHub: '🎟️ Crate Fest Hub',
-    vouchers: '🎫 Promo Codes',
-    analytics: '📊 Platform Stats',
-    categories: '📂 Categories',
-    laurels: '🏆 Laurel Forge',
-    rokuControl: '📺 Roku Control',
-    rokuAnalytics: '📊 Roku Analytics',
+    homepage: '🏠 Homepage',
+    watchParty: '🍿 Watch Party',
+    pwff: '🎬 PWFF Festival',
+    analytics: '📊 Stats',
+    users: '🧠 Users',
+    email: '✉️ Email',
+    spotlight: '✨ Monthly Spotlight',
+    editorial: '✍️ Editorial',
     outreach: '🎯 Outreach',
-    festivalReport: '📋 Festival Report',
-    audit: '📜 Audit Log',
-    errorLog: '🚨 Error Log',
+    vouchers: '🎫 Promo Codes',
+    ticketCodes: '🎟️ Access Codes',
+    jury: '⚖️ Jury',
+    crateFestHub: '🎪 Crate Fest (future)',
+    categories: '📂 Rows & Categories',
+    laurels: '🏆 Laurels',
+    money: '💰 Payouts & Revenue',
+    contracts: '📄 Contracts',
+    discovery: '🔬 Grants & Research',
+    shop: '🛍️ Shop',
+    roku: '📺 Roku',
+    system: '🛡️ Logs & Security',
     permissions: '🔑 Permissions',
-    security: '🛡️ Security',
-    pwff: '🎬 PWFF Festival'
 };
+
+const TAB_GROUPS: { title: string; ids: string[]; collapsible?: boolean }[] = [
+    { title: 'Daily', ids: ['pulse', 'submissions', 'movies', 'homepage', 'watchParty', 'pwff', 'analytics', 'users'] },
+    { title: 'Audience & Growth', ids: ['email', 'spotlight', 'editorial', 'outreach', 'vouchers', 'ticketCodes'] },
+    { title: 'Festivals & Library', ids: ['jury', 'crateFestHub', 'categories', 'laurels'] },
+    { title: 'Business & System', ids: ['money', 'contracts', 'shop', 'discovery', 'roku', 'system', 'permissions'], collapsible: true },
+];
+
+// Old tab IDs that may still be saved in Firestore permission grants →
+// the tab they now live in. Keeps every existing staff grant working.
+const LEGACY_TAB_MAP: Record<string, string> = {
+    hero: 'homepage', heroSpotlight: 'homepage',
+    mail: 'email', dispatch: 'email',
+    intel: 'users', accountLookup: 'users',
+    payouts: 'money', revenueFlow: 'money',
+    shopRequests: 'shop', shopRevenue: 'shop',
+    rokuControl: 'roku', rokuAnalytics: 'roku',
+    audit: 'system', errorLog: 'system', security: 'system',
+    festivalReport: 'pwff',
+    pipeline: 'submissions',
+};
+const normalizeTabIds = (ids: string[]): string[] =>
+    [...new Set(ids.map(id => LEGACY_TAB_MAP[id] || id).filter(id => id in ALL_TABS))];
+
+// Hard-coded security boundary: never visible to non-master admins no matter
+// what is stored in Firestore.
+const MASTER_ONLY = ['permissions', 'system', 'money', 'contracts', 'roku', 'outreach'];
+
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4">{children}</h3>
+);
 
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -116,31 +139,22 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
-    const allowedTabs = useMemo(() => {
+    const isMaster = useMemo(() => {
         const roleLower = role.toLowerCase();
-        const isMaster = roleLower === 'super_admin' || 
-                         roleLower === 'master' || 
-                         roleLower === 'chief_architect' || 
-                         roleLower.startsWith('super_admin:') || 
-                         roleLower.startsWith('master:') ||
-                         role === 'Chief Architect';
+        return roleLower === 'super_admin' ||
+               roleLower === 'master' ||
+               roleLower === 'chief_architect' ||
+               roleLower.startsWith('super_admin:') ||
+               roleLower.startsWith('master:') ||
+               role === 'Chief Architect';
+    }, [role]);
+
+    const allowedTabs = useMemo(() => {
         if (isMaster) return Object.keys(ALL_TABS);
-
-        // These tabs are NEVER visible to non-master admins regardless of
-        // what is stored in Firestore — hard-coded security boundary
-        const MASTER_ONLY = ['permissions', 'security', 'audit', 'payouts', 'contracts', 'revenueFlow', 'shopRevenue', 'rokuControl', 'rokuAnalytics', 'outreach', 'festivalReport', 'accountLookup'];
-
-        const specificTabs = permissions[role];
-        // Only the pulse dashboard is always visible — everything else must be explicitly granted
-        const ALWAYS_VISIBLE = ['pulse'];
-        if (specificTabs && specificTabs.length > 0) {
-            const merged = [...new Set([...ALWAYS_VISIBLE, ...specificTabs])]
-                .filter(tab => !MASTER_ONLY.includes(tab));
-            return merged;
-        }
-        // No permissions assigned yet — show pulse only
-        return ALWAYS_VISIBLE;
-    }, [role, permissions]);
+        const specificTabs = normalizeTabIds(permissions[role] || []);
+        // Only the dashboard is always visible — everything else must be granted
+        return [...new Set(['pulse', ...specificTabs])].filter(tab => !MASTER_ONLY.includes(tab));
+    }, [role, permissions, isMaster]);
 
     const filteredTabs = useMemo(() => {
         const entries = Object.entries(ALL_TABS).filter(([tabId]) => allowedTabs.includes(tabId));
@@ -335,8 +349,31 @@ const AdminPage: React.FC = () => {
         return () => clearInterval(timer);
     }, [isAuthenticated, refreshPipeline]);
 
+    // ── SIGN-IN ─────────────────────────────────────────────────────────
+    // The server returns a signed, 12-hour session pass (api/_lib/adminSession.ts).
+    // It's stored under the old 'adminPassword' key on purpose, so every
+    // existing tab keeps working untouched — but what's stored is the pass,
+    // never the real password.
+    const { user: crateUser, getUserIdToken } = useAuth();
+    const [sessionExpiresAt, setSessionExpiresAt] = useState<number>(0);
+    const [isRestoring, setIsRestoring] = useState(() => (sessionStorage.getItem('adminPassword') || '').startsWith('cs1.'));
+
+    const startSession = (data: any) => {
+        sessionStorage.setItem('adminPassword', data.sessionToken);
+        sessionStorage.setItem('operatorName', data.operatorName || loginName || 'ADMIN');
+        sessionStorage.setItem('adminRole', data.role || '');
+        sessionStorage.setItem('adminJobTitle', data.jobTitle || '');
+        setPassword(''); // don't keep the typed password in memory either
+        setRole(data.role);
+        setAssignedJobTitle(data.jobTitle || '');
+        setSessionExpiresAt(Number(data.expiresAt) || 0);
+        setIsAuthenticated(true);
+        fetchAllData(data.sessionToken);
+    };
+
     const handleLogin = async (e?: React.FormEvent | null) => {
         e?.preventDefault();
+        setError('');
         try {
             const response = await fetch('/api/admin-login', {
                 method: 'POST',
@@ -344,20 +381,72 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password, name: loginName }),
             });
             const data = await response.json();
-            if (data.success) {
-                sessionStorage.setItem('adminPassword', password);
-                sessionStorage.setItem('operatorName', loginName || 'ARCHITECT');
-                setRole(data.role);
-                setAssignedJobTitle(data.jobTitle || '');
-                setIsAuthenticated(true);
-                fetchAllData(password);
-            } else {
-                setError('Authentication Failed: Invalid Node Key.');
-            }
+            if (data.success && data.sessionToken) startSession(data);
+            else setError(response.status === 429 ? 'Too many attempts — wait a few minutes.' : 'Sign-in failed: invalid key.');
         } catch (err) {
-            setError('Auth Node Unreachable.');
+            setError('Could not reach the server.');
         }
     };
+
+    const handleAccountLogin = async () => {
+        setError('');
+        try {
+            const idToken = await getUserIdToken();
+            if (!idToken) { setError('Sign in to your Crate account first.'); return; }
+            const response = await fetch('/api/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+            });
+            const data = await response.json();
+            if (data.success && data.sessionToken) startSession(data);
+            else setError(data.error || "This Crate account doesn't have admin access. Ask the owner to add your email in Permissions.");
+        } catch {
+            setError('Could not reach the server.');
+        }
+    };
+
+    // Restore a still-valid session after a page reload.
+    useEffect(() => {
+        const token = sessionStorage.getItem('adminPassword') || '';
+        if (!token.startsWith('cs1.')) {
+            // Clear any raw password left over from before this update.
+            if (token) sessionStorage.removeItem('adminPassword');
+            return;
+        }
+        fetch('/api/admin-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'session', password: token }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    setRole(data.role);
+                    setAssignedJobTitle(sessionStorage.getItem('adminJobTitle') || '');
+                    setSessionExpiresAt(Number(data.expiresAt) || 0);
+                    setIsAuthenticated(true);
+                    fetchAllData(token);
+                } else {
+                    sessionStorage.removeItem('adminPassword');
+                }
+            })
+            .catch(() => {})
+            .finally(() => setIsRestoring(false));
+    }, []);
+
+    // Sign out automatically when the pass expires, instead of leaving a
+    // panel open whose every save quietly fails.
+    useEffect(() => {
+        if (!isAuthenticated || !sessionExpiresAt) return;
+        const ms = sessionExpiresAt - Date.now();
+        if (ms <= 0) { handleLogout(); return; }
+        const t = setTimeout(() => {
+            alert('Your admin session expired (12 hours). Please sign in again.');
+            handleLogout();
+        }, Math.min(ms, 2 ** 31 - 1));
+        return () => clearTimeout(t);
+    }, [isAuthenticated, sessionExpiresAt]);
 
     // Safe tab navigation — silently ignores attempts to navigate to unpermitted tabs
     const navigateTo = (tabId: string) => {
@@ -367,10 +456,10 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    const handleLogout = () => {
-        sessionStorage.clear();
+    function handleLogout() {
+        ['adminPassword', 'operatorName', 'adminRole', 'adminJobTitle'].forEach(k => sessionStorage.removeItem(k));
         window.location.reload();
-    };
+    }
 
     const handleSaveData = async (type: string, dataToSave: any) => {
         setIsSaving(true);
@@ -402,6 +491,8 @@ const AdminPage: React.FC = () => {
             setIsSaving(false);
         }
     };
+
+    if (!isAuthenticated && isRestoring) return <LoadingSpinner />;
 
     if (!isAuthenticated) {
         return (
@@ -458,6 +549,17 @@ const AdminPage: React.FC = () => {
                         >
                             Authorize Session
                         </button>
+                        <div className="pt-6 border-t border-white/5 space-y-3">
+                            {crateUser?.email ? (
+                                <button type="button" onClick={handleAccountLogin} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all">
+                                    Continue as {crateUser.email}
+                                </button>
+                            ) : (
+                                <a href="/login?redirect=/admin" className="block text-center w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all">
+                                    Staff: sign in with your Crate account
+                                </a>
+                            )}
+                        </div>
                     </form>
                 </div>
             </div>
@@ -545,107 +647,82 @@ const AdminPage: React.FC = () => {
                         )}
                     </div>
 
-                    {/* ── DAILY USE ── */}
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1">Daily</p>
-                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                    {[['pulse','⚡ Dashboard'],['hero','🏠 Hero Section'],['heroSpotlight','🎬 Hero Spotlight'],['movies','🎞️ Catalog'],['watchParty','🍿 Watch Party'],['pwff','🎬 PWFF Festival'],['intel','🧠 Users']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
-                        <button
-                            key={tabId}
-                            onClick={() => navigateTo(tabId as string)}
-                            className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
-                        >
-                            {label as string}
-                        </button>
-                    ))}
-                    </div>
-
-                    {/* ── FESTIVAL ── */}
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-1 mt-4">Festival</p>
-                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                    {[['pipeline','📥 Submissions'],['analytics','📊 Stats'],['mail','✉️ Send Email']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
-                        <button
-                            key={tabId}
-                            onClick={() => navigateTo(tabId as string)}
-                            className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
-                        >
-                            {label as string}
-                            {tabId === 'pipeline' && newSubmissionCount > 0 && (
-                                <span className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] leading-none animate-pulse" aria-label={`${newSubmissionCount} new submissions`}>
-                                    {newSubmissionCount}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                    </div>
-
-                    {/* ── MORE TOOLS ── */}
-                    <div className="mt-4">
-                        <button
-                            onClick={() => setShowMoreTools(!showMoreTools)}
-                            className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 hover:text-gray-400 transition-colors mb-2"
-                        >
-                            <span>{showMoreTools ? '▾' : '▸'}</span>
-                            <span>More Tools</span>
-                        </button>
-                        {showMoreTools && (
-                            <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                            {[['spotlight','✨ Spotlight'],['dispatch','🛰️ Dispatch'],['editorial','✍️ Editorial'],['jury','⚖️ Jury'],['payouts','💰 Payouts'],['contracts','📄 Contracts'],['discovery','🔬 Grants & Research'],['ticketCodes','🎟️ Access Codes'],['crateFestHub','🎟️ Crate Fest (future)'],['vouchers','🎫 Promos'],['categories','📂 Categories'],['laurels','🏆 Laurels'],['rokuControl','📺 Roku'],['rokuAnalytics','📊 Roku Analytics'],['outreach','🎯 Outreach'],['festivalReport','📋 Festival Report'],['audit','📜 Audit Log'],['errorLog','🚨 Error Log'],['permissions','🔑 Permissions'],['security','🛡️ Security']].filter(([id]) => allowedTabs.includes(id as string)).map(([tabId, label]) => (
-                                <button
-                                    key={tabId}
-                                    onClick={() => navigateTo(tabId as string)}
-                                    className={`flex-shrink-0 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
-                                >
-                                    {label as string}
-                                </button>
-                            ))}
+                    {TAB_GROUPS.map(group => {
+                        const ids = group.ids.filter(id => allowedTabs.includes(id));
+                        if (ids.length === 0) return null;
+                        const open = !group.collapsible || showMoreTools || ids.includes(activeTab);
+                        return (
+                            <div key={group.title} className="mt-3">
+                                {group.collapsible ? (
+                                    <button onClick={() => setShowMoreTools(!showMoreTools)} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 hover:text-gray-400 transition-colors mb-2">
+                                        <span>{open ? '▾' : '▸'}</span><span>{group.title}</span>
+                                    </button>
+                                ) : (
+                                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-2">{group.title}</p>
+                                )}
+                                {open && (
+                                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
+                                        {ids.map(tabId => (
+                                            <button
+                                                key={tabId}
+                                                onClick={() => navigateTo(tabId)}
+                                                className={`relative flex-shrink-0 px-5 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                                            >
+                                                {ALL_TABS[tabId]}
+                                                {tabId === 'submissions' && newSubmissionCount > 0 && (
+                                                    <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-black text-[9px] font-black flex items-center justify-center">{newSubmissionCount}</span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-
-                    {/* Hidden original tab renderer — kept for tab search fallback */}
-                    <div className="hidden">
-                    {filteredTabs.map(([tabId, label]) => (
-                        <button
-                            key={tabId}
-                            onClick={() => navigateTo(tabId)}
-                            className={`flex-shrink-0 px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                    {tabSearch && filteredTabs.length === 0 && (
-                        <p className="text-gray-700 text-[10px] uppercase tracking-widest py-3.5 px-4">No tabs found</p>
-                    )}
-                    </div>
+                        );
+                    })}
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {/* Content-level guard — never renders a tab the current role isn't permitted to see */}
                     {allowedTabs.includes(activeTab) && (<>
-                    {activeTab === 'hero' && (
-                        <HeroEditor
-                            config={heroConfig}
-                            isSaving={isSaving}
-                            onSave={async (c) => { setHeroConfig(c); await handleSaveData('settings', { heroConfig: c }); }}
-                        />
-                    )}
-                    {activeTab === 'heroSpotlight' && (
-                        <HeroManager
-                            allMovies={Object.values(movies) as Movie[]}
-                            featuredKeys={categories.featured?.movieKeys || []}
-                            isSaving={isSaving}
-                            onSave={(newKeys) => handleSaveData('categories', { featured: { ...(categories.featured || {}), title: categories.featured?.title || 'Featured', movieKeys: newKeys } })}
-                        />
+                    {activeTab === 'homepage' && (
+                        <div className="space-y-16">
+                            <HeroEditor
+                                config={heroConfig}
+                                isSaving={isSaving}
+                                onSave={async (c) => { setHeroConfig(c); await handleSaveData('settings', { heroConfig: c }); }}
+                            />
+                            <HeroManager
+                                allMovies={Object.values(movies) as Movie[]}
+                                featuredKeys={categories.featured?.movieKeys || []}
+                                isSaving={isSaving}
+                                onSave={(newKeys) => handleSaveData('categories', { featured: { ...(categories.featured || {}), title: categories.featured?.title || 'Featured', movieKeys: newKeys } })}
+                            />
+                        </div>
                     )}
                     {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
                     {activeTab === 'pulse' && (
-                        <div>
+                        <div className="space-y-8">
+                            {newSubmissionCount > 0 && allowedTabs.includes('submissions') && (
+                                <button onClick={() => navigateTo('submissions')} className="w-full flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-4 text-left hover:bg-amber-500/15 transition-colors">
+                                    <span className="text-amber-300 text-xs font-black uppercase tracking-widest">📥 {newSubmissionCount} new film submission{newSubmissionCount === 1 ? '' : 's'} waiting for review</span>
+                                    <span className="text-amber-400 text-[10px] font-black uppercase tracking-widest">Review →</span>
+                                </button>
+                            )}
                             <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />
                         </div>
                     )}
-                    {activeTab === 'mail' && <StudioMail />}
-                    {activeTab === 'dispatch' && <CommunicationsTerminal movies={movies} />}
-                    {activeTab === 'intel' && <UserIntelligenceTab movies={movies} />}
+                    {activeTab === 'email' && (
+                        <div className="space-y-16">
+                            <section><SectionTitle>Inbox & one-to-one replies</SectionTitle><StudioMail /></section>
+                            <section><SectionTitle>Bulk email to your audience</SectionTitle><CommunicationsTerminal movies={movies} /></section>
+                        </div>
+                    )}
+                    {activeTab === 'users' && (
+                        <div className="space-y-16">
+                            <UserIntelligenceTab movies={movies} />
+                            {isMaster && <section><SectionTitle>Account lookup & access diagnostics</SectionTitle><UserDiagnosticsTab /></section>}
+                        </div>
+                    )}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'watchParty' && (
                         <WatchPartyManager 
@@ -657,20 +734,36 @@ const AdminPage: React.FC = () => {
                             onSaveCrateFest={async (c) => handleSaveData('settings', { crateFestConfig: c })}
                         />
                     )}
-                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
-                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => navigateTo('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!, true)} onViewed={markSubmissionViewed} onMarkAllViewed={markAllSubmissionsViewed} />}
+                    {activeTab === 'submissions' && (
+                        <SubmissionsTab
+                            pipeline={pipeline}
+                            onCreateMovie={() => navigateTo('movies')}
+                            onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!, true)}
+                            onViewed={markSubmissionViewed}
+                            onMarkAllViewed={markAllSubmissionsViewed}
+                        />
+                    )}
+                    {activeTab === 'contracts' && <ContractsTab />}
+                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'jury' && (
                         <div className="space-y-16">
                             <JuryRoomTab pipeline={pipeline} />
                             <AcademyIntelTab pipeline={pipeline} movies={movies} />
                         </div>
                     )}
-                    {activeTab === 'payouts' && <AdminPayoutsTab />}
-                    {activeTab === 'contracts' && <ContractsTab />}
-                    {activeTab === 'revenueFlow' && <AdminRevenueFlowTab />}
-                    {activeTab === 'shopRequests' && <AdminShopRequestsTab />}
-                    {activeTab === 'shopRevenue' && <AdminShopRevenueTab />}
+                    {activeTab === 'money' && (
+                        <div className="space-y-16">
+                            <AdminPayoutsTab />
+                            <section><SectionTitle>Where the revenue came from</SectionTitle><AdminRevenueFlowTab /></section>
+                        </div>
+                    )}
+                    {activeTab === 'shop' && (
+                        <div className="space-y-16">
+                            <AdminShopRequestsTab />
+                            {isMaster && <section><SectionTitle>Shop revenue</SectionTitle><AdminShopRevenueTab /></section>}
+                        </div>
+                    )}
                     {activeTab === 'ticketCodes' && (
                         <TicketCodesTab festivalDays={festivalData} />
                     )}
@@ -681,6 +774,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'pwff' && (
+                        <div className="space-y-16">
                         <PwffAdminTab
                             pwffVisible={pwffVisible}
                             pwffDate={pwffDate}
@@ -715,6 +809,8 @@ const AdminPage: React.FC = () => {
                             onSaveFestival={(latestConfig) => { handleSaveData('festival', { config: latestConfig, data: festivalData }); }}
                             isSavingFestival={isSaving}
                         />
+                        {isMaster && <section><SectionTitle>Festival revenue report</SectionTitle><FestivalReportTab /></section>}
+                        </div>
                     )}
                     {activeTab === 'vouchers' && (
                         <PromoCodeManager 
@@ -724,16 +820,22 @@ const AdminPage: React.FC = () => {
                         />
                     )}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
-                    {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
-                    {activeTab === 'rokuControl' && <RokuManagementTab allMovies={Object.values(movies) as Movie[]} onSaveMovie={async (m) => handleSaveData('movies', { [m.key]: m })} />}
-                    {activeTab === 'rokuAnalytics' && <RokuAnalyticsTab analytics={analytics} movies={movies} />}
+                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
+                    {activeTab === 'roku' && (
+                        <div className="space-y-16">
+                            <RokuManagementTab allMovies={Object.values(movies) as Movie[]} onSaveMovie={async (m) => handleSaveData('movies', { [m.key]: m })} />
+                            <section><SectionTitle>Roku analytics</SectionTitle><RokuAnalyticsTab analytics={analytics} movies={movies} /></section>
+                        </div>
+                    )}
                     {activeTab === 'outreach' && <FilmmakerOutreachTab />}
-                    {activeTab === 'festivalReport' && <FestivalReportTab />}
-                    {activeTab === 'audit' && <AuditTerminal />}
-                    {activeTab === 'errorLog' && <ErrorLogTab />}
-                    {activeTab === 'accountLookup' && <UserDiagnosticsTab />}
-                    {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
-                    {activeTab === 'security' && <SecurityTerminal />}
+                    {activeTab === 'system' && (
+                        <div className="space-y-16">
+                            <section><SectionTitle>Errors from the live site</SectionTitle><ErrorLogTab /></section>
+                            <section><SectionTitle>Admin activity (audit log)</SectionTitle><AuditTerminal /></section>
+                            <section><SectionTitle>Security monitor</SectionTitle><SecurityTerminal /></section>
+                        </div>
+                    )}
+                    {activeTab === 'permissions' && <PermissionsManager allTabs={Object.fromEntries(Object.entries(ALL_TABS).filter(([id]) => !MASTER_ONLY.includes(id)))} initialPermissions={Object.fromEntries(Object.entries(permissions).map(([r, ids]) => [r, normalizeTabIds(ids)]))} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     </>)}
                 </div>
             </div>

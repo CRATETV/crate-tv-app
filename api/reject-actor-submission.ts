@@ -1,15 +1,19 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { isValidAdminKey } from './_lib/adminAuth.js';
 import { Resend } from 'resend';
 import { renderBrandedEmail } from './_lib/emailBranding.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
 export async function POST(request: Request) {
   try {
-    const { submissionId, password, reason } = await request.json();
+    const { submissionId, password: __raw_password, reason } = await request.json();
+    const password = await resolveAdminCredential(__raw_password);
 
-    if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
+    if (getInitializationError()) throw new Error(getInitializationError()!);
+    if (!(await isValidAdminKey(password, getAdminDb()))) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
     

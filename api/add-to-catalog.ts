@@ -8,10 +8,12 @@ import { Resend } from 'resend';
 import { addPipelineEntryToCatalog } from './_lib/addToCatalog.js';
 import { publishBlockReason } from './_lib/publishGate.js';
 import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { submissionId, password } = await request.json();
+        const { submissionId, password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         // Auth check
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -29,7 +31,8 @@ export async function POST(request: Request) {
             }
         }
         const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD;
-        if (!anyPasswordSet) isAuthenticated = true;
+        // SECURITY: "setup mode" removed — a missing ADMIN_PASSWORD no longer unlocks this endpoint.
+        void anyPasswordSet;
 
         if (!isAuthenticated) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {

@@ -1,10 +1,12 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
 import { fetchAllRelevantPayments, getSquareCredentials, computeRevenueByFilm, PARTNER_SHARE } from './_lib/filmmakerBalance.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { password, movieKey } = await request.json();
+        const { password: __raw_password, movieKey } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         
         // Basic admin check
         if (!password || (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD)) {

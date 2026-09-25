@@ -1,6 +1,7 @@
 
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { GrowthAnalyticsData, MonthlyDataPoint, User, Movie, AboutData } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // EPOCH RESET: Moved to May 24, 2025
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
@@ -72,7 +73,8 @@ const generateProjections = (historical: MonthlyDataPoint[], monthsToProject: nu
 
 export async function POST(request: Request) {
     try {
-        const { password } = await request.json();
+        const { password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }

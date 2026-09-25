@@ -1,13 +1,15 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
 export async function POST(request: Request) {
     try {
-        const { password, email, code, itemName, discountType, discountValue, customMessage } = await request.json();
+        const { password: __raw_password, email, code, itemName, discountType, discountValue, customMessage } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         // 1. Authentication
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;

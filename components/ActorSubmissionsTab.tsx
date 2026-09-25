@@ -77,7 +77,7 @@ export const ActorSubmissionsTab: React.FC<ActorSubmissionsTabProps> = ({ submis
                                         <p className="text-sm text-gray-400">{sub.email}</p>
                                         {sub.imdbUrl && <a href={sub.imdbUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline">IMDb Profile</a>}
                                         <p className="text-sm text-gray-300 mt-2">{sub.bio}</p>
-                                        <p className="text-xs text-gray-500 mt-2">Submitted: {sub.submissionDate ? new Date(sub.submissionDate.seconds * 1000).toLocaleString() : 'N/A'}</p>
+                                        <p className="text-xs text-gray-500 mt-2">Submitted: {(sub.submissionDate?._seconds ?? sub.submissionDate?.seconds) ? new Date((sub.submissionDate._seconds ?? sub.submissionDate.seconds) * 1000).toLocaleString() : 'N/A'}</p>
                                     </div>
                                     <div className="flex flex-col gap-2 flex-shrink-0 w-full md:w-32">
                                         <button

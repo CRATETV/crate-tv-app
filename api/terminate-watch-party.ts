@@ -4,10 +4,12 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
 import { sendWatchPartyReport } from './_lib/sendWatchPartyReport.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, password } = await request.json();
+    const { movieKey, password: __raw_password } = await request.json();
+    const password = await resolveAdminCredential(__raw_password);
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

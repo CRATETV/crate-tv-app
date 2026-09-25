@@ -8,6 +8,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { RokuConfig } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const DEFAULT_CONFIG: RokuConfig = {
     _version: 0,
@@ -23,7 +24,8 @@ const DEFAULT_CONFIG: RokuConfig = {
 
 export async function POST(request: Request) {
     try {
-        const { password } = await request.json();
+        const { password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

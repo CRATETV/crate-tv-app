@@ -1,5 +1,6 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { logServerError } from './_lib/logError.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // Read/delete counterpart to api/generate-ticket-codes.ts — the admin panel's
 // listing and delete actions were still doing direct client Firestore
@@ -20,7 +21,7 @@ async function isAuthenticated(db: FirebaseFirestore.Firestore, password: string
 export async function GET(request: Request) {
     try {
         const url = new URL(request.url);
-        const password = url.searchParams.get('password') || '';
+        const password = await resolveAdminCredential(url.searchParams.get('password') || '');
 
         const initError = getInitializationError();
         if (initError) throw new Error(initError);
@@ -47,7 +48,8 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { password, codeId } = await request.json();
+        const { password: __raw_password, codeId } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const initError = getInitializationError();
         if (initError) throw new Error(initError);

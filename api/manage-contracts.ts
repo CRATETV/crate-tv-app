@@ -56,7 +56,7 @@ const safeName = (name: string) => name.replace(/[^A-Za-z0-9._-]+/g, '_').replac
 
 export async function GET(request: Request) {
     try {
-        if (!isMasterAdmin(bearer(request))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await isMasterAdmin(bearer(request)))) return json({ error: 'Unauthorized' }, 401);
         const db = getDb();
         const id = new URL(request.url).searchParams.get('id');
 
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        if (!isMasterAdmin(bearer(request))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await isMasterAdmin(bearer(request)))) return json({ error: 'Unauthorized' }, 401);
         const body = await request.json().catch(() => ({}));
 
         if (body.action === 'get-upload-url') {
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        if (!isMasterAdmin(bearer(request))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await isMasterAdmin(bearer(request)))) return json({ error: 'Unauthorized' }, 401);
         const id = new URL(request.url).searchParams.get('id');
         if (!id || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) return json({ error: 'Invalid id' }, 400);
         const db = getDb();

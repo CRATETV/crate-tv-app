@@ -14,6 +14,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, ListObjectsV2Command, PutObjectTaggingCommand } from '@aws-sdk/client-s3';
 import { Movie } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const TAG_KEY = 'crate-content';
 
@@ -33,7 +34,8 @@ function folderPrefix(key: string): string {
 
 export async function POST(request: Request) {
     try {
-        const { tagValue, password } = await request.json();
+        const { tagValue, password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

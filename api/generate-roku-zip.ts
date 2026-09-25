@@ -3,6 +3,7 @@ import path from 'path';
 import JSZip from 'jszip';
 import { Buffer } from 'buffer';
 import process from 'process';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 async function readDirectory(dirPath: string): Promise<string[]> {
     try {
@@ -62,7 +63,8 @@ export async function POST(request: Request) {
     const apiUrl = `${domain}/api`;
     
     try {
-        const { password } = await request.json();
+        const { password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
         }
     } catch (e) {}
 
-    if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) isAuthenticated = true;
+    if ((host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) && process.env.VERCEL !== '1') isAuthenticated = true;
     if (!isAuthenticated) return new Response(JSON.stringify({ error: 'Unauthorized Infrastructure Access' }), { status: 401 });
 
     const rokuDir = path.join((process as any).cwd(), 'roku');

@@ -7,9 +7,20 @@ interface Collaborator {
     name: string;
     jobTitle: string;
     accessKey: string;
+    email?: string;
     assignedTabs: string[];
     status: string;
 }
+
+// Tabs were consolidated (Sept 2026). Staff grants saved under the old tab
+// IDs are shown — and re-saved — under the tab they now live in.
+const LEGACY_TAB_MAP: Record<string, string> = {
+    hero: 'homepage', heroSpotlight: 'homepage', mail: 'email', dispatch: 'email',
+    intel: 'users', accountLookup: 'users', payouts: 'money', revenueFlow: 'money',
+    shopRequests: 'shop', shopRevenue: 'shop', rokuControl: 'roku', rokuAnalytics: 'roku',
+    audit: 'system', errorLog: 'system', security: 'system', festivalReport: 'pwff', pipeline: 'submissions',
+};
+const normalizeTabs = (ids: string[] = []) => [...new Set(ids.map(id => LEGACY_TAB_MAP[id] || id))];
 
 interface PermissionsManagerProps {
     allTabs: Record<string, string>;
@@ -25,6 +36,7 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
     const [processingRole, setProcessingRole] = useState<string | null>(null);
     const [newCollabName, setNewCollabName] = useState('');
     const [newCollabJob, setNewCollabJob] = useState('');
+    const [newCollabEmail, setNewCollabEmail] = useState('');
     const [error, setError] = useState('');
 
     const fetchCollaborators = async () => {
@@ -62,7 +74,7 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
         const collab = collaborators.find(c => c.id === collabId);
         if (!collab) return;
 
-        const currentTabs = collab.assignedTabs || [];
+        const currentTabs = normalizeTabs(collab.assignedTabs);
         const nextTabs = currentTabs.includes(tabId)
             ? currentTabs.filter(t => t !== tabId)
             : [...currentTabs, tabId];
@@ -108,11 +120,26 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
         await fetch('/api/manage-collaborators', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password, action: 'create', data: { name: newCollabName, jobTitle: newCollabJob } }),
-        });
+            body: JSON.stringify({ password, action: 'create', data: { name: newCollabName, jobTitle: newCollabJob, email: newCollabEmail } }),
+        }).then(async r => { if (!r.ok) setError((await r.json().catch(() => ({}))).error || 'Could not add staff member.'); });
         setNewCollabName('');
         setNewCollabJob('');
+        setNewCollabEmail('');
         fetchCollaborators();
+    };
+
+    const handleUpdateEmail = async (collabId: string, email: string) => {
+        const collab = collaborators.find(c => c.id === collabId);
+        if (!collab || (collab.email || '') === email.trim().toLowerCase()) return;
+        setError('');
+        const password = sessionStorage.getItem('adminPassword');
+        const res = await fetch('/api/manage-collaborators', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, action: 'set_email', data: { id: collabId, email } }),
+        });
+        if (!res.ok) { setError((await res.json().catch(() => ({}))).error || 'Could not save email.'); return; }
+        setCollaborators(prev => prev.map(c => c.id === collabId ? { ...c, email: email.trim().toLowerCase() } : c));
     };
 
     const handleDeleteCollab = async (id: string) => {
@@ -170,7 +197,7 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Collaborator Access</h2>
-                        <p className="text-gray-500 text-sm mt-1 uppercase font-bold tracking-widest italic">Issue and revoke unique personnel keys.</p>
+                        <p className="text-gray-500 text-sm mt-1">Add staff and choose which tabs they see. If you add their Crate account email, they sign in at /admin with their own account — no shared key to pass around. Revoking takes effect immediately.</p>
                     </div>
                     
                     <form onSubmit={handleCreateCollab} className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
@@ -179,6 +206,13 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                             value={newCollabName}
                             onChange={e => setNewCollabName(e.target.value)}
                             placeholder="Personnel Name..."
+                            className="form-input !py-3 !px-6 text-xs bg-black/40 border-white/10"
+                        />
+                        <input
+                            type="email"
+                            value={newCollabEmail}
+                            onChange={e => setNewCollabEmail(e.target.value)}
+                            placeholder="Their Crate account email (optional)"
                             className="form-input !py-3 !px-6 text-xs bg-black/40 border-white/10"
                         />
                         <input
@@ -199,7 +233,7 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                                 <tr>
                                     <th className="p-5">Name / Identity</th>
                                     <th className="p-5">Job Function</th>
-                                    <th className="p-5">Access Token</th>
+                                    <th className="p-5">Sign-in</th>
                                     <th className="p-5">Permitted Sectors</th>
                                     <th className="p-5 text-right">Actions</th>
                                 </tr>
@@ -226,7 +260,15 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                                             />
                                         </td>
                                         <td className="p-5">
-                                            <code className="bg-white/5 px-3 py-1.5 rounded-lg text-red-500 font-mono tracking-widest select-all">{c.accessKey}</code>
+                                            <input
+                                                type="email"
+                                                defaultValue={c.email || ''}
+                                                placeholder="add Crate email…"
+                                                onBlur={(e) => handleUpdateEmail(c.id, e.target.value)}
+                                                className="bg-transparent border-b border-white/10 focus:border-indigo-500 text-gray-200 outline-none w-full max-w-[200px] mb-2"
+                                            />
+                                            <p className="text-[9px] text-gray-600 uppercase tracking-widest">Backup key</p>
+                                            <code className="bg-white/5 px-2 py-1 rounded text-red-500 font-mono text-[10px] select-all">{c.accessKey}</code>
                                         </td>
                                         <td className="p-5">
                                             <div className="flex flex-wrap gap-1 max-w-md">
@@ -234,7 +276,7 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                                                     <button 
                                                         key={tid}
                                                         onClick={() => handleCollabTabToggle(c.id, tid)}
-                                                        className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-tighter transition-all ${c.assignedTabs?.includes(tid) ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-700 hover:text-gray-400'}`}
+                                                        className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-tighter transition-all ${normalizeTabs(c.assignedTabs).includes(tid) ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-700 hover:text-gray-400'}`}
                                                     >
                                                         {(tlabel as string).split(' ')[1]}
                                                     </button>

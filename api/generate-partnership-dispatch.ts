@@ -1,9 +1,11 @@
 
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
   try {
-    const { password, target } = await request.json();
+    const { password: __raw_password, target } = await request.json();
+    const password = await resolveAdminCredential(__raw_password);
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

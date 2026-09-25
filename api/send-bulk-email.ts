@@ -1,5 +1,6 @@
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
@@ -9,7 +10,8 @@ const LOGO_URL = 'https://cratetv.net/logo-tagline.png';
 
 export async function POST(request: Request) {
     try {
-        const { password, subject, htmlBody, imageUrl, audience = 'subscribers' } = await request.json();
+        const { password: __raw_password, subject, htmlBody, imageUrl, audience = 'subscribers' } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

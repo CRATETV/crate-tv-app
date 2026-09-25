@@ -3,6 +3,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { Movie, EditorialStory } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const getRoleFromPassword = (password: string | null) => {
     if (!password) return 'unknown';
@@ -115,7 +116,8 @@ export const assembleAndSyncMasterData = async (db: Firestore) => {
 
 export async function POST(request: Request) {
     try {
-        const { password, operatorName, type, data } = await request.json();
+        const { password: __raw_password, operatorName, type, data } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         const baseRole = getRoleFromPassword(password);
 
         if (baseRole === 'unknown') {

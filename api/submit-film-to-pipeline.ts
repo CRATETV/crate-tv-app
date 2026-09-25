@@ -1,7 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
-import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
+import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { escapeHtml, cleanText, cleanLine, isValidEmail, safeHttpUrl } from './_lib/validation.js';
 import { getSubmissionBucket, inspectUpload, deleteUpload, parseStorageUrl, storageBucketName, InspectResult } from './_lib/submissionFiles.js';
@@ -380,6 +380,28 @@ export async function POST(request: Request) {
                 });
 
                 console.log(`Notification email sent to ${adminEmails.join(', ')} for submission: ${submissionKey}`);
+
+                // Confirmation to the filmmaker, so they know it actually arrived.
+                try {
+                    await resend.emails.send({
+                        from: 'CRATE <studio@cratetv.net>',
+                        to: [email],
+                        reply_to: 'studio@cratetv.net',
+                        subject: `We received "${title}" 🎬`,
+                        html: renderBrandedEmail({
+                            title: 'Submission received',
+                            bodyHtml: `
+                                <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Submission Received</p>
+                                <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">${h.title}</h1>
+                                <p style="margin:0 0 16px;">Thank you for sending your film to CRATE. It's in our review queue now.</p>
+                                <p style="margin:0 0 16px;">Our team watches every submission. You'll hear from us by email within 2–3 weeks.</p>
+                                <p style="margin:0;color:#888;font-size:12px;">Reference: ${h.submissionKey}</p>
+                            `,
+                        }),
+                    });
+                } catch (confirmError) {
+                    console.warn('Filmmaker confirmation email failed:', confirmError);
+                }
             } catch (emailError) {
                 console.warn('Failed to send notification email:', emailError);
                 // Don't fail the submission if email fails

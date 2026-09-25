@@ -1,6 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { verifyAdminPassword } from './_lib/adminAuth.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -11,7 +12,8 @@ const SAFE_ID = /^[A-Za-z0-9._-]{1,200}$/;
 /** Deletes one chat message from a watch party. */
 export async function POST(request: Request) {
   try {
-    const { movieKey, messageId, adminPassword } = await request.json();
+    const { movieKey, messageId, adminPassword: __raw_adminPassword } = await request.json();
+    const adminPassword = await resolveAdminCredential(__raw_adminPassword);
 
     if (!movieKey || !messageId || !adminPassword) {
       return json({ error: 'MovieKey, messageId, and Password required.' }, 400);

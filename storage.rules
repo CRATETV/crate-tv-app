@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRATE — Firebase Storage rules
+//
+// The ONLY thing in the app that talks to Firebase Storage directly is the
+// public film submission form (components/SubmitPage.tsx), which uploads to:
+//     submissions/posters/<timestamp>-<name>
+//     submissions/films/<timestamp>-<name>
+// Submitters don't need a Crate account, so uploads can't require sign-in.
+//
+// What these rules do:
+//   • Allow NEW uploads into those two folders only, with the right file type
+//     and size (posters: images ≤ 10 MB, films: video ≤ 5 GB).
+//   • Nobody can overwrite, rename or delete an existing file from a browser.
+//   • Nobody can list or browse the bucket.
+//   • A single file can be fetched only by its exact, hard-to-guess name
+//     (timestamp + filename). The submit form needs this to get the file's
+//     link right after uploading, and the admin panel uses that link to play
+//     the film. Browsing/listing the folder is blocked, so nobody can
+//     discover other people's submissions.
+//   • Everything else in the bucket: no browser access at all. (Server code
+//     using the Admin SDK is unaffected by rules.)
+// ─────────────────────────────────────────────────────────────────────────────
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /submissions/posters/{fileName} {
+      allow create: if request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow get: if true;
+      allow list, update, delete: if false;
+    }
+
+    match /submissions/films/{fileName} {
+      allow create: if request.resource.size < 5 * 1024 * 1024 * 1024
+                    && request.resource.contentType.matches('video/.*');
+      allow get: if true;
+      allow list, update, delete: if false;
+    }
+
+    // Default: deny everything else from browsers.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

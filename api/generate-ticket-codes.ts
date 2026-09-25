@@ -1,5 +1,6 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { logServerError } from './_lib/logError.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // Server-side counterpart to the admin "Ticket Codes" tab's code generation.
 // The client used to addDoc() straight to `ticket_codes` from the browser —
@@ -23,7 +24,7 @@ function generateCodeString(type: string): string {
 export async function POST(request: Request) {
     try {
         const {
-            password,
+            password: __raw_password,
             codeType,
             codeCount,
             selectedDay,
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
             recipientName,
             notes,
         } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

@@ -1,7 +1,9 @@
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { url, password } = await request.json();
+        const { url, password: __raw_password } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
         
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

@@ -10,10 +10,12 @@
  */
 
 import { getAdminDb } from './_lib/firebaseAdmin.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
     try {
-        const { password, movieKey, movieTitle, watchPartyStartTime, isWatchPartyEnabled, isWatchPartyPaid, watchPartyPrice, poster } = await request.json();
+        const { password: __raw_password, movieKey, movieTitle, watchPartyStartTime, isWatchPartyEnabled, isWatchPartyPaid, watchPartyPrice, poster } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         if (!password || (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD)) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });

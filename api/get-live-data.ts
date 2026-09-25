@@ -1,5 +1,6 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 function filterCategories(data: any) {
     if (data.categories) {
@@ -88,7 +89,8 @@ export async function GET(request: Request) {
 // free ones. Never cached, since a response here is only ever meant for the requesting admin.
 export async function POST(request: Request) {
     try {
-        const { password, noCache } = await request.json();
+        const { password: __raw_password, noCache } = await request.json();
+        const password = await resolveAdminCredential(__raw_password);
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;

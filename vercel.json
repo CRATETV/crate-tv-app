@@ -43,6 +43,14 @@
       "destination": "/api/zine-preview?id=:id"
     },
     {
+      "source": "/movie/:key",
+      "destination": "/api/movie-preview?key=:key&kind=movie"
+    },
+    {
+      "source": "/watchparty/:key",
+      "destination": "/api/movie-preview?key=:key&kind=watchparty"
+    },
+    {
       "source": "/((?!api/|@|.*\\..*).*)",
       "destination": "/index.html"
     }

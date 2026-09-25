@@ -2,6 +2,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
+import { resolveAdminCredential } from './_lib/adminSession.js';
 
 // This endpoint used to trust `isVerifiedDirector`, `isAdmin`, and
 // `isSystemMessage` straight from the request body with no verification at
@@ -30,8 +31,9 @@ export async function POST(request: Request) {
     const {
       movieKey, userName, userAvatar, text,
       isVerifiedDirector, isAdmin, isSystemMessage,
-      idToken, backstageKey, adminPassword,
+      idToken, backstageKey, adminPassword: __raw_adminPassword,
     } = await request.json();
+    const adminPassword = await resolveAdminCredential(__raw_adminPassword);
 
     if (!movieKey || !userName || !userAvatar || !text) {
       return new Response(JSON.stringify({ error: 'Missing required fields for chat message.' }), {
