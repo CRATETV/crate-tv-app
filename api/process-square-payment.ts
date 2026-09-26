@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
 import { Firestore } from 'firebase-admin/firestore';
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
@@ -175,8 +175,8 @@ export async function POST(request: Request) {
       });
     }
 
-    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, uid, promoCode } = await request.json();
-    
+    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, promoCode, idempotencyKey: clientIdempotencyKey } = await request.json();
+
     const isProduction = process.env.VERCEL_ENV === 'production';
     const accessToken = isProduction
       ? process.env.SQUARE_ACCESS_TOKEN
@@ -200,31 +200,91 @@ export async function POST(request: Request) {
     const initError = getInitializationError();
     const db = !initError ? getAdminDb() : null;
 
-    // --- DUPLICATE RENTAL GUARD ---
+    // --- VERIFY CALLER IDENTITY ---
+    // `uid` used to come straight from the request body — anyone could send
+    // any uid they liked (their own, a friend's, one just guessed) and this
+    // endpoint would grant paid access to THAT account instead of whoever
+    // actually paid, with nothing to stop it. A donation/support-pot deposit
+    // never grants account-scoped access below, so it can stay anonymous;
+    // every other payment type does grant access keyed to `uid`, so those
+    // require a verified Firebase ID token — the uid used everywhere below
+    // comes only from that token, never from the request body.
+    let uid: string | null = null;
+    const authHeader = request.headers.get('Authorization');
+    const requiresAuth = !['donation', 'billSavingsDeposit'].includes(paymentType);
+    if (authHeader?.startsWith('Bearer ')) {
+        const auth = getAdminAuth();
+        if (!auth) {
+            if (requiresAuth) throw new Error('Authentication service unavailable.');
+        } else {
+            try {
+                uid = (await auth.verifyIdToken(authHeader.slice(7))).uid;
+            } catch {
+                return new Response(JSON.stringify({ error: 'Invalid or expired session. Please sign in again.' }), {
+                    status: 401, headers: { 'Content-Type': 'application/json' },
+                });
+            }
+        }
+    }
+    if (requiresAuth && !uid) {
+        return new Response(JSON.stringify({ error: 'Sign in required to complete this purchase.' }), {
+            status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
+    // --- DUPLICATE PURCHASE GUARD ---
     // FIX (real customer overcharge — Bret Sperry was charged 3x for one
     // "Tino" rental): a client-side bug let the checkout modal be dismissed
     // right after a successful payment but before the app learned about it,
     // so the film still looked locked and he reasonably paid again. That
     // client bug is fixed separately (SquarePaymentModal.tsx), but this is
-    // the actual backstop: if the signed-in user already has a non-expired
-    // rental for this exact film, don't charge them again no matter what
-    // the client thinks the state is.
-    if (db && uid && paymentType === 'movie' && itemId) {
+    // the actual backstop: if the signed-in user already has whatever this
+    // exact purchase would grant, don't charge them again no matter what the
+    // client thinks the state is. Originally only covered movie rentals —
+    // extended to every access-granting payment type below (blocks, watch
+    // party tickets, and every kind of pass), since a stale client, a
+    // double-click, or a retried request could double-charge any of them
+    // the same way.
+    if (db && uid) {
         try {
             const userDoc = await db.collection('users').doc(uid).get();
-            const existingExpiry = userDoc.data()?.rentals?.[itemId];
-            if (existingExpiry && new Date(existingExpiry) > new Date()) {
+            const userData = userDoc.data();
+
+            const alreadyHasAccess = (() => {
+                if (paymentType === 'movie' && itemId) {
+                    const expiry = userData?.rentals?.[itemId];
+                    return !!expiry && new Date(expiry) > new Date();
+                }
+                if (paymentType === 'watchPartyTicket' && itemId) {
+                    return (userData?.unlockedWatchPartyKeys || []).includes(itemId);
+                }
+                if (paymentType === 'block' && itemId) {
+                    if (itemId === 'full-festival-pass') return !!userData?.hasFestivalAllAccess;
+                    const expiry = userData?.unlockedBlocks?.[itemId];
+                    return !!expiry && new Date(expiry) > new Date();
+                }
+                if (paymentType === 'pass') return !!userData?.hasFestivalAllAccess;
+                if (paymentType === 'crateFestPass') {
+                    const expiry = userData?.crateFestPassExpiry;
+                    return !!userData?.hasCrateFestPass && (!expiry || new Date(expiry) > new Date());
+                }
+                if (paymentType === 'juryPass') return !!userData?.hasJuryPass;
+                if (paymentType === 'subscription') return !!userData?.isPremiumSubscriber;
+                return false;
+            })();
+
+            if (alreadyHasAccess) {
                 return new Response(JSON.stringify({
-                    error: "You already have access to this film — no need to pay again.",
+                    error: "You already have access to this — no need to pay again.",
                     alreadyRented: true,
                 }), { status: 409, headers: { 'Content-Type': 'application/json' } });
             }
         } catch (e) {
             // If this check itself fails, fall through and let the payment
-            // proceed rather than blocking a legitimate first-time rental —
+            // proceed rather than blocking a legitimate first-time purchase —
             // this guard should only ever prevent a charge, never cause one
             // to be wrongly rejected.
-            console.error('[Payment API] Duplicate rental check failed (proceeding):', e);
+            console.error('[Payment API] Duplicate purchase check failed (proceeding):', e);
         }
     }
 
@@ -240,7 +300,16 @@ export async function POST(request: Request) {
         }
     }
 
-    const idempotencyKey = randomUUID();
+    // Reuses the client's own idempotency key for this checkout attempt
+    // (one generated once per SquarePaymentModal mount) instead of a fresh
+    // randomUUID() every call — a double-click firing two requests for the
+    // same attempt now sends the SAME key to Square, which dedupes them
+    // into a single charge instead of two. A missing/malformed key (an old
+    // client, or a direct API call) still gets a random one so the request
+    // doesn't fail outright, it just loses the double-click protection.
+    const idempotencyKey = (typeof clientIdempotencyKey === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(clientIdempotencyKey))
+        ? clientIdempotencyKey
+        : randomUUID();
     let amountInCents: number = 0;
     let note: string = "Crate TV Purchase";
 
@@ -345,6 +414,21 @@ export async function POST(request: Request) {
             if (promo?.type === 'one_time_access') amountInCents = 0;
             else if (promo?.type === 'discount') amountInCents = Math.round(amountInCents * ((100 - promo.discountValue) / 100));
         }
+    }
+
+    // --- PROMO VOUCHER SOURCE INTEGRITY CHECK ---
+    // sourceId 'PROMO_VOUCHER' means "skip Square, this is free" (see
+    // SquarePaymentModal.tsx). That was trusted unconditionally: a request
+    // could send sourceId: 'PROMO_VOUCHER' with no promoCode at all (or an
+    // invalid one) and walk straight past the charge below with
+    // amountInCents still >0, getting the item for free. Now it's only
+    // ever allowed once a real promo code has already brought the price to
+    // exactly $0 above — otherwise this is rejected outright rather than
+    // silently skipping the charge.
+    if (sourceId === 'PROMO_VOUCHER' && amountInCents > 0) {
+        return new Response(JSON.stringify({ error: "A valid promo code reducing the price to $0 is required to use this payment method." }), {
+            status: 400, headers: { 'Content-Type': 'application/json' },
+        });
     }
 
     // --- PROCESS TRANSACTION ---

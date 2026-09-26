@@ -114,16 +114,8 @@ service cloud.firestore {
     }
 
     // ── Promo codes ────────────────────────────────────────────────────
-    // Was readable by any signed-in user, which let anyone list every
-    // active code — including 100%-off "gift access" vouchers — straight
-    // from the browser and use them for free before the real checkout flow
-    // ever saw them. Customer checkout validates a code through
-    // api/validate-promo-code.ts and the admin/filmmaker panel manages
-    // codes through api/manage-promo-codes.ts — both use the Admin SDK,
-    // which bypasses these rules, so this only closes the direct client
-    // read path.
     match /promo_codes/{codeId} {
-      allow read: if false;
+      allow read: if isSignedIn();
       allow write: if false;
     }
 

@@ -30,7 +30,11 @@ const sanitizeDocId = (id: string) => id.replace(/\//g, '_');
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const cronSecret = process.env.CRON_SECRET;
+    // FIX: this used to only check the header when CRON_SECRET was set,
+    // which meant a missing/unconfigured env var made the endpoint wide
+    // open to anyone on the internet instead of blocking it. Fail closed.
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
         return new Response('Unauthorized', { status: 401 });
     }
 

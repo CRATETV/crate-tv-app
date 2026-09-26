@@ -103,3 +103,49 @@ export async function DELETE(request: Request) {
         return new Response(JSON.stringify({ error: (error as Error).message || 'Failed to revoke code.' }), { status: 500 });
     }
 }
+
+// PromoCodeManager.tsx used to list codes (and check whether a candidate
+// alias was already taken) with a direct client-side Firestore read.
+// firestore.rules now blocks all client reads of promo_codes (a readable
+// list let anyone see every live voucher, including 100%-off codes,
+// straight from the browser) — so both operations are routed through this
+// same admin-protected endpoint instead, via the Admin SDK.
+export async function GET(request: Request) {
+    if (!(await checkAuth(request))) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    try {
+        const { searchParams } = new URL(request.url);
+        const checkCode = searchParams.get('checkCode');
+        const createdBy = searchParams.get('createdBy');
+
+        const initError = getInitializationError();
+        if (initError) throw new Error(initError);
+        const db = getAdminDb();
+        if (!db) throw new Error('Database offline.');
+
+        // ── AVAILABILITY CHECK — powers the "is this alias taken" indicator
+        // while someone is typing a new code. ──
+        if (checkCode) {
+            const cleanCode = checkCode.toUpperCase().trim().replace(/\s/g, '');
+            if (!cleanCode) return new Response(JSON.stringify({ taken: false }), { status: 200 });
+            const doc = await db.collection('promo_codes').doc(cleanCode).get();
+            return new Response(JSON.stringify({ taken: doc.exists }), { status: 200 });
+        }
+
+        // ── LIST ────────────────────────────────────────────────────────
+        let query: FirebaseFirestore.Query = db.collection('promo_codes');
+        if (createdBy) query = query.where('createdBy', '==', createdBy);
+        const snapshot = await query.get();
+
+        const codes = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as PromoCode))
+            .sort((a: any, b: any) => {
+                const toMillis = (ts: any) => typeof ts?.toMillis === 'function' ? ts.toMillis() : 0;
+                return toMillis(b.createdAt) - toMillis(a.createdAt);
+            });
+
+        return new Response(JSON.stringify({ codes }), { status: 200 });
+    } catch (error) {
+        console.error('[manage-promo-codes] List error:', error);
+        return new Response(JSON.stringify({ error: (error as Error).message || 'Failed to load vouchers.' }), { status: 500 });
+    }
+}

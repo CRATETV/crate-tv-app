@@ -210,25 +210,26 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     const [selectedItemId, setSelectedItemId] = useState(defaultItemId);
     const [codeAvailability, setCodeAvailability] = useState<'checking' | 'available' | 'taken' | 'idle'>('idle');
 
+    // Codes used to be listed with a direct client-side Firestore read.
+    // firestore.rules now blocks that (a readable promo_codes collection let
+    // anyone see every live voucher — including 100%-off codes — straight
+    // from the browser), so this goes through the same admin-protected
+    // endpoint that already handles create/delete/restore.
     const fetchCodes = async () => {
-        const db = getDbInstance();
-        if (!db) {
-            setTimeout(() => setIsLoading(false), 2000);
-            return;
-        }
-        
+        const password = sessionStorage.getItem('adminPassword');
         try {
-            let query: any = db.collection('promo_codes');
-            if (!isAdmin && filmmakerName) {
-                query = query.where('createdBy', '==', filmmakerName);
-            }
+            const params = new URLSearchParams();
+            if (!isAdmin && filmmakerName) params.set('createdBy', filmmakerName);
+            const res = await fetch(`/api/manage-promo-codes${params.toString() ? `?${params.toString()}` : ''}`, {
+                headers: { 'Authorization': `Bearer ${password}` },
+            });
+            if (!res.ok) throw new Error('Failed to load vouchers.');
+            const data = await res.json();
+            const fetched: PromoCode[] = data.codes || [];
 
-            const snapshot = await query.get();
-            const fetched = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as PromoCode));
-            
             fetched.sort((a: PromoCode, b: PromoCode) => {
-                const dateA = a.createdAt?.seconds || 0;
-                const dateB = b.createdAt?.seconds || 0;
+                const dateA = (a.createdAt as any)?.seconds ?? (a.createdAt as any)?._seconds ?? 0;
+                const dateB = (b.createdAt as any)?.seconds ?? (b.createdAt as any)?._seconds ?? 0;
                 return dateB - dateA;
             });
 
@@ -267,12 +268,15 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             }
 
             setCodeAvailability('checking');
-            const db = getDbInstance();
-            if (!db) return;
+            const password = sessionStorage.getItem('adminPassword');
 
             try {
-                const doc = await db.collection('promo_codes').doc(cleanCode).get();
-                setCodeAvailability(doc.exists ? 'taken' : 'available');
+                const res = await fetch(`/api/manage-promo-codes?checkCode=${encodeURIComponent(cleanCode)}`, {
+                    headers: { 'Authorization': `Bearer ${password}` },
+                });
+                if (!res.ok) { setCodeAvailability('idle'); return; }
+                const data = await res.json();
+                setCodeAvailability(data.taken ? 'taken' : 'available');
             } catch (e) {
                 setCodeAvailability('idle');
             }

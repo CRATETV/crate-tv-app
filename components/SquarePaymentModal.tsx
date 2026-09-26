@@ -58,15 +58,15 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
     </div>
 );
 
-const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ 
-    movie, 
-    block, 
-    paymentType, 
-    onClose, 
-    onPaymentSuccess, 
-    priceOverride 
+const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
+    movie,
+    block,
+    paymentType,
+    onClose,
+    onPaymentSuccess,
+    priceOverride
 }) => {
-    const { user } = useAuth();
+    const { user, getUserIdToken } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isValidatingPromo, setIsValidatingPromo] = useState(false);
@@ -78,6 +78,16 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const [appliedPromo, setAppliedPromo] = useState<any>(null);
     
     const cardRef = useRef<any>(null);
+    // Generated once when this checkout attempt opens, not per request — if
+    // handlePayment somehow fires twice for the same attempt (a double
+    // click, a retried fetch), both requests carry the SAME key, so
+    // process-square-payment.ts can hand it to Square as-is and let Square's
+    // own idempotency guarantee dedupe them into a single charge.
+    const idempotencyKeyRef = useRef<string>(
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
 
     const basePrice = useMemo(() => {
         if (priceOverride !== undefined) return priceOverride;
@@ -226,9 +236,21 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 sourceId = result.token;
             }
 
+            // The server no longer trusts a `uid` field in the body — every
+            // payment type except an anonymous donation/savings deposit now
+            // requires a verified Firebase ID token instead (see
+            // api/process-square-payment.ts).
+            const idToken = await getUserIdToken();
+            if (!idToken && !['donation', 'billSavingsDeposit'].includes(paymentType)) {
+                throw new Error("Please sign in to complete this purchase.");
+            }
+
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+
             const response = await fetch('/api/process-square-payment', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     sourceId,
                     amount: displayAmount,
@@ -238,8 +260,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                     directorName: movie?.director,
                     blockTitle: block?.title,
                     email: user?.email,
-                    uid: user?.uid || null,
-                    promoCode: promoCode.trim() || undefined
+                    promoCode: promoCode.trim() || undefined,
+                    idempotencyKey: idempotencyKeyRef.current,
                 }),
             });
 

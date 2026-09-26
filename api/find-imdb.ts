@@ -1,7 +1,15 @@
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 export async function POST(request: Request) {
   try {
+    // Unmetered AI calls (with Google Search grounding, which costs more
+    // than a plain generation) on a public endpoint — anyone could script
+    // repeated requests here and run up the bill for free.
+    if (!rateLimit(`find-imdb:${getIP(request)}`, 20, 5 * 60_000)) {
+      return new Response(JSON.stringify({ error: 'Too many requests. Please wait a few minutes and try again.' }), { status: 429 });
+    }
+
     const { name } = await request.json();
     if (!name) return new Response(JSON.stringify({ error: 'Name required.' }), { status: 400 });
 

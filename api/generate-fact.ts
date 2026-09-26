@@ -1,7 +1,14 @@
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 export async function POST(request: Request) {
   try {
+    // Unmetered AI calls on a public endpoint — anyone could script repeated
+    // requests here and run up the Gemini bill for free.
+    if (!rateLimit(`generate-fact:${getIP(request)}`, 20, 5 * 60_000)) {
+      return new Response(JSON.stringify({ error: 'Too many requests. Please wait a few minutes and try again.' }), { status: 429 });
+    }
+
     const { name, bio } = await request.json();
 
     if (!name || !bio) {

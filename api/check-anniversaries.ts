@@ -10,7 +10,11 @@ const adminEmail = 'cratetiv@gmail.com';
 export async function GET(request: Request) {
     try {
         const authHeader = request.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        const cronSecret = process.env.CRON_SECRET;
+        // FIX: comparing directly against `Bearer ${process.env.CRON_SECRET}`
+        // means an unset CRON_SECRET makes the literal string "Bearer
+        // undefined" a valid credential. Fail closed instead.
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
             return new Response('Unauthorized', { status: 401 });
         }
 

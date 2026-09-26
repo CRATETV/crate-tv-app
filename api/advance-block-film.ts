@@ -2,6 +2,13 @@ import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 
+// A film's recorded duration is stored in whole minutes, so a genuine
+// video-ended event on a viewer's device can fire up to just under a
+// minute before that rounded duration has technically "elapsed" by the
+// server's clock. This tolerance absorbs that rounding gap without
+// opening any real window for a client to force an early skip.
+const ADVANCE_EARLY_TOLERANCE_MS = 60 * 1000;
+
 export async function POST(request: Request): Promise<Response> {
     try {
         const { partyId, currentIndex, totalFilms } = await request.json();
@@ -13,6 +20,45 @@ export async function POST(request: Request): Promise<Response> {
         const db = getAdminDb();
         if (!db) return new Response(JSON.stringify({ error: 'Database unavailable' }), { status: 500 });
         const partyRef = db.collection('watch_parties').doc(partyId);
+
+        // --- VERIFY THE CURRENT FILM HAS ACTUALLY FINISHED ---
+        // This used to advance purely on the client's say-so — any request
+        // with the right currentIndex/totalFilms shape could force every
+        // viewer straight into the next film (or skip several, one call at
+        // a time) no matter how much of the current one had actually
+        // played. Same approach as api/auto-end-watch-party.ts: independently
+        // re-derive the active film and its real runtime from the party's
+        // own server-recorded data, and only allow the advance once that
+        // film has genuinely finished.
+        let blockMovieKeys: string[] | null = null;
+        const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+        for (const dayDoc of daysSnap.docs) {
+            const blocks = (dayDoc.data().blocks || []) as any[];
+            const match = blocks.find(b => b.id === partyId);
+            if (match) { blockMovieKeys = match.movieKeys || []; break; }
+        }
+        if (!blockMovieKeys) {
+            const settingsDoc = await db.collection('settings').doc('site').get();
+            const crateFestBlocks = settingsDoc.data()?.crateFestConfig?.movieBlocks || [];
+            const match = crateFestBlocks.find((b: any) => b.id === partyId);
+            if (match) blockMovieKeys = match.movieKeys || [];
+        }
+
+        const activeFilmKey = blockMovieKeys && blockMovieKeys.length > 0
+            ? blockMovieKeys[Math.min(currentIndex, blockMovieKeys.length - 1)]
+            : null;
+
+        // Unknown runtime (block not found, or missing duration metadata) —
+        // assume a generous 3-hour ceiling rather than a duration that could
+        // be trivially satisfied, same fallback auto-end-watch-party.ts uses.
+        let durationMs = 3 * 60 * 60 * 1000;
+        if (activeFilmKey) {
+            const movieDoc = await db.collection('movies').doc(activeFilmKey).get();
+            const durationMinutes = movieDoc.data()?.durationInMinutes;
+            if (typeof durationMinutes === 'number' && durationMinutes > 0) {
+                durationMs = durationMinutes * 60 * 1000;
+            }
+        }
 
         // MUST be a transaction, not a plain get()-then-update(). Every viewer's
         // client independently notices the film ending within the same ~1-2s
@@ -28,6 +74,7 @@ export async function POST(request: Request): Promise<Response> {
         // first request actually advances anything.
         type AdvanceResult =
             | { kind: 'already-advanced'; serverIndex: number }
+            | { kind: 'not-ready'; message: string }
             | { kind: 'ended' }
             | { kind: 'advanced'; nextIndex: number; intermissionEnd: number };
 
@@ -38,6 +85,19 @@ export async function POST(request: Request): Promise<Response> {
 
             if (serverIndex !== currentIndex) {
                 return { kind: 'already-advanced', serverIndex };
+            }
+
+            // The film's own recorded start time (read fresh, in the same
+            // transaction, alongside activeMovieIndex above) is the only
+            // thing trusted for "has it finished" — never the client's
+            // currentIndex/totalFilms alone.
+            const startRef = currentData?.filmStartTime || currentData?.actualStartTime;
+            if (!startRef || typeof (startRef as any).toDate !== 'function') {
+                return { kind: 'not-ready', message: 'No film start time recorded yet.' };
+            }
+            const filmStartMs = (startRef as any).toDate().getTime();
+            if (Date.now() < filmStartMs + durationMs - ADVANCE_EARLY_TOLERANCE_MS) {
+                return { kind: 'not-ready', message: 'Current film has not finished yet.' };
             }
 
             const nextIndex = currentIndex + 1;
@@ -106,6 +166,10 @@ export async function POST(request: Request): Promise<Response> {
                 message: 'Index mismatch — another client already advanced',
                 serverIndex: result.serverIndex,
             }), { status: 200 });
+        }
+
+        if (result.kind === 'not-ready') {
+            return new Response(JSON.stringify({ success: false, message: result.message }), { status: 200 });
         }
 
         if (result.kind === 'ended') {

@@ -2,9 +2,20 @@
 // It will be accessible at the path /api/generate-public-presigned-url
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { rateLimit, getIP } from "./_lib/rateLimit.js";
 
 export async function POST(request: Request) {
     try {
+        // This endpoint is intentionally public (no sign-in — used from the
+        // actor signup flow before an account exists), so without a limit
+        // anyone could script it to mint unlimited presigned S3 upload URLs.
+        if (!rateLimit(`public-presign:${getIP(request)}`, 15, 10 * 60_000)) {
+            return new Response(JSON.stringify({ error: 'Too many upload requests. Please wait a few minutes and try again.' }), {
+                status: 429,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const { fileName, fileType } = await request.json();
 
         // 1. AWS Configuration Check
@@ -28,7 +39,20 @@ export async function POST(request: Request) {
                 headers: { 'Content-Type': 'application/json' },
             });
         }
-        
+
+        // This is a public, unauthenticated endpoint that hands out a write
+        // URL straight into the bucket — without a type check it would sign
+        // an upload for literally any content type (HTML, executables, an
+        // arbitrarily large file masquerading as anything), turning it into
+        // free, attacker-controlled file hosting on our S3 bucket. Every
+        // real caller only ever uploads an actor photo or video.
+        if (!/^(image|video)\//i.test(String(fileType))) {
+            return new Response(JSON.stringify({ error: 'Only image and video uploads are allowed.' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const s3Client = new S3Client({
             region,
             credentials: { accessKeyId, secretAccessKey },
