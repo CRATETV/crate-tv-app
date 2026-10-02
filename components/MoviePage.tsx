@@ -30,9 +30,12 @@ const getEmbedUrl = (url: string): string | null => {
     if (vimeoMatch && vimeoMatch[1]) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
     const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = url.match(youtubeRegex);
-    if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
+    if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
     return null;
 };
+
+const YT_EMBED_ELEMENT_ID = 'yt-embed-player';
+const isYouTubeEmbedUrl = (url: string | null): boolean => !!url && url.startsWith('https://www.youtube.com/embed/');
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user, authInitialized, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, unlockFestivalBlock, claimActiveSession } = useAuth();
@@ -76,6 +79,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // implementation rather than writing new, untested logic.
   const hlsRef = useRef<any>(null);
   const [videoError, setVideoError] = useState(false);
+  // The YT.Player instance wrapping our YouTube iframe (Caribbean Fix-style
+  // episodes) — lets its onStateChange feed the same isEnded/auto-advance
+  // state the native <video>'s onEnded already drives, instead of episodes
+  // hosted on YouTube silently never auto-advancing.
+  const ytPlayerRef = useRef<any>(null);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
 
@@ -167,7 +175,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       return raw ? decodeURIComponent(raw) : null;
   }, [currentSearch]);
 
-  const embedUrl = movie ? getEmbedUrl(movie.fullMovie) : null;
+  // Checks the actively-playing URL first (an episode override, e.g. a
+  // Caribbean Fix-style YouTube-hosted episode) and falls back to the
+  // parent entry's own fullMovie — previously this only ever looked at
+  // movie.fullMovie, so a series whose episodes are YouTube/Vimeo links
+  // (the admin episode editor has always accepted those) fell through to
+  // the native <video> below with a watch-page URL as its src, which no
+  // browser can play.
+  const embedUrl = movie ? getEmbedUrl(episodeStreamOverride || movie.fullMovie) : null;
 
   // SECURITY: the real movie file used to be read directly off movie.fullMovie —
   // a permanent, unsigned URL handed to every visitor regardless of payment (see
@@ -511,6 +526,105 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
   }, [playerMode, hasAccess, playableUrl, playContent, currentSearch]);
 
+  // Embedded (YouTube/Vimeo) playback has no <video> element for
+  // playContent() above to call .play() on, so "watched" tracking and view
+  // counting — both bundled inside playContent() — never ran for it. Mirrors
+  // just that bookkeeping half of playContent() for the embed case.
+  useEffect(() => {
+      if (playerMode !== 'full' || !hasAccess || !embedUrl || !movie?.key) return;
+      markAsWatched(movie.key);
+      if (!hasTrackedViewRef.current) {
+          hasTrackedViewRef.current = true;
+          getUserIdToken().then(token => {
+              if (!token) return;
+              fetch('/api/track-view', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({ movieKey: movie.key }),
+              }).catch(() => {});
+          }).catch(() => {});
+      }
+  }, [playerMode, hasAccess, embedUrl, movie, getUserIdToken, markAsWatched]);
+
+  // ── YOUTUBE IFRAME API — auto-advance for YouTube-hosted episodes ───────
+  // FEATURE (user request — Caribbean Fix-style rows hosting episodes as
+  // YouTube links should auto-advance like any other episode does): a plain
+  // <iframe src="youtube.com/embed/..."> never tells the page anything about
+  // its playback state, so isEnded/nextEpisode (driven entirely by the
+  // native <video>'s onEnded below) never fired for these. Converting the
+  // already-rendered iframe to a YT.Player (via its element id — the
+  // documented way to attach to an existing iframe instead of letting the
+  // API build its own) lets onStateChange feed the exact same isEnded/
+  // autoAdvanceCountdown state, so the Up Next / Transmission Complete
+  // overlays and auto-advance work identically for both.
+  useEffect(() => {
+      if (playerMode !== 'full' || !hasAccess || !isYouTubeEmbedUrl(embedUrl)) return;
+      let cancelled = false;
+
+      const createPlayer = () => {
+          if (cancelled) return;
+          const YT = (window as any).YT;
+          if (!YT || !document.getElementById(YT_EMBED_ELEMENT_ID)) return;
+          ytPlayerRef.current = new YT.Player(YT_EMBED_ELEMENT_ID, {
+              events: {
+                  onStateChange: (event: any) => {
+                      if (event.data === YT.PlayerState.ENDED) {
+                          setIsEnded(true);
+                          if (nextEpisode) setAutoAdvanceCountdown(AUTO_ADVANCE_SECONDS);
+                      } else if (event.data === YT.PlayerState.PLAYING) {
+                          setIsEnded(false);
+                          setIsPaused(false);
+                      } else if (event.data === YT.PlayerState.PAUSED) {
+                          setIsPaused(true);
+                      }
+                  },
+              },
+          });
+      };
+
+      if ((window as any).YT && (window as any).YT.Player) {
+          createPlayer();
+      } else {
+          if (!document.getElementById('youtube-iframe-api-script')) {
+              const script = document.createElement('script');
+              script.id = 'youtube-iframe-api-script';
+              script.src = 'https://www.youtube.com/iframe_api';
+              document.head.appendChild(script);
+          }
+          // The YouTube API loader calls this exact global once it's ready —
+          // chain onto whatever's already there instead of clobbering it, in
+          // case something else on the page is also waiting on it.
+          const previous = (window as any).onYouTubeIframeAPIReady;
+          (window as any).onYouTubeIframeAPIReady = () => {
+              if (typeof previous === 'function') previous();
+              createPlayer();
+          };
+      }
+
+      return () => {
+          cancelled = true;
+          if (ytPlayerRef.current) {
+              try { ytPlayerRef.current.destroy(); } catch { /* iframe already gone */ }
+              ytPlayerRef.current = null;
+          }
+      };
+  }, [playerMode, hasAccess, embedUrl, nextEpisode]);
+
+  const handleRewatch = useCallback(() => {
+      setIsEnded(false);
+      if (ytPlayerRef.current) {
+          try {
+              ytPlayerRef.current.seekTo(0);
+              ytPlayerRef.current.playVideo();
+          } catch { /* player not ready yet */ }
+          return;
+      }
+      if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play();
+      }
+  }, []);
+
   // Registers this video as real OS-level "Now Playing" media. Without
   // this, iOS has no way to recognize the video specifically when casting
   // via Control Center — it falls back to mirroring the whole phone screen,
@@ -620,65 +734,78 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     hasAccess ? (
                         <>
                             {embedUrl ? (
-                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
+                                <iframe
+                                    id={YT_EMBED_ELEMENT_ID}
+                                    key={embedUrl}
+                                    src={embedUrl}
+                                    className="w-full h-full"
+                                    frameBorder="0"
+                                    allow="autoplay; fullscreen"
+                                    allowFullScreen
+                                    title={movie.title}
+                                ></iframe>
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
                                     {/* Video rendered above, this div is for overlays */}
                                     <CastButton videoElement={videoRef.current} />
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-                                    {isEnded && nextEpisode && autoAdvanceCountdown !== null && (
-                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/60 backdrop-blur-sm">
-                                            <div className="max-w-lg w-full space-y-8">
-                                                <div>
-                                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Up Next</p>
-                                                    <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{nextEpisode.title}</h2>
-                                                </div>
-                                                <div className="relative w-20 h-20 mx-auto">
-                                                    <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
-                                                        <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
-                                                        <circle cx="40" cy="40" r="36" fill="none" stroke="#dc2626" strokeWidth="4"
-                                                            strokeDasharray={2 * Math.PI * 36}
-                                                            strokeDashoffset={2 * Math.PI * 36 * (1 - autoAdvanceCountdown / AUTO_ADVANCE_SECONDS)}
-                                                            style={{ transition: 'stroke-dashoffset 1s linear' }} />
-                                                    </svg>
-                                                    <div className="absolute inset-0 flex items-center justify-center text-2xl font-black">{autoAdvanceCountdown}</div>
-                                                </div>
-                                                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Starts automatically in {autoAdvanceCountdown}s</p>
-                                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                                                    <button onClick={() => advanceToEpisode(nextEpisode.url)} className="px-8 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-xs tracking-widest transition-all">Play Now</button>
-                                                    <button onClick={() => setAutoAdvanceCountdown(null)} className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors">Cancel</button>
-                                                </div>
-                                            </div>
+                                </div>
+                            )}
+                            {/* Up Next / Transmission Complete — siblings of both the iframe and
+                                the native <video> branch above (not nested inside it) so a
+                                YouTube-hosted episode ending via the YT.Player wiring above gets
+                                the exact same auto-advance overlay a native video does. */}
+                            {isEnded && nextEpisode && autoAdvanceCountdown !== null && (
+                                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/60 backdrop-blur-sm">
+                                    <div className="max-w-lg w-full space-y-8">
+                                        <div>
+                                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Up Next</p>
+                                            <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{nextEpisode.title}</h2>
                                         </div>
-                                    )}
-                                    {isEnded && !(nextEpisode && autoAdvanceCountdown !== null) && (
-                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
-                                            <div className="max-w-2xl w-full space-y-12">
-                                                <div>
-                                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Transmission Complete</p>
-                                                    <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{movie.title}</h2>
-                                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-4">Directed by {movie.director}</p>
-                                                </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl mx-auto">
-                                                    <button onClick={handleToggleLike} className={`p-8 rounded-[2.5rem] border transition-all transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4 group ${isLiked ? 'bg-red-600 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)]' : 'bg-white/5 border-white/10 hover:border-red-600/50'}`}>
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-10 w-10 transition-all ${isLiked ? 'text-white scale-110' : 'text-gray-500 group-hover:text-red-500'} ${isAnimatingLike ? 'animate-heartbeat' : ''}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                                        </svg>
-                                                        <div><p className="text-base font-black uppercase tracking-tight">{isLiked ? 'Applauded' : 'Applaud Film'}</p></div>
-                                                    </button>
-                                                    <button onClick={() => setIsSupportModalOpen(true)} className="p-8 rounded-[2.5rem] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 transition-all transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4 shadow-[0_0_50px_rgba(79,70,229,0.3)]">
-                                                        <span className="text-4xl">💎</span>
-                                                        <div><p className="text-base font-black uppercase tracking-tight">Support Creator</p></div>
-                                                    </button>
-                                                </div>
-                                                <div className="flex flex-col sm:flex-row items-center justify-center gap-10 pt-4">
-                                                    <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
-                                                    <div className="w-px h-4 bg-white/10 hidden sm:block"></div>
-                                                    <button onClick={() => { setIsEnded(false); if(videoRef.current) videoRef.current.currentTime = 0; videoRef.current?.play(); }} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Re-Watch Session</button>
-                                                </div>
-                                            </div>
+                                        <div className="relative w-20 h-20 mx-auto">
+                                            <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
+                                                <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+                                                <circle cx="40" cy="40" r="36" fill="none" stroke="#dc2626" strokeWidth="4"
+                                                    strokeDasharray={2 * Math.PI * 36}
+                                                    strokeDashoffset={2 * Math.PI * 36 * (1 - autoAdvanceCountdown / AUTO_ADVANCE_SECONDS)}
+                                                    style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                                            </svg>
+                                            <div className="absolute inset-0 flex items-center justify-center text-2xl font-black">{autoAdvanceCountdown}</div>
                                         </div>
-                                    )}
+                                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Starts automatically in {autoAdvanceCountdown}s</p>
+                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                                            <button onClick={() => advanceToEpisode(nextEpisode.url)} className="px-8 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-xs tracking-widest transition-all">Play Now</button>
+                                            <button onClick={() => setAutoAdvanceCountdown(null)} className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors">Cancel</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {isEnded && !(nextEpisode && autoAdvanceCountdown !== null) && (
+                                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
+                                    <div className="max-w-2xl w-full space-y-12">
+                                        <div>
+                                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Transmission Complete</p>
+                                            <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{movie.title}</h2>
+                                            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-4">Directed by {movie.director}</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl mx-auto">
+                                            <button onClick={handleToggleLike} className={`p-8 rounded-[2.5rem] border transition-all transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4 group ${isLiked ? 'bg-red-600 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)]' : 'bg-white/5 border-white/10 hover:border-red-600/50'}`}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-10 w-10 transition-all ${isLiked ? 'text-white scale-110' : 'text-gray-500 group-hover:text-red-500'} ${isAnimatingLike ? 'animate-heartbeat' : ''}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                </svg>
+                                                <div><p className="text-base font-black uppercase tracking-tight">{isLiked ? 'Applauded' : 'Applaud Film'}</p></div>
+                                            </button>
+                                            <button onClick={() => setIsSupportModalOpen(true)} className="p-8 rounded-[2.5rem] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 transition-all transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4 shadow-[0_0_50px_rgba(79,70,229,0.3)]">
+                                                <span className="text-4xl">💎</span>
+                                                <div><p className="text-base font-black uppercase tracking-tight">Support Creator</p></div>
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-10 pt-4">
+                                            <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
+                                            <div className="w-px h-4 bg-white/10 hidden sm:block"></div>
+                                            <button onClick={handleRewatch} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Re-Watch Session</button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </>

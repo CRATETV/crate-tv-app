@@ -56,6 +56,15 @@ export interface FourthwallCart {
   checkoutUrl?: string;
 }
 
+interface FourthwallPaging {
+  pageNumber: number;
+  pageSize: number;
+  elementsSize: number;
+  elementsTotal: number;
+  totalPages: number;
+  hasNextPage: boolean;
+}
+
 async function fwFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${path}${path.includes('?') ? '&' : '?'}storefront_token=${STOREFRONT_TOKEN}`;
   const res = await fetch(url, {
@@ -77,11 +86,28 @@ export function getCollections() {
   return fwFetch<{ results: FourthwallCollection[] }>('/collections');
 }
 
-/** Fetch all products in a given collection by its slug (e.g. "all"). */
-export function getProductsByCollection(collectionSlug: string) {
-  return fwFetch<{ results: FourthwallProduct[] }>(
-    `/collections/${collectionSlug}/products`
-  );
+/**
+ * Fetch every product in a given collection by its slug (e.g. "all").
+ *
+ * The storefront API paginates (`page`/`size`, default page size well under
+ * most shops' full catalog) — fetching just page 1 meant any product past
+ * the first page silently never showed up, and which products that was
+ * shifted every time a new one got added. Walk every page via `hasNextPage`
+ * so the full catalog always shows, no matter how many products exist.
+ */
+export async function getProductsByCollection(collectionSlug: string) {
+  const results: FourthwallProduct[] = [];
+  let page = 1;
+  const size = 100;
+  while (true) {
+    const data = await fwFetch<{ results: FourthwallProduct[]; paging: FourthwallPaging }>(
+      `/collections/${collectionSlug}/products?page=${page}&size=${size}`
+    );
+    results.push(...data.results);
+    if (!data.paging?.hasNextPage) break;
+    page += 1;
+  }
+  return { results };
 }
 
 /** Fetch a single product by its slug. */
