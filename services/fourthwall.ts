@@ -90,15 +90,23 @@ export function getCollections() {
  * Fetch every product in a given collection by its slug (e.g. "all").
  *
  * The storefront API paginates (`page`/`size`, default page size well under
- * most shops' full catalog) — fetching just page 1 meant any product past
- * the first page silently never showed up, and which products that was
- * shifted every time a new one got added. Walk every page via `hasNextPage`
- * so the full catalog always shows, no matter how many products exist.
+ * most shops' full catalog) — fetching just the first page meant any product
+ * past it silently never showed up, and which products that was shifted
+ * every time a new one got added. Walk every page via `hasNextPage` so the
+ * full catalog always shows, no matter how many products exist.
+ *
+ * Two confirmed-by-testing quirks that aren't obvious from the docs:
+ * - `page` is 0-indexed (the first page is `page=0`, not `1`) — passing `1`
+ *   skips the real first page's products entirely.
+ * - Requesting a `size` of 20 or more makes this endpoint come back with an
+ *   empty `results` array (200 OK, correct `elementsTotal`, but zero actual
+ *   items) — some undocumented cap well under what the docs' `size` param
+ *   implies. 10 is confirmed to work reliably.
  */
 export async function getProductsByCollection(collectionSlug: string) {
   const results: FourthwallProduct[] = [];
-  let page = 1;
-  const size = 100;
+  let page = 0;
+  const size = 10;
   while (true) {
     const data = await fwFetch<{ results: FourthwallProduct[]; paging: FourthwallPaging }>(
       `/collections/${collectionSlug}/products?page=${page}&size=${size}`
