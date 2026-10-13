@@ -1,5 +1,6 @@
 
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
+import { checkBackstageKey } from './_lib/backstage.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -21,7 +22,9 @@ import { resolveAdminCredential } from './_lib/adminSession.js';
 export async function POST(request: Request) {
   try {
     const ip = getIP(request);
-    if (!rateLimit(`send-chat-message:${ip}`, 20, 60_000)) {
+    // Per-address limit is a loose flood guard only (a theatre full of people
+    // on one Wi-Fi shares an address); the real limit is per account, below.
+    if (!rateLimit(`send-chat-message:${ip}`, 120, 60_000)) {
       return new Response(JSON.stringify({ error: 'Too many messages — slow down a moment.' }), {
         status: 429,
         headers: { 'Content-Type': 'application/json' },
@@ -69,16 +72,23 @@ export async function POST(request: Request) {
       if (!idToken || !auth) {
         return new Response(JSON.stringify({ error: 'Sign in required to chat.' }), { status: 401 });
       }
+      let uid: string;
       try {
-        await auth.verifyIdToken(idToken);
+        uid = (await auth.verifyIdToken(idToken)).uid;
       } catch {
         return new Response(JSON.stringify({ error: 'Invalid or expired session — please refresh.' }), { status: 401 });
+      }
+      if (!rateLimit(`send-chat-message:user:${uid}`, 20, 60_000)) {
+        return new Response(JSON.stringify({ error: 'Too many messages — slow down a moment.' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
 
       if (wantsDirector) {
         const partyDoc = await db.collection('watch_parties').doc(movieKey).get();
         const realKey = partyDoc.data()?.backstageKey;
-        if (realKey && backstageKey && String(backstageKey).toUpperCase() === String(realKey).toUpperCase()) {
+        if (await checkBackstageKey(db, movieKey, backstageKey)) {
           grantedDirector = true;
         }
       }

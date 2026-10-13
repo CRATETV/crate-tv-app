@@ -1,4 +1,6 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
+import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
+import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 
 // Redeems a festival ticket code (full festival pass, single-day pass, or a
 // specific block) and grants the corresponding access.
@@ -58,6 +60,18 @@ export async function POST(request: Request) {
         const codeRef = codesSnap.docs[0].ref;
         const userRef = db.collection('users').doc(uid);
 
+        // Festival schedule, read once up front: a block ticket's expiry is
+        // tied to its screening date, and a day pass unlocks every block on
+        // that day.
+        const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+        const scheduleDays = daysSnap.docs.map(d => d.data() as { day?: number; blocks?: any[] });
+        const findBlockById = (id: string) => scheduleDays.flatMap(d => d.blocks || []).find(b => b?.id === id);
+        const expiryFor = (block: any) => blockAccessExpiry({
+            nowMs: Date.now(),
+            screeningStartTime: block?.screeningStartTime || block?.watchPartyStartTime,
+            rewatchWindowMs: FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS,
+        }).toISOString();
+
         type RedeemResult =
             | { ok: false; error: string }
             | { ok: true; type: string; blockTitle?: string; dayNumber?: number };
@@ -82,18 +96,25 @@ export async function POST(request: Request) {
                     festivalAccessSource: 'ticket_code',
                 }, { merge: true });
             } else if (codeData.type === 'day_pass') {
+                // FIX (Oct 2026 audit): day passes used to only record the day
+                // number, which nothing else in the app ever checked — so a
+                // day-pass holder got no access at all. Now the pass unlocks
+                // every block scheduled that day, exactly like buying each one.
                 const currentDays: number[] = userData.unlockedFestivalDays || [];
-                if (!currentDays.includes(codeData.dayNumber)) {
-                    tx.set(userRef, {
-                        unlockedFestivalDays: [...currentDays, codeData.dayNumber],
-                    }, { merge: true });
-                }
+                const dayBlocks = scheduleDays.find(d => d.day === codeData.dayNumber)?.blocks || [];
+                const currentBlocks = userData.unlockedBlocks || {};
+                const addedBlocks: Record<string, string> = {};
+                for (const b of dayBlocks) if (b?.id) addedBlocks[b.id] = expiryFor(b);
+                tx.set(userRef, {
+                    unlockedFestivalDays: currentDays.includes(codeData.dayNumber) ? currentDays : [...currentDays, codeData.dayNumber],
+                    unlockedBlocks: { ...currentBlocks, ...addedBlocks },
+                }, { merge: true });
             } else if (codeData.type === 'block') {
-                const expirationDate = new Date();
-                expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks, matches unlockFestivalBlock's window
+                // Valid through the screening + rewatch week (not 14 days
+                // from redemption — early redeemers used to be locked out).
                 const currentBlocks = userData.unlockedBlocks || {};
                 const updates: Record<string, any> = {
-                    unlockedBlocks: { ...currentBlocks, [codeData.blockId]: expirationDate.toISOString() },
+                    unlockedBlocks: { ...currentBlocks, [codeData.blockId]: expiryFor(findBlockById(codeData.blockId)) },
                 };
                 if (Array.isArray(codeData.movieKeys) && codeData.movieKeys.length > 0) {
                     const currentKeys: string[] = userData.unlockedWatchPartyKeys || [];

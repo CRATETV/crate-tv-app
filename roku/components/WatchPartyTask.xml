@@ -19,6 +19,7 @@
         <field id="isQALive"        type="boolean" value="false" />
         <field id="isPaid"          type="boolean" value="false" />
         <field id="isUnlocked"      type="boolean" value="false" />
+        <field id="partyType"       type="string"  value="movie" />
         <field id="errorMessage"    type="string"  value="" />
     </interface>
 

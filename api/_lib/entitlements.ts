@@ -30,7 +30,7 @@ export interface MovieAccessResult {
     filmKey: string | null;
 }
 
-interface FestivalBlock { id: string; price: number; movieKeys: string[]; }
+interface FestivalBlock { id: string; price: number; movieKeys: string[]; day?: number; }
 
 /**
  * Resolves whether a user (by uid, or by Roku deviceId via roku_links) has real access to
@@ -62,9 +62,16 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
         !!(userData.festivalPassExpiry && new Date(userData.festivalPassExpiry) > now);
     const hasJuryPass = userData.hasJuryPass === true;
     const unlockedBlocks: Record<string, string> = userData.unlockedBlocks || {};
+    const unlockedDays: number[] = Array.isArray(userData.unlockedFestivalDays) ? userData.unlockedFestivalDays : [];
+    const allBlocks = unlockedDays.length > 0 ? await getFestivalBlocks(db) : [];
     const isBlockUnlocked = (blockId: string) => {
         const exp = unlockedBlocks[blockId];
         if (exp && new Date(exp) > now) return true;
+        // Day passes redeemed before Oct 2026 only recorded the day number.
+        if (unlockedDays.length > 0) {
+            const block = allBlocks.find(b => b.id === blockId);
+            if (block?.day != null && unlockedDays.includes(block.day)) return true;
+        }
         return Array.isArray(userData.unlockedBlockIds) && userData.unlockedBlockIds.includes(blockId);
     };
     const unlockedWatchPartyKeys: string[] = userData.unlockedWatchPartyKeys || [];
@@ -168,7 +175,7 @@ async function getFestivalBlocks(db: Firestore): Promise<FestivalBlock[]> {
     const blocks: FestivalBlock[] = [];
     for (const d of daysSnap.docs) {
         for (const b of (d.data().blocks || [])) {
-            if (b?.id) blocks.push({ id: b.id, price: b.price, movieKeys: Array.isArray(b.movieKeys) ? b.movieKeys : [] });
+            if (b?.id) blocks.push({ id: b.id, price: b.price, movieKeys: Array.isArray(b.movieKeys) ? b.movieKeys : [], day: d.data().day });
         }
     }
     return blocks;

@@ -29,6 +29,7 @@ Sub Init()
 
     ' State
     m.noLiveState         = m.top.FindNode("noLiveState")
+    m.blockState          = m.top.FindNode("blockState")
     m.currentFilm         = Invalid
     m.partyStatus         = "loading"
     m.scheduledStartTime  = 0   ' Unix seconds when party is scheduled
@@ -139,6 +140,15 @@ Sub OnPartyStatusReady()
 
     ' Update QA overlay regardless of main state
     If m.qaOverlay <> Invalid Then m.qaOverlay.visible = isQALive
+
+    ' Festival blocks (several films back to back) aren't supported on Roku
+    ' yet -- this player can only follow one film. Send viewers to the web
+    ' player instead of playing the wrong film from the wrong point.
+    If task.partyType = "block" And partyStatus <> "ended"
+        StopTimers()
+        ShowState("block")
+        Return
+    End If
 
     If partyStatus = "live" And isPlaying
         If m.isPaid And Not isUnlocked
@@ -263,6 +273,7 @@ Sub ShowState(state as String)
     If m.paidState    <> Invalid Then m.paidState.visible    = (state = "paid")
     If m.endedState   <> Invalid Then m.endedState.visible   = (state = "ended")
     If m.noLiveState  <> Invalid Then m.noLiveState.visible  = (state = "nolive")
+    If m.blockState   <> Invalid Then m.blockState.visible   = (state = "block")
 End Sub
 
 Sub StopTimers()

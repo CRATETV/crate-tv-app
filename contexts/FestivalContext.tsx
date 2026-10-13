@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition, useRef } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
@@ -258,13 +258,31 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         return null;
     }, [activeParties, allPartyStates, movies, festivalData, now, settings, scheduledParties]);
 
+    // Latest live watch-party fields from data/movies. Applied on top of every
+    // catalog fetch so a background refresh (which reads a published
+    // snapshot) can never overwrite fresher live values — e.g. resurrect a
+    // banner for a party that just ended.
+    const watchPartyOverridesRef = useRef<Record<string, any>>({});
+    const applyWatchPartyOverrides = (base: Record<string, Movie>): Record<string, Movie> => {
+        const updated = { ...base };
+        Object.entries(watchPartyOverridesRef.current).forEach(([key, m]) => {
+            if (updated[key] && m) updated[key] = { ...updated[key],
+                isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
+                watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
+                isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
+                watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
+            };
+        });
+        return updated;
+    };
+
     const fetchData = async (forceNoCache = false) => {
         try {
             const res = await fetch(`/api/get-live-data?t=${Date.now()}&noCache=${forceNoCache}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.movies) {
-                    setMovies(data.movies);
+                    setMovies(applyWatchPartyOverrides(data.movies));
                 }
                 if (data.categories) setCategories(data.categories);
                 if (data.zineStories) setZineStories(data.zineStories);
@@ -293,39 +311,25 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             const db = getDbInstance();
             if (!db) return;
 
-            // Movies — watch party fields
-            // Full movies collection listener — silent background update
-            unsubs.push(db.collection('movies').onSnapshot(snapshot => {
-                if (snapshot.empty) return;
-                startTransition(() => {
-                    setMovies(prev => {
-                        const updated = { ...prev };
-                        snapshot.docChanges().forEach(change => {
-                            if (change.type === 'removed') delete updated[change.doc.id];
-                            else updated[change.doc.id] = { ...updated[change.doc.id], key: change.doc.id, ...change.doc.data() } as Movie; // merge — preserve S3 fields
-                        });
-                        return updated;
-                    });
-                });
-            }, () => {}));
+            // SECURITY (Oct 2026 audit): this used to subscribe every visitor's
+            // browser to the entire `movies` collection — every field of every
+            // film, including raw video file links for paid titles and drafts
+            // that aren't released yet. That collection is now server-only
+            // (firestore.rules). Catalog data comes from /api/get-live-data
+            // (links stripped), refreshed in the background below; live
+            // watch-party fields still stream in from data/movies.
+            const refreshTimer = setInterval(() => {
+                if (typeof document !== 'undefined' && document.visibilityState === 'visible') fetchData();
+            }, 5 * 60 * 1000);
+            unsubs.push(() => clearInterval(refreshTimer));
 
             // data/movies — watch party fields
             unsubs.push(db.collection('data').doc('movies').onSnapshot(doc => {
                 if (!doc.exists) return;
                 const wpData = doc.data() as Record<string, any>;
+                watchPartyOverridesRef.current = wpData;
                 startTransition(() => {
-                    setMovies(prev => {
-                        const updated = { ...prev };
-                        Object.entries(wpData).forEach(([key, m]) => {
-                            if (updated[key]) updated[key] = { ...updated[key],
-                                isWatchPartyEnabled: m.isWatchPartyEnabled ?? updated[key].isWatchPartyEnabled,
-                                watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
-                                isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
-                                watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
-                            };
-                        });
-                        return updated;
-                    });
+                    setMovies(prev => applyWatchPartyOverrides(prev));
                 });
             }, () => {}));
 

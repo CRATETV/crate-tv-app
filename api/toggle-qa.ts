@@ -1,5 +1,6 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { checkBackstageKey } from './_lib/backstage.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const partyData = partySnap.data();
-    if (partyData?.backstageKey !== backstageKey) {
+    if (!(await checkBackstageKey(db, movieKey, backstageKey))) {
       return new Response(JSON.stringify({ error: 'Invalid Backstage key.' }), { status: 401 });
     }
 

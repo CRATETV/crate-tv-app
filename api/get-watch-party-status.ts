@@ -1,8 +1,11 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { findBlock } from './_lib/watchPartyLifecycle.js';
 
 const cache = new Map<string, { response: any, timestamp: number }>();
-const CACHE_TTL = 300 * 1000; // 5 minutes (300 seconds)
+// 10 seconds. Was 5 minutes, which meant a Roku could take up to 5 minutes
+// to notice a party had gone live (it polls every 30s).
+const CACHE_TTL = 10 * 1000;
 
 export async function GET(request: Request) {
   try {
@@ -47,12 +50,21 @@ export async function GET(request: Request) {
         actualStartTime = data.actualStartTime.toDate().toISOString();
     }
 
+    // Roku can't parse ISO dates easily, so whole seconds are sent as well.
+    // filmStartTime is when the CURRENT film started (it differs from
+    // actualStartTime for later films in a festival block).
+    const toSecs = (v: any) => (v && typeof v.toDate === 'function') ? Math.floor(v.toDate().getTime() / 1000) : 0;
     const response = {
       status: data?.status || 'waiting',
       isPlaying: !!data?.isPlaying,
       actualStartTime: actualStartTime,
+      actualStartTimeSeconds: toSecs(data?.actualStartTime),
+      filmStartTimeSeconds: toSecs(data?.filmStartTime) || toSecs(data?.actualStartTime),
+      activeMovieIndex: data?.activeMovieIndex ?? 0,
+      isQALive: !!data?.isQALive,
       currentTime: data?.currentTime || 0,
-      type: data?.type || 'movie'
+      // Not every start path records `type`, so check the schedule itself.
+      type: (await findBlock(db, movieKey)) ? 'block' : (data?.type || 'movie')
     };
 
     cache.set(movieKey, { response, timestamp: nowTime });

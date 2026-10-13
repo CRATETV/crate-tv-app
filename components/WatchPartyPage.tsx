@@ -684,6 +684,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 watchPartyPrice: block.price,
                 director: activeFilm?.director || 'Festival Event',
                 fullMovie: activeFilm?.fullMovie || '',
+                _activeFilmKey: block.movieKeys[safeIdx],
                 isLiveStream: activeFilm?.isLiveStream || false,
                 liveStreamEmbed: activeFilm?.liveStreamEmbed || '',
                 poster: activeFilm?.poster || '',
@@ -693,7 +694,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 _blockTitle: block.title,
                 _activeFilmTitle: activeFilm?.title || block.title,
                 _activeFilmDirector: activeFilm?.director || 'Festival Event',
-            } as Movie & { _blockMovieKeys?: string[]; _blockTitle?: string; _activeFilmTitle?: string; _activeFilmDirector?: string };
+            } as Movie & { _blockMovieKeys?: string[]; _blockTitle?: string; _activeFilmTitle?: string; _activeFilmDirector?: string; _activeFilmKey?: string };
         }
         return null;
     }, [movieKey, allMovies, festivalData, partyState?.activeMovieIndex]);
@@ -750,16 +751,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [signedUrl, setSignedUrl] = useState<string | null>(null);
     useEffect(() => {
         setSignedUrl(null);
-        if (!hasAccess || !movie || isBackstageVerified || movie.isLiveStream) return;
+        if (!hasAccess || !movie || movie.isLiveStream) return;
         let cancelled = false;
         (async () => {
             try {
-                const idToken = await getUserIdToken();
-                if (!idToken) return;
+                // Directors/hosts verified with the backstage key get the same
+                // short-lived signed link as ticket holders (they used to get
+                // the raw, permanent file link).
+                const body = isBackstageVerified && verifiedBackstageKey
+                    ? { movieKey, mode: 'live', backstageKey: verifiedBackstageKey }
+                    : { movieKey, mode: 'live', idToken: await getUserIdToken() };
+                if (!('backstageKey' in body) && !body.idToken) return;
                 const res = await fetch('/api/get-stream-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieKey, mode: 'live', idToken }),
+                    body: JSON.stringify(body),
                 });
                 if (!res.ok) { console.error('[WatchPartyPage] get-stream-url failed:', res.status); return; }
                 const data = await res.json();
@@ -769,9 +775,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             }
         })();
         return () => { cancelled = true; };
-    }, [hasAccess, movie, movieKey, isBackstageVerified, getUserIdToken]);
+    }, [hasAccess, movie, movieKey, isBackstageVerified, verifiedBackstageKey, getUserIdToken]);
 
-    const playableUrl = isBackstageVerified ? movie?.fullMovie : (signedUrl || undefined);
+    const playableUrl = signedUrl || undefined;
 
     // ── LATE JOIN INTO A BLOCK, WITH ANOTHER FILM STILL TO COME ──────────
     // The catch-up watchdog above (search CATCH_UP_LATE_JOIN_THRESHOLD_SEC)
@@ -809,7 +815,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const evaluatedLateJoinSessionRef = useRef<string | null>(null);
     useEffect(() => {
         if (!partyState || !movie) return; // wait for real data before deciding anything
-        const sessionKey = `${partyState.lastStartedAt || ''}|${movie.fullMovie || ''}`;
+        const sessionKey = `${partyState.lastStartedAt || ''}|${(movie as any)._activeFilmKey || movie.key || ''}`;
         if (evaluatedLateJoinSessionRef.current === sessionKey) return; // already decided for this session
         evaluatedLateJoinSessionRef.current = sessionKey;
 
@@ -838,12 +844,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         setLateJoinWaitInfo({ currentFilmTitle: m?._activeFilmTitle || m?.title, nextIdx: currentIdx + 1 });
     }, [partyState, movie]);
 
-    const handleBackstageSubmit = (e: React.FormEvent) => {
+    // Backstage keys are checked on the server now (the key is no longer on
+    // the public party record, so the browser has nothing to compare against).
+    const verifyBackstageKeyRemote = useCallback(async (key: string): Promise<boolean> => {
+        try {
+            const res = await fetch('/api/verify-backstage-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, key }),
+            });
+            const d = await res.json();
+            return d.ok === true;
+        } catch {
+            return false;
+        }
+    }, [movieKey]);
+
+    const acceptBackstageKey = useCallback((key: string) => {
+        unlockWatchParty(movieKey);
+        setIsBackstageVerified(true);
+        setVerifiedBackstageKey(key.trim().toUpperCase());
+    }, [movieKey, unlockWatchParty]);
+
+    const handleBackstageSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-            unlockWatchParty(movieKey);
-            setIsBackstageVerified(true);
-            setVerifiedBackstageKey(backstageInput);
+        const candidate = backstageInput;
+        if (candidate && await verifyBackstageKeyRemote(candidate)) {
+            acceptBackstageKey(candidate);
             setBackstageError(false);
             setBackstageInput('');
         } else {
@@ -900,7 +927,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // starts from the safe muted-autoplay-first flow.
     const lastSessionKeyRef = useRef<string | undefined>(undefined);
     useEffect(() => {
-        const sessionKey = `${partyState?.lastStartedAt || ''}|${movie?.fullMovie || ''}`;
+        const sessionKey = `${partyState?.lastStartedAt || ''}|${(movie as any)?._activeFilmKey || movie?.key || ''}`;
         if (lastSessionKeyRef.current !== undefined && lastSessionKeyRef.current !== sessionKey) {
             // FIX (targeted, iOS-safe): the original reset applied to every
             // device, but the actual risk it protects against — iOS Safari
@@ -937,7 +964,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             requestResyncRef.current();
         }
         lastSessionKeyRef.current = sessionKey;
-    }, [partyState?.lastStartedAt, movie?.fullMovie]);
+    }, [partyState?.lastStartedAt, (movie as any)?._activeFilmKey, movie?.key]);
 
     // ── UNIFIED SYNC ENGINE ──────────────────────────────────────────────
     // Single source of truth for getting this viewer's video to the correct
@@ -1658,37 +1685,42 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return;
         }
 
-        // There's a next film — advance via the server. This used to write
-        // straight to Firestore from the browser inside a transaction (the
-        // transaction was there so that if every viewer's client detects
-        // "ended" within the same ~1s window, only the first one actually
-        // advances instead of each re-triggering a fresh serverTimestamp and
-        // restarting the next film from 0). That direct client write is
-        // exactly what firestore.rules blocks though — `watch_parties` is
-        // server-only ("allow write: if false"). The API route below does the
-        // identical guard server-side (re-reads activeMovieIndex and no-ops
-        // if it's already moved on) using the Admin SDK, which isn't subject
-        // to those rules, so every viewer can safely call it and only the
-        // first one to land will actually change anything.
-        fetch('/api/advance-block-film', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                partyId: movieKey,
-                currentIndex: currentIdx,
-                totalFilms: blockKeys.length,
-            }),
-        })
-            .then(r => r.json())
-            .then(d => {
-                if (d.success === false) console.warn('[BLOCK AUTO-ADVANCE] Not advanced:', d.message || d.error);
+        // There's a next film — ask the server to advance. The server only
+        // agrees once the film's recorded runtime has elapsed (see
+        // api/_lib/watchPartyLifecycle.ts), and a transaction makes sure only
+        // one viewer's request wins.
+        //
+        // FIX (Oct 2026 audit — blocks could freeze between films): this used
+        // to ask exactly once. If that one request landed a little early (the
+        // video file ran slightly shorter than its recorded runtime) or failed
+        // on a flaky connection, nothing ever asked again and the room sat on
+        // the "Thank You" screen. It now retries every 30 seconds until the
+        // party actually moves on (the server cron also advances on its own
+        // as a final backstop).
+        let cancelled = false;
+        let retryTimer: ReturnType<typeof setTimeout> | null = null;
+        const ADVANCE_RETRY_MS = 30 * 1000;
+        const attemptAdvance = () => {
+            if (cancelled) return;
+            fetch('/api/advance-block-film', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partyId: movieKey, currentIndex: currentIdx }),
             })
-            .catch((err) => {
-                // This was previously a silent no-op — if the write was
-                // rejected, the film would just sit frozen on the "ended"
-                // frame with zero indication why to anyone.
-                console.error('[BLOCK AUTO-ADVANCE] Request failed:', err);
-            });
+                .then(r => r.json())
+                .then(d => {
+                    if (cancelled) return;
+                    if (d.success === false && d.serverIndex === undefined && !d.lastFilm && d.message !== 'Party is not live.') {
+                        console.warn('[BLOCK AUTO-ADVANCE] Not advanced yet, retrying:', d.message || d.error);
+                        retryTimer = setTimeout(attemptAdvance, ADVANCE_RETRY_MS);
+                    }
+                })
+                .catch((err) => {
+                    console.error('[BLOCK AUTO-ADVANCE] Request failed, retrying:', err);
+                    if (!cancelled) retryTimer = setTimeout(attemptAdvance, ADVANCE_RETRY_MS);
+                });
+        };
+        attemptAdvance();
 
         // FIX (user report — "there was a blank screen before the countdown
         // to the other movie began"): this used to call setIsEnded(false)
@@ -1705,7 +1737,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         // below), which happens at the same moment intermission/the next
         // film's data actually arrives — so the "Thank You" overlay bridges
         // the gap instead of leaving a blank frame.
-    }, [isEnded]);
+        return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
+    }, [isEnded, partyState?.activeMovieIndex]);
 
     // ── AUTO-END THE PARTY once the last film has genuinely finished ────
     // FEATURE (user request — "a few minutes after the movie ends can we
@@ -2351,13 +2384,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 <button 
                                     onClick={() => {
                                         const key = window.prompt("Enter Backstage Key:");
-                                        if (key && partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-                                            setIsBackstageVerified(true);
-                                            setVerifiedBackstageKey(key);
-                                            unlockWatchParty(movieKey);
-                                        } else if (key) {
-                                            toast.error("Invalid access key.");
-                                        }
+                                        if (!key) return;
+                                        verifyBackstageKeyRemote(key).then(ok => {
+                                            if (ok) acceptBackstageKey(key);
+                                            else toast.error("Invalid access key.");
+                                        });
                                     }}
                                     className="text-gray-600 hover:text-white transition-colors"
                                     title="Backstage Access"
@@ -2729,13 +2760,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             isBackstageVerified={isBackstageVerified}
                             verifiedBackstageKey={verifiedBackstageKey}
                             onBackstageVerify={(key) => {
-                                if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-                                    setIsBackstageVerified(true);
-                                    setVerifiedBackstageKey(key);
-                                    unlockWatchParty(movieKey);
-                                } else {
-                                    toast.error("Invalid access key.");
-                                }
+                                verifyBackstageKeyRemote(key).then(ok => {
+                                    if (ok) acceptBackstageKey(key);
+                                    else toast.error("Invalid access key.");
+                                });
                             }}
                         />
                     </div>
@@ -2750,13 +2778,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         isBackstageVerified={isBackstageVerified}
                         verifiedBackstageKey={verifiedBackstageKey}
                         onBackstageVerify={(key) => {
-                            if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-                                setIsBackstageVerified(true);
-                                setVerifiedBackstageKey(key);
-                                unlockWatchParty(movieKey);
-                            } else {
-                                toast.error("Invalid access key.");
-                            }
+                            verifyBackstageKeyRemote(key).then(ok => {
+                                if (ok) acceptBackstageKey(key);
+                                else toast.error("Invalid access key.");
+                            });
                         }}
                     />
                 </div>

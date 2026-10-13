@@ -2,6 +2,20 @@ import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
+// YouTube/Vimeo links are public embeds anyway and the catalog page needs
+// them to show the embedded player. Anything else is one of OUR video files
+// and must only ever reach a viewer as a short-lived signed link from
+// /api/get-stream-url.
+export function isPublicEmbedUrl(url: unknown): boolean {
+    if (typeof url !== 'string' || !url) return false;
+    try {
+        const host = new URL(url).hostname.replace(/^www\./, '');
+        return ['youtube.com', 'm.youtube.com', 'youtu.be', 'vimeo.com', 'player.vimeo.com'].includes(host);
+    } catch {
+        return false;
+    }
+}
+
 function filterCategories(data: any) {
     if (data.categories) {
         const finalCategories: Record<string, Category> = {};
@@ -55,8 +69,15 @@ export async function GET(request: Request) {
                 // file (see WatchPartyManager.tsx's Control Room preview, MovieEditor, etc.);
                 // this endpoint originally fed the admin panel too, and stripping it here
                 // unconditionally silently broke every paid title's admin preview until caught.
+                // Oct 2026: tightened further. "Free" was judged only by
+                // isForSale/isWatchPartyPaid, which festival films (gated by
+                // their BLOCK's price) don't carry — so paid festival films
+                // were still published with their raw file link. The players
+                // never need the raw link (they all use signed links now), so
+                // it is now withheld for every title unless it's a public
+                // YouTube/Vimeo embed.
                 const isFree = !m.isForSale && !m.isWatchPartyPaid;
-                const filtered: Movie = isFree ? m : { ...m, fullMovie: undefined as any };
+                const filtered: Movie = isPublicEmbedUrl(m.fullMovie) ? m : { ...m, fullMovie: undefined as any };
                 if (!isFree && Array.isArray(filtered.episodes)) {
                     filtered.episodes = filtered.episodes.map(ep => ({ ...ep, url: undefined as any }));
                 }

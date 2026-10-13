@@ -7,6 +7,7 @@ import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
+import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -162,6 +163,8 @@ export async function POST(request: Request) {
   // in the catch block if the payment ends up failing after the reservation
   // succeeded, so a failed charge never permanently occupies a seat.
   let releaseCapacityReservation: (() => Promise<void>) | null = null;
+  // The block being bought (paymentType 'block'), kept for the access-expiry calculation.
+  let purchasedBlockData: any = null;
   try {
     // No throttling existed on the endpoint that actually charges a card —
     // a script could otherwise hammer this with rapid repeated attempts
@@ -345,7 +348,8 @@ export async function POST(request: Request) {
             }
             
             if (blockData) {
-                amountInCents = Math.round((blockData.price || 10.00) * 100);
+                // ?? not || — a block deliberately priced at $0 is free, not $10.
+                amountInCents = Math.round((blockData.price ?? 10.00) * 100);
                 note = `Watch Party Ticket (Block): ${blockData.title || itemId}`;
             } else {
                 throw new Error("Item record not found.");
@@ -391,6 +395,7 @@ export async function POST(request: Request) {
             const reservation = await reserveBlockCapacity(db, itemId);
             if (!reservation) throw new Error("Item record not found.");
             const blockData = reservation.blockData;
+            purchasedBlockData = blockData;
             releaseCapacityReservation = reservation.release;
 
             amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
@@ -631,8 +636,15 @@ export async function POST(request: Request) {
     // block clients from writing payment/access fields directly.
     if (db && uid && paymentType === 'block' && itemId) {
         try {
-            const expirationDate = new Date();
-            expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks access
+            // FIX (Oct 2026 audit): this was "14 days from purchase", so anyone
+            // who bought more than two weeks before the festival was locked
+            // out on screening day. Now valid through the screening plus the
+            // post-festival rewatch window (never less than 14 days).
+            const expirationDate = blockAccessExpiry({
+                nowMs: Date.now(),
+                screeningStartTime: purchasedBlockData?.screeningStartTime || purchasedBlockData?.watchPartyStartTime,
+                rewatchWindowMs: FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS,
+            });
             const userRef = db.collection('users').doc(uid);
             await userRef.set({
                 unlockedBlocks: { [itemId]: expirationDate.toISOString() }

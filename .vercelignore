@@ -1,0 +1,9 @@
+# Files Vercel should never receive when deploying.
+service-account*.json
+*-firebase-adminsdk-*.json
+*.csv
+square-report*.txt
+film-urls.txt
+ops/
+tests/
+__MACOSX/

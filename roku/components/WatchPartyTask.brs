@@ -81,12 +81,31 @@ Sub Main()
             actualStartSecs = Int(ast)
         End If
     End If
+    ' FIX (Oct 2026): the API sends actualStartTime as an ISO string, which
+    ' none of the branches above handled -- so this was always 0 and the
+    ' Roku never actually joined a live party. Prefer the whole-seconds
+    ' fields the API now sends; fall back to parsing the ISO string.
+    If json.filmStartTimeSeconds <> Invalid And json.filmStartTimeSeconds > 0
+        actualStartSecs = Int(json.filmStartTimeSeconds)
+    Else If json.actualStartTimeSeconds <> Invalid And json.actualStartTimeSeconds > 0
+        actualStartSecs = Int(json.actualStartTimeSeconds)
+    Else If actualStartSecs = 0 And (Type(json.actualStartTime) = "roString" Or Type(json.actualStartTime) = "String")
+        dt = CreateObject("roDateTime")
+        dt.FromISO8601String(json.actualStartTime)
+        actualStartSecs = dt.AsSeconds()
+    End If
     m.top.actualStartTime = actualStartSecs
 
-    ' isPaid comes from the movie manifest field, passed in by the scene
-    ' isUnlocked requires checking the user's account
-    isPaid = false
-    If json.isPaid <> Invalid Then isPaid = json.isPaid
+    partyType = "movie"
+    If json.type <> Invalid And json.type <> "" Then partyType = json.type
+    m.top.partyType = partyType
+
+    ' isPaid comes from the movie manifest field, passed in by the scene.
+    ' FIX (Oct 2026): this used to be overwritten with json.isPaid, which the
+    ' API never sends -- so paid parties never checked the user's unlock and
+    ' ticket holders always saw the paywall QR.
+    isPaid = m.top.isPaid
+    If json.isPaid <> Invalid And json.isPaid = true Then isPaid = true
     m.top.isPaid = isPaid
 
     ' -------------------------------------------------------------------------

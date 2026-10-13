@@ -1,7 +1,10 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl as s3GetSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-const STREAM_URL_TTL_SECONDS = 4 * 60 * 60; // 4 hours, matching the prior CloudFront-signed TTL
+// 8 hours. Was 4: a viewer who opened a lobby early and then watched a long
+// feature could outlast the link mid-film (the player re-requests byte ranges
+// as it plays). Still short enough that a shared link goes dead the same day.
+const STREAM_URL_TTL_SECONDS = 8 * 60 * 60;
 
 /**
  * Turns a raw, permanent S3 URL (the shape stored in movie.fullMovie, e.g.

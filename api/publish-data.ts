@@ -19,6 +19,9 @@ const getRoleFromPassword = (password: string | null) => {
     return 'delegated_node';
 };
 
+// The only movie fields allowed in the public data/movies document.
+export const PUBLIC_WATCH_PARTY_FIELDS = ['isWatchPartyEnabled', 'watchPartyStartTime', 'isWatchPartyPaid', 'watchPartyPrice'] as const;
+
 export const assembleAndSyncMasterData = async (db: Firestore) => {
     // Parallel fetching for manifest assembly - ADDED editorial_stories
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap, storiesSnap, dataMoviesSnap] = await Promise.all([
@@ -188,8 +191,16 @@ export async function POST(request: Request) {
         else if (type === 'movies') {
             for (const [id, docData] of Object.entries(data)) {
                 batch.set(db.collection('movies').doc(id), docData as object, { merge: true });
-                // Also update the real-time data/movies document so client listeners get watch party fields immediately
-                batch.set(db.collection('data').doc('movies'), { [id]: docData }, { merge: true });
+                // Also update the real-time data/movies document so client listeners get watch party fields immediately.
+                // SECURITY (Oct 2026): data/movies is publicly readable, so it gets
+                // ONLY the watch-party fields browsers listen for — it used to get
+                // the whole movie record, including the raw video file link.
+                const d = (docData || {}) as Record<string, any>;
+                const publicFields: Record<string, any> = {};
+                for (const f of PUBLIC_WATCH_PARTY_FIELDS) if (f in d) publicFields[f] = d[f];
+                if (Object.keys(publicFields).length > 0) {
+                    batch.set(db.collection('data').doc('movies'), { [id]: publicFields }, { merge: true });
+                }
             }
         }
         else if (type === 'festival') {

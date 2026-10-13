@@ -47,3 +47,27 @@ Once the block has **ended**:
 
 ---
 **When something fails:** note the exact device/browser, account used, and steps — a screenshot of the actual broken state is the single most useful thing (that's what made every fix in this round possible).
+
+---
+
+# October 2026 update — extra checks
+
+Full festival rehearsal steps are in `docs/FESTIVAL-RUNBOOK.md`. After deploying this update, also confirm:
+
+## 8. Ended parties stay ended
+- [ ] End a test party (or let it auto-end). Wait 5 minutes. It must **not** go live again, and the homepage banner must stay gone.
+
+## 9. Admin "Next Film" always works
+- [ ] Mid-film in a live test block, press **Next Film**. It skips right away (it used to be refused until the film's runtime had passed).
+
+## 10. Backstage key
+- [ ] The Watch Party Manager shows the key for a live party; entering it on the watch-party page as a director works (badge, Q&A, video plays).
+- [ ] A wrong key is refused.
+
+## 11. Film links are private
+- [ ] Signed out, open cratetv.net, open DevTools → Network, reload. Search the responses for `.mp4`: no paid film's file link should appear.
+
+## 12. Roku
+- [ ] A single-film watch party: Roku joins at the right point once live.
+- [ ] A paid single-film party with a linked account that has a ticket: Roku plays (no paywall QR).
+- [ ] A festival block: Roku shows the "plays on cratetv.net" QR screen.

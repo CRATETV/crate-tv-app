@@ -168,6 +168,28 @@
                 translation="[0, 684]" />
         </Group>
 
+        <!-- Festival block (multi-film) parties: web/phone only for now -->
+        <Group id="blockState" visible="false">
+            <Label text="THIS FESTIVAL BLOCK PLAYS ON CRATETV.NET"
+                font="font:SmallBoldSystemFont" color="#FFFFFF"
+                width="1920" horizAlign="center"
+                translation="[0, 400]" />
+            <Label text="Scan to join the watch party on your phone, tablet or computer"
+                font="font:SmallSystemFont" color="#A0A0A0"
+                width="1920" horizAlign="center"
+                translation="[0, 448]" />
+            <Rectangle width="160" height="160" color="#EBEBEB" translation="[880, 510]" />
+            <Poster
+                width="150" height="150"
+                loadDisplayMode="scaleToFit"
+                translation="[885, 515]"
+                uri="https://api.qrserver.com/v1/create-qr-code/?size=150x150&amp;data=https://cratetv.net/watchparty" />
+            <Label text="cratetv.net/watchparty"
+                font="font:SmallSystemFont" color="#EF4444"
+                width="1920" horizAlign="center"
+                translation="[0, 684]" />
+        </Group>
+
         <!-- ================================================================ -->
         <!-- QA OVERLAY -- shown on top of player when isQALive = true         -->
         <!-- ================================================================ -->

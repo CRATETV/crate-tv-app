@@ -80,7 +80,11 @@ service cloud.firestore {
 
       match /live_reactions/{reactionId} {
         allow read: if true;
-        allow create: if isSignedIn();
+        // Only a short emoji + timestamp — nothing else can be smuggled in.
+        allow create: if isSignedIn()
+          && request.resource.data.keys().hasOnly(['emoji', 'timestamp'])
+          && request.resource.data.emoji is string
+          && request.resource.data.emoji.size() <= 16;
         allow update, delete: if false;
       }
 
@@ -135,7 +139,11 @@ service cloud.firestore {
 
     // ── Public content ─────────────────────────────────────────────────
     match /movies/{movieId} {
-      allow read: if true;
+      // SERVER ONLY (Oct 2026). Movie records hold the raw video file link
+      // and unreleased drafts. Browsers get the catalog from
+      // /api/get-live-data (links stripped) and play through short-lived
+      // signed links from /api/get-stream-url.
+      allow read: if false;
       allow write: if false;
     }
 
@@ -220,9 +228,17 @@ service cloud.firestore {
     // get-jury-dashboard-data.ts), not through this client rule.
     match /guest_judging/{docId} {
       allow read: if true;
+      // A signed-in juror can only write their own votes. Guest jurors (not
+      // signed in) must use a guest_ id, so nobody can overwrite a real
+      // account's votes. (Guest voting itself is still unauthenticated —
+      // see the audit's suggestion to require sign-in for juries.)
       allow create, update: if request.resource.data.userId is string
         && request.resource.data.filmId is string
-        && docId == request.resource.data.userId + '_' + request.resource.data.filmId;
+        && docId == request.resource.data.userId + '_' + request.resource.data.filmId
+        && (
+          (isSignedIn() && request.resource.data.userId == request.auth.uid)
+          || (!isSignedIn() && request.resource.data.userId.matches('guest_.*'))
+        );
       allow delete: if false;
     }
 

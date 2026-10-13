@@ -3,6 +3,8 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
+import { getBackstageKey, setBackstageKey } from './_lib/backstage.js';
+import { shouldAutoStart, tryAdvanceBlock, tryAutoEnd, newBackstageKey, SERVER_ADVANCE_GRACE_MS } from './_lib/watchPartyLifecycle.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
@@ -100,6 +102,7 @@ export async function GET(request: Request) {
 
         const now = new Date();
         const batch = db.batch();
+        const startedPartyIds: string[] = [];
         let mutationsCount = 0;
 
         // 1. Fetch Current State
@@ -115,16 +118,21 @@ export async function GET(request: Request) {
             const state = partyStates.get(doc.id);
             const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
             
-            if (startTime && startTime <= now && (!state || state.status !== 'live')) {
+            // shouldAutoStart: only if this scheduled run hasn't happened yet —
+            // an ended party is never resurrected for the same start time.
+            if (shouldAutoStart({ scheduledStartMs: startTime ? startTime.getTime() : null, nowMs: now.getTime(), partyState: state })) {
                 batch.set(db.collection('watch_parties').doc(doc.id), {
                     status: 'live',
                     type: 'movie',
                     isPlaying: true,
                     currentTime: 0,
                     actualStartTime: FieldValue.serverTimestamp(),
+                    lastStartedAt: new Date().toISOString(),
                     lastUpdated: FieldValue.serverTimestamp(),
-                    backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
+                    endedAt: null,
+                    backstageKey: null // stored server-side only — see api/_lib/backstage.ts
                 }, { merge: true });
+                startedPartyIds.push(doc.id);
                 mutationsCount++;
             }
         });
@@ -141,7 +149,17 @@ export async function GET(request: Request) {
                         const startTimeStr = block.watchPartyStartTime || block.screeningStartTime;
                         const startTime = startTimeStr ? new Date(startTimeStr) : null;
 
-                        if (startTime && startTime <= now && (!state || state.status !== 'live')) {
+                        // FIX (Oct 2026 audit): this used to be "start time has
+                        // passed and it isn't live" — which an ENDED block also
+                        // satisfies, so finished blocks were re-launched from
+                        // film 1 every minute. shouldAutoStart also rules out a
+                        // block that already ran for this start time.
+                        if (shouldAutoStart({
+                            scheduledStartMs: startTime ? startTime.getTime() : null,
+                            nowMs: now.getTime(),
+                            partyState: state,
+                            blockFestivalEndTime: block.festivalEndTime,
+                        })) {
                             batch.set(db.collection('watch_parties').doc(block.id), {
                                 status: 'live',
                                 activeMovieIndex: 0, // Reset — don't inherit leftover index from a previous screening
@@ -158,16 +176,20 @@ export async function GET(request: Request) {
                                 // later films in the block; the Admin SDK auto-converts a JS
                                 // Date into a real Firestore Timestamp on write.
                                 filmStartTime: new Date(startTimeStr),
+                                intermissionUntil: null,
+                                lastStartedAt: new Date().toISOString(),
                                 lastUpdated: FieldValue.serverTimestamp(),
-                                backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
+                                endedAt: null,
+                                backstageKey: null // stored server-side only — see api/_lib/backstage.ts
                             }, { merge: true });
+                            startedPartyIds.push(block.id);
                             mutationsCount++;
                             console.log(`[AUTO-START] Block ${block.id} (${block.title}) started at ${startTimeStr}`);
                         }
 
                         // "Starts in 30 minutes" reminder window — see collectReminderRecipients/
                         // sendBlockReminders above for why this piggybacks on this same cron tick.
-                        if (startTime && !state?.remindersSentAt) {
+                        if (startTime && !state?.remindersSentAt && state?.status !== 'live') {
                             const minutesUntilStart = (startTime.getTime() - now.getTime()) / 60000;
                             if (minutesUntilStart <= 30 && minutesUntilStart > 29) {
                                 blocksNeedingReminders.push({ block, startTime });
@@ -186,10 +208,11 @@ export async function GET(request: Request) {
             const data = doc.data();
             const lastUpdated = data.lastUpdated?.toDate();
             if (lastUpdated && lastUpdated < twelveHoursAgo) {
-                batch.update(doc.ref, { 
-                    status: 'ended', 
+                batch.update(doc.ref, {
+                    status: 'ended',
                     isPlaying: false,
-                    lastUpdated: FieldValue.serverTimestamp()
+                    lastUpdated: FieldValue.serverTimestamp(),
+                    endedAt: FieldValue.serverTimestamp()
                 });
                 mutationsCount++;
             }
@@ -197,6 +220,16 @@ export async function GET(request: Request) {
 
         if (mutationsCount > 0) {
             await batch.commit();
+        }
+
+        // Director backstage keys for parties just started (kept if one was
+        // already issued). Stored server-side only — see api/_lib/backstage.ts.
+        for (const id of startedPartyIds) {
+            try {
+                if (!(await getBackstageKey(db, id))) await setBackstageKey(db, id, newBackstageKey());
+            } catch (e) {
+                console.error(`[backstage] Failed to issue key for ${id}:`, e);
+            }
         }
 
         // Send any due reminders after the main batch — email delivery is
@@ -215,30 +248,32 @@ export async function GET(request: Request) {
             }
         }
 
-        // ── SERVER-SIDE AUTO-END (doesn't depend on anyone's browser being open) ──
-        // Same logic as api/auto-end-watch-party.ts, called here independently
-        // every minute for every currently-live party. That endpoint is
-        // designed to safely no-op if a party isn't actually done yet (wrong
-        // film, still playing, etc.), so it's safe to call blindly here.
+        // ── SERVER-SIDE ADVANCE + AUTO-END (no browser needed) ──────────────
+        // The server is the clock: every minute, each live party is moved to
+        // its next film once the current one's runtime (+ a short grace) has
+        // passed, and ended a few minutes after its last film. Viewers'
+        // browsers usually get there first; this guarantees it happens even
+        // if nobody is watching or a browser's request never arrives.
+        // Calls the shared functions directly — it used to call this same
+        // site over HTTP, which Vercel deployment protection can block.
+        let advanced = 0, ended = 0;
         try {
             const liveSnap = await db.collection('watch_parties').where('status', '==', 'live').get();
             for (const liveDoc of liveSnap.docs) {
                 try {
-                    const origin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://cratetv.net';
-                    await fetch(`${origin}/api/auto-end-watch-party`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ partyId: liveDoc.id }),
-                    });
+                    const adv = await tryAdvanceBlock(db, { partyId: liveDoc.id, toleranceMs: -SERVER_ADVANCE_GRACE_MS });
+                    if (adv.kind === 'advanced') { advanced++; continue; }
+                    const end = await tryAutoEnd(db, liveDoc.id);
+                    if (end.kind === 'ended') ended++;
                 } catch (e) {
-                    console.error(`[auto-end check] Failed for party ${liveDoc.id}:`, e);
+                    console.error(`[lifecycle] Failed for party ${liveDoc.id}:`, e);
                 }
             }
         } catch (e) {
-            console.error('[auto-end check] Failed to query live parties:', e);
+            console.error('[lifecycle] Failed to query live parties:', e);
         }
 
-        return new Response(JSON.stringify({ success: true, mutationsCount, remindersSent: blocksNeedingReminders.length }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, mutationsCount, remindersSent: blocksNeedingReminders.length, advanced, ended }), { status: 200 });
 
     } catch (error) {
         console.error("Error in update-watch-parties cron job:", error);

@@ -589,10 +589,14 @@ const WatchPartyControlRoom: React.FC<{
             const res = await fetch('/api/advance-block-film', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                // force: admins skip the "has the film's runtime elapsed?"
+                // check — this button used to be blocked by it, so a film
+                // with a missing or wrong runtime froze the whole block.
                 body: JSON.stringify({
                     partyId: item.id,
                     currentIndex: currentIdx,
-                    totalFilms: item.movieKeys.length,
+                    force: true,
+                    adminPassword: sessionStorage.getItem('adminPassword') || '',
                 }),
             });
             const data = await res.json();
@@ -700,6 +704,34 @@ const WatchPartyControlRoom: React.FC<{
         return () => clearInterval(interval);
     }, []);
 
+    // Director backstage key — kept server-side now (it used to sit on the
+    // public party record where anyone could read it), so admins fetch it.
+    const [adminBackstageKey, setAdminBackstageKey] = useState<string | null>(null);
+    useEffect(() => {
+        if (partyState?.status !== 'live') { setAdminBackstageKey(null); return; }
+        let cancelled = false;
+        const password = sessionStorage.getItem('adminPassword') || '';
+        fetch('/api/get-backstage-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movieKey: item.id, password }),
+        })
+            .then(r => r.json())
+            .then(d => { if (!cancelled) setAdminBackstageKey(d.backstageKey || null); })
+            .catch(err => console.error('[backstage key] fetch failed:', err));
+        return () => { cancelled = true; };
+    }, [item.id, partyState?.status, partyState?.lastStartedAt]);
+
+    // Pre-flight check: the server uses each film's recorded runtime to know
+    // when to move on. A missing runtime means it waits up to 3 hours (only
+    // the Next Film button gets past that), so flag those films up front.
+    const filmsMissingRuntime = useMemo(() => {
+        if (item.type !== 'block' || !item.movieKeys) return [] as string[];
+        return item.movieKeys
+            .filter(k => !(typeof allMovies[k]?.durationInMinutes === 'number' && (allMovies[k]?.durationInMinutes as number) > 0))
+            .map(k => allMovies[k]?.title || k);
+    }, [item, allMovies]);
+
     const isLastFilmOfBlock = item.type !== 'block' || !item.movieKeys || (partyState?.activeMovieIndex ?? 0) >= item.movieKeys.length - 1;
 
     const expectedFilmEndMs = useMemo(() => {
@@ -758,7 +790,7 @@ const WatchPartyControlRoom: React.FC<{
     };
 
     const toggleQA = async () => {
-        if (!partyState?.backstageKey) return;
+        if (!adminBackstageKey || !partyState) return;
         setIsTogglingQA(true);
         try {
             const newQAState = !partyState.isQALive;
@@ -803,7 +835,7 @@ const WatchPartyControlRoom: React.FC<{
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     movieKey: item.id, 
-                    backstageKey: partyState.backstageKey, 
+                    backstageKey: adminBackstageKey, 
                     isQALive: newQAState,
                     qaEmbed: embedUrl,
                     isWebcamLive: useWebcam
@@ -987,13 +1019,13 @@ const WatchPartyControlRoom: React.FC<{
                                             <span className="ml-3 text-xs bg-gradient-to-r from-pink-600 to-red-600 px-3 py-1 rounded-full uppercase tracking-widest">Block</span>
                                         )}
                                     </h3>
-                                    {partyState?.backstageKey && (
+                                    {adminBackstageKey && (
                                         <div className="mt-3 inline-flex items-center gap-3 bg-pink-600/10 border border-pink-500/30 rounded-xl px-4 py-2">
                                             <span className="text-[10px] font-black uppercase text-pink-400">Director Key</span>
-                                            <span className="font-mono font-bold text-white tracking-widest">{partyState.backstageKey}</span>
+                                            <span className="font-mono font-bold text-white tracking-widest">{adminBackstageKey}</span>
                                             <button 
                                                 onClick={() => {
-                                                    navigator.clipboard.writeText(partyState.backstageKey!);
+                                                    navigator.clipboard.writeText(adminBackstageKey!);
                                                 }}
                                                 className="text-pink-400 hover:text-white transition-colors"
                                             >
@@ -1105,6 +1137,11 @@ const WatchPartyControlRoom: React.FC<{
                                         </button>
                                     )}
                                     
+                                    {filmsMissingRuntime.length > 0 && (
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-red-300 bg-red-900/20 border border-red-500/30 rounded-xl py-3 px-4">
+                                            Missing runtime: {filmsMissingRuntime.join(', ')} — set it in the Movie Editor or the block will wait for "Next Film"
+                                        </span>
+                                    )}
                                     {isLive && (
                                         <>
                                             {item.type === 'block' && item.movieKeys && item.movieKeys.length > 1 && (
@@ -1150,7 +1187,7 @@ const WatchPartyControlRoom: React.FC<{
                             qaEmbed={partyState?.qaEmbed} 
                             isWebcamLive={partyState?.isWebcamLive}
                             isBackstageVerified={true} 
-                            backstageKey={partyState?.backstageKey}
+                            backstageKey={adminBackstageKey || undefined}
                             allMovies={allMovies}
                         />
                     </div>

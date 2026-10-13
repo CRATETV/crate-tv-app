@@ -51,13 +51,13 @@ export async function GET(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error('Database offline');
 
-        // Published catalog lives in data/movies (a map keyed by movie key);
-        // fall back to the per-movie collection.
-        let movie: any = (await db.collection('data').doc('movies').get()).data()?.[key];
-        if (!movie) {
-            const doc = await db.collection('movies').doc(key).get();
-            movie = doc.exists ? doc.data() : null;
-        }
+        // The per-movie record is the source of truth for title/poster/synopsis.
+        // (data/movies now only holds public watch-party fields — see
+        // PUBLIC_WATCH_PARTY_FIELDS in publish-data.ts — so it's merged on top
+        // rather than used as the primary source.)
+        const movieDoc = await db.collection('movies').doc(key).get();
+        const wpFields = (await db.collection('data').doc('movies').get()).data()?.[key];
+        let movie: any = movieDoc.exists ? { ...movieDoc.data(), ...(wpFields || {}) } : null;
         if (!movie || movie.isUnlisted) return await shell(origin);
 
         const filmTitle = String(movie.title || 'Crate TV');

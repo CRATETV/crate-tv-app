@@ -1,28 +1,16 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { setBackstageKey } from './_lib/backstage.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
-import { resolveAdminCredential } from './_lib/adminSession.js';
+import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { purgePartyMessages, newBackstageKey } from './_lib/watchPartyLifecycle.js';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, password: __raw_password } = await request.json();
-    const password = await resolveAdminCredential(__raw_password);
+    const { movieKey, password } = await request.json();
 
-    const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-    const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-    let isAuthenticated = false;
-    if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
-      isAuthenticated = true;
-    } else {
-        const db = getAdminDb();
-        if (db) {
-            const collabSnap = await db.collection('collaborator_access').where('accessKey', '==', password).limit(1).get();
-            if (!collabSnap.empty) isAuthenticated = true;
-        }
-    }
-
-    if (!isAuthenticated) {
+    if (!(await verifyAdminPassword(password))) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
@@ -36,13 +24,7 @@ export async function POST(request: Request) {
     if (!db) throw new Error("Database offline.");
 
     // CLEANUP: Purge old messages for a fresh session
-    const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
-    const snapshot = await messagesRef.get();
-    if (!snapshot.empty) {
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-    }
+    await purgePartyMessages(db, movieKey);
 
     const partyRef = db.collection('watch_parties').doc(movieKey);
     
@@ -62,8 +44,10 @@ export async function POST(request: Request) {
       lastUpdated: FieldValue.serverTimestamp(),
       activeMovieIndex: 0,             // always start at film 0
       intermissionUntil: null,         // no intermission at start
-      backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
+      backstageKey: null, // now stored server-side only (api/_lib/backstage.ts)
     }, { merge: true });
+
+    await setBackstageKey(db, movieKey, newBackstageKey());
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
 

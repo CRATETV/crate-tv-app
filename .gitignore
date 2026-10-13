@@ -1,54 +1,25 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-!firebase.json
-!.firebaserc
-!firebase.json
-!.firebaserc
-service-account.json
-.vercel
-
-# One-off diagnostic/debug scripts run from the terminal — not part of
-# the deployed app, so they shouldn't clutter git history or status.
-/*.cjs
-/*.sh
-crate-allaccess-purchasers.csv
-film-urls.txt
-s3-cors-config.json
-/*.py
-square-report-raw.txt
-.env*
-
-# added in the admin/security update — secrets & customer data
+# Dependencies & builds
 node_modules/
 dist/
 .vercel/
+roku/out/
+
+# Secrets — never commit or upload these
 .env
 .env.*
-!.env.example
-*service-account*.json
-*.pem
+service-account*.json
+*-firebase-adminsdk-*.json
+
+# Customer / business data exports — keep off the project folder entirely
 *.csv
+square-report*.txt
+film-urls.txt
+
+# One-off maintenance scripts — many contain customer emails. Keep local.
+ops/archive/
+ops/diagnostics/
+
+# OS / editor
+.DS_Store
 __MACOSX/
-_write_test.txt
+*.log

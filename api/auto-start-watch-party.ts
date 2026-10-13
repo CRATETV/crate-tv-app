@@ -1,6 +1,8 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getBackstageKey, setBackstageKey } from './_lib/backstage.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
+import { findBlock, purgePartyMessages, newBackstageKey, shouldAutoStart, toMillis } from './_lib/watchPartyLifecycle.js';
 
 export async function POST(request: Request) {
   try {
@@ -20,20 +22,38 @@ export async function POST(request: Request) {
     // We only hard-block if it's a single movie with isWatchPartyEnabled explicitly false.
     const moviesDoc = await db.collection('data').doc('movies').get();
     const movies = moviesDoc.data() || {};
-    const movie = movies[movieKey];
+    let movie = movies[movieKey];
+    if (!movie) {
+      // Not every film has an entry in data/movies — fall back to its own doc.
+      const movieDoc = await db.collection('movies').doc(movieKey).get();
+      if (movieDoc.exists) movie = movieDoc.data();
+    }
     if (movie && !movie.isWatchPartyEnabled) {
       return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
     }
 
     // SECURITY: this route is public (every viewer's lobby calls it when its
-    // countdown hits zero), so without a server-side time check anyone could
-    // POST a movieKey and start a scheduled party hours early. Allow a
-    // 2-minute tolerance for viewers whose device clocks run a little fast.
-    if (movie?.watchPartyStartTime) {
-      const scheduled = Date.parse(movie.watchPartyStartTime);
-      if (!isNaN(scheduled) && Date.now() < scheduled - 2 * 60_000) {
-        return new Response(JSON.stringify({ error: 'Too early — this watch party has not started yet.', startsAt: movie.watchPartyStartTime }), { status: 425 });
-      }
+    // countdown hits zero), so the server decides whether it's really time.
+    // This used to check only standalone movies — a festival block id skipped
+    // the check entirely, so anyone could start a block hours early. Both now
+    // use the scheduled start, with a 2-minute allowance for fast device clocks.
+    const blockLookup = movie ? null : await findBlock(db, movieKey);
+    const scheduledStr = movie?.watchPartyStartTime
+        || blockLookup?.block?.watchPartyStartTime
+        || blockLookup?.block?.screeningStartTime
+        || null;
+    const scheduledMs = toMillis(scheduledStr);
+    if (!movie && !blockLookup) {
+      return new Response(JSON.stringify({ error: 'Unknown watch party.' }), { status: 404 });
+    }
+    if (blockLookup && blockLookup.block?.isWatchPartyEnabled === false) {
+      return new Response(JSON.stringify({ error: 'Watch party not enabled.' }), { status: 400 });
+    }
+    if (scheduledMs == null) {
+      return new Response(JSON.stringify({ error: 'No start time scheduled — an admin must start this party.' }), { status: 400 });
+    }
+    if (Date.now() < scheduledMs - 2 * 60_000) {
+      return new Response(JSON.stringify({ error: 'Too early — this watch party has not started yet.', startsAt: scheduledStr }), { status: 425 });
     }
 
     // Every viewer's lobby independently calls this the moment its local
@@ -48,6 +68,7 @@ export async function POST(request: Request) {
     // one transaction makes Firestore itself pick exactly one winner;
     // everyone else gets back `alreadyLive: true` with no write at all.
     const partyRef = db.collection('watch_parties').doc(movieKey);
+    const existingKey = await getBackstageKey(db, movieKey);
     const txResult = await db.runTransaction(async (tx) => {
       const partyDoc = await tx.get(partyRef);
       const partyState = partyDoc.data();
@@ -55,10 +76,20 @@ export async function POST(request: Request) {
       if (partyState?.status === 'live') {
         return { outcome: 'already-live' as const };
       }
-      if (partyState?.status === 'ended') {
+      // Ended parties only restart if this is a NEW scheduled run (the
+      // scheduled start is later than when it last ended) — same rule the
+      // every-minute scheduler uses.
+      if (partyState?.status === 'ended' && !shouldAutoStart({
+        scheduledStartMs: scheduledMs,
+        nowMs: Math.max(Date.now(), scheduledMs),
+        partyState,
+        blockFestivalEndTime: blockLookup?.block?.festivalEndTime,
+      })) {
         return { outcome: 'ended' as const };
       }
 
+      // Keep an existing key (it may already be shared with a director).
+      if (!existingKey) setBackstageKey(db, movieKey, newBackstageKey(), tx);
       tx.set(partyRef, {
         status: 'live',
         lastStartedAt: new Date().toISOString(),
@@ -74,7 +105,7 @@ export async function POST(request: Request) {
         // otherwise a party that somehow cycles through this path twice
         // (e.g. a prior partial/aborted start) would silently invalidate
         // a key that may already have been shared with a director.
-        backstageKey: partyState?.backstageKey || Math.random().toString(36).substring(2, 8).toUpperCase(),
+        backstageKey: null, // stored server-side only — see api/_lib/backstage.ts
         autoStarted: true
       }, { merge: true });
 
@@ -99,13 +130,7 @@ export async function POST(request: Request) {
     // Only the single winning caller (the one whose transaction actually
     // flipped status to 'live') reaches here, so this purge can never run
     // more than once per start.
-    const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
-    const snapshot = await messagesRef.get();
-    if (!snapshot.empty) {
-      const batch = db.batch();
-      snapshot.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-    }
+    await purgePartyMessages(db, movieKey);
 
     return new Response(JSON.stringify({
       success: true,
