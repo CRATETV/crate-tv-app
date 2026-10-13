@@ -703,7 +703,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (isControllerMode || isBackstageVerified) return true;
         if (!movie) return false;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
-        if (hasFestivalAllAccess) return true;
+        // The PWFF all-access pass doesn't cover partner festivals (Festival in a box).
+        const owningBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.id === movieKey || (b.movieKeys || []).includes(movieKey));
+        if (hasFestivalAllAccess && !owningBlock?.partnerId) return true;
         if (unlockedFestivalBlockIds.has(movieKey)) return true;
 
         // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's

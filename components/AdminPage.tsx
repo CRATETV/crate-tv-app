@@ -16,6 +16,7 @@ import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
 import SubmissionsTab from './SubmissionsTab';
 import { isNewSubmission } from './MoviePipelineTab';
+import PartnersAdminTab from './PartnersAdminTab';
 import ContractsTab from './ContractsTab';
 import DiscoveryEngine from './DiscoveryEngine';
 import CrateFestEditor from './CrateFestEditor';
@@ -53,6 +54,7 @@ const ALL_TABS: Record<string, string> = {
     homepage: '🏠 Homepage',
     watchParty: '🍿 Watch Party',
     pwff: '🎬 PWFF Festival',
+    partners: '🤝 Partner Festivals',
     analytics: '📊 Stats',
     users: '🧠 Users',
     email: '✉️ Email',
@@ -77,7 +79,7 @@ const ALL_TABS: Record<string, string> = {
 const TAB_GROUPS: { title: string; ids: string[]; collapsible?: boolean }[] = [
     { title: 'Daily', ids: ['pulse', 'submissions', 'movies', 'homepage', 'watchParty', 'pwff', 'analytics', 'users'] },
     { title: 'Audience & Growth', ids: ['email', 'spotlight', 'editorial', 'outreach', 'vouchers', 'ticketCodes'] },
-    { title: 'Festivals & Library', ids: ['jury', 'crateFestHub', 'categories', 'laurels'] },
+    { title: 'Festivals & Library', ids: ['partners', 'jury', 'crateFestHub', 'categories', 'laurels'] },
     { title: 'Business & System', ids: ['money', 'contracts', 'shop', 'discovery', 'roku', 'system', 'permissions'], collapsible: true },
 ];
 
@@ -99,7 +101,7 @@ const normalizeTabIds = (ids: string[]): string[] =>
 
 // Hard-coded security boundary: never visible to non-master admins no matter
 // what is stored in Firestore.
-const MASTER_ONLY = ['permissions', 'system', 'money', 'contracts', 'roku', 'outreach'];
+const MASTER_ONLY = ['permissions', 'system', 'money', 'contracts', 'roku', 'outreach', 'partners'];
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4">{children}</h3>
@@ -118,6 +120,8 @@ const AdminPage: React.FC = () => {
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
+    // PWFF's own days; partner festivals are managed in the Partners tab.
+    const pwffDays = useMemo(() => festivalData.filter(d => !d.partnerId), [festivalData]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig | null>(null);
     const [heroConfig, setHeroConfig] = useState<HeroConfig>({});
@@ -745,6 +749,7 @@ const AdminPage: React.FC = () => {
                         />
                     )}
                     {activeTab === 'contracts' && <ContractsTab />}
+                    {activeTab === 'partners' && <PartnersAdminTab allMovies={movies} />}
                     {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'jury' && (
                         <div className="space-y-16">
@@ -783,7 +788,7 @@ const AdminPage: React.FC = () => {
                             pwffTagline={pwffTagline}
                             pwffYear={pwffYear}
                             pwffAnnualNumber={pwffAnnualNumber}
-                            pwffBlocks={festivalData.flatMap(d => d.blocks || [])}
+                            pwffBlocks={pwffDays.flatMap(d => d.blocks || [])}
                             onToggleVisible={(val) => { setPwffVisible(val); }}
                             onChangeDate={(val) => { setPwffDate(val); }}
                             onChangeName={(val) => { setPwffName(val); }}
@@ -802,11 +807,11 @@ const AdminPage: React.FC = () => {
                             })}
                             isSaving={isSaving}
                             allMovies={movies}
-                            festivalData={festivalData}
+                            festivalData={pwffDays}
                             festivalConfig={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }}
-                            onFestivalDataChange={(d) => setFestivalData(d)}
+                            onFestivalDataChange={(d) => setFestivalData([...d, ...festivalData.filter(day => day.partnerId)])}
                             onFestivalConfigChange={(c) => setFestivalConfig(c)}
-                            onSaveFestival={(latestConfig) => { handleSaveData('festival', { config: latestConfig, data: festivalData }); }}
+                            onSaveFestival={(latestConfig) => { handleSaveData('festival', { config: latestConfig, data: pwffDays }); }}
                             isSavingFestival={isSaving}
                         />
                         {isMaster && <section><SectionTitle>Festival revenue report</SectionTitle><FestivalReportTab /></section>}

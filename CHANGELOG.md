@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10 — Festival in a box
+
+Partner festivals can now run their own lineup on CRATE TV. See `docs/FESTIVAL-IN-A-BOX.md`.
+
+- **Partner portal (`/partner`).** A partner's team:
+  - Uploads films (runtime read from the file automatically).
+  - Builds the schedule and sets block and pass prices.
+  - Brands their page with logo, banner and colour.
+  - Submits the lineup for review and follows ticket sales live.
+- **Public festival pages (`/festivals/<address>`).** Branded, with block tickets, an optional festival pass, watch parties and the rewatch week. They run on the same engine as PWFF.
+- **Admin → 🤝 Partner Festivals.**
+  - Add partners and invite their team (14-day single-use links).
+  - Review a lineup, then approve and publish it, or send it back with a note.
+  - See live sales and download a CSV.
+  - Set deductions and record payouts, using the same method as PWFF.
+- **Safety:**
+  - Partners only ever see their own festival.
+  - Nothing goes live without your approval.
+  - A republish can't remove a block that has tickets sold.
+  - Republishing keeps seat counts.
+  - The PWFF all-access pass doesn't cover partner festivals, and partner sales are kept out of the PWFF report and filmmaker payouts.
+  - The PWFF editor can never overwrite partner schedules.
+- 9 new automated tests (`tests/partnerRules.test.ts`).
+
 ## 2026-10 — Festival reliability & security update
 
 From the October 2026 platform audit.

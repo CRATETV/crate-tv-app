@@ -22,7 +22,7 @@ const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
 // starts (matching the once-a-minute cron cadence so it's not fired
 // repeatedly), with a `remindersSentAt` flag on the party doc as a backstop
 // in case a cron tick is ever skipped/retried.
-async function collectReminderRecipients(db: FirebaseFirestore.Firestore, blockId: string): Promise<string[]> {
+async function collectReminderRecipients(db: FirebaseFirestore.Firestore, blockId: string, partnerId?: string): Promise<string[]> {
     const emails = new Set<string>();
 
     // Direct ticket buyers for this specific block — festival_tickets already
@@ -36,17 +36,28 @@ async function collectReminderRecipients(db: FirebaseFirestore.Firestore, blockI
     // Full-festival-pass holders have access to every block, not just ones
     // they bought a ticket for individually, so they won't show up in
     // festival_tickets for this specific block — pull them separately.
-    const passHoldersSnap = await db.collection('users').where('hasFestivalAllAccess', '==', true).get();
-    passHoldersSnap.forEach(doc => {
-        const email = doc.data().email;
-        if (email) emails.add(email);
-    });
+    // Partner festivals (Festival in a box) have their own pass, recorded as
+    // a ticket for "partner-pass:<id>"; the PWFF all-access pass doesn't
+    // cover them.
+    if (partnerId) {
+        const partnerPassSnap = await db.collection('festival_tickets').where('itemId', '==', `partner-pass:${partnerId}`).get();
+        partnerPassSnap.forEach(doc => {
+            const email = doc.data().email;
+            if (email) emails.add(email);
+        });
+    } else {
+        const passHoldersSnap = await db.collection('users').where('hasFestivalAllAccess', '==', true).get();
+        passHoldersSnap.forEach(doc => {
+            const email = doc.data().email;
+            if (email) emails.add(email);
+        });
+    }
 
     return Array.from(emails);
 }
 
 async function sendBlockReminders(db: FirebaseFirestore.Firestore, block: any, startTime: Date) {
-    const emails = await collectReminderRecipients(db, block.id);
+    const emails = await collectReminderRecipients(db, block.id, block.partnerId);
     if (emails.length === 0) return;
 
     // FIX (user report — reminder email showed "UTC" instead of a

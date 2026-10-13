@@ -8,6 +8,8 @@ import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
+import { partnerIdFromPassItem } from './_lib/partnerRules.js';
+import { getPartner, getPublishedBlocks, grantBlocksToUser } from './_lib/partners.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -165,6 +167,10 @@ export async function POST(request: Request) {
   let releaseCapacityReservation: (() => Promise<void>) | null = null;
   // The block being bought (paymentType 'block'), kept for the access-expiry calculation.
   let purchasedBlockData: any = null;
+  // Partner festival (Festival in a box) this purchase belongs to, if any —
+  // stamped on the ticket record so the partner's sales report finds it.
+  let purchasePartnerId: string | null = null;
+  let partnerPassBlocks: any[] | null = null;
   try {
     // No throttling existed on the endpoint that actually charges a card —
     // a script could otherwise hammer this with rapid repeated attempts
@@ -263,6 +269,8 @@ export async function POST(request: Request) {
                 }
                 if (paymentType === 'block' && itemId) {
                     if (itemId === 'full-festival-pass') return !!userData?.hasFestivalAllAccess;
+                    const passPartner = partnerIdFromPassItem(itemId);
+                    if (passPartner) return !!userData?.partnerPasses?.[passPartner];
                     const expiry = userData?.unlockedBlocks?.[itemId];
                     return !!expiry && new Date(expiry) > new Date();
                 }
@@ -350,12 +358,14 @@ export async function POST(request: Request) {
             if (blockData) {
                 // ?? not || — a block deliberately priced at $0 is free, not $10.
                 amountInCents = Math.round((blockData.price ?? 10.00) * 100);
+                purchasePartnerId = blockData.partnerId || null;
                 note = `Watch Party Ticket (Block): ${blockData.title || itemId}`;
             } else {
                 throw new Error("Item record not found.");
             }
         } else {
             const movieData = movieDoc.data();
+            purchasePartnerId = movieData?.partnerId || null;
             const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
@@ -365,7 +375,19 @@ export async function POST(request: Request) {
         if (!db) throw new Error("Database offline.");
         if (!itemId) throw new Error("Missing block id.");
 
-        if (itemId === 'full-festival-pass') {
+        const passPartnerId = partnerIdFromPassItem(itemId);
+        if (passPartnerId) {
+            // Festival pass for a partner festival: price comes from the
+            // partner's PUBLISHED details, never from the browser.
+            const partner = await getPartner(db, passPartnerId);
+            const passPrice = partner?.status === 'active' ? partner?.published?.details?.passPrice : 0;
+            if (!partner || !passPrice || passPrice <= 0) throw new Error("This festival pass isn't on sale.");
+            partnerPassBlocks = await getPublishedBlocks(db, partner.id);
+            if (!partnerPassBlocks.length) throw new Error("This festival pass isn't on sale yet.");
+            amountInCents = Math.round(passPrice * 100);
+            note = `Festival Pass: ${partner.published?.details?.title || partner.name}`;
+            purchasePartnerId = partner.id;
+        } else if (itemId === 'full-festival-pass') {
             // The "Buy Full Festival Pass" button (PwffPage.tsx) builds a
             // synthetic block-shaped object client-side purely to reuse the
             // existing ticket-purchase UI — it was never written to
@@ -396,6 +418,7 @@ export async function POST(request: Request) {
             if (!reservation) throw new Error("Item record not found.");
             const blockData = reservation.blockData;
             purchasedBlockData = blockData;
+            purchasePartnerId = blockData?.partnerId || null;
             releaseCapacityReservation = reservation.release;
 
             amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
@@ -571,6 +594,7 @@ export async function POST(request: Request) {
             isWatchParty: paymentType === 'watchPartyTicket',
             isFestivalBlock: paymentType === 'block',
             uid: uid || null,
+            partnerId: purchasePartnerId,
         };
         try {
             await db.collection('festival_tickets').add(ticketRecord);
@@ -634,7 +658,15 @@ export async function POST(request: Request) {
 
     // This is done server-side (Admin SDK) because Firestore security rules
     // block clients from writing payment/access fields directly.
-    if (db && uid && paymentType === 'block' && itemId) {
+    if (db && uid && paymentType === 'block' && itemId && purchasePartnerId && partnerPassBlocks) {
+        try {
+            await grantBlocksToUser(db, uid, purchasePartnerId, partnerPassBlocks);
+            console.log(`[Payment API] Granted partner festival pass ${purchasePartnerId} to ${uid}`);
+        } catch (e) {
+            console.error('[Payment API] Failed to grant partner festival pass:', e);
+            logServerError('api/process-square-payment:partner-pass-grant', e, { uid, itemId });
+        }
+    } else if (db && uid && paymentType === 'block' && itemId) {
         try {
             // FIX (Oct 2026 audit): this was "14 days from purchase", so anyone
             // who bought more than two weeks before the festival was locked

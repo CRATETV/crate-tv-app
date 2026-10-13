@@ -211,7 +211,7 @@ const BlockSection: React.FC<{
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const FestivalProgramPage: React.FC = () => {
-    const { festivalData, festivalConfig, movies, activeParties, allPartyStates, isLoading, livePartyMovie } = useFestival();
+    const { pwffFestivalData: festivalData, festivalConfig, movies, activeParties, allPartyStates, isLoading, livePartyMovie } = useFestival();
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, grantFestivalAllAccess, unlockedWatchPartyKeys, unlockWatchParty, user, authInitialized } = useAuth();
 
     const [activeDay, setActiveDay] = useState<number>(1);

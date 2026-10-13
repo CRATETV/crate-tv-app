@@ -23,6 +23,8 @@ export async function getFestivalConclusionTime(db: Firestore): Promise<Date | n
     let blockCount = 0;
 
     for (const dayDoc of daysSnap.docs) {
+        // Partner festivals settle separately (see api/_lib/partners.ts).
+        if (dayDoc.data().partnerId) continue;
         for (const block of (dayDoc.data().blocks || [])) {
             blockCount++;
             // festivalEndTime only gets stamped by the watch-party-ending

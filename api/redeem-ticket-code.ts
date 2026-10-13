@@ -101,7 +101,7 @@ export async function POST(request: Request) {
                 // day-pass holder got no access at all. Now the pass unlocks
                 // every block scheduled that day, exactly like buying each one.
                 const currentDays: number[] = userData.unlockedFestivalDays || [];
-                const dayBlocks = scheduleDays.find(d => d.day === codeData.dayNumber)?.blocks || [];
+                const dayBlocks = scheduleDays.find(d => d.day === codeData.dayNumber && !(d as any).partnerId)?.blocks || [];
                 const currentBlocks = userData.unlockedBlocks || {};
                 const addedBlocks: Record<string, string> = {};
                 for (const b of dayBlocks) if (b?.id) addedBlocks[b.id] = expiryFor(b);

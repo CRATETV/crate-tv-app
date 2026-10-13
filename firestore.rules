@@ -53,7 +53,8 @@ service cloud.firestore {
           || !protectedFieldUnchanged('unlockedWatchPartyKeys', [])
           || !protectedFieldUnchanged('unlockedBlocks', [])
           || !protectedFieldUnchanged('unlockedBlockIds', [])
-          || !protectedFieldUnchanged('unlockedFestivalDays', []);
+          || !protectedFieldUnchanged('unlockedFestivalDays', [])
+          || !protectedFieldUnchanged('partnerPasses', {});
     }
 
     // ── Users ──────────────────────────────────────────────────────────

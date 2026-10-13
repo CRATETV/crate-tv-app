@@ -37,7 +37,8 @@ export async function POST(request: Request) {
             db.collection('festival_viewers').orderBy('firstJoinedAt', 'desc').get(),
         ]);
 
-        const tickets = ticketSnap.docs.map(doc => {
+        // Partner-festival sales are reported in the Partners tab instead.
+        const tickets = ticketSnap.docs.filter(doc => !doc.data().partnerId).map(doc => {
             const data = doc.data();
             return { id: doc.id, ...data, purchasedAt: data.purchasedAt?.toDate?.().toISOString() || null };
         });

@@ -248,12 +248,16 @@ export interface FilmBlock {
    * block's watch party ends. PwffPage.tsx uses this to hide the block from
    * the public festival page once EXPIRY_WINDOW_MS has passed since then. */
   festivalEndTime?: string;
+  /** Set on blocks that belong to a partner festival (Festival in a box). */
+  partnerId?: string;
 }
 
 export interface FestivalDay {
   day: number;
   date: string;
   blocks: FilmBlock[];
+  /** Set on schedule days that belong to a partner festival (Festival in a box). */
+  partnerId?: string;
 }
 
 export interface FestivalConfig {

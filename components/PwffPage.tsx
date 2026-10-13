@@ -379,7 +379,8 @@ const TeaserMode: React.FC<{
 
 // ─── PROGRAMME MODE ───────────────────────────────────────────────────────────
 const ProgrammeMode: React.FC = () => {
-    const { festivalData, festivalConfig, movies, activeParties, allPartyStates, settings } = useFestival();
+    // PWFF days only — partner festivals (Festival in a box) have their own pages.
+    const { pwffFestivalData: festivalData, festivalConfig, movies, activeParties, allPartyStates, settings } = useFestival();
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockFestivalBlock, unlockedWatchPartyKeys, user, getUserIdToken } = useAuth();
 
     const [activeDay, setActiveDay] = useState(1);
@@ -817,7 +818,7 @@ function ordinal(n: number): string {
 }
 
 const PwffPage: React.FC = () => {
-    const { settings, isLoading, livePartyMovie, activeParties, allPartyStates, festivalData, movies, festivalConfig } = useFestival();
+    const { settings, isLoading, livePartyMovie, activeParties, allPartyStates, pwffFestivalData: festivalData, movies, festivalConfig } = useFestival();
     const { unlockedWatchPartyKeys, unlockedFestivalBlockIds, hasFestivalAllAccess, user, authInitialized } = useAuth();
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);

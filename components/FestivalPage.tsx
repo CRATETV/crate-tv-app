@@ -16,7 +16,7 @@ const FestivalPage: React.FC = () => {
     const { 
         isLoading, 
         movies, 
-        festivalData, 
+        pwffFestivalData: festivalData, 
         festivalConfig, 
         isFestivalLive, 
         dataSource,

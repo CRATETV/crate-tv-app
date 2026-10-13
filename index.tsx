@@ -22,6 +22,8 @@ installGlobalErrorLogging();
 import App from './App';
 const AdminPage = lazy(() => import('./components/AdminPage'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
+const PartnerPortalPage = lazy(() => import('./components/PartnerPortalPage'));
+const PartnerFestivalPage = lazy(() => import('./components/PartnerFestivalPage'));
 import PublicSquarePage from './components/PublicSquarePage';
 import CratemasPage from './components/CratemasPage';
 import SubmitPage from './components/SubmitPage';
@@ -167,6 +169,15 @@ const AppRouter: React.FC = () => {
   const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);
   if (actorProfileMatch && actorProfileMatch[1]) {
     return <ActorProfilePage slug={actorProfileMatch[1]} />;
+  }
+
+  // Festival in a box — partner festival pages and the partner portal.
+  const partnerFestivalMatch = route.match(/^\/festivals\/([a-z0-9-]+)\/?$/);
+  if (partnerFestivalMatch && partnerFestivalMatch[1]) {
+    return <PartnerFestivalPage slug={partnerFestivalMatch[1]} />;
+  }
+  if (route === '/partner') {
+    return user ? <PartnerPortalPage /> : <RedirectToLogin />;
   }
 
   const zineMatch = route.match(/^\/zine\/([a-zA-Z0-9_-]+)/);

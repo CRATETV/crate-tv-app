@@ -62,7 +62,18 @@ export const assembleAndSyncMasterData = async (db: Firestore) => {
     const storiesData: EditorialStory[] = [];
     storiesSnap.forEach(doc => storiesData.push({ id: doc.id, ...doc.data() } as EditorialStory));
 
+    // Public branding/details for partner festivals (Festival in a box).
+    // Imported lazily: partners.ts itself imports this file.
+    let partnerFestivals: Record<string, unknown> = {};
+    try {
+        const { getPublicPartnerFestivals } = await import('./_lib/partners.js');
+        partnerFestivals = await getPublicPartnerFestivals(db);
+    } catch (e) {
+        console.error('[publish-data] Partner festivals not included in snapshot:', e);
+    }
+
     const liveData = {
+        partnerFestivals,
         movies: moviesData,
         categories: categoriesData,
         zineStories: storiesData, // NEW: Include zine stories in manifest
@@ -210,10 +221,14 @@ export async function POST(request: Request) {
             }
             if (Array.isArray(days)) {
                 const existingDays = await db.collection('festival').doc('schedule').collection('days').get();
-                existingDays.forEach(doc => batch.delete(doc.ref));
-                
+                // Partner festivals ("Festival in a box") keep their own day
+                // docs in this collection, managed only through
+                // api/admin-partners.ts — the PWFF editor must never delete
+                // or overwrite them.
+                existingDays.forEach(doc => { if (!doc.data()?.partnerId) batch.delete(doc.ref); });
+
                 days.forEach((day: any) => {
-                    if (day && day.day) {
+                    if (day && day.day && !day.partnerId) {
                         batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day_${day.day}`), day);
                     }
                 });

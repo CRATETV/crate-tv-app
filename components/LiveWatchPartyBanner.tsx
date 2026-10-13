@@ -70,11 +70,12 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     
     // Authorization check for the banner button
     const alreadyHasAccess = useMemo(() => {
-        if (hasFestivalAllAccess) return true;
+        const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.id === movie.key || b.movieKeys.includes(movie.key));
+        // The PWFF all-access pass doesn't cover partner festivals.
+        if (hasFestivalAllAccess && !parentBlock?.partnerId) return true;
         if (unlockedWatchPartyKeys.has(movie.key)) return true;
-        
+
         // Check if this movie belongs to any unlocked block
-        const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.movieKeys.includes(movie.key));
         if (parentBlock && unlockedFestivalBlockIds.has(parentBlock.id)) return true;
         
         return false;

@@ -305,7 +305,8 @@ const App: React.FC = () => {
     const festivalCatalogBlocks = useMemo(() => {
         const endedBlocks = festivalData
             .flatMap((d: any) => d.blocks || [])
-            .filter((b: any) => allPartyStates[b.id]?.status === 'ended');
+            // PWFF rows only — partner festivals have their own pages.
+            .filter((b: any) => allPartyStates[b.id]?.status === 'ended' && !b.partnerId);
         return endedBlocks
             .map((block: any) => ({
                 block,
@@ -559,7 +560,7 @@ const App: React.FC = () => {
                         user={user}
                         hasAccess={
                             !livePartyMovie.isWatchPartyPaid ||
-                            hasFestivalAllAccess ||
+                            (hasFestivalAllAccess && !livePartyParentBlock?.partnerId) ||
                             (livePartyParentBlock
                                 ? unlockedFestivalBlockIds.has(livePartyMovie.key)
                                 : unlockedWatchPartyKeys.has(livePartyMovie.key)) ||
@@ -785,7 +786,7 @@ const App: React.FC = () => {
                                 </div>
                             )}
                             {festivalCatalogBlocks.map(({ block, films }) => {
-                                const blockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                                const blockUnlocked = (hasFestivalAllAccess && !block.partnerId) || unlockedFestivalBlockIds.has(block.id);
                                 const rowTitle = (
                                     <div className="flex items-center gap-3 flex-wrap">
                                         <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white">

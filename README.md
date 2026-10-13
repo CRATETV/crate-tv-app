@@ -18,7 +18,9 @@ Founder & operator: Salome Denoon.
 | `roku/` | Roku channel source (BrightScript) |
 | `tests/` | Automated tests (`npm test`) |
 | `ops/` | Maintenance scripts run by hand from Terminal (not deployed) |
-| `docs/` | Festival runbook, deploy notes |
+| `docs/` | Festival runbook, Festival in a box guide, deploy notes |
+| `api/_lib/partnerRules.ts`, `api/_lib/partners.ts` | Festival in a box: partner rules (tested) and database side |
+| `api/partner-portal.ts`, `api/admin-partners.ts` | Partner team endpoint and admin endpoint |
 | `firestore.rules`, `storage.rules` | Database / file-storage security rules (deployed with the Firebase CLI) |
 
 ## How the pieces fit
@@ -74,6 +76,10 @@ node ops/diagnostics/check-live-party.cjs
 - `ops/diagnostics/` — read-only checks (live parties, access, capacity, errors).
 - `ops/archive/` — one-off fixes that have already been applied. Kept for reference; don't re-run without reading them.
 - `ops/video/` — film conversion helpers (MediaConvert).
+
+## Partner festivals (Festival in a box)
+
+Partner teams manage their own lineup at `/partner`. Audiences buy tickets at `/festivals/<address>`. You approve lineups and settle sales in **Admin → 🤝 Partner Festivals**. Full guide: **`docs/FESTIVAL-IN-A-BOX.md`**.
 
 ## Before a festival
 

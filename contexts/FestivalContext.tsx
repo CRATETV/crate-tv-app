@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition, useRef } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
+import type { PublicPartnerFestival } from '../api/_lib/partnerRules';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -9,7 +10,13 @@ interface FestivalContextType {
     categories: Record<string, Category>;
     zineStories: EditorialStory[];
     festivalConfig: FestivalConfig | null;
+    /** Every festival schedule day, including partner festivals — use for
+     *  looking up a block by id (watch parties, access checks). */
     festivalData: FestivalDay[];
+    /** Only CRATE's own festival (PWFF) days — use on PWFF pages. */
+    pwffFestivalData: FestivalDay[];
+    /** Published partner festivals by slug (Festival in a box). */
+    partnerFestivals: Record<string, PublicPartnerFestival>;
     aboutData: AboutData | null;
     isFestivalLive: boolean;
     dataSource: 'live' | 'fallback' | null;
@@ -42,6 +49,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(initialFestivalConfig);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>(initialFestivalData);
     const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
+    const [partnerFestivals, setPartnerFestivals] = useState<Record<string, PublicPartnerFestival>>({});
+    const pwffFestivalData = useMemo(() => festivalData.filter(d => !d.partnerId), [festivalData]);
     const [adConfig, setAdConfig] = useState<AdConfig | null>(null);
     const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
@@ -291,6 +300,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 //    solely on the client-side onSnapshot which can fail silently
                 if (data.festivalConfig) setFestivalConfig(data.festivalConfig);
                 if (data.festivalData && Array.isArray(data.festivalData)) setFestivalData(data.festivalData);
+                if (data.partnerFestivals && typeof data.partnerFestivals === 'object') setPartnerFestivals(data.partnerFestivals);
                 setDataSource('live');
             }
         } catch (err) {
@@ -457,6 +467,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         zineStories,
         festivalConfig,
         festivalData,
+        pwffFestivalData,
+        partnerFestivals,
         aboutData,
         isFestivalLive,
         dataSource,

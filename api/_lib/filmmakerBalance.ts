@@ -133,6 +133,8 @@ export async function computeRevenueByFilm(
             add(details.title, 'tickets', p.amount_money.amount);
         } else if (details.type === 'vodRental') {
             const movie = movieByTitle.get(details.title);
+            // Partner-festival films are settled with the partner (Festival in a box).
+            if ((movie as any)?.partnerId) continue;
             if (movie?.isFestival) {
                 // Still an active/unresolved festival film — its individual
                 // rentals aren't the filmmaker's yet.

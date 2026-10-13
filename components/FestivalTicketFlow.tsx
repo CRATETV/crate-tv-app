@@ -35,7 +35,8 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
     const { activeParties } = useFestival();
 
     // ── STEP LOGIC ────────────────────────────────────────────────────────────
-    const alreadyHasAccess = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+    // The PWFF all-access pass doesn't cover partner festivals (Festival in a box).
+    const alreadyHasAccess = (hasFestivalAllAccess && !block.partnerId) || unlockedFestivalBlockIds.has(block.id);
     const isLive = activeParties[block.id]?.status === 'live';
     const isFree = !block.price || block.price === 0;
 

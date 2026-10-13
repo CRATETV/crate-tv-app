@@ -110,7 +110,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     // ticket holder can come back during the 7-day window and just press
     // play like any other Crate TV title, no watch party/lobby involved.
     if (parentFestivalBlock) {
-      if (hasFestivalAllAccess || unlockedFestivalBlockIds.has(parentFestivalBlock.id) || unlockedWatchPartyKeys.has(parentFestivalBlock.id)) {
+      if ((hasFestivalAllAccess && !parentFestivalBlock.partnerId) || unlockedFestivalBlockIds.has(parentFestivalBlock.id) || unlockedWatchPartyKeys.has(parentFestivalBlock.id)) {
         // Owning a ticket/pass used to grant access here with no timing
         // check at all. This route (/movie/{key}, the on-demand catalog
         // player) is only meant to open once the block's watch party has
