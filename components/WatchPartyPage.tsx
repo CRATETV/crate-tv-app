@@ -20,6 +20,7 @@ import { reportClientError } from '../services/errorLogger';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
 import AudienceMap, { useAudienceCheckin } from './AudienceMap';
 import AudienceChoiceVote from './AudienceChoiceVote';
+import { useWatchMilestone } from './WatchStreaks';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -734,6 +735,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // URL handed to every visitor regardless of payment (see the security plan).
     // "Who's watching" map: count this viewer's city once (components/AudienceMap.tsx).
     useAudienceCheckin(hasAccess ? movieKey : undefined);
+    // Watch streaks: 5 minutes of the live party counts (components/WatchStreaks.tsx).
+    useWatchMilestone('party', movieKey, !!hasAccess && partyState?.status === 'live' && !isEnded);
 
     // Once hasAccess is real, fetch a short-lived signed URL from the server
     // (which independently re-checks entitlement, matching this page's own

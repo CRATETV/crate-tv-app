@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10 — Watch streaks
+
+- **Watch streaks and badges.** These are just for fun and never unlock anything paid.
+  - **Monthly streak:** "🔥 4 months in a row". It's counted in Philadelphia time, and it stays alive until a whole month is skipped. Badges at 3, 6, 12 and 24 months.
+  - **Festival streak:** watch every block of a festival, live or on demand, to earn "🎟️ PWFF 2027: watched every block". This works for PWFF, partner festivals and Crate Fest.
+  - "First film on Crate TV" badge.
+  - Viewers get a nudge like "1 block left to complete your PWFF streak". A pop-up appears when a badge is earned.
+  - Shown on the Account page and My Festival.
+  - **What counts:** 5 minutes of real watching, either a live watch party or a film playing with the tab visible. The server re-checks that the viewer really has access, and that a watch party is live, before counting it. Stored server-side only (`user_streaks`).
+- 5 new tests.
+
 ## 2026-10 — Audience Choice voting and "Who's watching" map
 
 - **Audience Choice.** In any festival block with 2 or more films, ticket holders vote for their favourite film. This works for PWFF, partner festivals and Crate Fest.

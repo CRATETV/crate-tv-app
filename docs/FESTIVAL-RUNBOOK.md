@@ -60,3 +60,8 @@ Viewers have a **Need help?** button on every festival page, and a **Help** butt
 - **After the festival:** go to **Admin → PWFF → 🏆 Audience Choice**, check the winner, and press **Award**. That puts "Audience Choice Award <year>" on the film's laurel, which replaces any other award the film shows.
   - On a tie, choose yourself, or announce joint winners and use the Laurels tab for the second film.
 - **The "Who's watching" map** fills in on its own during each watch party. Screenshot it for social media after the screening.
+
+
+## Streaks
+
+- **Streaks run themselves.** Viewers see their streaks and badges on their Account page and on My Festival. Nothing for you to do.

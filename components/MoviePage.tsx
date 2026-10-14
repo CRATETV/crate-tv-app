@@ -19,6 +19,7 @@ import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
 import CastButton from './CastButton';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
+import { useWatchMilestone } from './WatchStreaks';
 
 interface MoviePageProps {
   movieKey: string;
@@ -147,6 +148,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     const expiration = rentals[movieKey];
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, allPartyStates]);
+
+  // Watch streaks: counts once the viewer has really watched 5 minutes (components/WatchStreaks.tsx).
+  useWatchMilestone('film', movieKey, hasAccess && playerMode === 'full' && !isPaused && !isEnded);
 
   // Festival films are never individually marked `isForSale`/`salePrice` in
   // the editor (they're normally sold as a block, or through the full

@@ -5,6 +5,7 @@ import CollapsibleFooter from './CollapsibleFooter';
 import { avatars } from './avatars';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
+import { StreaksCard } from './WatchStreaks';
 
 const AccountPage: React.FC = () => {
     const { user, logout, setAvatar, updateName, claimActiveSession } = useAuth();
@@ -101,6 +102,8 @@ const AccountPage: React.FC = () => {
                             </button>
                         )}
                     </div>
+
+                    <StreaksCard />
 
                     <div className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">

@@ -4,6 +4,7 @@ import { useFestival } from '../contexts/FestivalContext';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
+import { StreaksCard } from './WatchStreaks';
 
 // New page: previously a ticket holder's only way to find "what did I buy /
 // what's live right now / what's next" was to remember which blocks they
@@ -91,6 +92,8 @@ const MyFestivalPage: React.FC = () => {
                     </h1>
                     {user?.name && <p className="text-gray-500 text-sm mt-3">Signed in as {user.name}</p>}
                 </div>
+
+                <div className="mb-10"><StreaksCard /></div>
 
                 {myBlocks.length === 0 && (
                     <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl space-y-6">
