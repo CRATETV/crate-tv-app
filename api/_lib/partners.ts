@@ -17,6 +17,7 @@ import {
     PartnerRecord, PartnerDraft, PublicPartnerFestival, TicketLike,
     buildPublishPlan, checkDraft, blocksRemovedWithSales, computeSales, partnerPassItemId, SalesSummary,
     festivalCleanupDueMs, partnerFilmKey, partnerStorageKey, PartnerCleanup,
+    PWFF_PARTNER_ID, PWFF_PASS_ITEM_ID, selectPwffDays, blockWindow, findScheduleOverlaps, ScheduleWindow,
 } from './partnerRules.js';
 
 export const PARTNERS = 'partners';
@@ -68,10 +69,18 @@ export async function getPartnerTickets(db: Firestore, partner: PartnerRecord, b
     const snaps = await Promise.all([
         col.where('partnerId', '==', partner.id).get(),
         ...chunk(ids, 30).map(group => col.where('itemId', 'in', group).get()),
+        // PWFF's committee sells the PWFF all-access pass. Count the passes
+        // bought since the committee was set up (earlier ones were 2026's).
+        ...(partner.id === PWFF_PARTNER_ID ? [col.where('itemId', '==', PWFF_PASS_ITEM_ID).get()] : []),
     ]);
     const byId = new Map<string, any>();
+    const passSinceMs = Date.parse(partner.createdAt || '') || 0;
     for (const s of snaps) for (const d of s.docs) {
         const data = d.data();
+        if (data.itemId === PWFF_PASS_ITEM_ID) {
+            const at = data.purchasedAt?.toDate?.()?.getTime?.() || 0;
+            if (at < passSinceMs) continue;
+        }
         byId.set(d.id, {
             id: d.id,
             itemId: data.itemId,
@@ -187,7 +196,7 @@ export async function grantBlocksToUser(db: Firestore, uid: string, partnerId: s
 }
 
 async function extendPassHolders(db: Firestore, partner: PartnerRecord, blocks: any[]): Promise<void> {
-    if (!blocks.length) return;
+    if (!blocks.length || partner.id === PWFF_PARTNER_ID) return; // the PWFF pass already covers every PWFF block
     const passTickets = await db.collection('festival_tickets').where('itemId', '==', partnerPassItemId(partner.id)).get();
     const uids = [...new Set(passTickets.docs.map(d => d.data().uid).filter(Boolean) as string[])];
     for (const uid of uids) {
@@ -203,6 +212,7 @@ export async function getPublicPartnerFestivals(db: Firestore): Promise<Record<s
     for (const d of snap.docs) {
         const p = d.data() as PartnerRecord;
         if (!p.published) continue;
+        if (d.id === PWFF_PARTNER_ID) continue; // shown on CRATE's own /pwff page
         out[p.slug] = { partnerId: d.id, name: p.name, slug: p.slug, details: p.published.details, blockIds: p.published.blockIds || [] };
     }
     return out;
@@ -214,6 +224,7 @@ export function partnerView(p: PartnerRecord) {
         id: p.id, name: p.name, slug: p.slug, payeeName: p.payeeName, crateSharePct: p.crateSharePct,
         memberEmails: p.memberEmails || [], draft: p.draft || null, review: p.review, published: p.published || null,
         payout: p.payout || null,
+        isPwff: p.id === PWFF_PARTNER_ID,
     };
 }
 
@@ -289,4 +300,63 @@ export async function runPartnerCleanup(db: Firestore, partner: PartnerRecord): 
     try { await assembleAndSyncMasterData(db); }
     catch (e) { console.error('[partner-cleanup] Catalog republish failed:', e); }
     return cleanup;
+}
+
+
+// ─── Schedule overlaps (admin warning only) ───────────────────────────────
+
+/** A festival screening already on the calendar, tagged with who owns it. */
+export interface ScheduledScreening { owner: string; window: ScheduleWindow }
+
+/**
+ * Every festival screening currently on the site: PWFF (as shown on /pwff),
+ * Crate Fest and each partner festival. Runtimes come from the films.
+ */
+export async function loadScheduledScreenings(db: Firestore, partnerNames: Record<string, string>): Promise<ScheduledScreening[]> {
+    const [daysSnap, settingsSnap] = await Promise.all([
+        db.collection('festival').doc('schedule').collection('days').get(),
+        db.collection('content').doc('settings').get(),
+    ]);
+    const allDays = daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] });
+    const pwffDays = new Set(selectPwffDays(allDays));
+    const entries: { owner: string; festival: string; block: any }[] = [];
+    for (const day of allDays) {
+        const isPwff = pwffDays.has(day);
+        if (day.partnerId && day.partnerId !== PWFF_PARTNER_ID && !isPwff) {
+            for (const b of day.blocks || []) entries.push({ owner: day.partnerId, festival: partnerNames[day.partnerId] || day.partnerId, block: b });
+        } else if (isPwff) {
+            for (const b of day.blocks || []) entries.push({ owner: PWFF_PARTNER_ID, festival: 'PWFF', block: b });
+        }
+    }
+    const crateFest = settingsSnap.data()?.crateFestConfig;
+    for (const b of crateFest?.movieBlocks || []) entries.push({ owner: 'cratefest', festival: crateFest?.title || 'Crate Fest', block: b });
+
+    const keys = [...new Set(entries.flatMap(e => (Array.isArray(e.block?.movieKeys) ? e.block.movieKeys : []) as string[]))];
+    const minutes = new Map<string, number>();
+    const snaps = await Promise.all(keys.map(k => db.collection('movies').doc(k).get()));
+    snaps.forEach((snap, i) => minutes.set(keys[i], Number(snap.data()?.durationInMinutes) || 0));
+
+    const out: ScheduledScreening[] = [];
+    for (const e of entries) {
+        const w = blockWindow(e.festival, e.block?.title || 'Untitled block', e.block?.screeningStartTime || e.block?.watchPartyStartTime,
+            ((e.block?.movieKeys || []) as string[]).map(k => minutes.get(k) || 0), e.block?.festivalEndTime);
+        if (w) out.push({ owner: e.owner, window: w });
+    }
+    return out;
+}
+
+/** Where this partner's draft lineup overlaps another festival's screenings. */
+export function partnerOverlaps(partner: PartnerRecord, scheduled: ScheduledScreening[]) {
+    const draft = partner.draft;
+    if (!draft) return [];
+    const runtime = new Map(draft.films.map(f => [f.id, Number(f.durationInMinutes) || 0]));
+    const mine = draft.days.flatMap(d => d.blocks.map(b =>
+        blockWindow(partner.name, b.title || 'Untitled block', b.screeningStartTime, b.filmIds.map(id => runtime.get(id) || 0))))
+        .filter((w): w is ScheduleWindow => !!w);
+    const others = scheduled.filter(s => s.owner !== partner.id).map(s => s.window);
+    return findScheduleOverlaps(mine, others).map(o => ({
+        title: o.mine.title, startsAt: new Date(o.mine.startMs).toISOString(),
+        otherFestival: o.other.festival, otherTitle: o.other.title,
+        otherStartsAt: new Date(o.other.startMs).toISOString(), otherEndsAt: new Date(o.other.endMs).toISOString(),
+    }));
 }

@@ -1,4 +1,5 @@
 import { Firestore } from 'firebase-admin/firestore';
+import { isOutsidePartner } from './partnerRules.js';
 
 export type AccessMode = 'ondemand' | 'live';
 
@@ -90,7 +91,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
             let granted = false;
             if (unlockedWatchPartyKeys.includes(movieKey)) granted = true;
             // The PWFF all-access pass never covers partner festivals.
-            else if (hasFestivalAllAccess && !directBlock.partnerId) granted = true;
+            else if (hasFestivalAllAccess && !isOutsidePartner(directBlock.partnerId)) granted = true;
             else if (isBlockUnlocked(movieKey)) granted = true;
             else if (directBlock.price === 0) granted = true;
             else granted = isRented(movieKey);
@@ -106,7 +107,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
 
         let granted = false;
         if (unlockedWatchPartyKeys.includes(movieKey)) granted = true;
-        else if (hasFestivalAllAccess && !parentBlock?.partnerId) granted = true;
+        else if (hasFestivalAllAccess && !isOutsidePartner(parentBlock?.partnerId)) granted = true;
         else if (isBlockUnlocked(movieKey)) granted = true;
         else if (parentBlock) {
             if (isBlockUnlocked(parentBlock.id)) granted = true;
@@ -149,7 +150,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
     if (hasJuryPass) granted = true;
     else if (parentBlock) {
         const status = await getPartyStatus(db, parentBlock.id);
-        if ((hasFestivalAllAccess && !parentBlock.partnerId) || isBlockUnlocked(parentBlock.id) || unlockedWatchPartyKeys.includes(parentBlock.id)) {
+        if ((hasFestivalAllAccess && !isOutsidePartner(parentBlock.partnerId)) || isBlockUnlocked(parentBlock.id) || unlockedWatchPartyKeys.includes(parentBlock.id)) {
             granted = status === 'ended';
         } else if (!(parentBlock.price > 0)) {
             granted = true;
@@ -176,7 +177,7 @@ async function getFestivalBlocks(db: Firestore): Promise<FestivalBlock[]> {
     const blocks: FestivalBlock[] = [];
     for (const d of daysSnap.docs) {
         for (const b of (d.data().blocks || [])) {
-            if (b?.id) blocks.push({ id: b.id, price: b.price, movieKeys: Array.isArray(b.movieKeys) ? b.movieKeys : [], day: d.data().partnerId ? undefined : d.data().day, partnerId: b.partnerId || d.data().partnerId || undefined });
+            if (b?.id) blocks.push({ id: b.id, price: b.price, movieKeys: Array.isArray(b.movieKeys) ? b.movieKeys : [], day: isOutsidePartner(d.data().partnerId) ? undefined : d.data().day, partnerId: b.partnerId || d.data().partnerId || undefined });
         }
     }
     return blocks;

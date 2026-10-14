@@ -8,7 +8,7 @@ import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
-import { partnerIdFromPassItem } from './_lib/partnerRules.js';
+import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
 import { getPartner, getPublishedBlocks, grantBlocksToUser } from './_lib/partners.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -376,6 +376,9 @@ export async function POST(request: Request) {
         if (!itemId) throw new Error("Missing block id.");
 
         const passPartnerId = partnerIdFromPassItem(itemId);
+        // PWFF's committee lineup is covered by the PWFF all-access pass
+        // ("full-festival-pass" below), never a separate partner pass.
+        if (passPartnerId && !isOutsidePartner(passPartnerId)) throw new Error("This festival pass isn't on sale.");
         if (passPartnerId) {
             // Festival pass for a partner festival: price comes from the
             // partner's PUBLISHED details, never from the browser.
@@ -481,6 +484,9 @@ export async function POST(request: Request) {
               currency: 'USD',
             },
             note: note,
+            // Marks partner-festival sales so the PWFF money reports can
+            // leave other festivals' money out (Square allows 40 chars).
+            ...(isOutsidePartner(purchasePartnerId) ? { reference_id: `partner:${purchasePartnerId}`.slice(0, 40) } : {}),
           }),
         });
 

@@ -41,6 +41,7 @@ import MonthlySpotlightTab from './MonthlySpotlightTab';
 import HeroEditor from './HeroEditor';
 import HeroManager from './HeroManager';
 import UserDiagnosticsTab from './UserDiagnosticsTab';
+import { PWFF_PARTNER_ID } from '../api/_lib/partnerRules';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TAB MAP — consolidated Sept 2026.
@@ -122,6 +123,8 @@ const AdminPage: React.FC = () => {
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     // PWFF's own days; partner festivals are managed in the Partners tab.
     const pwffDays = useMemo(() => festivalData.filter(d => !d.partnerId), [festivalData]);
+    // PWFF run by its committee through the partner portal (Festival in a box).
+    const pwffCommitteeDays = useMemo(() => festivalData.filter(d => d.partnerId === PWFF_PARTNER_ID), [festivalData]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig | null>(null);
     const [heroConfig, setHeroConfig] = useState<HeroConfig>({});
@@ -780,6 +783,12 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'pwff' && (
                         <div className="space-y-16">
+                        {pwffCommitteeDays.length > 0 && (
+                            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5 text-sm text-emerald-100">
+                                <p className="font-bold text-emerald-300">PWFF's lineup is now run by the committee.</p>
+                                <p className="mt-1">The PWFF page shows the lineup approved in <strong>🤝 Partner Festivals → PWFF</strong> ({pwffCommitteeDays.reduce((n, d) => n + (d.blocks?.length || 0), 0)} blocks). The schedule editor below no longer appears on the PWFF page; use it only for anything outside the committee's lineup. The page title, dates and "Live" switch are still set here, and the all-access pass price where you set it today.</p>
+                            </div>
+                        )}
                         <PwffAdminTab
                             pwffVisible={pwffVisible}
                             pwffDate={pwffDate}
@@ -788,7 +797,7 @@ const AdminPage: React.FC = () => {
                             pwffTagline={pwffTagline}
                             pwffYear={pwffYear}
                             pwffAnnualNumber={pwffAnnualNumber}
-                            pwffBlocks={pwffDays.flatMap(d => d.blocks || [])}
+                            pwffBlocks={(pwffCommitteeDays.length ? pwffCommitteeDays : pwffDays).flatMap(d => d.blocks || [])}
                             onToggleVisible={(val) => { setPwffVisible(val); }}
                             onChangeDate={(val) => { setPwffDate(val); }}
                             onChangeName={(val) => { setPwffName(val); }}

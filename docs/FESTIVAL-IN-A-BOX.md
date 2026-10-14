@@ -25,7 +25,8 @@ Under the hood, a partner festival uses exactly the same machinery as PWFF: tick
 5. **Review lineup.** Check the films, preview the videos, check the schedule. Then either:
    - **Approve & publish:** the page and tickets go live immediately.
    - **Request changes:** your note is emailed to them, and the lineup goes back to them to fix.
-6. Before the first screening, run the rehearsal in `docs/FESTIVAL-RUNBOOK.md` with one of their blocks.
+6. **Overlap warning.** If any of their screenings fall within 30 minutes of another festival's (PWFF, Crate Fest or another partner), you see ⚠ on their card, in Review lineup and when you approve. It's a warning only, so you decide.
+7. Before the first screening, run the rehearsal in `docs/FESTIVAL-RUNBOOK.md` with one of their blocks.
 
 ## What partners can and can't do
 
@@ -62,14 +63,28 @@ Under the hood, a partner festival uses exactly the same machinery as PWFF: tick
 - If the partner sets a pass price, their page sells an all-access pass. It unlocks every block in **their** festival only, including blocks they add later.
 - **The PWFF all-access pass doesn't cover partner festivals.** Each festival keeps its own revenue.
 
-## Moving PWFF onto Festival in a box
+## PWFF run by its own committee
 
-PWFF keeps working exactly as it does now. When you're ready, e.g. for PWFF 2027:
+PWFF can be run through the portal by someone on the Playhouse West committee, while the page keeps the PWFF look at **cratetv.net/pwff**.
 
-1. Add Playhouse West as a partner at your agreed % (30% today), paying *Playhouse West Arts Foundation, Inc.*
-2. Invite the committee member who will enter the lineup.
-3. Their festival page will be cratetv.net/festivals/&lt;address&gt;. You can change the address in the partner's **settings** before launch.
-4. Point the homepage festival banner and your social links at that page.
+1. **Admin → Partner Festivals → Set up PWFF committee access.** This creates the PWFF portal (paid to *Playhouse West Arts Foundation, Inc.*, CRATE 30%).
+2. **Team → Invite by email:** the committee member. Invite your own email too if you want to enter or fix things yourself.
+3. They upload the films and build the schedule at cratetv.net/partner, then press **Submit for review**.
+4. You **Approve & publish.** From that moment the PWFF page shows the committee's lineup instead of the schedule from the admin Festival editor. Old links (cratetv.net/pwff, /pwff-philly2027) keep working, and cratetv.net/festivals/pwff opens the same page.
+
+What stays with you, in the admin **PWFF** tab and settings as now:
+- The page title, festival dates and the **Live** switch.
+- The all-access pass price.
+
+The committee's lineup counts as PWFF everywhere:
+- The PWFF all-access pass covers it.
+- Ticket codes and day passes work for it.
+- It's in the Festival revenue report and filmmaker payouts.
+- Pass holders get the 30-minute reminders.
+
+The committee's **Sales** tab shows its block tickets and the all-access passes sold since the committee was set up. Record the Playhouse West payout in **one** place, either the Festival revenue report or the partner Sales tab.
+
+Automatic film cleanup applies to PWFF too. Films are deleted about 14 days after the last screening unless the committee ticks **Keep this film on Crate TV after the festival**, as with LUNA.
 
 ## Good to know
 

@@ -14,6 +14,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { isOutsidePartner } from './_lib/partnerRules.js';
 
 export async function POST(request: Request) {
     try {
@@ -37,8 +38,9 @@ export async function POST(request: Request) {
             db.collection('festival_viewers').orderBy('firstJoinedAt', 'desc').get(),
         ]);
 
-        // Partner-festival sales are reported in the Partners tab instead.
-        const tickets = ticketSnap.docs.filter(doc => !doc.data().partnerId).map(doc => {
+        // Other partner festivals' sales are reported in the Partners tab
+        // instead. PWFF's committee lineup (partner "pwff") IS PWFF, so it stays.
+        const tickets = ticketSnap.docs.filter(doc => !isOutsidePartner(doc.data().partnerId)).map(doc => {
             const data = doc.data();
             return { id: doc.id, ...data, purchasedAt: data.purchasedAt?.toDate?.().toISOString() || null };
         });

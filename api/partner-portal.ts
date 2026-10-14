@@ -22,7 +22,7 @@ import {
     HttpError, PARTNERS, PARTNER_INVITES, authenticatePartnerUser, requirePartnerMember, getPartnerSales, partnerView,
     planPartnerCleanup,
 } from './_lib/partners.js';
-import { checkDraft, sanitizeDraft, computePayout } from './_lib/partnerRules.js';
+import { checkDraft, sanitizeDraft, computePayout, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
 import { notifyOwnerSubmitted } from './_lib/partnerEmails.js';
 
 const json = (body: unknown, status = 200) =>
@@ -90,6 +90,8 @@ export async function POST(request: Request) {
                 const raw = JSON.stringify(body.draft || {});
                 if (raw.length > 600_000) throw new HttpError(413, 'This draft is too large to save.');
                 const draft = sanitizeDraft(body.draft);
+                // PWFF sells the PWFF all-access pass, priced by CRATE in the admin.
+                if (partner.id === PWFF_PARTNER_ID) draft.details.passPrice = 0;
                 // Editing after submitting takes the lineup back to "draft" —
                 // it has to be resubmitted, so CRATE always reviews what goes live.
                 const review = partner.review?.state === 'submitted' || partner.review?.state === 'approved'

@@ -1,5 +1,6 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../../types.js';
+import { selectPwffDays } from './partnerRules.js';
 
 // While the festival is running — which, for revenue purposes, includes
 // the full on-demand rewatch week after the live screenings end, not
@@ -22,10 +23,10 @@ export async function getFestivalConclusionTime(db: Firestore): Promise<Date | n
     let latestMs: number | null = null;
     let blockCount = 0;
 
-    for (const dayDoc of daysSnap.docs) {
-        // Partner festivals settle separately (see api/_lib/partners.ts).
-        if (dayDoc.data().partnerId) continue;
-        for (const block of (dayDoc.data().blocks || [])) {
+    // PWFF days only: the committee's lineup once published, otherwise the
+    // admin-entered days. Other partner festivals settle separately.
+    for (const day of selectPwffDays(daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] }))) {
+        for (const block of (day.blocks || [])) {
             blockCount++;
             // festivalEndTime only gets stamped by the watch-party-ending
             // code paths — a plain ticketed screening with no live watch

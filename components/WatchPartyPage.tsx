@@ -17,6 +17,7 @@ import { useSessionGuard } from '../hooks/useSessionGuard';
 import { useWatchHeartbeat } from '../hooks/useWatchHeartbeat';
 import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
 import { reportClientError } from '../services/errorLogger';
+import { isOutsidePartner } from '../api/_lib/partnerRules';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -705,7 +706,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
         // The PWFF all-access pass doesn't cover partner festivals (Festival in a box).
         const owningBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.id === movieKey || (b.movieKeys || []).includes(movieKey));
-        if (hasFestivalAllAccess && !owningBlock?.partnerId) return true;
+        if (hasFestivalAllAccess && !isOutsidePartner(owningBlock?.partnerId)) return true;
         if (unlockedFestivalBlockIds.has(movieKey)) return true;
 
         // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode, useMe
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import type { PublicPartnerFestival } from '../api/_lib/partnerRules';
+import { selectPwffDays } from '../api/_lib/partnerRules';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -50,7 +51,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [festivalData, setFestivalData] = useState<FestivalDay[]>(initialFestivalData);
     const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
     const [partnerFestivals, setPartnerFestivals] = useState<Record<string, PublicPartnerFestival>>({});
-    const pwffFestivalData = useMemo(() => festivalData.filter(d => !d.partnerId), [festivalData]);
+    // The committee's lineup once PWFF runs through the partner portal, else the admin-entered days.
+    const pwffFestivalData = useMemo(() => selectPwffDays(festivalData), [festivalData]);
     const [adConfig, setAdConfig] = useState<AdConfig | null>(null);
     const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);

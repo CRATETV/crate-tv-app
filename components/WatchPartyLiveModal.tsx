@@ -3,6 +3,7 @@ import { Movie, FilmBlock, WatchPartyState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import SquarePaymentModal from './SquarePaymentModal';
+import { isOutsidePartner } from '../api/_lib/partnerRules';
 
 interface WatchPartyLiveModalProps {
     onClose: () => void;
@@ -49,7 +50,7 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
                         .filter((m): m is Movie => !!m);
                     
                     // Check if user has access
-                    const hasAccess = (hasFestivalAllAccess && !block.partnerId) ||
+                    const hasAccess = (hasFestivalAllAccess && !isOutsidePartner(block.partnerId)) ||
                         unlockedFestivalBlockIds.has(block.id) ||
                         block.movieKeys.some(key => unlockedWatchPartyKeys.has(key)) ||
                         !block.price || block.price === 0;
@@ -81,7 +82,7 @@ const WatchPartyLiveModal: React.FC<WatchPartyLiveModalProps> = ({ onClose }) =>
                 // Check if we already have this block
                 const existingIndex = parties.findIndex(p => p.block.id === parentBlock.id);
                 if (existingIndex === -1) {
-                    const hasAccess = (hasFestivalAllAccess && !parentBlock.partnerId) ||
+                    const hasAccess = (hasFestivalAllAccess && !isOutsidePartner(parentBlock.partnerId)) ||
                         unlockedFestivalBlockIds.has(parentBlock.id) ||
                         unlockedWatchPartyKeys.has(movieKey) ||
                         !parentBlock.price || parentBlock.price === 0;

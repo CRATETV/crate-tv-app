@@ -179,6 +179,36 @@ export const partnerIdFromPassItem = (itemId: unknown): string | null =>
         ? itemId.slice(PARTNER_PASS_PREFIX.length)
         : null;
 
+// ─── PWFF on Festival in a box ────────────────────────────────────────────
+//
+// PWFF can be run by its own committee through the partner portal. That
+// partner always has the reserved id "pwff" (no other partner can take it).
+// Its lineup still appears on CRATE's own PWFF page (/pwff) with the PWFF
+// look, and is treated as PWFF everywhere else too: the PWFF all-access pass
+// covers it, it counts in the PWFF report and filmmaker payouts, and pass
+// holders get the reminders. Every other partner stays separate.
+
+export const PWFF_PARTNER_ID = 'pwff';
+export const PWFF_PASS_ITEM_ID = 'full-festival-pass';
+
+/** True for a partner festival that is NOT PWFF (kept separate from PWFF). */
+export const isOutsidePartner = (partnerId: unknown): boolean =>
+    typeof partnerId === 'string' && partnerId !== '' && partnerId !== PWFF_PARTNER_ID;
+
+/** The pass a festival sells: PWFF's all-access pass, or the partner's own. */
+export const festivalPassItemId = (partnerId: string) =>
+    partnerId === PWFF_PARTNER_ID ? PWFF_PASS_ITEM_ID : partnerPassItemId(partnerId);
+
+/**
+ * The schedule days shown as PWFF. Once the committee has published a
+ * lineup through the portal, that lineup IS the PWFF schedule; until then
+ * the days entered in the admin Festival editor are (as in 2026).
+ */
+export function selectPwffDays<T extends { partnerId?: string | null }>(days: T[]): T[] {
+    const committee = days.filter(d => d.partnerId === PWFF_PARTNER_ID);
+    return committee.length ? committee : days.filter(d => !d.partnerId);
+}
+
 export function emptyDraft(name = ''): PartnerDraft {
     return {
         details: {
@@ -307,6 +337,9 @@ export function buildPublishPlan(partner: Pick<PartnerRecord, 'id' | 'name' | 's
             // Respected by the auto-unlist cron; films without it are deleted
             // after the festival (see festivalCleanupDueMs / cleanup-partner-festivals).
             keepInCatalogAfterFestival: !!f.keepAfterFestival,
+            // PWFF films follow the PWFF money rules (rentals during the
+            // festival stay with the festival; afterwards they're the filmmaker's).
+            ...(partner.id === PWFF_PARTNER_ID ? { isFestival: true } : {}),
         };
         // strip undefined (Firestore rejects them)
         Object.keys(movies[key]).forEach(k => movies[key][k] === undefined && delete movies[key][k]);
@@ -367,7 +400,7 @@ export function computeSales(
 ): SalesSummary {
     const blockIndex = new Map(ctx.blocks.map(b => [b.id, b.title]));
     const filmKeys = new Set(ctx.filmKeys);
-    const passId = partnerPassItemId(ctx.partnerId);
+    const passId = festivalPassItemId(ctx.partnerId);
     const blocks = new Map<string, SalesLine>(ctx.blocks.map(b => [b.id, { id: b.id, label: b.title, orders: 0, gross: 0 }]));
     const pass: SalesLine = { id: passId, label: 'Festival pass', orders: 0, gross: 0 };
     const rentals: SalesLine = { id: 'rentals', label: 'Individual film rentals', orders: 0, gross: 0 };
@@ -536,4 +569,52 @@ export function partnerStorageKey(url: unknown, bucket: string, partnerId: strin
     try { key = decodeURIComponent(key); } catch { return null; }
     if (key.includes('..')) return null;
     return key.startsWith(`partners/${partnerId}/`) ? key : null;
+}
+
+// ─── Schedule overlaps between festivals ─────────────────────────────────
+//
+// CRATE is run by one person, so two festivals screening at once is avoided.
+// The admin is warned (never blocked) when a lineup overlaps another
+// festival's screenings.
+
+export interface ScheduleWindow {
+    festival: string;
+    title: string;
+    startMs: number;
+    endMs: number;
+}
+
+/** Used when a block's films have no runtime yet. */
+export const DEFAULT_BLOCK_MINUTES = 120;
+/** Screenings closer than this to each other also count as overlapping. */
+export const OVERLAP_BUFFER_MS = 30 * 60 * 1000;
+
+/** When a block starts and roughly ends (film runtimes + 1 min between films). */
+export function blockWindow(festival: string, title: string, startIso: unknown, filmMinutes: number[], endIso?: unknown): ScheduleWindow | null {
+    const startMs = typeof startIso === 'string' ? Date.parse(startIso) : NaN;
+    if (!Number.isFinite(startMs)) return null;
+    const ended = typeof endIso === 'string' ? Date.parse(endIso) : NaN;
+    const known = filmMinutes.filter(m => Number.isFinite(m) && m > 0);
+    const minutes = known.length ? known.reduce((a, b) => a + b, 0) + Math.max(0, filmMinutes.length - 1) : DEFAULT_BLOCK_MINUTES;
+    const endMs = Number.isFinite(ended) && ended > startMs ? ended : startMs + minutes * 60_000;
+    return { festival, title, startMs, endMs };
+}
+
+/** Every pair where one of `mine` comes within the buffer of one of `others`. */
+export function findScheduleOverlaps(
+    mine: ScheduleWindow[],
+    others: ScheduleWindow[],
+    opts: { bufferMs?: number; nowMs?: number } = {},
+): { mine: ScheduleWindow; other: ScheduleWindow }[] {
+    const buffer = opts.bufferMs ?? OVERLAP_BUFFER_MS;
+    const now = opts.nowMs ?? Date.now();
+    const out: { mine: ScheduleWindow; other: ScheduleWindow }[] = [];
+    for (const a of mine) {
+        if (a.endMs < now) continue; // already over
+        for (const b of others) {
+            if (b.endMs < now) continue;
+            if (a.startMs < b.endMs + buffer && b.startMs < a.endMs + buffer) out.push({ mine: a, other: b });
+        }
+    }
+    return out.sort((x, y) => x.mine.startMs - y.mine.startMs);
 }

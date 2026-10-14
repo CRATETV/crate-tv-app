@@ -158,3 +158,56 @@ test('the keep flag survives saving and is published onto the film', () => {
     assert.equal(plan.movies[partnerFilmKey('fest-a', 'film1')].keepInCatalogAfterFestival, true);
     assert.equal(plan.movies[partnerFilmKey('fest-a', 'film2')].keepInCatalogAfterFestival, false);
 });
+
+// ─── PWFF run by its committee through the portal ─────────────────────────
+import { PWFF_PARTNER_ID, isOutsidePartner, selectPwffDays, festivalPassItemId } from '../api/_lib/partnerRules.js';
+
+test('the PWFF committee lineup counts as PWFF; every other partner stays separate', () => {
+    assert.equal(isOutsidePartner(PWFF_PARTNER_ID), false);
+    assert.equal(isOutsidePartner(undefined), false);
+    assert.equal(isOutsidePartner(''), false);
+    assert.equal(isOutsidePartner('philly-shorts'), true);
+    assert.equal(festivalPassItemId(PWFF_PARTNER_ID), 'full-festival-pass');
+    assert.equal(festivalPassItemId('philly-shorts'), 'partner-pass:philly-shorts');
+});
+
+test('the PWFF page shows the committee lineup once published, otherwise the admin-entered days', () => {
+    const legacy = { day: 1, partnerId: undefined as string | undefined };
+    const committee = { day: 1, partnerId: PWFF_PARTNER_ID };
+    const other = { day: 1, partnerId: 'philly-shorts' };
+    assert.deepEqual(selectPwffDays([legacy, other]), [legacy]);
+    assert.deepEqual(selectPwffDays([legacy, committee, other]), [committee]);
+    assert.deepEqual(selectPwffDays([other]), []);
+});
+
+test('PWFF committee films follow PWFF money rules; the PWFF pass counts in committee sales', () => {
+    const plan = buildPublishPlan({ id: PWFF_PARTNER_ID, name: 'PWFF', slug: 'pwff' }, goodDraft());
+    assert.equal(plan.movies[partnerFilmKey(PWFF_PARTNER_ID, 'film1')].isFestival, true);
+    assert.equal(buildPublishPlan({ id: 'fest-a', name: 'A', slug: 'fest-a' }, goodDraft()).movies[partnerFilmKey('fest-a', 'film1')].isFestival, undefined);
+    const b1 = partnerBlockId(PWFF_PARTNER_ID, 'blk1');
+    const sales = computeSales([
+        { itemId: 'full-festival-pass', paymentType: 'block', amountPaid: 50 },
+        { itemId: b1, paymentType: 'block', amountPaid: 10, partnerId: PWFF_PARTNER_ID },
+    ], { partnerId: PWFF_PARTNER_ID, blocks: [{ id: b1, title: 'Opening Night' }], filmKeys: [] });
+    assert.equal(sales.pass.gross, 50);
+    assert.equal(sales.totals.gross, 60);
+});
+
+// ─── Overlap warning between festivals ────────────────────────────────────
+import { blockWindow, findScheduleOverlaps, DEFAULT_BLOCK_MINUTES } from '../api/_lib/partnerRules.js';
+
+test('festivals screening at the same time (or within 30 minutes) are flagged; past ones are ignored', () => {
+    const now = Date.parse('2027-01-01T00:00:00Z');
+    const mine = blockWindow('Fest A', 'Night One', '2027-08-20T23:00:00Z', [60, 30])!; // 91 min → ends 00:31
+    assert.equal(mine.endMs - mine.startMs, 91 * 60_000);
+    const clash = blockWindow('PWFF', 'Opening', '2027-08-21T00:00:00Z', [45])!;
+    const close = blockWindow('PWFF', 'Late', '2027-08-21T00:50:00Z', [45])!;   // 19 min after → within buffer
+    const clear = blockWindow('PWFF', 'Next day', '2027-08-22T23:00:00Z', [45])!;
+    const past = blockWindow('Old', 'Gone', '2026-08-20T23:00:00Z', [60])!;
+    const hits = findScheduleOverlaps([mine], [clash, close, clear, past], { nowMs: now });
+    assert.deepEqual(hits.map(h => h.other.title), ['Opening', 'Late']);
+    // No runtimes yet → assume a 2-hour block rather than missing a clash.
+    const unknown = blockWindow('Fest A', 'TBD', '2027-08-20T23:00:00Z', [0, 0])!;
+    assert.equal(unknown.endMs - unknown.startMs, DEFAULT_BLOCK_MINUTES * 60_000);
+    assert.equal(blockWindow('X', 'No date', '', [10]), null);
+});

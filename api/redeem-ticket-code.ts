@@ -1,6 +1,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
+import { selectPwffDays } from './_lib/partnerRules.js';
 
 // Redeems a festival ticket code (full festival pass, single-day pass, or a
 // specific block) and grants the corresponding access.
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
                 // day-pass holder got no access at all. Now the pass unlocks
                 // every block scheduled that day, exactly like buying each one.
                 const currentDays: number[] = userData.unlockedFestivalDays || [];
-                const dayBlocks = scheduleDays.find(d => d.day === codeData.dayNumber && !(d as any).partnerId)?.blocks || [];
+                const dayBlocks = selectPwffDays(scheduleDays as any[]).find((d: any) => d.day === codeData.dayNumber)?.blocks || [];
                 const currentBlocks = userData.unlockedBlocks || {};
                 const addedBlocks: Record<string, string> = {};
                 for (const b of dayBlocks) if (b?.id) addedBlocks[b.id] = expiryFor(b);

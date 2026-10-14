@@ -6,7 +6,9 @@
 //
 // Actions (POST { action, password, ... }):
 //   list                         → every partner with draft, review state and checks
-//   create      { name, payeeName, contactEmail, crateSharePct }
+//   create      { name, payeeName, contactEmail, crateSharePct, linkPwff? }
+//               linkPwff: the PWFF committee's portal (reserved id "pwff"), whose
+//               lineup appears on /pwff and is treated as PWFF everywhere
 //   update      { partnerId, name?, slug?, payeeName?, contactEmail?, crateSharePct?, status? }
 //   invite      { partnerId, email }      → emails a 14-day invitation link (also returned)
 //   removeMember{ partnerId, email }
@@ -20,8 +22,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { isMasterAdmin } from './_lib/adminAuth.js';
 import { logServerError } from './_lib/logError.js';
-import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup } from './_lib/partners.js';
-import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord } from './_lib/partnerRules.js';
+import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup, loadScheduledScreenings, partnerOverlaps } from './_lib/partners.js';
+import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
 import { sendPartnerInvite, notifyPartnerReviewed } from './_lib/partnerEmails.js';
 
 const json = (body: unknown, status = 200) =>
@@ -58,10 +60,12 @@ export async function POST(request: Request) {
         switch (action) {
             case 'list': {
                 const snap = await db.collection(PARTNERS).orderBy('createdAt', 'desc').get();
+                const names = Object.fromEntries(snap.docs.map(d => [d.id, String(d.data().name || d.id)]));
+                const scheduled = await loadScheduledScreenings(db, names).catch(e => { console.error('[admin-partners] overlap check failed:', e); return []; });
                 const partners = await Promise.all(snap.docs.map(async d => {
                     const p = { ...(d.data() as PartnerRecord), id: d.id };
                     const plan = p.published && !p.cleanup ? await planPartnerCleanup(db, p).catch(() => null) : null;
-                    return { ...p, check: checkDraft(p.draft), cleanupPlan: plan };
+                    return { ...p, check: checkDraft(p.draft), cleanupPlan: plan, overlaps: partnerOverlaps(p, scheduled) };
                 }));
                 return json({ partners });
             }
@@ -71,10 +75,16 @@ export async function POST(request: Request) {
                 if (!name) throw new HttpError(400, 'Festival / partner name is required.');
                 const contactEmail = String(body.contactEmail || '').trim().toLowerCase();
                 if (contactEmail && !EMAIL.test(contactEmail)) throw new HttpError(400, 'Contact email looks wrong.');
-                let base = slugify(String(body.slug || name)) || 'festival';
-                if (RESERVED_SLUGS.has(base)) base = `${base}-festival`;
-                let id = base;
-                for (let i = 2; (await db.collection(PARTNERS).doc(id).get()).exists || await slugTaken(db, id); i++) id = `${base}-${i}`;
+                let id: string;
+                if (body.linkPwff) {
+                    id = PWFF_PARTNER_ID;
+                    if ((await db.collection(PARTNERS).doc(id).get()).exists) throw new HttpError(409, 'PWFF committee access is already set up.');
+                } else {
+                    let base = slugify(String(body.slug || name)) || 'festival';
+                    if (RESERVED_SLUGS.has(base)) base = `${base}-festival`;
+                    id = base;
+                    for (let i = 2; (await db.collection(PARTNERS).doc(id).get()).exists || await slugTaken(db, id); i++) id = `${base}-${i}`;
+                }
                 const record: Omit<PartnerRecord, 'id'> = {
                     name,
                     slug: id,
@@ -104,7 +114,7 @@ export async function POST(request: Request) {
                 }
                 if (body.crateSharePct != null) patch.crateSharePct = sharePct(body.crateSharePct);
                 if (body.status != null) patch.status = body.status === 'archived' ? 'archived' : 'active';
-                if (body.slug != null) {
+                if (body.slug != null && p.id !== PWFF_PARTNER_ID) {
                     const slug = slugify(String(body.slug));
                     if (!slug || RESERVED_SLUGS.has(slug)) throw new HttpError(400, 'Choose a different web address.');
                     if (await slugTaken(db, slug, p.id)) throw new HttpError(409, 'Another festival already uses that web address.');

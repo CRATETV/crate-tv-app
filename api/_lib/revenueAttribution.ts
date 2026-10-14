@@ -55,6 +55,8 @@ export async function computeRevenueAttribution(db: Firestore, payments: SquareP
     let postFestivalRentalCents = 0, postFestivalRentalCount = 0;
 
     for (const p of payments) {
+        // Another partner festival's sale (Festival in a box) isn't PWFF money.
+        if (p.reference_id?.startsWith('partner:')) continue;
         const note = p.note || '';
         const amt = p.amount_money.amount;
 

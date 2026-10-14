@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 import { getBackstageKey, setBackstageKey } from './_lib/backstage.js';
 import { shouldAutoStart, tryAdvanceBlock, tryAutoEnd, newBackstageKey, SERVER_ADVANCE_GRACE_MS } from './_lib/watchPartyLifecycle.js';
+import { isOutsidePartner } from './_lib/partnerRules.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
@@ -39,7 +40,7 @@ async function collectReminderRecipients(db: FirebaseFirestore.Firestore, blockI
     // Partner festivals (Festival in a box) have their own pass, recorded as
     // a ticket for "partner-pass:<id>"; the PWFF all-access pass doesn't
     // cover them.
-    if (partnerId) {
+    if (isOutsidePartner(partnerId)) {
         const partnerPassSnap = await db.collection('festival_tickets').where('itemId', '==', `partner-pass:${partnerId}`).get();
         partnerPassSnap.forEach(doc => {
             const email = doc.data().email;

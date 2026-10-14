@@ -29,6 +29,8 @@ interface PartnerSummary {
     published: PartnerPublished | null;
     payout: PartnerPayout | null;
     cleanupDueAt?: string | null;
+    /** PWFF's own committee: the lineup appears on cratetv.net/pwff with the PWFF design. */
+    isPwff?: boolean;
     cleanup?: { deletedAt: string; deletedFilmKeys: string[]; keptFilmKeys: string[] } | null;
 }
 
@@ -105,9 +107,21 @@ const Checklist: React.FC<{ errors: string[]; warnings: string[] }> = ({ errors,
 
 // ─── Festival details ───────────────────────────────────────────────────────
 
-const FestivalTab: React.FC<{ draft: PartnerDraft; partnerId: string; onChange: (d: PartnerDraft) => void }> = ({ draft, partnerId, onChange }) => {
+const FestivalTab: React.FC<{ draft: PartnerDraft; partnerId: string; isPwff?: boolean; onChange: (d: PartnerDraft) => void }> = ({ draft, partnerId, isPwff, onChange }) => {
     const d = draft.details;
     const set = (patch: Partial<PartnerDraft['details']>) => onChange({ ...draft, details: { ...d, ...patch } });
+    if (isPwff) return (
+        <div className="space-y-6">
+            <div className={`${card} space-y-4`}>
+                <div>
+                    <label className={label}>Festival name (for this portal)</label>
+                    <input className={input} value={d.title} onChange={e => set({ title: e.target.value })} placeholder="e.g. Playhouse West Film Festival 2027" />
+                </div>
+                <p className="text-sm text-gray-300">Your lineup appears on <strong className="text-white">cratetv.net/pwff</strong> with the festival's own design. The page title, festival dates and the all-access pass price are set by Crate TV. Your part is the <strong className="text-white">films</strong> and the <strong className="text-white">schedule</strong>.</p>
+            </div>
+            <p className="text-[11px] text-gray-500">Times you enter are in your time zone: <strong className="text-gray-300">{d.timeZone || 'America/New_York'}</strong>.</p>
+        </div>
+    );
     return (
         <div className="space-y-6">
             <div className={`${card} grid md:grid-cols-2 gap-5`}>
@@ -492,7 +506,7 @@ const PartnerPortalPage: React.FC = () => {
 
     if (!user) return null; // route redirects to login
 
-    const tabs: [Tab, string][] = [['overview', 'Overview'], ['festival', 'Festival & branding'], ['films', `Films (${draft?.films.length || 0})`], ['schedule', 'Schedule'], ['sales', 'Sales']];
+    const tabs: [Tab, string][] = [['overview', 'Overview'], ['festival', partner?.isPwff ? 'Festival' : 'Festival & branding'], ['films', `Films (${draft?.films.length || 0})`], ['schedule', 'Schedule'], ['sales', 'Sales']];
     const reviewState = partner?.review?.state || 'draft';
     const copy = REVIEW_COPY[reviewState] || REVIEW_COPY.draft;
 
@@ -521,7 +535,7 @@ const PartnerPortalPage: React.FC = () => {
                                 )}
                             </div>
                             <div className="flex gap-2 flex-wrap">
-                                {partner.published && <button type="button" className={btnGhost} onClick={() => navigate(`/festivals/${partner.slug}`)}>View public page</button>}
+                                {partner.published && <button type="button" className={btnGhost} onClick={() => navigate(partner.isPwff ? '/pwff' : `/festivals/${partner.slug}`)}>View public page</button>}
                                 <button type="button" className={btnGhost} disabled={!dirty || saving} onClick={save}>{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
                                 <button type="button" className={btnPrimary} disabled={saving || check.errors.length > 0 || (reviewState === 'submitted' && !dirty)} onClick={submit}>Submit for review</button>
                             </div>
@@ -568,7 +582,7 @@ const PartnerPortalPage: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                        {tab === 'festival' && <FestivalTab draft={draft} partnerId={partner.id} onChange={change} />}
+                        {tab === 'festival' && <FestivalTab draft={draft} partnerId={partner.id} isPwff={partner.isPwff} onChange={change} />}
                         {tab === 'films' && <FilmsTab draft={draft} partnerId={partner.id} onChange={change} />}
                         {tab === 'schedule' && <ScheduleTab draft={draft} onChange={change} />}
                         {tab === 'sales' && <SalesTab partner={partner} />}

@@ -25,6 +25,7 @@ import CrateFestBanner from './components/CrateFestBanner';
 import CrateVaultRow from './components/CrateVaultRow';
 import CrateIntelligence from './components/CrateIntelligence';
 import firebase from 'firebase/compat/app';
+import { isOutsidePartner, PWFF_PARTNER_ID } from './api/_lib/partnerRules';
 
 const MaintenanceScreen: React.FC = () => (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
@@ -306,13 +307,14 @@ const App: React.FC = () => {
         const endedBlocks = festivalData
             .flatMap((d: any) => d.blocks || [])
             // PWFF rows only — partner festivals have their own pages.
-            .filter((b: any) => allPartyStates[b.id]?.status === 'ended' && !b.partnerId);
+            .filter((b: any) => allPartyStates[b.id]?.status === 'ended' && !isOutsidePartner(b.partnerId));
         return endedBlocks
             .map((block: any) => ({
                 block,
                 films: (block.movieKeys || [])
                     .map((k: string) => movies[k])
-                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted),
+                    // PWFF committee films stay hidden from the other rows but belong here.
+                    .filter((m: Movie | undefined): m is Movie => !!m && (!m.isUnlisted || (m as any).partnerId === PWFF_PARTNER_ID)),
             }))
             .filter(({ films }) => films.length > 0);
     }, [movies, festivalData, allPartyStates]);
@@ -560,7 +562,7 @@ const App: React.FC = () => {
                         user={user}
                         hasAccess={
                             !livePartyMovie.isWatchPartyPaid ||
-                            (hasFestivalAllAccess && !livePartyParentBlock?.partnerId) ||
+                            (hasFestivalAllAccess && !isOutsidePartner(livePartyParentBlock?.partnerId)) ||
                             (livePartyParentBlock
                                 ? unlockedFestivalBlockIds.has(livePartyMovie.key)
                                 : unlockedWatchPartyKeys.has(livePartyMovie.key)) ||
@@ -786,7 +788,7 @@ const App: React.FC = () => {
                                 </div>
                             )}
                             {festivalCatalogBlocks.map(({ block, films }) => {
-                                const blockUnlocked = (hasFestivalAllAccess && !block.partnerId) || unlockedFestivalBlockIds.has(block.id);
+                                const blockUnlocked = (hasFestivalAllAccess && !isOutsidePartner(block.partnerId)) || unlockedFestivalBlockIds.has(block.id);
                                 const rowTitle = (
                                     <div className="flex items-center gap-3 flex-wrap">
                                         <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white">

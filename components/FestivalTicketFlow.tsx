@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SquarePaymentModal from './SquarePaymentModal';
 import WatchPartyLobby from './WatchPartyLobby';
 import { useFestival } from '../contexts/FestivalContext';
+import { isOutsidePartner } from '../api/_lib/partnerRules';
 
 /**
  * FESTIVAL TICKET FLOW
@@ -36,7 +37,7 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
 
     // ── STEP LOGIC ────────────────────────────────────────────────────────────
     // The PWFF all-access pass doesn't cover partner festivals (Festival in a box).
-    const alreadyHasAccess = (hasFestivalAllAccess && !block.partnerId) || unlockedFestivalBlockIds.has(block.id);
+    const alreadyHasAccess = (hasFestivalAllAccess && !isOutsidePartner(block.partnerId)) || unlockedFestivalBlockIds.has(block.id);
     const isLive = activeParties[block.id]?.status === 'live';
     const isFree = !block.price || block.price === 0;
 

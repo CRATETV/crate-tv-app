@@ -173,6 +173,11 @@ const AppRouter: React.FC = () => {
 
   // Festival in a box — partner festival pages and the partner portal.
   const partnerFestivalMatch = route.match(/^\/festivals\/([a-z0-9-]+)\/?$/);
+  if (partnerFestivalMatch && partnerFestivalMatch[1] === 'pwff') {
+    // PWFF's committee lineup lives on CRATE's own PWFF page.
+    window.history.replaceState({}, '', '/pwff');
+    return <PwffPage />;
+  }
   if (partnerFestivalMatch && partnerFestivalMatch[1]) {
     return <PartnerFestivalPage slug={partnerFestivalMatch[1]} />;
   }

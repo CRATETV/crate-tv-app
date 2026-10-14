@@ -3,6 +3,7 @@ import { Movie } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import Countdown from './Countdown';
+import { isOutsidePartner } from '../api/_lib/partnerRules';
 
 interface LiveWatchPartyBannerProps {
   movie: Movie;
@@ -72,7 +73,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     const alreadyHasAccess = useMemo(() => {
         const parentBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.id === movie.key || b.movieKeys.includes(movie.key));
         // The PWFF all-access pass doesn't cover partner festivals.
-        if (hasFestivalAllAccess && !parentBlock?.partnerId) return true;
+        if (hasFestivalAllAccess && !isOutsidePartner(parentBlock?.partnerId)) return true;
         if (unlockedWatchPartyKeys.has(movie.key)) return true;
 
         // Check if this movie belongs to any unlocked block

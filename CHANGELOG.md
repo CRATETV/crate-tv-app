@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10 — PWFF on Festival in a box
+
+- **Admin → Partner Festivals → Set up PWFF committee access.** Someone on the PWFF committee can now upload films and build the schedule in the partner portal.
+- After approval, their lineup appears on **cratetv.net/pwff** with the PWFF design. `/festivals/pwff` redirects there.
+- The committee's lineup is treated as PWFF everywhere:
+  - The all-access pass covers it.
+  - Day passes and ticket codes work for it.
+  - It counts in the festival report, filmmaker payouts and post-festival catalog rows.
+  - Pass holders get the reminders.
+- Other partner festivals stay separate. Their card payments are now tagged in Square (`partner:<id>`), so the PWFF revenue dashboard leaves them out.
+- **Overlap warning:** when a partner's lineup screens within 30 minutes of another festival (PWFF, Crate Fest or another partner), the admin shows a warning on their card, in Review lineup and when you press Approve. It never blocks approval.
+- 4 new tests.
+
 ## 2026-10 — Festival in a box: automatic film cleanup
 
 - Partner films are deleted automatically one week after the rewatch week ends: catalog entry, video and poster.

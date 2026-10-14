@@ -3,6 +3,7 @@ import { Movie } from '../../types.js';
 import { getCreditedNames, normalize } from './creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './shopRevenue.js';
 import { getFestivalConclusionTime } from './festivalTiming.js';
+import { isOutsidePartner } from './partnerRules.js';
 
 export const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
 export const PARTNER_SHARE = 0.70;
@@ -11,6 +12,8 @@ export interface SquarePayment {
     amount_money: { amount: number };
     note?: string;
     created_at?: string;
+    /** "partner:<id>" on sales for another partner festival (Festival in a box). */
+    reference_id?: string;
     processing_fee?: { amount_money?: { amount: number } }[];
 }
 
@@ -85,12 +88,13 @@ export async function fetchAllRelevantPayments(accessToken: string, locationId: 
         .filter(p => p.status === 'COMPLETED')
         .map(p => {
             const refunded = p.refunded_money?.amount || 0;
-            if (refunded <= 0) return { amount_money: p.amount_money, note: p.note, created_at: p.created_at, processing_fee: p.processing_fee };
+            if (refunded <= 0) return { amount_money: p.amount_money, note: p.note, created_at: p.created_at, processing_fee: p.processing_fee, reference_id: p.reference_id };
             return {
                 amount_money: { amount: Math.max(0, p.amount_money.amount - refunded) },
                 note: p.note,
                 created_at: p.created_at,
                 processing_fee: p.processing_fee,
+                reference_id: p.reference_id,
             };
         })
         .filter(p => p.amount_money.amount > 0); // fully-refunded payments contribute nothing
@@ -133,8 +137,9 @@ export async function computeRevenueByFilm(
             add(details.title, 'tickets', p.amount_money.amount);
         } else if (details.type === 'vodRental') {
             const movie = movieByTitle.get(details.title);
-            // Partner-festival films are settled with the partner (Festival in a box).
-            if ((movie as any)?.partnerId) continue;
+            // Other partner festivals' films are settled with the partner
+            // (Festival in a box). PWFF committee films follow PWFF rules.
+            if (isOutsidePartner((movie as any)?.partnerId)) continue;
             if (movie?.isFestival) {
                 // Still an active/unresolved festival film — its individual
                 // rentals aren't the filmmaker's yet.
