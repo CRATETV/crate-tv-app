@@ -9,6 +9,7 @@ interface LaurelManagerProps {
 
 const PRESET_CATEGORIES = [
     "Official Selection", 
+    "Audience Choice Award",
     "Grand Jury Prize", 
     "Best Performance", 
     "Best Documentary Short", 
@@ -27,6 +28,37 @@ const PRESET_FINISHES = [
     { name: 'Black', val: '#000000' },
 ];
 
+// Dark lettering for the signature wreath on light posters.
+const SIGNATURE_DARK_TEXT = '#141414';
+
+// Everything in "Export Full Kit": the signature wreath (for dark and for
+// light posters) plus every solid finish.
+const KIT_FINISHES: { name: string; color: string; text?: string }[] = [
+    { name: 'Signature', color: 'gradient' },
+    { name: 'Signature_for_light_backgrounds', color: 'gradient', text: SIGNATURE_DARK_TEXT },
+    { name: 'White', color: '#FFFFFF' },
+    { name: 'Black', color: '#000000' },
+    { name: 'Gold', color: '#FFD700' },
+    { name: 'Silver', color: '#C0C0C0' },
+    { name: 'Rose_Gold', color: '#B76E79' },
+];
+
+const dataUrlCache = new Map<string, Promise<string>>();
+function toDataUrl(src: string): Promise<string> {
+    if (!dataUrlCache.has(src)) {
+        dataUrlCache.set(src, fetch(src).then(r => {
+            if (!r.ok) throw new Error(`Couldn't load ${src}`);
+            return r.blob();
+        }).then(blob => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+        })));
+    }
+    return dataUrlCache.get(src)!;
+}
+
 const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     const [selectedMovieKey, setSelectedMovieKey] = useState('');
     const [award, setAward] = useState('Official Selection');
@@ -35,8 +67,13 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     const [isDownloading, setIsDownloading] = useState(false);
     const [isKitGenerating, setIsKitGenerating] = useState(false);
     const [isApplying, setIsApplying] = useState(false);
+    // Preview only (downloads are transparent): a black laurel needs a light backdrop to be seen.
+    const [lightPreview, setLightPreview] = useState(false);
     
     const laurelRef = useRef<HTMLDivElement>(null);
+    // Hidden copies of every finish for "Export Full Kit", independent of
+    // whichever finish is being previewed.
+    const signatureRef = useRef<HTMLDivElement>(null);
 
     const selectedMovie = useMemo(() => 
         allMovies.find(m => m.key === selectedMovieKey), 
@@ -49,21 +86,19 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
         }
     }, [selectedMovie]);
 
-    const renderToPng = async (svgElement: SVGSVGElement, fillColor: string): Promise<string> => {
+    // Each finish is drawn natively by LaurelPreview (leaves, lines and lettering
+    // in the right colours), so exporting is just a straight render to PNG.
+    const renderToPng = async (svgElement: SVGSVGElement): Promise<string> => {
         const size = 3000;
         const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
         clonedSvg.setAttribute('width', size.toString());
         clonedSvg.setAttribute('height', size.toString());
-        
-        // Update all paths/texts to the target color — except "gradient",
-        // whose per-leaf rainbow fills are already baked into the source
-        // SVG by LaurelPreview and must be left alone.
-        if (fillColor !== 'gradient') {
-            const elements = clonedSvg.querySelectorAll('path, text');
-            elements.forEach(el => {
-                if (el.tagName === 'path') el.setAttribute('fill', fillColor);
-                if (el.tagName === 'text') el.setAttribute('fill', fillColor);
-            });
+        // Browsers refuse to load outside images inside an SVG that's being turned
+        // into a PNG, which used to drop the wreath and leave only the text.
+        // Embed the artwork directly so every leaf makes it into the file.
+        for (const img of Array.from(clonedSvg.querySelectorAll('image'))) {
+            const href = img.getAttribute('href') || img.getAttribute('xlink:href') || '';
+            if (href && !href.startsWith('data:')) img.setAttribute('href', await toDataUrl(href));
         }
 
         const canvas = document.createElement('canvas');
@@ -96,7 +131,7 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
             const sourceSvg = laurelRef.current.querySelector('svg');
             if (!sourceSvg) throw new Error("SVG element not found");
             
-            const base64 = await renderToPng(sourceSvg, color);
+            const base64 = await renderToPng(sourceSvg);
             const link = document.createElement('a');
             link.download = `Crate_Laurel_${award.replace(/\s/g, '_')}_${year}.png`;
             link.href = `data:image/png;base64,${base64}`;
@@ -109,23 +144,15 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     };
 
     const handleExportKit = async () => {
-        if (!laurelRef.current || isKitGenerating) return;
+        if (!signatureRef.current || isKitGenerating) return;
         setIsKitGenerating(true);
         const zip = new JSZip();
         
         try {
-            const sourceSvg = laurelRef.current.querySelector('svg');
-            if (!sourceSvg) throw new Error("SVG element not found");
-
-            const variations = [
-                { name: 'Gold', hex: '#FFD700' },
-                { name: 'White', hex: '#FFFFFF' },
-                { name: 'Black', hex: '#000000' }
-            ];
-
-            for (const v of variations) {
-                const b64 = await renderToPng(sourceSvg, v.hex);
-                zip.file(`Laurel_Accreditation_${v.name}.png`, b64, { base64: true });
+            for (const v of KIT_FINISHES) {
+                const svg = signatureRef.current.querySelector(`[data-finish="${v.name}"] svg`) as SVGSVGElement | null;
+                if (!svg) throw new Error(`Missing ${v.name} laurel`);
+                zip.file(`Crate_Laurel_${v.name}.png`, await renderToPng(svg), { base64: true });
             }
 
             const readme = `
@@ -135,10 +162,14 @@ Film: ${selectedMovie?.title || 'Untitled'}
 Award: ${award}
 Year: ${year}
 
-USAGE GUIDELINES:
-- GOLD: Use for primary posters and high-end marketing materials.
-- WHITE: Optimized for dark background social media tiles and trailers.
-- BLACK: Optimized for light background printed press releases.
+WHICH ONE TO USE:
+- SIGNATURE (colour gradient, white lettering): the official Crate TV laurel, for dark posters.
+- SIGNATURE FOR LIGHT BACKGROUNDS: the same colourful laurel with dark lettering, for light posters.
+- WHITE: dark posters, trailers and social media tiles.
+- BLACK: light posters, printed press releases and one-colour print.
+- GOLD / SILVER / ROSE GOLD: premium posters where a metallic accent suits the design.
+
+All files are transparent PNGs, 3000 x 3000 px. Please don't stretch, recolour or crop the laurel.
 
 Accreditation provided by Crate TV Studio V4.
             `.trim();
@@ -277,15 +308,22 @@ Accreditation provided by Crate TV Studio V4.
                             <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.5em]">Live Proofing Core</p>
                         </div>
                         
-                        <div className="w-full aspect-square bg-black rounded-[60px] border border-white/5 flex items-center justify-center overflow-hidden shadow-[inset_0_0_200px_rgba(0,0,0,1)] relative">
+                        <div className={`w-full aspect-square rounded-[60px] border border-white/5 flex items-center justify-center overflow-hidden relative transition-colors ${lightPreview ? 'bg-[#f4f1ea]' : 'bg-black shadow-[inset_0_0_200px_rgba(0,0,0,1)]'}`}>
                             <div ref={laurelRef} className="w-full h-full p-8 md:p-12">
-                                <LaurelPreview awardName={award} year={year} color={color} />
+                                <LaurelPreview awardName={award} year={year} color={color} textColor={color === 'gradient' && lightPreview ? SIGNATURE_DARK_TEXT : undefined} />
+                            </div>
+                            <div ref={signatureRef} aria-hidden className="absolute -left-[9999px] top-0 pointer-events-none">
+                                {KIT_FINISHES.map(f => (
+                                    <div key={f.name} data-finish={f.name} className="w-[600px] h-[600px]">
+                                        <LaurelPreview awardName={award} year={year} color={f.color} textColor={f.text} />
+                                    </div>
+                                ))}
                             </div>
                             <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
                                 {PRESET_FINISHES.map(f => (
                                     <button
                                         key={f.val}
-                                        onClick={() => setColor(f.val)}
+                                        onClick={() => { setColor(f.val); if (f.val === '#000000') setLightPreview(true); else if (f.val === '#FFFFFF') setLightPreview(false); }}
                                         title={f.name}
                                         className={`w-4 h-4 rounded-full border border-white/20 transition-transform ${color === f.val ? 'scale-150 ring-2 ring-red-500/50' : 'hover:scale-125'}`}
                                         style={f.val === 'gradient'
@@ -295,6 +333,14 @@ Accreditation provided by Crate TV Studio V4.
                                 ))}
                             </div>
                         </div>
+                        <div className="mt-6 flex items-center gap-3 text-[11px]">
+                            <span className="text-gray-500">Finish: <strong className="text-white">{PRESET_FINISHES.find(f => f.val === color)?.name}</strong></span>
+                            <span className="text-gray-700">·</span>
+                            <span className="text-gray-500">Preview on</span>
+                            <button type="button" onClick={() => setLightPreview(false)} className={`px-3 py-1 rounded-full border ${!lightPreview ? 'bg-white text-black border-white' : 'border-white/15 text-gray-400'}`}>Dark poster</button>
+                            <button type="button" onClick={() => setLightPreview(true)} className={`px-3 py-1 rounded-full border ${lightPreview ? 'bg-white text-black border-white' : 'border-white/15 text-gray-400'}`}>Light poster</button>
+                        </div>
+                        <p className="mt-3 text-[11px] text-gray-500 text-center max-w-md">"Export Full Kit" includes every finish as a transparent PNG, including the signature laurel with dark lettering for light posters, so the filmmaker can pick what suits their poster.</p>
                         <p className="mt-8 text-[10px] font-black text-gray-800 uppercase tracking-[1em] mr-[-1em]">CRATE SOPHISTICATION STANDARDS</p>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface LaurelPreviewProps {
     movieTitle?: string;
@@ -6,6 +6,8 @@ interface LaurelPreviewProps {
     year: string;
     color: string;
     customUrl?: string;
+    /** Lettering/ring colour override, e.g. dark text on the signature wreath for light posters. */
+    textColor?: string;
 }
 
 // Rainbow stops for the "gradient" laurel — teal at the tip, sweeping
@@ -54,7 +56,12 @@ export function rainbowColorAt(t: number): string {
  * hex value renders the classic flat-tone wreath used for print exports
  * (Laurel Forge's Gold/White/Silver/Black/Rose Gold options).
  */
-const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, customUrl }) => {
+/** The signature wreath artwork; exports inline it so it survives the PNG conversion. */
+export const WREATH_SRC = '/laurel-wreath.png';
+
+const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, customUrl, textColor: textOverride }) => {
+    // Unique per instance: several laurels can be on one page (preview + export copies).
+    const tintId = `laurel-tint-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
     if (customUrl) {
         return (
             <div className="flex items-center justify-center w-full h-full pointer-events-none select-none p-4">
@@ -68,78 +75,27 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
     }
 
     const isGradient = color === 'gradient';
-    const textColor = isGradient ? '#FFFFFF' : color;
-    const ringColor = isGradient ? '#FFFFFF' : color;
-
-    const LEAF = "M0,0 C-14,-1 -22,-19 -17,-44 C-13,-58 13,-58 17,-44 C22,-19 14,-1 0,0 Z";
-    const CX = 500, CY = 500, R = 295, N = 20;
-
-    const makeBranch = (side: 'left' | 'right') => {
-        const startA = side === 'left' ? 128 : 52;
-        const endA   = side === 'left' ? 232 : -52;
-        return Array.from({ length: N }, (_, i) => {
-            const t       = i / (N - 1);
-            const a       = startA + (endA - startA) * t;
-            const ar      = (a * Math.PI) / 180;
-            const off     = i % 2 === 0 ? 0 : -30;
-            const lx      = CX + (R + off) * Math.cos(ar);
-            const ly      = CY + (R + off) * Math.sin(ar);
-            const rot     = 90 + a;
-            const sc      = (1.25 - t * 0.73).toFixed(3);
-            const opacity = i % 2 === 0 ? 0.95 : 0.80;
-            return (
-                <g key={`${side}-${i}`} transform={`translate(${lx.toFixed(1)},${ly.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${sc})`}>
-                    <path d={LEAF} fill={color} opacity={opacity} />
-                    <path d="M0,-1 L0,-53" stroke={color} strokeWidth="1.3" fill="none" opacity="0.20" />
-                </g>
-            );
-        });
-    };
-
-    const topY = CY - R + 18;
-    const botY = CY + R - 18;
-    const fanLeaves = [[-54,0.44],[-36,0.58],[-18,0.68],[0,0.78],[18,0.68],[36,0.58],[54,0.44]];
-    const tieLeaves = [[-26,0.38],[0,0.48],[26,0.38]];
+    const textColor = textOverride || (isGradient ? '#FFFFFF' : color);
+    const CX = 500;
 
     return (
         <div className="flex items-center justify-center w-full h-full p-4 pointer-events-none select-none">
             <svg width="100%" height="100%" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
 
-                {isGradient ? (
-                    // The actual illustrated wreath artwork (public/laurel-wreath.png),
-                    // background removed. Text renders on top, same as every other mode.
-                    <image href="/laurel-wreath.png" x="0" y="0" width="1000" height="1000" preserveAspectRatio="xMidYMid meet" />
-                ) : (
-                    <>
-                        {/* Branches */}
-                        {makeBranch('left')}
-                        {makeBranch('right')}
-
-                        {/* 7-leaf top fan */}
-                        <g transform={`translate(${CX},${topY})`}>
-                            {fanLeaves.map(([angle, scale], i) => (
-                                <g key={i} transform={`rotate(${angle}) translate(0,-10) scale(${scale})`}>
-                                    <path d={LEAF} fill={color} opacity="0.92" />
-                                </g>
-                            ))}
-                        </g>
-                        {/* Apex gem */}
-                        <circle cx={CX} cy={topY - 2} r="4" fill={color} opacity="0.85" />
-
-                        {/* Bottom 3-leaf tie */}
-                        <g transform={`translate(${CX},${botY}) rotate(180)`}>
-                            {tieLeaves.map(([angle, scale], i) => (
-                                <g key={i} transform={`rotate(${angle}) translate(0,-8) scale(${scale})`}>
-                                    <path d={LEAF} fill={color} opacity="0.62" />
-                                </g>
-                            ))}
-                        </g>
-
-                        {/* Art Deco double inner ring */}
-                        <circle cx={CX} cy={CY} r="163" fill="none" stroke={ringColor} strokeWidth="0.75" opacity="0.22" />
-                        <circle cx={CX} cy={CY} r="156" fill="none" stroke={ringColor} strokeWidth="0.35" opacity="0.14" />
-                    </>
+                {/* The illustrated wreath (public/laurel-wreath.png). The signature
+                    finish shows it in full colour; every other finish is the SAME
+                    wreath filled with one solid colour, for posters that need white,
+                    black or a metallic laurel. */}
+                {!isGradient && (
+                    <defs>
+                        <filter id={tintId} x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+                            <feFlood floodColor={color} result="tint" />
+                            <feComposite in="tint" in2="SourceAlpha" operator="in" />
+                        </filter>
+                    </defs>
                 )}
+                <image href={WREATH_SRC} x="0" y="0" width="1000" height="1000" preserveAspectRatio="xMidYMid meet"
+                    filter={isGradient ? undefined : `url(#${tintId})`} />
 
                 {/* Typography */}
                 <g textAnchor="middle" fill={textColor} fontFamily="Georgia, 'Times New Roman', serif">

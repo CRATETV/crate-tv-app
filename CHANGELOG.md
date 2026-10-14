@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10 — Laurel finishes from the signature wreath
+
+- **Every laurel finish now uses the signature painted wreath** (`public/laurel-wreath.png`), not the older drawn one: Signature, White, Black, Gold, Silver and Rose Gold. The solid finishes are the same wreath filled with one colour.
+- **Fixed:** downloading the Signature laurel produced text with no leaves. Browsers block outside images when an SVG is turned into a PNG, so the artwork is now embedded before export.
+- **Export Full Kit** now holds 7 transparent 3000 px PNGs:
+  - Signature, plus Signature for light backgrounds (dark lettering);
+  - White, Black, Gold, Silver and Rose Gold.
+  - It also includes a guide to which finish suits which poster. Before, it held only gold, white and black, drawn as the old laurel.
+- Laurels tab:
+  - "Audience Choice Award" is now a quick award button.
+  - A "Dark poster / Light poster" preview toggle; picking Black switches to light automatically.
+  - The chosen finish is named under the preview.
+- On-site laurels (film cards, hero) are unchanged.
+
 ## 2026-10 — Watch streaks
 
 - **Watch streaks and badges.** These are just for fun and never unlock anything paid.
