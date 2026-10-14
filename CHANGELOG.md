@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10 — Festival in a box: automatic film cleanup
+
+- Partner films are deleted automatically one week after the rewatch week ends: catalog entry, video and poster.
+- Films the festival allows CRATE to keep (a "Keep this film on Crate TV after the festival" checkbox per film in the partner portal, like LUNA) are kept and released into the main catalog.
+- The cleanup date and the kept count show in the partner portal and the admin Partners tab.
+- Ticket and sales records are never deleted. Only files in that partner's own folder can be removed.
+- New daily scheduled job: `/api/cleanup-partner-festivals`. 3 new tests.
+
 ## 2026-10 — Festival in a box
 
 Partner festivals can now run their own lineup on CRATE TV. See `docs/FESTIVAL-IN-A-BOX.md`.

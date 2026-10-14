@@ -49,6 +49,14 @@ Under the hood, a partner festival uses exactly the same machinery as PWFF: tick
 - **Download sales CSV** gives you every order (with buyer emails) for your own records.
 - Partner sales are **not** counted in the PWFF festival report or in filmmaker payouts.
 
+## After the festival: films are deleted automatically
+
+- **One week after the rewatch week ends** (about 14 days after the last screening), every partner film is deleted from CRATE TV: the catalog entry, the video file and the poster.
+- **The exception: films the festival lets you keep, as with LUNA.** The partner ticks **"Keep this film on Crate TV after the festival"** on that film in their portal. Only tick it once the filmmaker has agreed. They can tick it at any time before the cleanup date, without re-approval. Kept films move into the main CRATE catalog.
+- **Where to see it.** The partner sees the cleanup date and how many films are kept on their Overview tab. You see it on the partner's card in the admin, and afterwards a summary of what was deleted and kept.
+- **What is never touched:** ticket and sales records (the payout report keeps working), CRATE's own films, and other partners' files. Cleanup can only delete files inside that partner's own `partners/<id>/` folder.
+- **It runs once a day** (the `cleanup-partner-festivals` scheduled job) and never runs twice for the same festival.
+
 ## Festival passes
 
 - If the partner sets a pass price, their page sells an all-access pass. It unlocks every block in **their** festival only, including blocks they add later.

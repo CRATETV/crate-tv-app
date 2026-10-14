@@ -28,6 +28,8 @@ interface PartnerSummary {
     review: PartnerReview;
     published: PartnerPublished | null;
     payout: PartnerPayout | null;
+    cleanupDueAt?: string | null;
+    cleanup?: { deletedAt: string; deletedFilmKeys: string[]; keptFilmKeys: string[] } | null;
 }
 
 type Tab = 'overview' | 'festival' | 'films' | 'schedule' | 'sales';
@@ -190,6 +192,13 @@ const FilmEditor: React.FC<{ film: PartnerFilmDraft; partnerId: string; onChange
                     <p className="text-[11px] text-gray-500 mt-1">Filled in automatically from the file. The watch party uses it to know when to start the next film.</p>
                 </div>
                 <UploadField title="Poster (portrait)" value={film.posterUrl} accept="image/png,image/jpeg,image/webp" kind="poster" partnerId={partnerId} onUploaded={url => set({ posterUrl: url })} />
+                <label className="md:col-span-2 flex items-start gap-3 bg-black/30 border border-white/10 rounded-xl p-4 cursor-pointer">
+                    <input type="checkbox" className="mt-1" checked={!!film.keepAfterFestival} onChange={e => set({ keepAfterFestival: e.target.checked })} />
+                    <span>
+                        <span className="block text-sm font-bold text-white">Keep this film on Crate TV after the festival</span>
+                        <span className="block text-[12px] text-gray-400">Only tick this if the filmmaker has agreed. Unticked films (and their files) are deleted from Crate TV after the festival and rewatch week; ticked films move into the main Crate TV catalog.</span>
+                    </span>
+                </label>
             </div>
             <div className="flex justify-between gap-3 flex-wrap pt-2 border-t border-white/10">
                 <button type="button" className={`${btn} text-red-400 hover:bg-red-500/10`} onClick={() => { if (window.confirm(`Remove "${film.title || 'this film'}" from your lineup?`)) onRemove(); }}>Remove film</button>
@@ -224,6 +233,7 @@ const FilmsTab: React.FC<{ draft: PartnerDraft; partnerId: string; onChange: (d:
                             <p className="font-black text-white truncate">{f.title || 'Untitled film'}</p>
                             <p className="text-xs text-gray-400 truncate">{f.director || 'Director not set'} · {f.durationInMinutes ? `${f.durationInMinutes} min` : 'runtime missing'}</p>
                         </div>
+                        {f.keepAfterFestival && <span className="text-[10px] font-black uppercase tracking-widest text-sky-300">Stays after festival</span>}
                         <span className={`text-[10px] font-black uppercase tracking-widest ${f.videoUrl ? 'text-emerald-400' : 'text-red-400'}`}>{f.videoUrl ? 'Video ✓' : 'No video'}</span>
                     </button>
                 ))}
@@ -536,6 +546,14 @@ const PartnerPortalPage: React.FC = () => {
                                 <div className={card}>
                                     <p className={label}>Before you submit</p>
                                     <Checklist errors={check.errors} warnings={check.warnings} />
+                                </div>
+                                <div className={card}>
+                                    <p className={label}>After the festival</p>
+                                    {partner.cleanup?.deletedAt
+                                        ? <p className="text-sm text-gray-300">Festival films were removed from Crate TV on {new Date(partner.cleanup.deletedAt).toLocaleDateString()}. {partner.cleanup.keptFilmKeys.length} film{partner.cleanup.keptFilmKeys.length === 1 ? '' : 's'} stayed on Crate TV with your permission.</p>
+                                        : <p className="text-sm text-gray-300">
+                                            Films are deleted from Crate TV {partner.cleanupDueAt ? <>on <strong className="text-white">{new Date(partner.cleanupDueAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong></> : 'one week after the rewatch week ends'}, unless you tick <em>Keep this film on Crate TV after the festival</em> on the Films tab ({draft.films.filter(f => f.keepAfterFestival).length} of {draft.films.length} kept). Kept films stay in the Crate TV catalog.
+                                          </p>}
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className={card}>

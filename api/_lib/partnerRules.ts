@@ -30,6 +30,9 @@ export interface PartnerFilmDraft {
     videoUrl: string;
     year?: string;
     country?: string;
+    /** The festival gave CRATE permission to keep this film on the site
+     *  after the festival (like LUNA). Everything else is deleted. */
+    keepAfterFestival?: boolean;
 }
 
 export interface PartnerBlockDraft {
@@ -98,6 +101,13 @@ export interface PartnerPayout {
     paidNote?: string;
 }
 
+export interface PartnerCleanup {
+    deletedAt: string;
+    deletedFilmKeys: string[];
+    keptFilmKeys: string[];
+    failedFiles?: string[];
+}
+
 export interface PartnerRecord {
     id: string;
     name: string;
@@ -115,6 +125,7 @@ export interface PartnerRecord {
     review: PartnerReview;
     published?: PartnerPublished;
     payout?: PartnerPayout;
+    cleanup?: PartnerCleanup;
 }
 
 /** The public, non-sensitive slice of a partner shown on its festival page. */
@@ -293,6 +304,9 @@ export function buildPublishPlan(partner: Pick<PartnerRecord, 'id' | 'name' | 's
             partnerId: partner.id,
             partnerName: partner.name,
             partnerSlug: partner.slug,
+            // Respected by the auto-unlist cron; films without it are deleted
+            // after the festival (see festivalCleanupDueMs / cleanup-partner-festivals).
+            keepInCatalogAfterFestival: !!f.keepAfterFestival,
         };
         // strip undefined (Firestore rejects them)
         Object.keys(movies[key]).forEach(k => movies[key][k] === undefined && delete movies[key][k]);
@@ -451,6 +465,7 @@ export function sanitizeDraft(input: any): PartnerDraft {
             videoUrl: url(f?.videoUrl),
             year: str(f?.year, 8),
             country: str(f?.country, 80),
+            keepAfterFestival: !!f?.keepAfterFestival,
         };
     });
     const days: PartnerDayDraft[] = (Array.isArray(input?.days) ? input.days : []).slice(0, 31).map((day: any) => ({
@@ -471,4 +486,54 @@ export function sanitizeDraft(input: any): PartnerDraft {
         }),
     }));
     return { details, films, days, updatedAt: new Date().toISOString() };
+}
+
+// ─── After the festival: film cleanup ─────────────────────────────────────
+
+/** Extra time after the rewatch window closes before partner films are
+ *  deleted — room for late refunds, disputes or a "please keep it" request. */
+export const PARTNER_FILM_CLEANUP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * When a partner festival's films are due to be deleted: the latest block's
+ * end (or start, if it never had a watch party) + the rewatch window + the
+ * grace period. Null when there are no blocks or a block has no time yet.
+ */
+export function festivalCleanupDueMs(
+    blocks: { screeningStartTime?: string; festivalEndTime?: string }[],
+    rewatchWindowMs: number,
+    graceMs: number = PARTNER_FILM_CLEANUP_GRACE_MS,
+): number | null {
+    if (!blocks.length) return null;
+    let latest = -Infinity;
+    for (const b of blocks) {
+        const t = Date.parse(b.festivalEndTime || b.screeningStartTime || '');
+        if (Number.isNaN(t)) return null;
+        latest = Math.max(latest, t);
+    }
+    return latest + rewatchWindowMs + graceMs;
+}
+
+/**
+ * The storage key for a file a partner uploaded — or null if the URL is not
+ * inside THIS partner's folder of OUR bucket. Cleanup never deletes anything
+ * else (CRATE's own films, another partner's files, outside links).
+ */
+export function partnerStorageKey(url: unknown, bucket: string, partnerId: string): string | null {
+    if (typeof url !== 'string' || !url || !bucket || !isSafeId(partnerId)) return null;
+    let u: URL;
+    try { u = new URL(url); } catch { return null; }
+    if (u.protocol !== 'https:') return null;
+    const host = u.hostname.toLowerCase();
+    let key: string;
+    if (host === `${bucket}.s3.amazonaws.com` || (host.startsWith(`${bucket}.s3.`) && host.endsWith('.amazonaws.com'))) {
+        key = u.pathname.replace(/^\//, '');
+    } else if (/^s3[.-]([a-z0-9-]+\.)?amazonaws\.com$/.test(host) && u.pathname.startsWith(`/${bucket}/`)) {
+        key = u.pathname.slice(bucket.length + 2);
+    } else {
+        return null;
+    }
+    try { key = decodeURIComponent(key); } catch { return null; }
+    if (key.includes('..')) return null;
+    return key.startsWith(`partners/${partnerId}/`) ? key : null;
 }

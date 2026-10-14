@@ -8,7 +8,10 @@ import { callAdminPartners, money, formatWhen } from '../services/partnerApi';
 // and approve lineups, and settle sales at the end of the festival.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type AdminPartner = PartnerRecord & { check: DraftCheck };
+type AdminPartner = PartnerRecord & {
+    check: DraftCheck;
+    cleanupPlan?: { dueAt: string | null; deleteFilmKeys: string[]; keepFilmKeys: string[] } | null;
+};
 
 const label = 'block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1.5';
 const input = 'w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/40';
@@ -69,7 +72,7 @@ const Lineup: React.FC<{ p: AdminPartner }> = ({ p }) => {
                     {draft.films.map(f => (
                         <div key={f.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                             <div className="w-8 h-11 bg-white/5 rounded overflow-hidden flex-shrink-0">{f.posterUrl && <img src={f.posterUrl} alt="" className="w-full h-full object-cover" />}</div>
-                            <div className="flex-1 min-w-0"><p className="text-white truncate">{f.title || 'Untitled'}</p><p className="text-xs text-gray-500 truncate">{f.director} · {f.durationInMinutes || '?'} min</p></div>
+                            <div className="flex-1 min-w-0"><p className="text-white truncate">{f.title || 'Untitled'}</p><p className="text-xs text-gray-500 truncate">{f.director} · {f.durationInMinutes || '?'} min{f.keepAfterFestival ? ' · stays after festival' : ''}</p></div>
                             {f.videoUrl ? <a href={f.videoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Preview video</a> : <span className="text-[10px] font-black uppercase tracking-widest text-red-400">No video</span>}
                         </div>
                     ))}
@@ -193,6 +196,12 @@ const PartnerCard: React.FC<{ p: AdminPartner; onChanged: () => void }> = ({ p, 
                         cratetv.net/festivals/{p.slug} · CRATE {p.crateSharePct}% · pays {p.payeeName} · {p.draft?.films.length || 0} films / {blocks} blocks · team: {(p.memberEmails || []).length}
                         {p.published && ` · live since ${new Date(p.published.publishedAt).toLocaleDateString()}`}
                     </p>
+                    {p.cleanup?.deletedAt && (
+                        <p className="text-xs text-gray-400 mt-1">Films cleaned up {new Date(p.cleanup.deletedAt).toLocaleDateString()}: {p.cleanup.deletedFilmKeys.length} deleted, {p.cleanup.keptFilmKeys.length} kept in catalog{p.cleanup.failedFiles?.length ? ` · ${p.cleanup.failedFiles.length} file(s) couldn't be deleted — check Logs` : ''}.</p>
+                    )}
+                    {!p.cleanup && p.cleanupPlan?.dueAt && (
+                        <p className="text-xs text-gray-400 mt-1">Automatic film cleanup on {new Date(p.cleanupPlan.dueAt).toLocaleDateString()}: deletes {p.cleanupPlan.deleteFilmKeys.length} film(s), keeps {p.cleanupPlan.keepFilmKeys.length}.</p>
+                    )}
                 </div>
                 <div className="flex gap-2 flex-wrap">
                     {(['lineup', 'team', 'sales', 'settings'] as const).map(k => (

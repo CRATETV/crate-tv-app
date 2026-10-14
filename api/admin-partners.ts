@@ -20,7 +20,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { isMasterAdmin } from './_lib/adminAuth.js';
 import { logServerError } from './_lib/logError.js';
-import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales } from './_lib/partners.js';
+import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup } from './_lib/partners.js';
 import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord } from './_lib/partnerRules.js';
 import { sendPartnerInvite, notifyPartnerReviewed } from './_lib/partnerEmails.js';
 
@@ -58,10 +58,11 @@ export async function POST(request: Request) {
         switch (action) {
             case 'list': {
                 const snap = await db.collection(PARTNERS).orderBy('createdAt', 'desc').get();
-                const partners = snap.docs.map(d => {
+                const partners = await Promise.all(snap.docs.map(async d => {
                     const p = { ...(d.data() as PartnerRecord), id: d.id };
-                    return { ...p, check: checkDraft(p.draft) };
-                });
+                    const plan = p.published && !p.cleanup ? await planPartnerCleanup(db, p).catch(() => null) : null;
+                    return { ...p, check: checkDraft(p.draft), cleanupPlan: plan };
+                }));
                 return json({ partners });
             }
 

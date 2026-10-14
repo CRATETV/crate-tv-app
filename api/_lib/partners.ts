@@ -7,6 +7,8 @@
 // api/admin-partners.ts (CRATE admin).
 
 import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getAdminAuth } from './firebaseAdmin.js';
 import { assembleAndSyncMasterData } from '../publish-data.js';
 import { blockAccessExpiry } from './watchPartyRules.js';
@@ -14,6 +16,7 @@ import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../../types.js';
 import {
     PartnerRecord, PartnerDraft, PublicPartnerFestival, TicketLike,
     buildPublishPlan, checkDraft, blocksRemovedWithSales, computeSales, partnerPassItemId, SalesSummary,
+    festivalCleanupDueMs, partnerFilmKey, partnerStorageKey, PartnerCleanup,
 } from './partnerRules.js';
 
 export const PARTNERS = 'partners';
@@ -212,4 +215,78 @@ export function partnerView(p: PartnerRecord) {
         memberEmails: p.memberEmails || [], draft: p.draft || null, review: p.review, published: p.published || null,
         payout: p.payout || null,
     };
+}
+
+// ─── After the festival: delete films unless kept ─────────────────────────
+
+
+export interface CleanupPlan {
+    dueAt: string | null;
+    deleteFilmKeys: string[];
+    keepFilmKeys: string[];
+    alreadyDone: boolean;
+}
+
+/** Which of a partner's films will be deleted vs kept, and when. */
+export async function planPartnerCleanup(db: Firestore, partner: PartnerRecord): Promise<CleanupPlan> {
+    const filmKeys = partner.published?.filmKeys || [];
+    const blocks = await getPublishedBlocks(db, partner.id);
+    const due = festivalCleanupDueMs(blocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+    // A film is kept if the partner ticked "keep" in their portal (no
+    // re-approval needed for that), or its movie record says so.
+    const keepFromDraft = new Set(
+        (partner.draft?.films || []).filter(f => f.keepAfterFestival).map(f => partnerFilmKey(partner.id, f.id)),
+    );
+    const keep: string[] = [];
+    const del: string[] = [];
+    for (const key of filmKeys) {
+        const movie = (await db.collection('movies').doc(key).get()).data();
+        if (!movie) continue; // already gone
+        if (keepFromDraft.has(key) || movie.keepInCatalogAfterFestival === true) keep.push(key);
+        else del.push(key);
+    }
+    return { dueAt: due ? new Date(due).toISOString() : null, deleteFilmKeys: del, keepFilmKeys: keep, alreadyDone: !!partner.cleanup?.deletedAt };
+}
+
+/**
+ * Deletes a finished partner festival's films (records + uploaded files),
+ * except the ones the festival allowed CRATE to keep — those are released
+ * into the main catalog. Sales records are never touched.
+ */
+export async function runPartnerCleanup(db: Firestore, partner: PartnerRecord): Promise<PartnerCleanup> {
+    const plan = await planPartnerCleanup(db, partner);
+    const bucket = process.env.AWS_S3_BUCKET_NAME || '';
+    let region = process.env.AWS_S3_REGION || 'us-east-1';
+    if (region === 'global') region = 'us-east-1';
+    const s3 = bucket && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        ? new S3Client({ region, credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY } })
+        : null;
+    const failedFiles: string[] = [];
+
+    for (const key of plan.deleteFilmKeys) {
+        const ref = db.collection('movies').doc(key);
+        const movie = (await ref.get()).data() || {};
+        for (const url of [movie.fullMovie, movie.poster, movie.tvPoster]) {
+            const objectKey = partnerStorageKey(url, bucket, partner.id);
+            if (!objectKey || !s3) continue;
+            try { await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey })); }
+            catch (e) { failedFiles.push(objectKey); console.error('[partner-cleanup] S3 delete failed:', objectKey, e); }
+        }
+        await ref.delete();
+        await db.collection('data').doc('movies').update({ [key]: FieldValue.delete() }).catch(() => {});
+    }
+    for (const key of plan.keepFilmKeys) {
+        await db.collection('movies').doc(key).set({ isUnlisted: false, keepInCatalogAfterFestival: true }, { merge: true });
+    }
+
+    const cleanup: PartnerCleanup = {
+        deletedAt: new Date().toISOString(),
+        deletedFilmKeys: plan.deleteFilmKeys,
+        keptFilmKeys: plan.keepFilmKeys,
+        ...(failedFiles.length ? { failedFiles } : {}),
+    };
+    await db.collection(PARTNERS).doc(partner.id).set({ cleanup }, { merge: true });
+    try { await assembleAndSyncMasterData(db); }
+    catch (e) { console.error('[partner-cleanup] Catalog republish failed:', e); }
+    return cleanup;
 }

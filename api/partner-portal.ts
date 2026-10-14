@@ -20,6 +20,7 @@ import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { logServerError } from './_lib/logError.js';
 import {
     HttpError, PARTNERS, PARTNER_INVITES, authenticatePartnerUser, requirePartnerMember, getPartnerSales, partnerView,
+    planPartnerCleanup,
 } from './_lib/partners.js';
 import { checkDraft, sanitizeDraft, computePayout } from './_lib/partnerRules.js';
 import { notifyOwnerSubmitted } from './_lib/partnerEmails.js';
@@ -46,10 +47,11 @@ export async function POST(request: Request) {
         switch (action) {
             case 'me': {
                 const who = await authenticatePartnerUser(db, idToken);
-                return json({
-                    email: who.email,
-                    partners: who.partners.map(p => ({ ...partnerView(p), check: checkDraft(p.draft) })),
-                });
+                const partners = await Promise.all(who.partners.map(async p => {
+                    const plan = p.published ? await planPartnerCleanup(db, p).catch(() => null) : null;
+                    return { ...partnerView(p), check: checkDraft(p.draft), cleanupDueAt: plan?.dueAt || null, cleanup: p.cleanup || null };
+                }));
+                return json({ email: who.email, partners });
             }
 
             case 'acceptInvite': {

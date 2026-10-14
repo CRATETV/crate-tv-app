@@ -125,3 +125,36 @@ test('pass ids and slugs are parsed safely', () => {
     assert.equal(slugify('Philadelphia Unnamed Film Festival — 2027!'), 'philadelphia-unnamed-film-festival-2027');
     assert.equal(slugify('Café Noir'), 'cafe-noir');
 });
+
+// ─── After-festival cleanup ───────────────────────────────────────────────
+import { festivalCleanupDueMs, partnerStorageKey, PARTNER_FILM_CLEANUP_GRACE_MS } from '../api/_lib/partnerRules.js';
+
+test('films are due for deletion one week after the rewatch week of the LAST block', () => {
+    const week = 7 * 24 * 60 * 60 * 1000;
+    const due = festivalCleanupDueMs([
+        { screeningStartTime: '2027-05-14T23:00:00Z' },
+        { screeningStartTime: '2027-05-15T23:00:00Z', festivalEndTime: '2027-05-16T01:30:00Z' },
+    ], week);
+    assert.equal(due, Date.parse('2027-05-16T01:30:00Z') + week + PARTNER_FILM_CLEANUP_GRACE_MS);
+    assert.equal(festivalCleanupDueMs([], week), null);
+    assert.equal(festivalCleanupDueMs([{ screeningStartTime: '' }], week), null); // never guess
+});
+
+test('cleanup only ever deletes files inside that partner\'s own folder', () => {
+    const b = 'cratetelevision';
+    assert.equal(partnerStorageKey('https://cratetelevision.s3.us-east-1.amazonaws.com/partners/fest-a/films/1-a.mp4', b, 'fest-a'), 'partners/fest-a/films/1-a.mp4');
+    assert.equal(partnerStorageKey('https://cratetelevision.s3.us-east-1.amazonaws.com/partners/fest-b/films/x.mp4', b, 'fest-a'), null); // another partner
+    assert.equal(partnerStorageKey('https://cratetelevision.s3.us-east-1.amazonaws.com/uploads/luna.mp4', b, 'fest-a'), null); // CRATE's own film
+    assert.equal(partnerStorageKey('https://evil.example.com/partners/fest-a/films/x.mp4', b, 'fest-a'), null);
+    assert.equal(partnerStorageKey('https://cratetelevision.s3.us-east-1.amazonaws.com/partners/fest-a/../../uploads/luna.mp4', b, 'fest-a'), null);
+    assert.equal(partnerStorageKey('not a url', b, 'fest-a'), null);
+});
+
+test('the keep flag survives saving and is published onto the film', () => {
+    const d = sanitizeDraft({ ...goodDraft(), films: goodDraft().films.map((f, i) => ({ ...f, keepAfterFestival: i === 0 })) });
+    assert.equal(d.films[0].keepAfterFestival, true);
+    assert.equal(d.films[1].keepAfterFestival, false);
+    const plan = buildPublishPlan({ id: 'fest-a', name: 'A', slug: 'fest-a' }, d);
+    assert.equal(plan.movies[partnerFilmKey('fest-a', 'film1')].keepInCatalogAfterFestival, true);
+    assert.equal(plan.movies[partnerFilmKey('fest-a', 'film2')].keepInCatalogAfterFestival, false);
+});
