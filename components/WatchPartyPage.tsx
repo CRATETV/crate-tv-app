@@ -18,6 +18,8 @@ import { useWatchHeartbeat } from '../hooks/useWatchHeartbeat';
 import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
 import { reportClientError } from '../services/errorLogger';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
+import AudienceMap, { useAudienceCheckin } from './AudienceMap';
+import AudienceChoiceVote from './AudienceChoiceVote';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -730,6 +732,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     // SECURITY: this used to read movie.fullMovie directly — a permanent, unsigned
     // URL handed to every visitor regardless of payment (see the security plan).
+    // "Who's watching" map: count this viewer's city once (components/AudienceMap.tsx).
+    useAudienceCheckin(hasAccess ? movieKey : undefined);
+
     // Once hasAccess is real, fetch a short-lived signed URL from the server
     // (which independently re-checks entitlement, matching this page's own
     // hasAccess rules exactly — see api/_lib/entitlements.ts's 'live' mode)
@@ -2378,6 +2383,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 // can drift out of sync.
                                 return <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{m?._activeFilmTitle || movie.title}</h2>;
                             })()}
+                            <AudienceMap partyKey={movieKey} className="mt-1" />
                             {isBackstageVerified && (
                                 <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>
                             )}
@@ -2687,8 +2693,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         </button>
                                     )}
                                     {isEnded && (
-                                        <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
-                                            <div className="max-w-2xl space-y-10">
+                                        <div className="absolute inset-0 z-[160] flex flex-col items-center justify-start bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8 overflow-y-auto">
+                                            <div className="max-w-2xl space-y-10 my-auto w-full">
                                                 <div>
                                                     <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Transmission Complete</p>
                                                     <h3 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Thank You.</h3>
@@ -2696,6 +2702,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                                         "{movie.title}" produced by <span className="text-white">{movie.director}</span>. Thank you for supporting the distribution afterlife of independent cinema.
                                                     </p>
                                                 </div>
+                                                <AudienceChoiceVote blockId={movieKey} compact />
+                                                <AudienceMap partyKey={movieKey} live={false} label="past" />
                                                 <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-10">
                                                     <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
                                                     <div className="w-px h-6 bg-white/10 hidden sm:block"></div>

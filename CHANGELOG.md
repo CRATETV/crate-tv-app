@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10 — Audience Choice voting and "Who's watching" map
+
+- **Audience Choice.** In any festival block with 2 or more films, ticket holders vote for their favourite film. This works for PWFF, partner festivals and Crate Fest.
+  - **Where viewers vote:** on the watch party's end screen, and with a 🏆 button on the festival page.
+  - **When:** voting opens when the screening starts and closes when its rewatch week ends.
+  - **Rules:** one vote per account per block, changeable until voting closes. Viewers never see the counts.
+  - **Admin → PWFF → 🏆 Audience Choice** shows live tallies. **Award** puts "Audience Choice Award" on the winner's laurel.
+- **Who's watching map.** Watch parties show "🌍 Watching from N cities". Tap it for a world map of where the audience is, and the end screen shows where it watched from.
+  - Each viewer is counted once per party.
+  - Location is city-level only, from Vercel's built-in location headers.
+  - No names, accounts, device ids or IP addresses are stored, only a one-way fingerprint so nobody is counted twice.
+- Free to run: Firestore and Vercel only. The map is a 57 KB image (`public/audience-world-map.svg`) and is cached for 30 seconds.
+- 4 new tests.
+
 ## 2026-10 — Festival help button
 
 - **"Need help?" button** on PWFF, partner festival pages, My Festival and watch parties. It's a compact "Help" pill at the top on the watch party.

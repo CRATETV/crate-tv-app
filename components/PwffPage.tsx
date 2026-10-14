@@ -9,6 +9,7 @@ import Header from './Header';
 import BottomNavBar from './BottomNavBar';
 import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
+import AudienceChoiceVote from './AudienceChoiceVote';
 
 // How long a block stays visible on the public festival page after its
 // watch party ends. See isBlockExpired in the main component. The window
@@ -242,7 +243,9 @@ const BlockCard: React.FC<{
     block: FilmBlock; films: Movie[]; isUnlocked: boolean; isLive: boolean; isEnded?: boolean;
     isBeforeScreening?: boolean; screeningStartTime?: string; filmsWatchable?: boolean;
     dayLabel: string; onBuyTicket: () => void; onEnterLobby: () => void; onWatch: (key: string) => void;
-}> = ({ block, films, isUnlocked, isLive, isEnded, isBeforeScreening, screeningStartTime, filmsWatchable, dayLabel, onBuyTicket, onEnterLobby, onWatch }) => {
+    /** Opens the Audience Choice ballot (ended blocks with 2+ films). */
+    onVote?: () => void;
+}> = ({ block, films, isUnlocked, isLive, isEnded, isBeforeScreening, screeningStartTime, filmsWatchable, dayLabel, onBuyTicket, onEnterLobby, onWatch, onVote }) => {
     const totalMins = films.reduce((a, m) => a + (m.durationInMinutes || 0), 0);
     const screenStart = screeningStartTime ? new Date(screeningStartTime) : null;
     const screenEnd = screenStart ? new Date(screenStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
@@ -305,6 +308,9 @@ const BlockCard: React.FC<{
                                 : block.price && block.price > 0
                                     ? <button onClick={onBuyTicket} className="bg-white hover:bg-gray-100 text-black font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all">Get Ticket — ${block.price.toFixed(2)}</button>
                                     : <button onClick={() => films[0] && onWatch(films[0].key)} disabled={films.length === 0} className="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">Watch Free</button>}
+                        {onVote && (isEnded || isLive) && isUnlocked && films.length >= 2 && (
+                            <button onClick={onVote} className="bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-200 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all">🏆 Vote Audience Choice</button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -385,6 +391,7 @@ const ProgrammeMode: React.FC = () => {
 
     const [activeDay, setActiveDay] = useState(1);
     const [ticketFlowBlock, setTicketFlowBlock] = useState<FilmBlock | null>(null);
+    const [voteBlockId, setVoteBlockId] = useState<string | null>(null);
     const [showLobbyFor, setShowLobbyFor] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<'programme' | 'directors'>('programme');
     const [showFullPassSuccess, setShowFullPassSuccess] = useState(false);
@@ -710,6 +717,7 @@ const ProgrammeMode: React.FC = () => {
                                         // is what "Watch Now"/individual film rows should open once
                                         // the live event itself is over.
                                         onWatch={key => navigate(`/movie/${key}?play=true`)}
+                                        onVote={() => setVoteBlockId(block.id)}
                                     />
                                 );
                             }) : (
@@ -733,6 +741,15 @@ const ProgrammeMode: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {voteBlockId && (
+                <div className="fixed inset-0 z-[650] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setVoteBlockId(null)}>
+                    <div className="w-full max-w-xl relative" onClick={e => e.stopPropagation()}>
+                        <button type="button" className="absolute -top-9 right-0 text-gray-300 hover:text-white text-sm" onClick={() => setVoteBlockId(null)}>Close ✕</button>
+                        <AudienceChoiceVote blockId={voteBlockId} showClosedMessage />
+                    </div>
+                </div>
+            )}
 
             {ticketFlowBlock && (() => {
                 const first = movies[ticketFlowBlock.movieKeys?.[0]];

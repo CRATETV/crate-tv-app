@@ -52,3 +52,11 @@ Viewers have a **Need help?** button on every festival page, and a **Help** butt
   **Reply to that email** to answer them directly.
 - Requests are also saved in Firestore under `help_requests`. Automatic repairs are logged under `help_repairs`.
 - **When you refund someone,** set `refunded: true` on their ticket in Firestore (`festival_tickets`). The help button will then never restore that ticket.
+
+
+## Audience Choice and the audience map
+
+- **Voting runs itself.** In every block with 2 or more films, ticket holders can vote from the moment the screening starts until the block's rewatch week ends.
+- **After the festival:** go to **Admin → PWFF → 🏆 Audience Choice**, check the winner, and press **Award**. That puts "Audience Choice Award <year>" on the film's laurel, which replaces any other award the film shows.
+  - On a tie, choose yourself, or announce joint winners and use the Laurels tab for the second film.
+- **The "Who's watching" map** fills in on its own during each watch party. Screenshot it for social media after the screening.

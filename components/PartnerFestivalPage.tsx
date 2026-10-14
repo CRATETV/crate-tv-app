@@ -8,6 +8,7 @@ import FestivalTicketFlow from './FestivalTicketFlow';
 import SquarePaymentModal from './SquarePaymentModal';
 import { partnerPassItemId } from '../api/_lib/partnerRules';
 import { formatWhen, money } from '../services/partnerApi';
+import AudienceChoiceVote from './AudienceChoiceVote';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FESTIVAL IN A BOX — a partner festival's public, branded page
@@ -24,6 +25,7 @@ const PartnerFestivalPage: React.FC<{ slug: string }> = ({ slug }) => {
     const [activeDay, setActiveDay] = useState<number | null>(null);
     const [ticketBlock, setTicketBlock] = useState<FilmBlock | null>(null);
     const [buyingPass, setBuyingPass] = useState(false);
+    const [voteBlockId, setVoteBlockId] = useState<string | null>(null);
 
     const days = useMemo(() => fest
         ? festivalData.filter(d => d.partnerId === fest.partnerId).sort((a, b) => a.day - b.day)
@@ -136,7 +138,9 @@ const PartnerFestivalPage: React.FC<{ slug: string }> = ({ slug }) => {
                                             <p className="text-xs text-gray-500 mt-1">{films.length} film{films.length === 1 ? '' : 's'}</p>
                                         </div>
                                         <div className="flex-shrink-0">
-                                            {isEnded ? null
+                                            {isEnded ? ((isUnlocked || isFree) && films.length >= 2
+                                                    ? <button onClick={() => setVoteBlockId(block.id)} className="bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-200 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl">🏆 Vote Audience Choice</button>
+                                                    : null)
                                                 : soldOut ? <span className="text-[10px] font-black uppercase tracking-widest text-red-400">Sold out</span>
                                                 : isLive ? <button onClick={join} className="text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 rounded-xl" style={{ backgroundColor: accent }}>Join watch party</button>
                                                 : isUnlocked || isFree ? <button onClick={() => navigate(`/watchparty/${block.id}`)} className="bg-white text-black font-black text-[10px] uppercase tracking-widest px-5 py-3 rounded-xl">{isFree && !isUnlocked ? 'Free · Enter lobby' : 'Enter lobby'}</button>
@@ -162,6 +166,14 @@ const PartnerFestivalPage: React.FC<{ slug: string }> = ({ slug }) => {
                 <p className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mt-16">Presented by {fest.name} · Streaming on Crate TV</p>
             </main>
 
+            {voteBlockId && (
+                <div className="fixed inset-0 z-[650] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setVoteBlockId(null)}>
+                    <div className="w-full max-w-xl relative" onClick={e => e.stopPropagation()}>
+                        <button type="button" className="absolute -top-9 right-0 text-gray-300 hover:text-white text-sm" onClick={() => setVoteBlockId(null)}>Close ✕</button>
+                        <AudienceChoiceVote blockId={voteBlockId} showClosedMessage />
+                    </div>
+                </div>
+            )}
             {ticketBlock && (
                 <FestivalTicketFlow block={ticketBlock} blockMovie={blockMovie(ticketBlock)} onClose={() => setTicketBlock(null)} onSuccess={() => setTicketBlock(null)} />
             )}

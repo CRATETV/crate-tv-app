@@ -42,6 +42,7 @@ import HeroEditor from './HeroEditor';
 import HeroManager from './HeroManager';
 import UserDiagnosticsTab from './UserDiagnosticsTab';
 import { PWFF_PARTNER_ID } from '../api/_lib/partnerRules';
+import AudienceChoiceAdmin from './AudienceChoiceAdmin';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TAB MAP — consolidated Sept 2026.
@@ -824,6 +825,7 @@ const AdminPage: React.FC = () => {
                             isSavingFestival={isSaving}
                         />
                         {isMaster && <section><SectionTitle>Festival revenue report</SectionTitle><FestivalReportTab /></section>}
+                        {isMaster && <section><SectionTitle>🏆 Audience Choice</SectionTitle><AudienceChoiceAdmin /></section>}
                         </div>
                     )}
                     {activeTab === 'vouchers' && (
