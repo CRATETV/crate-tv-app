@@ -68,6 +68,8 @@ import NotFoundPage from './components/NotFoundPage';
 import ToastContainer from './components/Toast';
 import RedCarpetPage from './components/RedCarpetPage';
 import FaqPage from './components/FaqPage';
+import FestivalHelpButton from './components/FestivalHelpButton';
+import { isOutsidePartner } from './api/_lib/partnerRules';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -92,6 +94,33 @@ const RedCarpetRoute: React.FC = () => {
 };
 
 // This component now contains the router and authentication logic.
+// "Need help?" on festival pages and watch parties (components/FestivalHelpButton.tsx).
+const FestivalHelpMount: React.FC = () => {
+  const [path, setPath] = useState(window.location.pathname);
+  const { festivalData, pwffFestivalData, partnerFestivals } = useFestival();
+  useEffect(() => {
+    const onNav = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onNav);
+    window.addEventListener('pushstate', onNav);
+    return () => { window.removeEventListener('popstate', onNav); window.removeEventListener('pushstate', onNav); };
+  }, []);
+  const lower = path.toLowerCase();
+  const partnerBlocks = (pid: string) => festivalData.filter(d => d.partnerId === pid).flatMap(d => d.blocks || []);
+  const festSlug = lower.match(/^\/festivals\/([a-z0-9-]+)\/?$/)?.[1];
+  if (festSlug && festSlug !== 'pwff') {
+    const fest = partnerFestivals[festSlug];
+    return fest ? <FestivalHelpButton blocks={partnerBlocks(fest.partnerId)} /> : null;
+  }
+  const partyKey = path.match(/^\/watchparty\/([a-zA-Z0-9_-]+)/)?.[1];
+  if (partyKey) {
+    const block = festivalData.flatMap(d => d.blocks || []).find(b => b.id === partyKey || (b.movieKeys || []).includes(partyKey));
+    if (!block) return <FestivalHelpButton placement="top" blocks={[]} />;
+    return <FestivalHelpButton placement="top" blocks={isOutsidePartner(block.partnerId) ? partnerBlocks(block.partnerId!) : pwffFestivalData.flatMap(d => d.blocks || [])} />;
+  }
+  if (/^\/(pwff|pwff\d{4}|pwff-philly\d{4}|festivals\/pwff|program|festival|my-festival)\/?$/.test(lower)) return <FestivalHelpButton />;
+  return null;
+};
+
 const AppRouter: React.FC = () => {
   const [route, setRoute] = useState(window.location.pathname);
   const { user, authInitialized, claimsLoaded } = useAuth();
@@ -304,6 +333,7 @@ const MainApp: React.FC = () => (
         <GlobalErrorBoundary>
           <Suspense fallback={<div className="min-h-screen bg-[#050505]" />}>
             <AppRouter />
+            <FestivalHelpMount />
           </Suspense>
           <ToastContainer />
         </GlobalErrorBoundary>

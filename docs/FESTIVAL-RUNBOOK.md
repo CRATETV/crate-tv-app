@@ -37,3 +37,18 @@ Create a test block with three 1–2 minute films, scheduled 15 minutes out. Use
 
 - [ ] Rewatch window: films stay available for 7 days after their block (or as agreed with the festival).
 - [ ] Pull the festival report from the admin panel; send the partner their share.
+
+
+## Help requests during a festival
+
+Viewers have a **Need help?** button on every festival page, and a **Help** button at the top of the watch party.
+
+- **Most ticket problems fix themselves.** "I bought a ticket but can't get in" checks their purchase and restores access they paid for. It also tells them when they're signed in to the wrong account.
+- **Everything else comes to your email**, with the subject 🆘 Festival help, from the address in Settings → technical email. Each email shows:
+  - Their message.
+  - Their device.
+  - Which tickets they have, and whether each one is working.
+
+  **Reply to that email** to answer them directly.
+- Requests are also saved in Firestore under `help_requests`. Automatic repairs are logged under `help_repairs`.
+- **When you refund someone,** set `refunded: true` on their ticket in Firestore (`festival_tickets`). The help button will then never restore that ticket.

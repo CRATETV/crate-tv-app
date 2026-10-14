@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10 — Festival help button
+
+- **"Need help?" button** on PWFF, partner festival pages, My Festival and watch parties. It's a compact "Help" pill at the top on the watch party.
+- **Fixes on its own:**
+  - Restores a ticket someone paid for but can't use, with the same expiry as the purchase. Also links tickets bought with their email but not attached to their account.
+  - Spots tickets that are on a different account and tells the viewer which email to sign in with.
+  - Re-sends the viewer's ticket list by email.
+  - Shows screening times in the viewer's own time zone, with links.
+  - Walks the viewer through playback fixes.
+- **Never does on its own:** grants access without a ticket record, re-opens access that has ended, restores refunded tickets, handles film rentals, or gives refunds. A last year's PWFF pass is never restored for this year's festival.
+- **Everything else:** "Send to Crate TV" saves a help request and emails you their message, device and ticket status. Reply to that email to answer them.
+- Free to run: uses only Firestore and the existing Resend account. No AI service.
+- 7 new tests.
+
 ## 2026-10 — PWFF on Festival in a box
 
 - **Admin → Partner Festivals → Set up PWFF committee access.** Someone on the PWFF committee can now upload films and build the schedule in the partner portal.
