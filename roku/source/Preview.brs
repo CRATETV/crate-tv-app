@@ -64,6 +64,8 @@ Function PreviewsAllowed() as Boolean
     If FindMemberFunction(di, "GetGraphicsPlatform") <> Invalid
         If LCase(di.GetGraphicsPlatform()) = "directfb" Then Return false
     End If
+    ' Roku has warned the channel about memory (main.brs, HandleMemoryEvent)
+    If m.global <> Invalid And m.global.memoryLow = true Then Return false
     ' Running low on memory right now
     If FindMemberFunction(di, "GetGeneralMemoryLevel") <> Invalid
         level = LCase(di.GetGeneralMemoryLevel())

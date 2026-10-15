@@ -33,7 +33,7 @@ All of the channel's files are in the `roku/` folder of the website project.
 | Poster tile | `MoviePosterItem.xml/.brs` | One poster in a row: rounded corners, white focus outline, price pill, progress bar, Top 10 number |
 | Film page | `TitleScene.xml/.brs` | Opens when you press OK on a poster: details, Play / Resume / Start over / Trailer, unlock QR code |
 | Trailer preview | `TrailerPreview.xml/.brs` | The trailer that fades in behind the text on Home and the film page. Sound on/off: `mute` in the .xml |
-| Screensaver | `CrateScreensaver.xml/.brs`, `source/ScreenSaver.brs` | Artwork slideshow when the TV is idle in Crate TV. Seconds per slide: `slideTimer` in the .xml |
+| (No screensaver) | `roku-archive/` | Roku certification (rule 4.5) forbids a channel's own screensaver, so it was removed in Oct 2026. When the TV is idle, the Roku's own screensaver runs. |
 | Actor page | `ActorDetailScene.xml/.brs` | Opened from Search: photo, bio and their films |
 | Button | `CrateButton.xml/.brs` | The white/grey buttons on the film page |
 | Player | `CrateVideoPlayer.xml/.brs` | Plays films; our own progress bar and pause screen; watch party sync |
@@ -166,8 +166,9 @@ Artwork for the store listing is in the `roku-store/` folder:
    using the same developer key as the existing channel. If you've never
    done this or lost the key, contact Roku developer support before
    uploading; a new key would make a separate channel.
-3. Bump the version first: `roku/manifest`, `minor_version` (2.2 → 2.3 and so on).
-4. Submit for certification. Roku reviews it, usually within a few days.
+3. In the dashboard, **minimum firmware** must be **15.1** (required by `rsg_version=1.3` in the manifest).
+4. Bump the version first: `roku/manifest`, `minor_version` (2.2 → 2.3 and so on).
+5. Submit for certification. Roku reviews it, usually within a few days.
 
 ---
 

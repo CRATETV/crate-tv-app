@@ -7,7 +7,7 @@
 title=Crate TV
 major_version=2
 minor_version=3
-build_version=3
+build_version=4
 
 # SceneGraph Application
 mm_icon_focus_fhd=pkg:/images/channel_logo_fhd.png
@@ -20,11 +20,12 @@ splash_screen_sd=pkg:/images/splash_sd.png
 splash_color=#0B0B0D
 splash_min_time=2000
 
-# Screensaver (source/ScreenSaver.brs + components/CrateScreensaver.xml):
-# a slideshow of film artwork shown when the TV is idle while Crate TV is open.
-# private=1: only inside Crate TV, not in the Roku's system screensaver list.
-screensaver_title=Crate TV
-screensaver_private=1
+# SceneGraph version. Roku requires 1.3 (Roku OS 15.1+) for new submissions;
+# the minimum firmware (15.1) is set separately in the Developer Dashboard.
+rsg_version=1.3
+
+# Roku certification rule 4.5: channels may not show their own idle slideshow,
+# so the old one was removed (kept in roku-archive/ for reference).
 
 # UI Resolution
 # fhd ONLY: every screen is laid out for 1920x1080, and Roku shrinks it
@@ -46,12 +47,9 @@ supports_input_launch=1
 # Your backend must implement the Roku Search Feed format
 supports_search=1
 
-# ==============================================================================
-# PERFORMANCE BEACON (ANALYTICS & MONITORING)
-# ==============================================================================
-# Allows Roku to track app performance metrics
-# Required for proper AppLaunchComplete signaling
-bs_libs_required=roku_ads_lib
+# No ads library: Crate TV shows no ads, so the Roku ads library line was
+# removed (it made certification look for ad code). AppLaunchComplete is
+# signalled in MainScene.brs and needs no library.
 
 # ==============================================================================
 # PLAYBACK FEATURES

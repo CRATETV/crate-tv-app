@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10 — Roku certification fixes
+
+- **Screensaver removed.** Roku's certification rule 4.5 doesn't allow a channel's own screensaver. When the TV is idle, the Roku's own screensaver runs instead (trailer previews still stop after 2 minutes so it can start). The old files are in `roku-archive/`.
+- **`rsg_version=1.3`** added to the manifest, as Roku now requires. In the Developer Dashboard, set **minimum firmware to 15.1**.
+- **Memory monitoring** (`source/main.brs`): the channel listens for Roku's low-memory warnings and turns off trailer previews when memory is tight.
+- **Removed the unused Roku ads library line** from the manifest; Crate TV shows no ads, and the line made certification look for ad code.
+- Channel version 2.3 build 4.
+
 ## 2026-10 — New CRATE logo everywhere
 
 - **New logo across the website.** Browser tab icon, iPhone/Android home-screen icons, the link preview image when cratetv.net is shared (now a proper 1200×630 banner), Top 10 share image, zine page, pitch deck, About page and the install prompt. No logo, by choice (cleaner): the sign-in / join page, the top menu once signed in, error and maintenance screens, the payment window, and the screens inside the Roku channel. It stays in emails and on the Roku home-screen tile and splash.

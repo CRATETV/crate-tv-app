@@ -35,6 +35,11 @@ Sub Main(args as Dynamic)
     ' roInput is REQUIRED for deep linking while the app is running
     m.input = CreateObject("roInput")
     m.input.SetMessagePort(m.port)
+
+    ' Memory monitoring (Roku certification "Monitoring" checks). If the Roku
+    ' runs low on memory we tell the channel through m.global.memoryLow, and
+    ' trailer previews stop (see PreviewsAllowed in source/Preview.brs).
+    StartMemoryMonitoring()
     
     ' Main event loop - must handle both screen events and input events
     While True
@@ -45,6 +50,8 @@ Sub Main(args as Dynamic)
             If msg.IsScreenClosed()
                 Exit While
             End If
+        Else If msgType = "roAppMemoryNotificationEvent" Or msgType = "roDeviceInfoEvent"
+            HandleMemoryEvent(msg)
         Else If msgType = "roInputEvent"
             ' Handle runtime deep links (required for certification)
             ' This is triggered when the app is already running and Roku
@@ -216,4 +223,51 @@ Sub HandleInputEvent(msg as Object)
         m.global.deepLinkMediaType = mediaTypeValue
         Print "CrateTV [roInput]: mediaType = " + mediaTypeValue
     End If
+End Sub
+
+' =============================================================================
+' MEMORY MONITORING
+' =============================================================================
+' Roku warns the channel when memory gets tight (at 80/85/90/95% of the
+' channel's limit, and when the whole TV is low). We log it and set
+' m.global.memoryLow so heavy extras (trailer previews) switch off.
+Sub StartMemoryMonitoring()
+    If Not m.global.HasField("memoryLow") Then m.global.AddField("memoryLow", "boolean", false)
+    m.global.memoryLow = false
+
+    m.memoryMonitor = CreateObject("roAppMemoryMonitor")
+    If m.memoryMonitor <> Invalid
+        m.memoryMonitor.SetMessagePort(m.port)
+        m.memoryMonitor.EnableMemoryWarningEvent(true)
+        limits = m.memoryMonitor.GetChannelMemoryLimit()
+        Print "CrateTV [Memory]: using " + m.memoryMonitor.GetMemoryLimitPercent().ToStr() + "% of limit, " + m.memoryMonitor.GetChannelAvailableMemory().ToStr() + " KB available"
+        If limits <> Invalid And limits.maxForegroundMemory <> Invalid
+            Print "CrateTV [Memory]: foreground limit " + limits.maxForegroundMemory.ToStr()
+        End If
+    End If
+
+    m.memoryDeviceInfo = CreateObject("roDeviceInfo")
+    m.memoryDeviceInfo.SetMessagePort(m.port)
+    m.memoryDeviceInfo.EnableLowGeneralMemoryEvent(true)
+End Sub
+
+Sub HandleMemoryEvent(msg as Object)
+    low = false
+    If Type(msg) = "roAppMemoryNotificationEvent"
+        low = true
+        If m.memoryMonitor <> Invalid
+            Print "CrateTV [Memory]: warning, at " + m.memoryMonitor.GetMemoryLimitPercent().ToStr() + "% of limit"
+        End If
+    Else
+        info = msg.GetInfo()
+        If info <> Invalid And info.generalMemoryLevel <> Invalid
+            level = LCase(info.generalMemoryLevel)
+            Print "CrateTV [Memory]: device memory " + level
+            low = (level = "low" Or level = "critical")
+            ' "normal" again: allow previews to come back
+        Else
+            Return
+        End If
+    End If
+    m.global.memoryLow = low
 End Sub
