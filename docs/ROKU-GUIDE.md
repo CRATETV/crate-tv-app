@@ -75,6 +75,13 @@ Roku (they still work on the website). The rule is `isRokuPlayable` in
 
 **Show the logo in the top menu again.** `Header.brs`: `m.SHOW_LOGO = true`.
 
+**Change the channel artwork (logo).** All in `roku/images/`, named in `roku/manifest`:
+`channel_logo_fhd.png` 540×405 (the tile on the Roku home screen), `channel_logo_hd.png` 290×218,
+`channel_logo_sd.png` 246×140, `channel_logo_side_fhd.png` 240×180, `splash_fhd.png` 1920×1080,
+`splash_hd.png` 1280×720, `splash_sd.png` 720×480, and `crate_logo_small.png` (shown 150×51 on the
+link and watch party screens). Keep the exact sizes. `splash_color` in the manifest is the colour
+behind the splash.
+
 **Send to TV / reactions / voting / end card (Oct 2026).** Each is explained at
 the top of its file: `MainScene.brs` (end of file, Send to TV),
 `ChatOverlay.xml` (reactions), `WatchPartyScene.brs` (voting),
@@ -146,6 +153,12 @@ channel's messages live: on a Mac, open Terminal and type
 ## 5. Updating the public channel (what everyone sees)
 
 Uploading to your own TV does **not** change it for viewers. To publish:
+
+Artwork for the store listing is in the `roku-store/` folder:
+- `roku-store-channel-poster-540x405.png` (or the `.jpg`): the **Channel poster** Roku asks for.
+- HD/SD posters and a 1920×1080 splash, in case the form asks for them.
+- **Screenshots** (up to 6, 1920×1080) must be real screens of the channel. Take them from your dev
+  Roku: `http://<IP>` → **Utilities** → **Screenshot**, with the channel open on the screen you want.
 
 1. Go to developer.roku.com → **Manage my channels** → Crate TV.
 2. **Package Upload**: upload the same zip. Roku may ask for a "signed"

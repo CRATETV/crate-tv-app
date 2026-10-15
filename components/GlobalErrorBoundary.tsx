@@ -45,11 +45,6 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
         <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
             <div className="relative z-10 space-y-8 max-w-lg">
-                <img 
-                    src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" 
-                    className="w-40 mx-auto opacity-20" 
-                    alt="Crate" 
-                />
                 <div className="space-y-2">
                     <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Sector Offline</h2>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Sector Identification: CRITICAL_ERROR_D_7</p>

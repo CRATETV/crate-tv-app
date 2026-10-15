@@ -72,16 +72,8 @@ const LoginPage: React.FC = () => {
 
             {/* ── HEADER ── */}
             <header className="relative z-10 p-6 md:p-10 flex items-center justify-between">
-                <button
-                    onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
-                    className="flex items-center gap-3 group"
-                >
-                    <img
-                        src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png"
-                        alt="Crate TV"
-                        className="h-8 w-auto"
-                    />
-                </button>
+                {/* No logo here (Oct 2026): the sign-in and join pages stay clean. */}
+                <span aria-hidden="true" />
                 <button
                     onClick={() => switchView(isLoginView ? 'signup' : 'login')}
                     className="text-sm text-gray-400 hover:text-white transition-colors"

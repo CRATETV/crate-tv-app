@@ -40,7 +40,6 @@
             <Poster uri="pkg:/images/ui/fade_top.png"    width="1920" height="260" />
             <Poster uri="pkg:/images/ui/fade_bottom.png" width="1920" height="520" translation="[0, 560]" />
 
-            <Poster uri="pkg:/images/crate_logo_small.png" width="150" height="37" translation="[96, 72]" />
 
             <!-- Always shown -->
             <Label id="eyebrow" text="●  WATCH PARTY" color="#EF4444" width="1920" horizAlign="center" translation="[0, 190]">

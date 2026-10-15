@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10 — New CRATE logo everywhere
+
+- **New logo across the website.** Browser tab icon, iPhone/Android home-screen icons, the link preview image when cratetv.net is shared (now a proper 1200×630 banner), Top 10 share image, zine page, pitch deck, About page and the install prompt. No logo, by choice (cleaner): the sign-in / join page, the top menu once signed in, error and maintenance screens, the payment window, and the screens inside the Roku channel. It stays in emails and on the Roku home-screen tile and splash.
+  - The old logo was hosted on S3 and had colour filters applied in each place to make it visible. The new files live in `public/` and are used in their real colours (white letters for dark backgrounds, `-light` versions for white ones).
+  - Which file to use where: `docs/BRAND.md`.
+- **Emails** use the new logo: `email-logo-on-dark.png` and `email-logo-on-light.png`. The old file names (`logo-tagline.png`, `crate-logo-email.png`) now hold the new logo too, so emails already sent update as well.
+- **Fixed: the phone home-screen app settings file (`manifest.json`) was never published** (it sat outside `public/`), so "Add to Home Screen" had no icons. Moved to `public/` with the new icons. Bar colour is now the logo's black (`#0B0B0D`) instead of red.
+- **Roku:** new channel posters, splash screens and splash background colour. The spinner on the link screen pointed at an image that didn't exist; it now has one. Channel version 2.3 build 3.
+- **Roku Channel Store artwork** for the developer dashboard: `roku-store/` (see `docs/ROKU-GUIDE.md`, section 5).
+- Removed old logo copies that nothing used (duplicates in the project's top folder, which the site never served, and unused Roku images).
+
 ## 2026-10 — Phone ↔ TV features
 
 - **Send to TV.** A new button on every film page on cratetv.net (signed-in viewers) opens that film on the Roku linked to their account within about 10 seconds, while Crate TV is open on the Roku. If they can watch it, it starts playing; if not, its page shows how to unlock it. "Sent from your phone" appears at the top of the TV.

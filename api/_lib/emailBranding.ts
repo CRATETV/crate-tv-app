@@ -28,8 +28,11 @@
 // using the dark-on-light logo directly on a dark background (invisible),
 // and a couple were applying filter:invert(1) to try to compensate, which
 // made an already-dark logo invisible on a LIGHT background instead.
-export const LOGO_URL = 'https://cratetv.net/crate-logo-email.png';
-export const LOGO_URL_ON_DARK = 'https://cratetv.net/logo-tagline.png';
+// Oct 2026: new CRATE logo. Both are wide PNGs (email apps can't show SVG);
+// the old names (crate-logo-email.png, logo-tagline.png) also hold the new
+// logo so emails sent before the change update too.
+export const LOGO_URL = 'https://cratetv.net/email-logo-on-light.png';
+export const LOGO_URL_ON_DARK = 'https://cratetv.net/email-logo-on-dark.png';
 
 export interface BrandedEmailOptions {
     /** Used as the <title> tag — not shown in the body, but shows in some mail-client tab/preview UI. */

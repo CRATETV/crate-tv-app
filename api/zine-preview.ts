@@ -64,7 +64,7 @@ export async function GET(request: Request) {
         const title = `${story.title || 'The Unpack'} | Crate TV`;
         const rawDescription = story.subtitle || story.content || '';
         const description = rawDescription.replace(/<[^>]+>/g, '').slice(0, 160);
-        const image = story.heroImage || 'https://cratetv.net/favicon-512x512.png';
+        const image = story.heroImage || 'https://cratetv.net/og-image.png';
 
         const html = `<!DOCTYPE html>
 <html lang="en">

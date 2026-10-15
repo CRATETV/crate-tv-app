@@ -10,7 +10,7 @@ const FALLBACK_FROM = 'studio@cratetv.net';
 // worth knowing: crate-logo-email.png didn't even exist in production until
 // now (a confirmed 404), so this file's logo has never actually rendered for
 // anyone before this fix.
-const LOGO_URL = 'https://cratetv.net/logo-tagline.png';
+const LOGO_URL = 'https://cratetv.net/email-logo-on-dark.png';
 
 export async function POST(request: Request) {
     try {

@@ -106,12 +106,7 @@ const Header: React.FC<HeaderProps> = ({
                             </button>
                         )}
                         
-                        {/* Logo ONLY for LOGGED IN users (when no stream is active) */}
-                        {user && !activeNotificationMovie && (
-                             <a href="/" onClick={(e) => handleNavigate(e, '/')} className="block transition-transform hover:scale-105 active:scale-95">
-                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className="h-6 md:h-8 invert brightness-0" />
-                             </a>
-                        )}
+                        {/* No logo in the top menu (Oct 2026, by choice). */}
                     </div>
 
                     {/* Only show Nav links if user is logged in */}

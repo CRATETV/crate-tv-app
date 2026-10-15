@@ -39,7 +39,6 @@
         <Group id="canvas" translation="[0, -60]">
             <Rectangle id="background" width="1920" height="1080" color="#000000" />
 
-            <Poster uri="pkg:/images/crate_logo_small.png" width="150" height="37" translation="[96, 72]" />
 
             <!-- ===== Left: what this is + the code ===== -->
             <Group translation="[96, 230]">

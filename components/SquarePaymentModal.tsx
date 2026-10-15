@@ -21,7 +21,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
         
         <div className="relative h-full flex flex-col p-6">
             <div className="flex justify-between items-start border-b border-white/10 pb-4 mb-4">
-                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="h-8 invert" alt="Crate" />
+                <span aria-hidden="true" />
                 <div className="text-right">
                     <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.3em]">Secure Verified Access</p>
                     <p className="text-[10px] font-mono text-white/40">HASH: {Math.random().toString(36).substring(2, 10).toUpperCase()}</p>

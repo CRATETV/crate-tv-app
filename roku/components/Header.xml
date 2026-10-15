@@ -45,7 +45,7 @@
 
         <!-- Logo: hidden by request (Oct 2026). To bring it back, set
              SHOW_LOGO = true in Header.brs. -->
-        <Poster id="headerLogo" width="150" height="37" uri="pkg:/images/crate_logo_small.png" translation="[96, 18]" visible="false" />
+        <Poster id="headerLogo" width="150" height="51" uri="pkg:/images/crate_logo_small.png" translation="[96, 18]" visible="false" />
 
         <!-- Menu items. Header.brs spaces them out to fit their text. -->
         <Group id="navItemsGroup" translation="[96, 0]" visible="false">

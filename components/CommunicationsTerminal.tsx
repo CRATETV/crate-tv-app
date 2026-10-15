@@ -204,7 +204,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
                              )}
                              <div className="flex-grow overflow-y-auto pr-4 scrollbar-hide text-gray-400 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: htmlBody || '<p style="opacity: 0.2">Manifest content pending uplink draft...</p>' }} />
                              <div className="pt-6 border-t border-white/5 text-center">
-                                <img src="https://cratetv.net/crate-logo-email.png" className="w-24 invert opacity-20 mx-auto" alt="" />
+                                <img src="/logo-mark.svg" className="w-24 opacity-30 mx-auto" alt="" />
                              </div>
                         </div>
                     </form>

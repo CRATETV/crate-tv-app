@@ -33,7 +33,7 @@ export async function POST(request: Request) {
                          correct as-is on this white background. Inverting would turn it white-
                          on-transparent and invisible here. (This logo file was a confirmed 404 in
                          production until today, so this never actually rendered either way before.) -->
-                    <img src="https://cratetv.net/crate-logo-email.png" alt="Crate TV" style="width: 120px;" />
+                    <img src="https://cratetv.net/email-logo-on-light.png" alt="Crate TV" style="width: 140px;" />
                 </div>
                 <h1 style="color: #ef4444; text-transform: uppercase; font-size: 24px; text-align: center; letter-spacing: 2px;">Uplink Secured</h1>
                 <p>Welcome to <strong>Crate Zine</strong>, the definitive record of the independent cinematic underground.</p>

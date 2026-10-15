@@ -12,7 +12,7 @@ interface SEOProps {
 const SEO: React.FC<SEOProps> = ({ 
     title, 
     description, 
-    image = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png', 
+    image = 'https://cratetv.net/og-image.png', 
     url,
     type = 'website',
     schemaData
@@ -71,7 +71,7 @@ const SEO: React.FC<SEOProps> = ({
             "name": "Crate TV",
             "alternateName": "Crate",
             "url": baseOrigin,
-            "logo": "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
+            "logo": "https://cratetv.net/logo-crest-512.png",
             "sameAs": [
                 "https://www.instagram.com/cratetv.philly/",
                 "https://playhousewest.com/philly/"

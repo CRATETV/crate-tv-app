@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="1024" height="1024">
+<defs><linearGradient id="rh" gradientUnits="userSpaceOnUse" x1="108.0" y1="0" x2="166.0" y2="0"><stop offset="0" stop-color="#FF9A3C"/><stop offset="1" stop-color="#FF3B5C"/></linearGradient><linearGradient id="rv" gradientUnits="userSpaceOnUse" x1="0" y1="34.0" x2="0" y2="92.0"><stop offset="0" stop-color="#FF3B5C"/><stop offset="1" stop-color="#D63BD9"/></linearGradient><linearGradient id="lv" gradientUnits="userSpaceOnUse" x1="0" y1="108.0" x2="0" y2="166.0"><stop offset="0" stop-color="#D63BD9"/><stop offset="1" stop-color="#7B4DFF"/></linearGradient><linearGradient id="lh" gradientUnits="userSpaceOnUse" x1="34.0" y1="0" x2="92.0" y2="0"><stop offset="0" stop-color="#7B4DFF"/><stop offset="1" stop-color="#1FCB7A"/></linearGradient></defs>
+<rect width="200" height="200" rx="44" fill="#0B0B0D"/>
+<rect x="159.0" y="34.0" width="7.0" height="58.0" fill="url(#rv)"/>
+<rect x="108.0" y="34.0" width="58.0" height="7.0" fill="url(#rh)"/>
+<rect x="34.0" y="108.0" width="7.0" height="58.0" fill="url(#lv)"/>
+<rect x="34.0" y="159.0" width="58.0" height="7.0" fill="url(#lh)"/>
+<g transform="translate(61.0,50.0) scale(1.0)" fill="#FFFFFF"><path d="M52,0 H24 A24,24 0 0 0 0,24 V76 A24,24 0 0 0 24,100 H78 V82 H24 A6,6 0 0 1 18,76 V24 A6,6 0 0 1 24,18 H52 Z"/><path d="M58,0 H78 V18 H58 Z"/></g>
+</svg>

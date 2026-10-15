@@ -66,7 +66,7 @@ export async function GET(request: Request) {
             : `${filmTitle}${movie.director ? ` — dir. ${movie.director}` : ''} | Crate TV`;
         const description = String(movie.synopsis || 'Stream independent film on Crate TV.')
             .replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 180);
-        const image = movie.poster || movie.tvPoster || `${origin}/favicon-512x512.png`;
+        const image = movie.poster || movie.tvPoster || `${origin}/og-image.png`;
 
         const html = `<!DOCTYPE html>
 <html lang="en">

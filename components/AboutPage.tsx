@@ -84,7 +84,7 @@ const AboutPage: React.FC = () => {
 
                     {/* FOUNDER */}
                     <section className="bg-[#0a0a0a] border border-white/10 rounded-[4rem] p-12 md:p-20 flex flex-col md:flex-row items-center md:items-start gap-12">
-                        <img src="/favicon-192x192.png" alt="Crate TV" className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0" />
+                        <img src="/logo-crest.svg" alt="Crate TV" className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0" />
                         <div className="space-y-6">
                             <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">Founded By</p>
                             <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none">Salome Denoon</h2>
