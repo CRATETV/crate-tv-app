@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Now Streaming Scene
-    Editorial spotlight for the featured film.
-    Layout (1920x1020 below 60px nav):
-      LEFT  (x=90):  Film poster 360x540
-      CENTER (x=500): Title, meta, description, cast
-      RIGHT (x=1480): Zine QR code + "Read the Zine" label + Watch button
+    ============================================================================
+    CRATE TV - Now Streaming tab (the featured film, editorial style)
+    ============================================================================
+    Same look as Home's billboard: the film's artwork on the right melting into
+    black, the details on the left, a white "Watch now" button, and a small
+    card with a QR code to the film's zine (if it has one).
+    OK = watch (MainScene opens the film page / plays). Up or Back = menu.
+
+    Screen positions: `canvas` is shifted up 60px because this page sits
+    inside MainScene's sceneContainer, under the top menu.
+    Logic: NowStreamingScene.brs
+    ============================================================================
 -->
 <component name="NowStreamingScene" extends="Group">
     <interface>
@@ -14,198 +20,87 @@
         <field id="playContent"   type="node" alwaysNotify="true" />
         <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
     </interface>
-
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
     <script type="text/brightscript" uri="NowStreamingScene.brs" />
-
     <children>
-        <!-- Full background -->
-        <Rectangle id="bg" width="1920" height="1020" color="#050505" />
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle id="bg" width="1920" height="1080" color="#000000" />
 
-        <!-- Subtle backdrop poster (full-bleed, dimmed) -->
-        <Poster id="backdropPoster"
-            width="1920" height="1020"
-            loadDisplayMode="scaleToFill"
-            loadingBitmapOpacity="0.0"
-            failedBitmapOpacity="0.0"
-            opacity="0.12" />
+            <!-- Artwork on the right, melting into black -->
+            <Poster id="backdropPoster" width="1040" height="1080" translation="[880, 0]"
+                    loadDisplayMode="scaleToZoom" loadWidth="1040" loadHeight="1080"
+                    loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" />
+            <Poster id="fadeLeft" uri="pkg:/images/ui/fade_left.png" width="840" height="1080" translation="[508, 0]" />
+            <Poster uri="pkg:/images/ui/fade_bottom.png" width="1920" height="420"  translation="[0, 660]" />
+            <Poster uri="pkg:/images/ui/fade_top.png"    width="1920" height="200" />
 
-        <!-- LEFT -- Film poster -->
-        <Rectangle id="posterBg" width="360" height="540"
-            color="#1A1A1A" translation="[90, 220]" />
-        <Poster id="filmPoster"
-            width="360" height="540"
-            loadDisplayMode="scaleToFill"
-            loadingBitmapOpacity="0.0"
-            failedBitmapUri="pkg:/images/poster_placeholder.png"
-            translation="[90, 220]" />
-        <!-- Rounded corner mask -->
-        <Poster id="posterCornerMask"
-            width="360" height="540"
-            uri="pkg:/images/corner_mask_360x540.png"
-           
-            translation="[90, 220]" />
+            <!-- Kept for NowStreamingScene.brs; the artwork above replaces it -->
+            <Poster id="filmPoster" width="1" height="1" visible="false" />
 
-        <!-- Red accent line between poster and info -->
-        <Rectangle width="4" height="540" color="#EF4444" translation="[465, 220]" />
+            <Group id="infoGroup" translation="[96, 170]">
+                <Label id="eyebrow" text="NOW STREAMING" color="#EF4444">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                </Label>
+                <Label id="filmTitle" text="" color="#FFFFFF" width="900" maxLines="2" wrap="true" lineSpacing="-6" translation="[0, 40]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="72" />
+                </Label>
+                <Label id="filmMeta" text="" color="#B3B3B3" width="900" translation="[0, 220]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
+                </Label>
+                <Label id="filmDesc" text="" color="#D2D2D2" width="820" maxLines="4" wrap="true" lineSpacing="5" translation="[0, 270]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="27" />
+                </Label>
+                <Label id="castHeader" text="Starring" color="#8C8C8C" translation="[0, 446]" visible="false">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                </Label>
+                <Label id="filmCast" text="" color="#B3B3B3" width="720" maxLines="1" translation="[130, 446]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
+                <Label id="directorHeader" text="Directed by" color="#8C8C8C" translation="[0, 482]" visible="false">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                </Label>
+                <Label id="filmDirector" text="" color="#B3B3B3" width="720" maxLines="1" translation="[130, 482]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
 
-        <!-- CENTER -- Film info -->
-        <Group id="infoGroup" translation="[490, 220]">
-            <!-- "NOW STREAMING" eyebrow label -->
-            <Label id="eyebrow"
-                text="NOW STREAMING"
-                font="font:SmallBoldSystemFont"
-                color="#EF4444"
-                translation="[0, 0]" />
+                <!-- Watch button (the only button; white = highlighted) -->
+                <Group translation="[0, 560]">
+                    <Poster id="watchBtn" width="260" height="68" uri="pkg:/images/ui/btn_focus.9.png" />
+                    <Label id="watchBtnLabel" text="▶  Watch now" color="#000000" width="260" height="68" horizAlign="center" vertAlign="center">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="26" />
+                    </Label>
+                </Group>
+            </Group>
+            <!-- Kept for NowStreamingScene.brs (the white button shows focus now) -->
+            <Rectangle id="watchFocusRing" width="1" height="1" color="#00000000" visible="false" />
 
-            <!-- Film title -->
-            <Label id="filmTitle"
-                text=""
-                font="font:LargeBoldSystemFont"
-                color="#EBEBEB"
-                width="860"
-                maxLines="2"
-                wrap="true"
-                translation="[0, 36]" />
+            <!-- Zine card (bottom right) -->
+            <Group id="rightPanel" translation="[1484, 610]">
+                <Poster width="340" height="380" uri="pkg:/images/ui/card.9.png" />
+                <Label text="Read the zine" color="#FFFFFF" width="340" horizAlign="center" translation="[0, 26]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="26" />
+                </Label>
+                <Rectangle id="qrBorder" width="212" height="212" color="#FFFFFF" translation="[64, 76]" />
+                <Poster id="qrPoster" width="196" height="196" translation="[72, 84]" loadDisplayMode="scaleToFit" loadingBitmapOpacity="0.0" />
+                <Label text="Scan with your phone" color="#8C8C8C" width="340" horizAlign="center" translation="[0, 302]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="20" />
+                </Label>
+                <Label id="zineUrlLabel" text="cratetv.net/zine" color="#FFFFFF" width="340" horizAlign="center" translation="[0, 332]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                </Label>
+                <Label id="noZineLabel" text="Zine coming soon" color="#8C8C8C" width="340" horizAlign="center" translation="[0, 170]" visible="false">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="24" />
+                </Label>
+            </Group>
 
-            <!-- Meta: year · genre · runtime -->
-            <Label id="filmMeta"
-                text=""
-                font="font:SmallSystemFont"
-                color="#A0A0A0"
-                width="860"
-                translation="[0, 130]" />
-
-            <!-- Description -->
-            <Label id="filmDesc"
-                text=""
-                font="font:SmallSystemFont"
-                color="#CCCCCC"
-                width="860"
-                maxLines="6"
-                wrap="true"
-                translation="[0, 168]" />
-
-            <!-- Cast -->
-            <Label id="castHeader"
-                text="CAST"
-                font="font:SmallBoldSystemFont"
-                color="#999999"
-                translation="[0, 360]"
-                visible="false" />
-            <Label id="filmCast"
-                text=""
-                font="font:SmallSystemFont"
-                color="#A0A0A0"
-                width="860"
-                maxLines="2"
-                wrap="true"
-                translation="[0, 388]" />
-
-            <!-- Director -->
-            <Label id="directorHeader"
-                text="DIRECTED BY"
-                font="font:SmallBoldSystemFont"
-                color="#999999"
-                translation="[0, 448]"
-                visible="false" />
-            <Label id="filmDirector"
-                text=""
-                font="font:SmallSystemFont"
-                color="#A0A0A0"
-                width="860"
-                translation="[0, 476]" />
-        </Group>
-
-        <!-- RIGHT -- QR + Watch button panel -->
-        <Group id="rightPanel" translation="[1460, 220]">
-            <!-- Panel background -->
-            <Rectangle width="360" height="540" color="#0F0F0F" opacity="0.95" />
-            <Rectangle width="360" height="4" color="#EF4444" />
-
-            <!-- "READ THE ZINE" header -->
-            <Label
-                text="READ THE ZINE"
-                font="font:SmallBoldSystemFont"
-                color="#EF4444"
-                width="360"
-                horizAlign="center"
-                translation="[0, 28]" />
-
-            <!-- Divider -->
-            <Rectangle width="280" height="1" color="#2A2A2A" translation="[40, 64]" />
-
-            <!-- QR code (white border + poster) -- generated by api.qrserver.com -->
-            <Rectangle id="qrBorder" width="220" height="220"
-                color="#EBEBEB" translation="[70, 84]" />
-            <Poster id="qrPoster"
-                width="210" height="210"
-                translation="[75, 89]"
-                loadDisplayMode="scaleToFit" />
-
-            <!-- Scan instruction -->
-            <Label
-                text="Scan with your phone"
-                font="font:SmallSystemFont"
-                color="#A0A0A0"
-                width="360"
-                horizAlign="center"
-                translation="[0, 316]" />
-            <Label id="zineUrlLabel"
-                text="cratetv.net/zine"
-                font="font:SmallSystemFont"
-                color="#EF4444"
-                width="360"
-                horizAlign="center"
-                translation="[0, 344]" />
-
-            <!-- Divider -->
-            <Rectangle width="280" height="1" color="#2A2A2A" translation="[40, 380]" />
-
-            <!-- WATCH button -->
-            <Rectangle id="watchBtn"
-                width="280" height="56"
-                color="#EF4444"
-                translation="[40, 400]" />
-            <Label id="watchBtnLabel"
-                text="WATCH NOW"
-                font="font:SmallBoldSystemFont"
-                color="#EBEBEB"
-                width="280" height="56"
-                horizAlign="center"
-                vertAlign="center"
-                translation="[40, 400]" />
-
-            <!-- No zine fallback message -->
-            <Label id="noZineLabel"
-                text="Zine coming soon"
-                font="font:SmallSystemFont"
-                color="#666666"
-                width="360"
-                horizAlign="center"
-                translation="[0, 316]"
-                visible="false" />
-        </Group>
-
-        <!-- Focus indicator ring around Watch button -->
-        <Rectangle id="watchFocusRing"
-            width="288" height="64"
-            color="#00000000"
-            borderColor="#FFFFFF"
-            borderWidth="3"
-            translation="[1496, 616]"
-            visible="false" />
-
-        <!-- Loading state -->
-        <Group id="loadingGroup" visible="true">
-            <Rectangle width="1920" height="1020" color="#050505" />
-            <Label text="Loading..."
-                font="font:SmallSystemFont"
-                color="#666666"
-                width="400"
-                horizAlign="center"
-                translation="[760, 490]" />
+            <!-- Loading -->
+            <Group id="loadingGroup" visible="true">
+                <Rectangle width="1920" height="1080" color="#000000" />
+                <Label text="Loading..." color="#8C8C8C" width="400" horizAlign="center" translation="[760, 520]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
+                </Label>
+            </Group>
         </Group>
     </children>
 </component>

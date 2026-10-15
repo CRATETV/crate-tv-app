@@ -3,6 +3,9 @@
 // Free to run: Firestore plus Vercel's built-in location headers (city-level).
 //
 // GET  ?map=<partyKey>                       → cities the audience joined from (cached 30s)
+// GET  ?tally=<blockId>                      → live vote counts for one block, for the
+//                                              TV's "Vote from the couch" card (cached 10s).
+//                                              Counts and titles only, never who voted.
 // POST { action: 'checkin', partyKey, idToken?, viewerId? }
 //                                            → counts this viewer's city once per party
 // POST { action: 'ballot', blockId, idToken? } → films, voting state, my vote
@@ -84,9 +87,34 @@ async function filmCards(db: Firestore, keys: string[]) {
     });
 }
 
+// ─── Live tally (TV) ──────────────────────────────────────────────────────
+
+async function liveTally(blockId: string): Promise<Response> {
+    try {
+        const db = getAdminDb();
+        if (!db) return json({ error: 'Service unavailable.' }, 503);
+        const block = await findBlock(db, blockId);
+        if (block.movieKeys.length < 2) return json({ state: 'none' }, 200, 'public, s-maxage=60');
+        const state = votingState(block, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS, Date.now());
+        const votesSnap = await db.collection(VOTES).where('blockId', '==', block.id).get();
+        const tally = tallyVotes(block.movieKeys, votesSnap.docs.map(d => ({ movieKey: d.data().movieKey })));
+        const titles = new Map((await filmCards(db, block.movieKeys)).map(f => [f.movieKey, f.title]));
+        return json({
+            state, title: block.title, total: tally.total,
+            results: tally.results.slice(0, 5).map(r => ({ title: titles.get(r.movieKey) || 'Untitled', votes: r.votes, share: r.share })),
+        }, 200, 'public, s-maxage=10, stale-while-revalidate=20');
+    } catch (e) {
+        if (e instanceof AudienceError) return json({ error: e.message }, e.status);
+        logServerError('api/audience:tally', e);
+        return json({ error: 'Results unavailable.' }, 500);
+    }
+}
+
 // ─── Map ──────────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
+    const tallyId = new URL(request.url).searchParams.get('tally');
+    if (tallyId !== null) return liveTally(tallyId);
     try {
         const partyKey = new URL(request.url).searchParams.get('map') || '';
         if (!SAFE_KEY.test(partyKey)) return json({ error: 'Unknown watch party.' }, 400);

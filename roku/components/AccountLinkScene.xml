@@ -1,175 +1,104 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Account Link Scene
-    Displays 6-digit link code and polls for authentication
-    Code is prominently displayed so user can see it
+    ============================================================================
+    CRATE TV - Link this Roku to a Crate account
+    ============================================================================
+    Opens from the Account tab ("Link your account"), or after signing out.
+
+    TWO WAYS TO LINK (whichever is easier for the viewer)
+      1. Scan the QR code with a phone camera. It opens
+         cratetv.net/link?code=ABC123 with the code already filled in;
+         they sign in (if needed) and press "Link my Roku".
+      2. Go to cratetv.net/link on any device and type the code.
+    The Roku checks every few seconds (AccountLinkScene.brs) and moves on by
+    itself as soon as the link is done. Codes last 15 minutes; a fresh one
+    appears automatically if it runs out.
+
+    LAYOUT: text and code on the left, QR card on the right, "Not now" button
+    at the bottom left. Full screen (no top menu); `canvas` is shifted up 60px
+    because this page sits inside MainScene's sceneContainer.
+
+    Logic: AccountLinkScene.brs. Website side: components/LinkRokuPage.tsx and
+    api/link-roku-account.ts.
+    ============================================================================
 -->
 <component name="AccountLinkScene" extends="Group">
     <interface>
         <field id="linkComplete" type="boolean" value="false" alwaysNotify="true" />
-        <field id="skipLink" type="boolean" value="false" alwaysNotify="true" />
-        <field id="linkCode" type="string" value="" />
-        <field id="errorMessage" type="string" value="" />
+        <field id="skipLink"     type="boolean" value="false" alwaysNotify="true" />
+        <field id="linkCode"     type="string"  value="" />
+        <field id="errorMessage" type="string"  value="" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
-    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
     <script type="text/brightscript" uri="AccountLinkScene.brs" />
 
     <children>
-        <!-- Background -->
-        <Rectangle id="background" width="1920" height="1080" color="#050505" />
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle id="background" width="1920" height="1080" color="#000000" />
 
-        <!-- Content Container -->
-        <Group id="contentGroup" translation="[0, 0]">
-            <!-- Logo -->
-            <Poster
-                id="logo"
-                width="300"
-                height="150"
-                uri="pkg:/images/crate_logo.png"
-                translation="[810, 100]"
-            />
+            <Poster uri="pkg:/images/crate_logo_small.png" width="150" height="37" translation="[96, 72]" />
 
-            <!-- Main Card -->
-            <Rectangle
-                id="linkCard"
-                width="750"
-                height="560"
-                color="#0A0A0A"
-                translation="[585, 290]"
-            >
-                <!-- Card border highlight -->
-                <Rectangle width="750" height="4" color="#EF4444" translation="[0, 0]" />
-            </Rectangle>
+            <!-- ===== Left: what this is + the code ===== -->
+            <Group translation="[96, 230]">
+                <Label text="LINK YOUR ACCOUNT" color="#EF4444">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                </Label>
+                <Label text="Watch everything you've unlocked" color="#FFFFFF" width="900" wrap="true" maxLines="2" translation="[0, 40]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="60" />
+                </Label>
+                <Label text="Films and festival tickets you buy on cratetv.net play here once this Roku is linked to your Crate account."
+                       color="#B3B3B3" width="860" wrap="true" maxLines="3" lineSpacing="5" translation="[0, 205]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="27" />
+                </Label>
 
-            <!-- Card Content -->
-            <Group id="cardContent" translation="[585, 290]">
-                <!-- Title -->
-                <Label
-                    id="titleLabel"
-                    text="Link Your Device"
-                    font="font:LargeBoldSystemFont"
-                    color="#EBEBEB"
-                    width="750"
-                    horizAlign="center"
-                    translation="[0, 40]"
-                />
+                <Label text="Or go to  cratetv.net/link  on any device and enter:" color="#D2D2D2" width="900" translation="[0, 345]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="27" />
+                </Label>
 
-                <!-- Instructions -->
-                <Label
-                    id="instructionsLabel"
-                    text="Visit cratetv.net/link and enter this code:"
-                    font="font:MediumSystemFont"
-                    color="#A0A0A0"
-                    width="680"
-                    horizAlign="center"
-                    wrap="true"
-                    translation="[35, 110]"
-                />
+                <!-- The code -->
+                <Poster width="460" height="120" uri="pkg:/images/ui/card.9.png" translation="[0, 400]" />
+                <Label id="linkCodeLabel" text="" color="#FFFFFF" width="460" height="120"
+                       horizAlign="center" vertAlign="center" translation="[0, 400]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="72" />
+                </Label>
+                <BusySpinner id="codeSpinner" translation="[198, 428]" visible="false" />
 
-                <!-- Code Display Container (large, prominent) -->
-                <Rectangle
-                    id="codeBackground"
-                    width="550"
-                    height="130"
-                    color="#1A1A1A"
-                    translation="[100, 180]"
-                />
-
-                <!-- Link Code (big, red, centered) -->
-                <Label
-                    id="linkCodeLabel"
-                    text="------"
-                    font="font:LargeBoldSystemFont"
-                    color="#EF4444"
-                    width="550"
-                    height="130"
-                    horizAlign="center"
-                    vertAlign="center"
-                    translation="[100, 180]"
-                />
-
-                <!-- Loading Spinner (shown while fetching code) -->
-                <BusySpinner
-                    id="codeSpinner"
-                    poster="pkg:/images/spinner.png"
-                    translation="[355, 225]"
-                    visible="false"
-                />
-
-                <!-- Status Message -->
-                <Label
-                    id="statusLabel"
-                    text="Generating code..."
-                    font="font:SmallSystemFont"
-                    color="#666666"
-                    width="680"
-                    horizAlign="center"
-                    translation="[35, 335]"
-                />
-
-                <!-- Error Message -->
-                <Label
-                    id="errorLabel"
-                    text=""
-                    font="font:SmallSystemFont"
-                    color="#EF4444"
-                    width="680"
-                    horizAlign="center"
-                    wrap="true"
-                    visible="false"
-                    translation="[35, 370]"
-                />
-
-                <!-- Skip Button -->
-                <Rectangle
-                    id="skipButtonBg"
-                    width="220"
-                    height="50"
-                    color="#252525"
-                    translation="[265, 430]"
-                />
-                <Label
-                    id="skipButtonLabel"
-                    text="Skip for Now"
-                    font="font:SmallBoldSystemFont"
-                    color="#A0A0A0"
-                    width="220"
-                    height="50"
-                    horizAlign="center"
-                    vertAlign="center"
-                    translation="[265, 430]"
-                />
+                <!-- Status / error -->
+                <Label id="statusLabel" text="" color="#8C8C8C" width="900" translation="[0, 545]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="24" />
+                </Label>
+                <Label id="errorLabel" text="" color="#EF4444" width="900" wrap="true" maxLines="2" translation="[0, 545]" visible="false">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
             </Group>
 
-            <!-- Bottom Instructions -->
-            <Label
-                id="bottomLabel"
-                text="Your account lets you unlock premium content and sync across devices"
-                font="font:SmallSystemFont"
-                color="#666666"
-                width="600"
-                horizAlign="center"
-                wrap="true"
-                translation="[660, 900]"
-            />
-        </Group>
+            <!-- "Not now" button (always focused; OK skips, Back too) -->
+            <Group translation="[96, 880]">
+                <Poster id="skipButtonBg" width="200" height="64" uri="pkg:/images/ui/btn_focus.9.png" />
+                <Label id="skipButtonLabel" text="Not now" color="#000000" width="200" height="64" horizAlign="center" vertAlign="center">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="26" />
+                </Label>
+            </Group>
+            <Label text="You can link later from the Account tab." color="#8C8C8C" translation="[320, 898]">
+                <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+            </Label>
 
-        <!-- Focus indicator for skip button -->
-        <Rectangle
-            id="focusRing"
-            width="228"
-            height="58"
-            color="#00000000"
-            visible="false"
-            translation="[846, 716]"
-        >
-            <Rectangle width="228" height="3" color="#EF4444" translation="[0, 0]" />
-            <Rectangle width="228" height="3" color="#EF4444" translation="[0, 55]" />
-            <Rectangle width="3" height="58" color="#EF4444" translation="[0, 0]" />
-            <Rectangle width="3" height="58" color="#EF4444" translation="[225, 0]" />
-        </Rectangle>
+            <!-- ===== Right: QR card ===== -->
+            <Group translation="[1184, 230]">
+                <Poster width="640" height="640" uri="pkg:/images/ui/card.9.png" />
+                <Label text="Scan with your phone" color="#FFFFFF" width="640" horizAlign="center" translation="[0, 48]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="32" />
+                </Label>
+                <Rectangle width="392" height="392" color="#FFFFFF" translation="[124, 118]" />
+                <Poster id="qrCode" width="360" height="360" translation="[140, 134]" loadingBitmapOpacity="0.0" />
+                <Label text="Your camera opens the link page with the code already filled in."
+                       color="#B3B3B3" width="540" wrap="true" maxLines="2" horizAlign="center" translation="[50, 538]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
+            </Group>
+        </Group>
     </children>
 </component>

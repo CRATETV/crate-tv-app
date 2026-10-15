@@ -9,7 +9,7 @@
 '   Type query -> local movie search (instant) + ContentTask actor search
 '   ContentTask fires "searchActors" -> returns raw JSON in actorResults
 '   OnActorSearchDone() parses JSON, builds actor cards prepended to grid
-'   Focus actor card -> ShowActorPanel() with photo + bio
+'   Focus actor card -> a one-line caption under the results (ShowActorPanel)
 '   Select actor card -> m.top.showActorDetail = slug (MainScene opens ActorDetailScene)
 ' ##############################################################################
 
@@ -27,6 +27,7 @@ Sub Init()
 
     ' Actor panel nodes
     m.actorPanel      = m.top.FindNode("actorPanel")
+    m.actorHint       = m.top.FindNode("actorHint")
     m.actorPanelPhoto = m.top.FindNode("actorPanelPhoto")
     m.actorPanelName  = m.top.FindNode("actorPanelName")
     m.actorPanelBio   = m.top.FindNode("actorPanelBio")
@@ -104,38 +105,40 @@ End Sub
 ' =============================================================================
 ' KEYBOARD BUILD
 ' =============================================================================
+' Keys: plain letters on black; the highlighted key is a white rounded
+' button with black text (same look as the film page buttons).
 Sub BuildKeyboard()
-    theme = GetThemeConfig()
+    KEY = 54        ' key size
+    GAP = 6
     For rowIdx = 0 To m.kbRows.Count() - 1
         rowGroup              = CreateObject("roSGNode", "LayoutGroup")
         rowGroup.layoutDirection = "horiz"
-        rowGroup.itemSpacings = [6]
+        rowGroup.itemSpacings = [GAP]
         rowButtons            = []
         For colIdx = 0 To m.kbRows[rowIdx].Count() - 1
             keyLabel = m.kbRows[rowIdx][colIdx]
             btnGroup = CreateObject("roSGNode", "Group")
-            btnWidth = 60
-            If keyLabel = "SPACE" Then btnWidth = 126
-            If keyLabel = "DEL"   Then btnWidth = 126
-            bg        = CreateObject("roSGNode", "Rectangle")
+            btnWidth = KEY
+            If keyLabel = "SPACE" Or keyLabel = "DEL" Then btnWidth = KEY * 2 + GAP
+            bg        = CreateObject("roSGNode", "Poster")
             bg.width  = btnWidth
-            bg.height = 56
-            bg.color  = theme.SURFACE_LIGHT
+            bg.height = KEY
+            bg.uri    = ""
             btnGroup.AppendChild(bg)
             lbl = CreateObject("roSGNode", "Label")
             If keyLabel = "SPACE"
-                lbl.text = "SPACE"
-                lbl.font = "font:SmallBoldSystemFont"
+                lbl.text = "Space"
+                lbl.font = CrateFont("semibold", 22)
             Else If keyLabel = "DEL"
-                lbl.text = "DELETE"
-                lbl.font = "font:SmallBoldSystemFont"
+                lbl.text = "Delete"
+                lbl.font = CrateFont("semibold", 22)
             Else
                 lbl.text = keyLabel
-                lbl.font = "font:MediumBoldSystemFont"
+                lbl.font = CrateFont("semibold", 28)
             End If
-            lbl.color      = "#FFFFFF"
+            lbl.color      = "#B3B3B3"
             lbl.width      = btnWidth
-            lbl.height     = 56
+            lbl.height     = KEY
             lbl.horizAlign = "center"
             lbl.vertAlign  = "center"
             btnGroup.AppendChild(lbl)
@@ -148,14 +151,15 @@ Sub BuildKeyboard()
 End Sub
 
 Sub UpdateKeyboardFocus()
-    theme = GetThemeConfig()
     For rr = 0 To m.kbButtons.Count() - 1
         For cc = 0 To m.kbButtons[rr].Count() - 1
             btn = m.kbButtons[rr][cc]
             If rr = m.kbRow And cc = m.kbCol And m.focusZone = "keyboard"
-                btn.bg.color = theme.PRIMARY_ACCENT
+                btn.bg.uri = "pkg:/images/ui/btn_focus.9.png"
+                btn.label.color = "#000000"
             Else
-                btn.bg.color = theme.SURFACE_LIGHT
+                btn.bg.uri = ""
+                btn.label.color = "#B3B3B3"
             End If
         End For
     End For
@@ -448,7 +452,7 @@ End Sub
 ' DISPLAY
 ' =============================================================================
 Sub ShowTopMovies()
-    m.resultsLabel.text      = "Top Movies"
+    m.resultsLabel.text      = "Top searches"
     m.noResultsLabel.visible = false
     m.currentResults         = m.topTenMovies
     m.currentActors          = []
@@ -509,7 +513,7 @@ Sub RenderGrid(actors as Object, movies as Object)
     nM = movies.Count()
     If nA = 0 And nM = 0
         m.noResultsLabel.visible = true
-        m.noResultsLabel.text    = "No results for """ + m.query + """"
+        m.noResultsLabel.text    = "Nothing found for """ + m.query + """. Try a director or actor's name."
         m.resultsGrid.content    = CreateObject("roSGNode", "ContentNode")
         Return
     End If
@@ -687,43 +691,31 @@ Sub OnResultFocused()
                 Exit For
             End If
         End For
+        ' A short line under the results instead of a pop-out card that
+        ' covered them. The full bio is on the actor's page (OK).
         If actor <> Invalid
-            ShowActorPanel(actor)
-            If slug <> "" Then FetchActorProfile(slug)
+            name = ""
+            If actor.DoesExist("name") And actor.name <> Invalid Then name = actor.name
+            m.actorHint.text = name + "  ·  Actor  ·  Press OK for their page and films"
         End If
     Else
-        HideActorPanel()
+        m.actorHint.text = ""
     End If
 End Sub
 
 ' ShowActorPanel and HideActorPanel restored to original simple panel
+' The pop-out actor card was removed (it covered the results). Anything that
+' used to open it now just shows the one-line caption under the results.
 Sub ShowActorPanel(actor as Object)
-    If m.actorPanel = Invalid Then Return
+    If m.actorHint = Invalid Or actor = Invalid Then Return
     name = ""
     If actor.DoesExist("name") And actor.name <> Invalid Then name = actor.name
-    m.actorPanelName.text = name
-    bio = ""
-    If actor.DoesExist("bio") And actor.bio <> Invalid Then bio = actor.bio
-    If bio = "" And actor.DoesExist("biography") And actor.biography <> Invalid Then bio = actor.biography
-    If bio = "" Then bio = "Loading..."
-    m.fullBio   = bio
-    m.bioOffset = 0
-    RenderBioPage()
-    photoUrl = ""
-    If actor.DoesExist("highResPhoto") And actor.highResPhoto <> Invalid And actor.highResPhoto <> ""
-        photoUrl = actor.highResPhoto
-    Else If actor.DoesExist("photo") And actor.photo <> Invalid And actor.photo <> ""
-        photoUrl = actor.photo
-    End If
-    If photoUrl <> "" And (Instr(1, photoUrl, ".s3.") > 0 Or Instr(1, photoUrl, ".amazonaws.com") > 0)
-        photoUrl = "https://cratetv.net/api/proxy-image?url=" + photoUrl
-    End If
-    m.actorPanelPhoto.uri = photoUrl
-    m.actorPanel.visible = true
+    If name <> "" Then m.actorHint.text = name + "  ·  Actor  ·  Press OK for their page and films"
 End Sub
 
 Sub HideActorPanel()
     If m.actorPanel <> Invalid Then m.actorPanel.visible = false
+    If m.actorHint <> Invalid Then m.actorHint.text = ""
 End Sub
 
 Sub AppendChar(c as String)
@@ -747,8 +739,11 @@ End Sub
 Sub UpdateSearchDisplay()
     m.searchInput.text          = m.query
     m.searchPlaceholder.visible = (m.query = "")
-    cursorX                     = 20 + Len(m.query) * 13
-    m.searchCursor.translation  = [cursorX, 15]
+    ' Put the blinking cursor just after the typed text
+    cursorX = 24
+    If m.query <> "" Then cursorX = 24 + m.searchInput.boundingRect().width + 4
+    If cursorX > 570 Then cursorX = 570
+    m.searchCursor.translation  = [cursorX, 17]
 End Sub
 
 ' =============================================================================

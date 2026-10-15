@@ -3,8 +3,19 @@
 '
 ' Global router:
 ' - Login (AccountLinkScene) on first launch
-' - Header nav switches viewport: HOME / THE PUBLIC SQUARE / SEARCH / MY ACCOUNT
-' - Movies play directly on OK (no details screen)
+' - Header nav switches the page: HOME / NOW STREAMING / PUBLIC SQUARE / SEARCH / ACCOUNT
+' - OK on a film opens its Title page (TitleScene); Play there starts the film.
+'   Deep links from Roku search still play straight away (certification 5.1).
+'
+' SCREEN STACK (how Back works)
+'   Tabs replace each other (ClearSceneContainer). The Title page and the video
+'   player are pushed on top of the current tab (m.sceneStack); Back pops them
+'   off again (PopScene) so the viewer returns exactly where they were.
+'
+' HEADER
+'   Hidden on the Title page and during playback. On Home it floats over the
+'   artwork (overArtwork = true); on other tabs it has a solid black bar.
+'   See UpdateHeaderMode().
 ' ##############################################################################
 
 Sub Init()
@@ -26,7 +37,7 @@ Sub Init()
     barInterp = m.loadingBarAnim.CreateChild("FloatFieldInterpolator")
     barInterp.fieldToInterp = "loadingBar.width"
     barInterp.key = [0.0, 0.5, 1.0]
-    barInterp.keyValue = [0, 600, 0]
+    barInterp.keyValue = [0, 300, 0]      ' bar is 300px wide (MainScene.xml)
     m.loadingBarAnim.control = "start"
 
     ' Dot pulse timer
@@ -50,6 +61,9 @@ Sub Init()
     m.headerNav       = m.top.FindNode("headerNav")
     
     m.sceneStack = []
+    m.sendTask = Invalid      ' Send to TV (see the end of this file)
+    m.sendTimer = Invalid
+    m.toastTimer = Invalid
     m.currentSceneNode = Invalid
     m.focusZone = "content"
     m.cachedFeedData = Invalid
@@ -74,6 +88,8 @@ Sub Init()
     
     m.headerNav.ObserveField("selectedIndex", "OnNavSelectionChange")
     m.global.ObserveField("deviceId", "OnDeviceIdReady")
+    ' Whenever the screen changes, pick the header style (see UpdateHeaderMode).
+    m.top.ObserveField("currentScene", "UpdateHeaderMode")
 
     ' Deep link updates can arrive while the app is already running via roInputEvent.
     ' Observe the global deepLinkContentId so we can route immediately for certification 5.1.
@@ -159,6 +175,7 @@ End Sub
 Sub OnAccountLinkComplete()
     Print "CrateTV: Account linked"
     SetDeviceLinked(true)
+    StartSendToTvChecks()
     ShowMainUI()
 End Sub
 
@@ -462,6 +479,9 @@ Sub OnHomeFeedReady()
     If m.partyPollTimer <> Invalid Then m.partyPollTimer.control = "start"
     CheckForLiveWatchParty()           ' immediate first check
 
+    ' "Send to TV" from the website: check every 10 s (linked Rokus only)
+    StartSendToTvChecks()
+
 End Sub
 
 Sub LoadSearchScene()
@@ -522,6 +542,7 @@ Sub LoadAccountScene()
     ClearSceneContainer()
     
     scene = CreateObject("roSGNode", "AccountScene")
+    scene.feedData = m.cachedFeedData       ' watch streak for the Account page
     scene.ObserveField("signOutRequested", "OnSignOutRequested")
     scene.ObserveField("exitRequested", "OnExitFromContent")
     
@@ -558,7 +579,8 @@ Sub OnShowActorDetail()
     ClearSceneContainer()
     actorScene = CreateObject("roSGNode", "ActorDetailScene")
     actorScene.ObserveField("exitToSearch",  "OnExitActorDetail")
-    actorScene.ObserveField("videoContent",  "OnActorMovieSelected")
+    actorScene.ObserveField("playContent",   "OnPlayContent")    ' -> film page
+    actorScene.feedData = m.cachedFeedData                        ' to match films to the catalogue
     m.sceneContainer.AppendChild(actorScene)
     actorScene.visible = true
     actorScene.SetFocus(true)
@@ -575,12 +597,6 @@ Sub OnExitActorDetail()
     LoadSearchScene()
 End Sub
 
-Sub OnActorMovieSelected()
-    If m.actorScene = Invalid Then Return
-    videoContent = m.actorScene.videoContent
-    If videoContent = Invalid Then Return
-    LoadVideoPlayer(videoContent)
-End Sub
 
 Sub OnPlayContent()
     content = Invalid
@@ -588,6 +604,20 @@ Sub OnPlayContent()
         content = m.currentSceneNode.playContent
     End If
     If content = Invalid Then Return
+
+    ' Search and Public Square used to start films immediately; they now open
+    ' the Title page first, like Home. Deep links (directPlay) still play
+    ' straight away, as Roku certification requires.
+    sourceScene = m.top.currentScene
+    directPlay = false
+    If m.currentSceneNode.HasField("directPlay")
+        directPlay = m.currentSceneNode.directPlay
+        m.currentSceneNode.directPlay = false
+    End If
+    If Not directPlay And (sourceScene = "SearchScene" Or sourceScene = "SquareScene" Or sourceScene = "ActorDetailScene")
+        LoadTitleScene(content)
+        Return
+    End If
 
     ' Check if this film has an active watch party
     isWatchParty = false
@@ -608,11 +638,40 @@ Sub OnPlayContent()
     End If
 End Sub
 
+' OK on a film (Home, or a series deep link) -> its Title page.
 Sub OnContentSelected()
     If m.currentSceneNode <> Invalid And m.currentSceneNode.HasField("selectedContent")
         content = m.currentSceneNode.selectedContent
-        If content <> Invalid Then LoadVideoPlayer(content)
+        If content <> Invalid Then LoadTitleScene(content)
     End If
+End Sub
+
+' Opens a film's Title page on top of the current screen (Back returns).
+Sub LoadTitleScene(content as Object)
+    m.headerNav.visible = false
+
+    scene = CreateObject("roSGNode", "TitleScene")
+    scene.ObserveField("playContent", "OnPlayContent")
+    scene.ObserveField("exitRequested", "OnVideoClose")
+
+    If m.currentSceneNode <> Invalid
+        m.currentSceneNode.visible = false
+        m.sceneStack.Push(m.currentSceneNode)
+    End If
+
+    m.sceneContainer.AppendChild(scene)
+    scene.content = content
+    scene.visible = true
+    scene.SetFocus(true)
+    m.currentSceneNode = scene
+    m.focusZone = "content"
+    m.headerNav.isActive = false
+    m.top.currentScene = "TitleScene"
+End Sub
+
+' Header floats over the artwork on Home; solid bar elsewhere.
+Sub UpdateHeaderMode()
+    m.headerNav.overArtwork = (m.top.currentScene = "HomeScene")
 End Sub
 
 Sub OnExitFromContent()
@@ -658,7 +717,11 @@ Sub LoadVideoPlayer(content as Object)
     m.top.currentScene = "CrateVideoPlayer"
 End Sub
 
+' The player sets BOTH playbackComplete and closeRequested when a film ends,
+' so only the first of these may close it. Otherwise Back would be pressed
+' twice and the viewer would skip past the Title page.
 Sub OnPlaybackComplete()
+    If m.top.currentScene <> "CrateVideoPlayer" Then Return
     If m.currentSceneNode <> Invalid And m.currentSceneNode.content <> Invalid
         MarkContentWatched(m.currentSceneNode.content)
     End If
@@ -666,6 +729,7 @@ Sub OnPlaybackComplete()
 End Sub
 
 Sub OnVideoClose()
+    If m.top.currentScene <> "CrateVideoPlayer" And m.top.currentScene <> "TitleScene" Then Return
     PopScene()
 End Sub
 
@@ -686,8 +750,10 @@ Sub PopScene()
         ' Restore the previous scene
         m.currentSceneNode = m.sceneStack.Pop()
         m.currentSceneNode.visible = true
-        m.headerNav.visible = true
         m.top.currentScene = m.currentSceneNode.SubType()
+        ' Header stays hidden when returning to a Title page (e.g. after a film).
+        m.headerNav.visible = (m.top.currentScene <> "TitleScene")
+        UpdateHeaderMode()
         
         ' CRITICAL: Reset focus state and give focus back to restored scene
         m.focusZone = "content"
@@ -766,10 +832,10 @@ Sub ShowDialog(title as String, message as String, buttons as Object)
     dialogBg = CreateObject("roSGNode", "Rectangle")
     dialogBg.width = 800 : dialogBg.height = 400 : dialogBg.color = GetThemeConfig().SURFACE_ELEVATED
     titleLabel = CreateObject("roSGNode", "Label")
-    titleLabel.text = title : titleLabel.font = "font:LargeBoldSystemFont"
+    titleLabel.text = title : titleLabel.font = CrateFont("display", 42)
     titleLabel.color = GetThemeConfig().TEXT_PRIMARY : titleLabel.width = 720 : titleLabel.translation = [40, 40]
     messageLabel = CreateObject("roSGNode", "Label")
-    messageLabel.text = message : messageLabel.font = "font:MediumSystemFont"
+    messageLabel.text = message : messageLabel.font = CrateFont("regular", 28)
     messageLabel.color = GetThemeConfig().TEXT_SECONDARY : messageLabel.width = 720
     messageLabel.wrap = true : messageLabel.translation = [40, 120]
     dialogBg.AppendChild(titleLabel)
@@ -838,3 +904,111 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
     
     Return false
 End Function
+
+' =============================================================================
+' SEND TO TV  (website button -> this Roku)
+' =============================================================================
+' A viewer taps "Send to TV" on a film page on cratetv.net. The website leaves
+' a note for the Roku linked to their account (api/send-to-tv.ts). Every
+' 10 seconds, while the channel is open and linked, we ask for it. When one
+' arrives we leave whatever is on screen (stopping any video), open the
+' film's page, and start playing if the viewer can watch it. A short note
+' "Sent from your phone" appears at the top.
+Sub StartSendToTvChecks()
+    If Not IsDeviceLinked() Then Return
+    If m.sendTimer = Invalid
+        m.sendTimer = m.top.CreateChild("Timer")
+        m.sendTimer.duration = 10
+        m.sendTimer.repeat = true
+        m.sendTimer.ObserveField("fire", "CheckSendToTv")
+    End If
+    m.sendTimer.control = "start"
+End Sub
+
+Sub CheckSendToTv()
+    If m.sendTask <> Invalid Then Return              ' previous check still running
+    deviceId = ""
+    If m.global <> Invalid And m.global.HasField("deviceId") Then deviceId = m.global.deviceId
+    If deviceId = "" Then Return
+    task = CreateObject("roSGNode", "ContentTask")
+    task.taskType = "getJson"
+    task.feedUrl = "https://cratetv.net/api/send-to-tv?deviceId=" + deviceId
+    task.ObserveField("taskStatus", "OnSendToTvChecked")
+    task.control = "run"
+    m.sendTask = task
+End Sub
+
+Sub OnSendToTvChecked()
+    task = m.sendTask
+    If task = Invalid Or (task.taskStatus <> "success" And task.taskStatus <> "error") Then Return
+    m.sendTask = Invalid
+    If task.taskStatus <> "success" Then Return
+    cmd = ParseJson(task.actorResults)
+    If cmd = Invalid Or cmd.movieKey = Invalid Then Return
+
+    film = FindFilmInCache(cmd.movieKey)
+    If film = Invalid
+        ShowToast("That film isn't available on Roku yet")
+        Return
+    End If
+    episode = -1
+    If cmd.episode <> Invalid Then episode = Int(cmd.episode)
+    OpenFilmFromPhone(film, episode)
+End Sub
+
+Function FindFilmInCache(key as String) as Object
+    feed = m.cachedFeedData
+    If feed = Invalid Or key = "" Then Return Invalid
+    For i = 0 To feed.GetChildCount() - 1
+        row = feed.GetChild(i)
+        For j = 0 To row.GetChildCount() - 1
+            item = row.GetChild(j)
+            If item <> Invalid
+                If item.HasField("movieKey") And item.movieKey = key Then Return item
+                If item.id = key Then Return item
+            End If
+        End For
+    End For
+    Return Invalid
+End Function
+
+Sub OpenFilmFromPhone(film as Object, episode as Integer)
+    HideDialog()
+    ' Leave the player / film pages first (PopScene stops any video)
+    While m.sceneStack.Count() > 0 And (m.top.currentScene = "CrateVideoPlayer" Or m.top.currentScene = "TitleScene" Or m.top.currentScene = "WatchPartyScene")
+        PopScene()
+    End While
+    LoadTitleScene(film)
+    ShowToast("Sent from your phone")
+
+    ' Start playing if they can watch it now; otherwise the page shows how to unlock.
+    page = m.currentSceneNode
+    locked = (film.HasField("isUnlocked") And Not film.isUnlocked)
+    party = (film.HasField("isWatchPartyEnabled") And film.isWatchPartyEnabled)
+    If locked Or party Or page = Invalid Then Return
+    If episode >= 0 And page.HasField("playEpisodeIndex")
+        page.playEpisodeIndex = episode
+    Else If Not (film.HasField("episodes") And film.episodes <> Invalid And film.episodes.Count() > 0)
+        page.playContent = film
+    End If
+End Sub
+
+' Small note at the top of the screen for a few seconds
+Sub ShowToast(text as String)
+    toast = m.top.FindNode("toast")
+    If toast = Invalid Then Return
+    m.top.FindNode("toastLabel").text = text
+    toast.visible = true
+    If m.toastTimer = Invalid
+        m.toastTimer = m.top.CreateChild("Timer")
+        m.toastTimer.duration = 4
+        m.toastTimer.ObserveField("fire", "HideToast")
+    End If
+    m.toastTimer.control = "stop"
+    m.toastTimer.control = "start"
+End Sub
+
+Sub HideToast()
+    toast = m.top.FindNode("toast")
+    If toast <> Invalid Then toast.visible = false
+End Sub

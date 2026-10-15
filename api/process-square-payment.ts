@@ -614,8 +614,11 @@ export async function POST(request: Request) {
                 console.warn('[Payment API] Ticket sale logged on retry after initial failure.');
             } catch (secondError) {
                 console.error('[Payment API] Failed to log ticket sale after retry:', secondError);
+                // Everything needed to rebuild the record: the health check
+                // (api/health-check-cron.ts) restores the sale from this.
                 logServerError('api/process-square-payment:ticket-logging', secondError, {
                     itemId, paymentType, amountPaid: ticketRecord.amountPaid, email: email || null,
+                    note, promoCode: promoCode || null, uid: uid || null, partnerId: purchasePartnerId,
                 });
             }
         }

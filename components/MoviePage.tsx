@@ -18,6 +18,7 @@ import SessionKickedScreen from './SessionKickedScreen';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
 import CastButton from './CastButton';
+import SendToTvButton from './SendToTvButton';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
 import { useWatchMilestone } from './WatchStreaks';
 
@@ -58,6 +59,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isBlockPurchaseModalOpen, setIsBlockPurchaseModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  // ?action=support (from the QR code on the Roku's end-of-film card) opens
+  // "Support the filmmaker" straight away, when this film offers it.
+  const supportLinkHandledRef = useRef(false);
+  useEffect(() => {
+      if (supportLinkHandledRef.current || !movie) return;
+      if (new URLSearchParams(window.location.search).get('action') !== 'support') return;
+      supportLinkHandledRef.current = true;
+      // Same rule as the "Support Creator" button: free films with support on.
+      if (movie.isSupportEnabled !== false && !movie.isForSale) setIsSupportModalOpen(true);
+  }, [movie]);
   const [isDeepLinkOpen, setIsDeepLinkOpen] = useState(false);
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   
@@ -971,6 +982,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             )}
                         </>
                     )}
+
+                    {/* Send to TV: open this film on the viewer's linked Roku */}
+                    <SendToTvButton movieKey={movie.key} />
 
                     {/* Synopsis */}
                     <div

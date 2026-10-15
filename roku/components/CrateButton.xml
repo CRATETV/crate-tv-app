@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ============================================================================
+    CRATE TV - Button (used on the Title page)
+    ============================================================================
+    Looks like Netflix's TV buttons:
+      - focused:   solid white, black text
+      - unfocused: see-through white, white text
+    Width grows to fit the text (see CrateButton.brs).
+
+    USE
+      button = CreateObject("roSGNode", "CrateButton")
+      button.text = "▶  Play"
+      button.action = "play"        ' any word; TitleScene reads it on OK
+      button.focused = true         ' TitleScene moves this as the viewer presses Left/Right
+    ============================================================================
+-->
+<component name="CrateButton" extends="Group">
+    <interface>
+        <field id="text"    type="string"  value=""      onChange="OnTextChange" />
+        <field id="action"  type="string"  value="" />
+        <field id="focused" type="boolean" value="false" onChange="OnFocusedChange" />
+        <field id="buttonWidth" type="float" value="0" />   <!-- read-only: final width -->
+    </interface>
+    <script type="text/brightscript" uri="CrateButton.brs" />
+    <children>
+        <Poster id="bg" height="64" uri="pkg:/images/ui/btn_idle.9.png" />
+        <Label id="label" color="#FFFFFF" height="64" vertAlign="center" translation="[30, 0]">
+            <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="26" />
+        </Label>
+    </children>
+</component>

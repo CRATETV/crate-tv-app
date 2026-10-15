@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Watch Party Scene
-    Three states driven by watch_parties/{movieKey} Firestore document:
+    ============================================================================
+    CRATE TV - Watch Party screen (full screen; the top menu is hidden)
+    ============================================================================
+    WatchPartyScene.brs shows ONE of these states, from the party's status:
+      loadingState   checking the party's status
+      waitingState   party scheduled: big countdown, starts by itself
+      paidState      ticketed party this Roku hasn't unlocked: QR to buy
+      endedState     party over: OK watches from the beginning
+      noLiveState    no party live right now: QR to the schedule
+      blockState     festival blocks with several films play on the web
+      qaOverlay      thin bar shown during a live director Q&A
+    Design: the film's artwork, dimmed, behind centred text, the same fonts
+    and colours as the rest of the channel.
 
-    LOADING  -- spinner while fetching party status
-    WAITING  -- party exists but hasn't started yet, shows countdown
-    PAID     -- party is paid and user hasn't unlocked it, shows QR to webapp
-    LIVE     -- party is live, launches video player synced to actualStartTime
-    QA       -- Q&A / Director Stage is active, shows indicator overlay
-    ENDED    -- party has ended, prompt to watch from beginning
+    Screen positions: `canvas` is shifted up 60px because this page sits
+    inside MainScene's sceneContainer.
+    ============================================================================
 -->
 <component name="WatchPartyScene" extends="Group">
     <interface>
@@ -20,185 +28,135 @@
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
-    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
     <script type="text/brightscript" uri="WatchPartyScene.brs" />
 
     <children>
-        <Rectangle id="bg" width="1920" height="1020" color="#050505" />
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle id="bg" width="1920" height="1080" color="#000000" />
+            <!-- The film's artwork, dimmed, with the edges melting into black -->
+            <Poster id="backdropPoster" width="1920" height="1080" loadDisplayMode="scaleToZoom"
+                    loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.28" />
+            <Poster uri="pkg:/images/ui/fade_top.png"    width="1920" height="260" />
+            <Poster uri="pkg:/images/ui/fade_bottom.png" width="1920" height="520" translation="[0, 560]" />
 
-        <!-- Dimmed backdrop poster -->
-        <Poster id="backdropPoster"
-            width="1920" height="1020"
-            loadDisplayMode="scaleToFill"
-            opacity="0.15" />
+            <Poster uri="pkg:/images/crate_logo_small.png" width="150" height="37" translation="[96, 72]" />
 
-        <!-- Red top accent bar -->
-        <Rectangle width="1920" height="4" color="#EF4444" />
+            <!-- Always shown -->
+            <Label id="eyebrow" text="●  WATCH PARTY" color="#EF4444" width="1920" horizAlign="center" translation="[0, 190]">
+                <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+            </Label>
+            <Label id="filmTitle" text="" color="#FFFFFF" width="1600" horizAlign="center" maxLines="1" translation="[160, 232]">
+                <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="64" />
+            </Label>
 
-        <!-- Film title + "WATCH PARTY" eyebrow -- always visible -->
-        <Label id="eyebrow"
-            text="WATCH PARTY"
-            font="font:SmallBoldSystemFont"
-            color="#EF4444"
-            width="1920" horizAlign="center"
-            translation="[0, 80]" />
-        <Label id="filmTitle"
-            text=""
-            font="font:LargeBoldSystemFont"
-            color="#EBEBEB"
-            width="1920" horizAlign="center"
-            maxLines="1"
-            translation="[0, 118]" />
+            <Group id="loadingState" visible="true">
+                <Label text="Checking the watch party..." color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 520]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
+                </Label>
+            </Group>
 
-        <!-- ================================================================ -->
-        <!-- LOADING STATE                                                     -->
-        <!-- ================================================================ -->
-        <Group id="loadingState" visible="true">
-            <Label text="Checking watch party status..."
-                font="font:SmallSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 480]" />
-        </Group>
+            <Group id="waitingState" visible="false">
+                <Label text="STARTS IN" color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 400]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                </Label>
+                <Label id="countdownLabel" text="--:--:--" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 440]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="120" />
+                </Label>
+                <Label text="Stay here: the film starts by itself, in sync with everyone." color="#B3B3B3" width="1920" horizAlign="center" translation="[0, 620]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                </Label>
+                <Label id="waitingParticipants" text="" color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 680]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                </Label>
+            </Group>
 
-        <!-- ================================================================ -->
-        <!-- WAITING STATE -- countdown to start                               -->
-        <!-- ================================================================ -->
-        <Group id="waitingState" visible="false">
-            <Label text="THE PARTY STARTS IN"
-                font="font:SmallBoldSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 380]" />
-            <Label id="countdownLabel"
-                text="--:--:--"
-                font="font:LargeBoldSystemFont" color="#EBEBEB"
-                width="1920" horizAlign="center"
-                translation="[0, 430]" />
-            <Label text="Stay here -- playback will begin automatically"
-                font="font:SmallSystemFont" color="#666666"
-                width="1920" horizAlign="center"
-                translation="[0, 530]" />
+            <Group id="paidState" visible="false">
+                <Label text="This watch party needs a ticket" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 350]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="32" />
+                </Label>
+                <Label text="Buy it on your phone, then come back. This screen opens the party once you have it." color="#B3B3B3" width="1920" horizAlign="center" translation="[0, 400]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="24" />
+                </Label>
+                <Rectangle width="252" height="252" color="#FFFFFF" translation="[834, 460]" />
+                <Poster id="paidQrPoster" width="236" height="236" translation="[842, 468]" loadDisplayMode="scaleToFit" loadingBitmapOpacity="0.0" />
+                <Label id="paidUrlLabel" text="cratetv.net/watchparty" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 736]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
+            </Group>
 
-            <!-- Live dot animation (just a static red dot for now) -->
-            <Rectangle width="12" height="12" color="#EF4444"
-                translation="[946, 600]" />
-            <Label id="waitingParticipants"
-                text=""
-                font="font:SmallSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 620]" />
-        </Group>
+            <Group id="endedState" visible="false">
+                <Label text="This watch party has ended" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 400]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="32" />
+                </Label>
+                <Label text="You can still watch the film from the beginning." color="#B3B3B3" width="1920" horizAlign="center" translation="[0, 452]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                </Label>
+                <Poster id="watchBtn" width="380" height="68" uri="pkg:/images/ui/btn_focus.9.png" translation="[770, 530]" />
+                <Label text="▶  Watch from the beginning" color="#000000" width="380" height="68" horizAlign="center" vertAlign="center" translation="[770, 530]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                </Label>
+            </Group>
 
-        <!-- ================================================================ -->
-        <!-- PAID / NOT UNLOCKED STATE -- QR to webapp                         -->
-        <!-- ================================================================ -->
-        <Group id="paidState" visible="false">
-            <Label text="THIS IS A PREMIUM WATCH PARTY"
-                font="font:SmallBoldSystemFont" color="#EF4444"
-                width="1920" horizAlign="center"
-                translation="[0, 320]" />
-            <Label text="Purchase access at cratetv.net to join"
-                font="font:SmallSystemFont" color="#CCCCCC"
-                width="1920" horizAlign="center"
-                translation="[0, 362]" />
+            <Group id="noLiveState" visible="false">
+                <Label text="No watch party is live right now" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 350]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="32" />
+                </Label>
+                <Label text="Upcoming watch parties are listed on cratetv.net." color="#B3B3B3" width="1920" horizAlign="center" translation="[0, 400]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="24" />
+                </Label>
+                <Rectangle width="252" height="252" color="#FFFFFF" translation="[834, 460]" />
+                <Poster width="236" height="236" translation="[842, 468]" loadDisplayMode="scaleToFit" loadingBitmapOpacity="0.0" uri="https://api.qrserver.com/v1/create-qr-code/?size=236x236&amp;margin=0&amp;data=https%3A%2F%2Fcratetv.net%2Fwatchparty" />
+                <Label text="cratetv.net/watchparty" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 736]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
+            </Group>
 
-            <!-- QR code panel -->
-            <Rectangle width="220" height="220" color="#EBEBEB"
-                translation="[850, 410]" />
-            <Poster id="paidQrPoster"
-                width="210" height="210"
-                loadDisplayMode="scaleToFit"
-                translation="[855, 415]" />
+            <Group id="blockState" visible="false">
+                <Label text="This festival block plays on cratetv.net" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 350]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="32" />
+                </Label>
+                <Label text="Scan to join on your phone, tablet or computer." color="#B3B3B3" width="1920" horizAlign="center" translation="[0, 400]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="24" />
+                </Label>
+                <Rectangle width="252" height="252" color="#FFFFFF" translation="[834, 460]" />
+                <Poster width="236" height="236" translation="[842, 468]" loadDisplayMode="scaleToFit" loadingBitmapOpacity="0.0" uri="https://api.qrserver.com/v1/create-qr-code/?size=236x236&amp;margin=0&amp;data=https%3A%2F%2Fcratetv.net%2Fwatchparty" />
+                <Label text="cratetv.net/watchparty" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 736]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
+            </Group>
 
-            <Label text="Scan to join on your phone or computer"
-                font="font:SmallSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 645]" />
-            <Label id="paidUrlLabel"
-                text="cratetv.net/watchparty"
-                font="font:SmallBoldSystemFont" color="#EF4444"
-                width="1920" horizAlign="center"
-                translation="[0, 675]" />
-        </Group>
+            <!-- Vote from the couch: festival blocks with 2+ films, while Audience
+                 Choice voting is open (or results once it closes). Rows are
+                 built in WatchPartyScene.brs; refreshed every 15 seconds. -->
+            <Group id="voteState" visible="false">
+                <Label id="voteHeading" text="Vote for Audience Choice" color="#FFFFFF" width="1920" horizAlign="center" translation="[0, 330]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="34" />
+                </Label>
+                <Label id="voteSub" text="Ticket holders: scan with your phone and pick your favourite film." color="#B3B3B3" width="1920" horizAlign="center" translation="[0, 384]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="24" />
+                </Label>
+                <Group id="voteQrGroup" translation="[300, 460]">
+                    <Rectangle width="316" height="316" color="#FFFFFF" />
+                    <Poster id="voteQr" width="300" height="300" translation="[8, 8]" loadingBitmapOpacity="0.0" />
+                    <Label id="voteUrl" text="" color="#FFFFFF" width="316" horizAlign="center" translation="[0, 336]">
+                        <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                    </Label>
+                </Group>
+                <Group id="voteRows" translation="[720, 470]" />
+                <Label id="voteTotal" text="" color="#8C8C8C" translation="[720, 800]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="22" />
+                </Label>
+            </Group>
 
-        <!-- ================================================================ -->
-        <!-- ENDED STATE                                                       -->
-        <!-- ================================================================ -->
-        <Group id="endedState" visible="false">
-            <Label text="THIS WATCH PARTY HAS ENDED"
-                font="font:SmallBoldSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 400]" />
-            <Label text="Press OK to watch from the beginning"
-                font="font:SmallSystemFont" color="#CCCCCC"
-                width="1920" horizAlign="center"
-                translation="[0, 450]" />
-
-            <!-- Watch from beginning button -->
-            <Rectangle id="watchBtn" width="360" height="56"
-                color="#EF4444" translation="[780, 530]" />
-            <Label text="WATCH FROM BEGINNING"
-                font="font:SmallBoldSystemFont" color="#EBEBEB"
-                width="360" height="56"
-                horizAlign="center" vertAlign="center"
-                translation="[780, 530]" />
-        </Group>
-
-        <!-- ================================================================ -->
-        <!-- NO LIVE PARTY STATE                                              -->
-        <!-- ================================================================ -->
-        <Group id="noLiveState" visible="false">
-            <Label text="NO WATCH PARTY IS LIVE RIGHT NOW"
-                font="font:SmallBoldSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 400]" />
-            <Label text="Watch parties are announced on cratetv.net"
-                font="font:SmallSystemFont" color="#666666"
-                width="1920" horizAlign="center"
-                translation="[0, 448]" />
-            <!-- QR to website -->
-            <Rectangle width="160" height="160" color="#EBEBEB" translation="[880, 510]" />
-            <Poster
-                width="150" height="150"
-                loadDisplayMode="scaleToFit"
-                translation="[885, 515]"
-                uri="https://api.qrserver.com/v1/create-qr-code/?size=150x150&amp;data=https://cratetv.net/watchparty" />
-            <Label text="cratetv.net/watchparty"
-                font="font:SmallSystemFont" color="#EF4444"
-                width="1920" horizAlign="center"
-                translation="[0, 684]" />
-        </Group>
-
-        <!-- Festival block (multi-film) parties: web/phone only for now -->
-        <Group id="blockState" visible="false">
-            <Label text="THIS FESTIVAL BLOCK PLAYS ON CRATETV.NET"
-                font="font:SmallBoldSystemFont" color="#FFFFFF"
-                width="1920" horizAlign="center"
-                translation="[0, 400]" />
-            <Label text="Scan to join the watch party on your phone, tablet or computer"
-                font="font:SmallSystemFont" color="#A0A0A0"
-                width="1920" horizAlign="center"
-                translation="[0, 448]" />
-            <Rectangle width="160" height="160" color="#EBEBEB" translation="[880, 510]" />
-            <Poster
-                width="150" height="150"
-                loadDisplayMode="scaleToFit"
-                translation="[885, 515]"
-                uri="https://api.qrserver.com/v1/create-qr-code/?size=150x150&amp;data=https://cratetv.net/watchparty" />
-            <Label text="cratetv.net/watchparty"
-                font="font:SmallSystemFont" color="#EF4444"
-                width="1920" horizAlign="center"
-                translation="[0, 684]" />
-        </Group>
-
-        <!-- ================================================================ -->
-        <!-- QA OVERLAY -- shown on top of player when isQALive = true         -->
-        <!-- ================================================================ -->
-        <Group id="qaOverlay" visible="false">
-            <Rectangle width="1920" height="60" color="#1A1A1A" opacity="0.95" />
-            <Rectangle width="12" height="12" color="#EF4444" translation="[40, 24]" />
-            <Label text="DIRECTOR STAGE -- Q&amp;A IN PROGRESS"
-                font="font:SmallBoldSystemFont" color="#EBEBEB"
-                translation="[64, 20]" />
+            <!-- Shown during a live director Q&A -->
+            <Group id="qaOverlay" visible="false">
+                <Poster uri="pkg:/images/ui/fade_player_top.png" width="1920" height="160" />
+                <Poster width="420" height="48" uri="pkg:/images/ui/pill_red.9.png" translation="[96, 60]" />
+                <Label text="●  LIVE  ·  Director Q&amp;A" color="#FFFFFF" width="420" height="48" horizAlign="center" vertAlign="center" translation="[96, 60]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                </Label>
+            </Group>
         </Group>
     </children>
 </component>

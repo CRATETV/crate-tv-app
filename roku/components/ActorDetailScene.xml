@@ -1,96 +1,86 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="ActorDetailScene" extends="Scene">
-    <script type="text/brightscript" uri="ActorDetailScene.brs" />
+<!--
+    ============================================================================
+    CRATE TV - Actor page (opened from Search by choosing an actor)
+    ============================================================================
+    Photo, name and bio at the top; a row of their films on Crate below
+    (the same poster tiles as Home). OK on a film opens its film page, so
+    locked films stay locked. Back returns to Search.
+
+    HOW IT LOADS (ActorDetailScene.brs)
+      MainScene sets `feedData` (the catalogue) and then `actorSlug`.
+      A background task downloads the profile from
+      cratetv.net/api/get-public-actor-profile, and the films are matched
+      to the catalogue so they carry the right price/unlock state.
+
+    HISTORY: before Oct 2026 this page was built as a separate "Scene" that
+    downloaded on the screen-drawing thread, which Roku doesn't allow
+    (it could freeze or crash), and it played films directly.
+
+    Screen positions: `canvas` is shifted up 60px because this page sits
+    inside MainScene's sceneContainer, under the top menu.
+    ============================================================================
+-->
+<component name="ActorDetailScene" extends="Group">
     <interface>
-        <field id="actorSlug" type="string" alwaysNotify="true" />
-        <field id="videoContent" type="node" alwaysNotify="true" />
+        <field id="feedData"     type="node" />
+        <field id="actorSlug"    type="string"  alwaysNotify="true" onChange="OnActorSlugSet" />
+        <field id="playContent"  type="node"    alwaysNotify="true" />
         <field id="exitToSearch" type="boolean" alwaysNotify="true" />
     </interface>
-    
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="ActorDetailScene.brs" />
+
     <children>
-        <!-- Background -->
-        <Rectangle id="background" width="1920" height="1080" color="0x0F0F0FFF" />
-        
-        <!-- Header -->
-        <Header id="header" translation="[0,0]" />
-        
-        <!-- Loading Spinner -->
-        <BusySpinner id="loadingSpinner" translation="[850, 450]" visible="false" />
-        
-        <!-- Content Container -->
-        <Group id="contentGroup" translation="[0, 150]" visible="false">
-            
-            <!-- Actor Photo -->
-            <Poster
-                id="actorPhoto"
-                translation="[120, 50]"
-                width="400"
-                height="600"
-                loadDisplayMode="scaleToFit"
-            />
-            
-            <!-- Actor Info -->
-            <Group id="infoGroup" translation="[560, 50]">
-                <!-- Actor Name -->
-                <Label
-                    id="actorName"
-                    translation="[0, 0]"
-                    width="1240"
-                    height="80"
-                    font="font:LargeBoldSystemFont"
-                    color="0xFFFFFFFF"
-                    horizAlign="left"
-                    vertAlign="top"
-                />
-                
-                <!-- Bio -->
-                <Label
-                    id="actorBio"
-                    translation="[0, 100]"
-                    width="1240"
-                    height="400"
-                    font="font:MediumSystemFont"
-                    color="0xCCCCCCFF"
-                    horizAlign="left"
-                    vertAlign="top"
-                    wrap="true"
-                />
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle width="1920" height="1080" color="#000000" />
+
+            <Group id="contentGroup" visible="false">
+                <!-- Photo -->
+                <Poster width="300" height="420" uri="pkg:/images/ui/card.9.png" translation="[96, 130]" />
+                <Poster id="actorPhoto" width="300" height="420" translation="[96, 130]"
+                        loadDisplayMode="scaleToZoom" loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" />
+
+                <!-- Name + bio -->
+                <Group translation="[444, 140]">
+                    <Label text="ACTOR" color="#EF4444">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                    </Label>
+                    <Label id="actorName" text="" color="#FFFFFF" width="1380" maxLines="1" translation="[0, 36]">
+                        <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="64" />
+                    </Label>
+                    <Label id="actorBio" text="" color="#D2D2D2" width="1280" wrap="true" maxLines="7" lineSpacing="5" translation="[0, 130]">
+                        <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                    </Label>
+                </Group>
+
+                <!-- Their films -->
+                <RowList
+                    id="filmsRow"
+                    translation="[0, 600]"
+                    itemSize="[1920, 400]"
+                    numRows="1"
+                    showRowLabel="[true]"
+                    showRowCounter="[false]"
+                    rowLabelOffset="[[96, 12]]"
+                    rowLabelColor="#E5E5E5"
+                    rowItemSize="[[214, 321]]"
+                    rowItemSpacing="[[18, 0]]"
+                    focusXOffset="[96]"
+                    drawFocusFeedback="false"
+                    rowFocusAnimationStyle="fixedFocusWrap">
+                    <Font role="rowLabelFont" uri="pkg:/fonts/Inter-SemiBold.ttf" size="30" />
+                </RowList>
+                <Label id="noFilmsLabel" text="No films on Crate TV yet." color="#8C8C8C" translation="[96, 660]" visible="false">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
+                </Label>
             </Group>
-            
-            <!-- Filmography Section -->
-            <Label
-                id="filmographyLabel"
-                translation="[120, 700]"
-                text="Filmography"
-                font="font:MediumBoldSystemFont"
-                color="0xFFFFFFFF"
-            />
-            
-            <!-- Movies Grid -->
-            <PosterGrid
-                id="moviesGrid"
-                translation="[120, 760]"
-                itemSize="[240, 360]"
-                basePosterSize="[240, 360]"
-                itemSpacing="[20, 20]"
-                numColumns="6"
-                numRows="1"
-                posterDisplayMode="scaleToFit"
-            >
-            </PosterGrid>
+
+            <!-- Loading / error -->
+            <Label id="statusLabel" text="Loading..." color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 520]">
+                <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
+            </Label>
         </Group>
-        
-        <!-- Error Message -->
-        <Label
-            id="errorLabel"
-            translation="[0, 400]"
-            width="1920"
-            height="100"
-            font="font:LargeBoldSystemFont"
-            color="0xFF0000FF"
-            horizAlign="center"
-            vertAlign="center"
-            visible="false"
-        />
     </children>
 </component>

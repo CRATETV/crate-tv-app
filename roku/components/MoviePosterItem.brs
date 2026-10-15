@@ -1,284 +1,192 @@
 ' ##############################################################################
-' CRATE TV - Movie Poster Item (V4 Studio)
+' CRATE TV - Poster tile logic (see MoviePosterItem.xml for what it looks like)
+' ##############################################################################
 '
-' CRATE STANDARD: Poster [240, 360] / Focus Ring [248, 368] @ [-4, -4]
-' CLEAN UI: Zero text overlays. No "Press OK" labels. Just the poster art.
-' FOCUS: 10px Crate Red border with 4px offset + 1.1x scale transformation.
-' SMART SIZING: Dynamically adjusts all elements based on width/height fields.
-' Used as RowList itemComponentName for all rows.
+' HOW A ROWLIST TILE WORKS (short version)
+'   Roku re-uses a handful of tiles while the viewer scrolls. Each time a tile
+'   is given a different film, `itemContent` changes and OnContentChange()
+'   redraws it. `focusPercent` goes from 0 to 1 as focus arrives on the tile,
+'   which drives the zoom + focus ring in OnFocusChange().
+'
+' FIELDS READ FROM THE FILM (set in ContentTask.brs -> CreateMovieNode)
+'   posterUrl       poster image
+'   title           shown as a fallback if the poster can't load
+'   isUnlocked      false = show the lock pill
+'   salePrice       price shown in the lock pill (e.g. 4.99)
+'   watchProgress / duration   seconds watched / total, for the progress bar
+'   rankNumber      1-10 on the Top 10 row (set by HomeScene.brs), else 0
 ' ##############################################################################
 
 Sub Init()
-    m.posterImage = m.top.FindNode("posterImage")
-    m.lockOverlay = m.top.FindNode("lockOverlay")
+    m.FOCUS_SCALE = 1.06        ' how much a focused poster grows (1.0 = no zoom)
+    m.POSTER_W = 214            ' poster size inside the tile (Theme.brs tileWidth/tileHeight)
+    m.POSTER_H = 321
+
+    m.rankLabel     = m.top.FindNode("rankLabel")
+    ' Two sizes for the Top 10 number: "10" is two digits, so it's drawn a bit
+    ' smaller and tucked further behind the poster to fit (it used to be cut off).
+    m.rankFontOneDigit = CreateObject("roSGNode", "Font")
+    m.rankFontOneDigit.uri = "pkg:/fonts/InterDisplay-Black.ttf"
+    m.rankFontOneDigit.size = 250
+    m.rankFontTwoDigits = CreateObject("roSGNode", "Font")
+    m.rankFontTwoDigits.uri = "pkg:/fonts/InterDisplay-Black.ttf"
+    m.rankFontTwoDigits.size = 215
+    m.posterGroup   = m.top.FindNode("posterGroup")
+    m.posterBg      = m.top.FindNode("posterBg")
+    m.fallbackTitle = m.top.FindNode("fallbackTitle")
+    m.posterImage   = m.top.FindNode("posterImage")
+    m.lockPill      = m.top.FindNode("lockPill")
+    m.lockPillBg    = m.top.FindNode("lockPillBg")
+    m.lockPrice     = m.top.FindNode("lockPrice")
     m.progressGroup = m.top.FindNode("progressGroup")
-    m.progressFill = m.top.FindNode("progressFill")
-    m.focusBorder = m.top.FindNode("focusBorder")
-    m.posterContainer = m.top.FindNode("posterContainer")
-    m.shadow = m.top.FindNode("shadow")
-    m.posterBg = m.top.FindNode("posterBg")
-    m.shimmerBase = m.top.FindNode("shimmerBase")
-    m.shimmerBar  = m.top.FindNode("shimmerBar")
-    m.cornerMask = m.top.FindNode("cornerMask")
-    m.rankBadge = m.top.FindNode("rankBadge")
-    m.rankBadgeBg = m.top.FindNode("rankBadgeBg")
-    m.rankBadgeLabel = m.top.FindNode("rankBadgeLabel")
-    
-    ' focusBorder is now a Poster PNG -- no child rectangles needed
-    m.focusBorderTop    = Invalid
-    m.focusBorderBottom = Invalid
-    m.focusBorderLeft   = Invalid
-    m.focusBorderRight  = Invalid
-    
-    ' Observe width/height changes to update sizes
-    m.top.ObserveField("width", "UpdateSizes")
-    m.top.ObserveField("height", "UpdateSizes")
-    
-    ' Initialize sizes
-    UpdateSizes()
-    
-    ' Start poster invisible — shimmer shows while loading
-    m.posterImage.opacity = 0.0
+    m.progressFill  = m.top.FindNode("progressFill")
+    m.focusRing     = m.top.FindNode("focusRing")
 
-    ' Shimmer pulse animation
-    m.shimmerAnim = m.top.CreateChild("Animation")
-    m.shimmerAnim.duration = 1.6
-    m.shimmerAnim.repeat = true
-    m.shimmerAnim.easeFunction = "inOutSine"
-    shimInterp = m.shimmerAnim.CreateChild("FloatFieldInterpolator")
-    shimInterp.fieldToInterp = "shimmerBar.opacity"
-    shimInterp.key = [0.0, 0.5, 1.0]
-    shimInterp.keyValue = [0.0, 1.0, 0.0]
-    m.shimmerAnim.control = "start"
-
-    ' Observe poster load status for fade-in
+    ' Fade the poster in once it has downloaded, so tiles never "pop".
     m.posterImage.ObserveField("loadStatus", "OnPosterLoadStatus")
-    
-    ' Fade-in animation
     m.fadeAnim = m.top.CreateChild("Animation")
-    m.fadeAnim.duration = 0.15
-    m.fadeAnim.easeFunction = "outCubic"
-    m.fadeInterp = m.fadeAnim.CreateChild("FloatFieldInterpolator")
-    m.fadeInterp.fieldToInterp = "posterImage.opacity"
-    m.fadeInterp.key = [0.0, 1.0]
-    m.fadeInterp.keyValue = [0.0, 1.0]
-    
-    ' Focus scale animation
-    m.scaleAnim = m.top.CreateChild("Animation")
-    m.scaleAnim.duration = 0.1
-    m.scaleAnim.easeFunction = "outCubic"
-    m.scaleInterp = m.scaleAnim.CreateChild("Vector2DFieldInterpolator")
-    m.scaleInterp.fieldToInterp = "posterContainer.scale"
-    m.scaleInterp.key = [0.0, 1.0]
+    m.fadeAnim.duration = 0.2
+    m.fadeAnim.easeFunction = "outQuad"
+    fade = m.fadeAnim.CreateChild("FloatFieldInterpolator")
+    fade.fieldToInterp = "posterImage.opacity"
+    fade.key = [0.0, 1.0]
+    fade.keyValue = [0.0, 1.0]
+
+    ' Focus zoom
+    m.zoomAnim = m.top.CreateChild("Animation")
+    m.zoomAnim.duration = 0.14
+    m.zoomAnim.easeFunction = "outQuad"
+    m.zoomInterp = m.zoomAnim.CreateChild("Vector2DFieldInterpolator")
+    m.zoomInterp.fieldToInterp = "posterGroup.scale"
+    m.zoomInterp.key = [0.0, 1.0]
+
+    m.rankNumber = 0
+    Layout()
 End Sub
 
-' =============================================================================
-' DYNAMIC SIZING -- Update all elements based on width/height
-' =============================================================================
-Sub UpdateSizes()
+' Positions the poster inside the tile. Normal rows: the tile IS the poster.
+' Top 10 row: the tile is wider; the poster sits on the right and the big
+' rank number fills the space on the left.
+Sub Layout()
     w = m.top.width
     h = m.top.height
-    borderThickness = 10  ' Focus border thickness
-    borderOffset = 4      ' 4px offset for perfect fit (240+8=248, 360+8=368)
-    
-    ' Update poster and background
-    If m.posterImage <> Invalid
-        m.posterImage.width = w
-        m.posterImage.height = h
-        m.posterImage.loadWidth = w
-        m.posterImage.loadHeight = h
-        m.posterImage.loadDisplayMode = "limitSize"
-    End If
-    
-    If m.posterBg <> Invalid
-        m.posterBg.width = w
-        m.posterBg.height = h
-    End If
-    
-    ' Update shadow (slightly bigger)
-    If m.shadow <> Invalid
-        m.shadow.width = w + 4
-        m.shadow.height = h + 4
-    End If
-    
-    ' Update lock overlay
-    lockOverlayRect = m.top.FindNode("lockOverlayRect")
-    If lockOverlayRect <> Invalid
-        lockOverlayRect.width = w
-        lockOverlayRect.height = h
-    End If
-    
-    lockOverlayLabel = m.top.FindNode("lockOverlayLabel")
-    If lockOverlayLabel <> Invalid
-        lockOverlayLabel.width = w
-        lockOverlayLabel.height = h
-    End If
-    
-    ' Update progress bar
-    If m.progressGroup <> Invalid
-        m.progressGroup.translation = [0, h - 8]
-    End If
-    
-    progressBg = m.top.FindNode("progressBg")
-    If progressBg <> Invalid
-        progressBg.width = w
-    End If
-    
-    ' Update focus border (Poster PNG) -- scale proportionally
-    borderWidth = w + (borderOffset * 2)
-    borderHeight = h + (borderOffset * 2)
-    
-    If m.focusBorder <> Invalid
-        m.focusBorder.width = borderWidth
-        m.focusBorder.height = borderHeight
-        m.focusBorder.translation = [-borderOffset, -borderOffset]
-    End If
-    
-    ' Update corner mask to match poster size
-    If m.cornerMask <> Invalid
-        m.cornerMask.width = w
-        m.cornerMask.height = h
-    End If
-    
-    ' Old border child nodes no longer used (now PNG-based)
-    If m.focusBorderTop    <> Invalid Then m.focusBorderTop.width    = borderWidth
-    If m.focusBorderBottom <> Invalid
-        m.focusBorderBottom.width = borderWidth
-        m.focusBorderBottom.translation = [0, borderHeight - borderThickness]
-    End If
-    If m.focusBorderLeft  <> Invalid Then m.focusBorderLeft.height  = borderHeight
-    If m.focusBorderRight <> Invalid
-        m.focusBorderRight.height = borderHeight
-        m.focusBorderRight.translation = [borderWidth - borderThickness, 0]
-    End If
+    posterX = 0
+    If m.rankNumber > 0 Then posterX = w - m.POSTER_W
+    If posterX < 0 Then posterX = 0
+
+    m.posterGroup.translation = [posterX, 0]
+    ' Zoom from the middle of the poster, not its top-left corner.
+    m.posterGroup.scaleRotateCenter = [m.POSTER_W / 2, m.POSTER_H / 2]
+
+    m.progressGroup.translation = [0, m.POSTER_H - 5]
+
+    ' Rank number: right-aligned so it tucks in just behind the poster's left edge.
+    ' "10" tucks in further (60 px) so both digits fit in the space.
+    tuck = 30
+    If m.rankNumber >= 10 Then tuck = 60
+    m.rankLabel.width = posterX + tuck
+    m.rankLabel.height = h + 40
+    m.rankLabel.translation = [0, -40]
 End Sub
 
-' =============================================================================
-' POSTER LOAD STATUS -- fade in when ready
-' =============================================================================
+Sub OnContentChange()
+    film = m.top.itemContent
+    If film = Invalid Then Return
+
+    ' --- Poster ---
+    url = Field(film, "posterUrl")
+    If url = "" Then url = Field(film, "HDPosterUrl")
+    m.fallbackTitle.text = Field(film, "title")
+    m.fallbackTitle.visible = true
+    m.posterImage.opacity = 0.0
+    m.fadeAnim.control = "stop"
+    m.posterImage.uri = url        ' "" = keep the title fallback visible
+
+    ' --- Lock pill (locked films only) ---
+    unlocked = true
+    If film.HasField("isUnlocked") Then unlocked = film.isUnlocked
+    If unlocked
+        m.lockPill.visible = false
+    Else
+        price = ""
+        If film.HasField("salePrice") And film.salePrice > 0
+            price = "$" + FormatPrice(film.salePrice)
+        End If
+        m.lockPrice.text = price
+        pillW = 44                                  ' lock icon only
+        If price <> "" Then pillW = 38 + (Len(price) * 12) + 14
+        m.lockPillBg.width = pillW
+        m.lockPill.translation = [m.POSTER_W - pillW - 10, 10]
+        m.lockPill.visible = true
+    End If
+
+    ' --- Progress bar ---
+    watched = 0 : total = 0
+    If film.HasField("watchProgress") Then watched = film.watchProgress
+    If film.HasField("duration") Then total = film.duration
+    If watched > 0 And total > 0
+        m.progressFill.width = Int(m.POSTER_W * (watched / total))
+        m.progressGroup.visible = true
+    Else
+        m.progressGroup.visible = false
+    End If
+
+    ' --- Top 10 number ---
+    m.rankNumber = 0
+    If film.HasField("rankNumber") Then m.rankNumber = film.rankNumber
+    If m.rankNumber > 0
+        m.rankLabel.text = Str(m.rankNumber).Trim()
+        If m.rankNumber >= 10
+            m.rankLabel.font = m.rankFontTwoDigits
+        Else
+            m.rankLabel.font = m.rankFontOneDigit
+        End If
+        m.rankLabel.visible = true
+    Else
+        m.rankLabel.visible = false
+    End If
+    Layout()
+End Sub
+
 Sub OnPosterLoadStatus()
     status = m.posterImage.loadStatus
     If status = "ready"
-        m.shimmerAnim.control = "stop"
-        If m.shimmerBase <> Invalid Then m.shimmerBase.visible = false
-        If m.shimmerBar  <> Invalid Then m.shimmerBar.opacity  = 0.0
+        m.fallbackTitle.visible = false
         m.fadeAnim.control = "start"
     Else If status = "failed"
-        m.shimmerAnim.control = "stop"
-        If m.shimmerBase <> Invalid Then m.shimmerBase.visible = false
-        If m.shimmerBar  <> Invalid Then m.shimmerBar.opacity  = 0.0
-        m.posterImage.uri = "pkg:/images/poster_placeholder.png"
-        m.posterImage.opacity = 1.0
+        ' Leave the dark tile + film title showing; nothing else to do.
+        m.posterImage.opacity = 0.0
+        m.fallbackTitle.visible = true
     End If
 End Sub
 
-' =============================================================================
-' CONTENT BINDING -- RowList calls this when item data changes
-' =============================================================================
-Sub OnContentChange()
-    content = m.top.itemContent
-    If content = Invalid
-        ClearPoster()
-        Return
-    End If
-    
-    ' Reset poster, restart shimmer for new image
-    m.posterImage.opacity = 0.0
-    m.fadeAnim.control = "stop"
-    If m.shimmerBase <> Invalid Then m.shimmerBase.visible = true
-    If m.shimmerBar  <> Invalid Then m.shimmerBar.opacity  = 0.0
-    If m.shimmerAnim <> Invalid Then m.shimmerAnim.control = "start"
-    
-    ' --- POSTER IMAGE — try every known field name ---
-    posterUrl = ""
-    If posterUrl = "" And content.HasField("posterUrl")     And content.posterUrl     <> Invalid And content.posterUrl     <> "" Then posterUrl = content.posterUrl
-    If posterUrl = "" And content.HasField("HDPosterUrl")   And content.HDPosterUrl   <> Invalid And content.HDPosterUrl   <> "" Then posterUrl = content.HDPosterUrl
-    If posterUrl = "" And content.HasField("hdPosterUrl")   And content.hdPosterUrl   <> Invalid And content.hdPosterUrl   <> "" Then posterUrl = content.hdPosterUrl
-    If posterUrl = "" And content.HasField("SDPosterUrl")   And content.SDPosterUrl   <> Invalid And content.SDPosterUrl   <> "" Then posterUrl = content.SDPosterUrl
-    If posterUrl = "" And content.HasField("tvPoster")      And content.tvPoster      <> Invalid And content.tvPoster      <> "" Then posterUrl = content.tvPoster
-    If posterUrl = "" And content.HasField("poster")        And content.poster        <> Invalid And content.poster        <> "" Then posterUrl = content.poster
-    If posterUrl = "" And content.HasField("thumbnailUrl")  And content.thumbnailUrl  <> Invalid And content.thumbnailUrl  <> "" Then posterUrl = content.thumbnailUrl
-    If posterUrl = "" And content.HasField("thumbnail")     And content.thumbnail     <> Invalid And content.thumbnail     <> "" Then posterUrl = content.thumbnail
-
-    If posterUrl <> ""
-        m.posterImage.uri = posterUrl
-        ' poster will fade in via OnPosterLoadStatus when ready
-    Else
-        m.shimmerAnim.control = "stop"
-        If m.shimmerBase <> Invalid Then m.shimmerBase.visible = false
-        m.posterImage.uri = "pkg:/images/poster_placeholder.png"
-        m.posterImage.opacity = 1.0
-    End If
-    
-    ' --- LOCK STATUS ---
-    isUnlocked = true
-    If content.HasField("isUnlocked") Then isUnlocked = content.isUnlocked
-    If Not isUnlocked And content.HasField("isFree") Then isUnlocked = content.isFree
-    If m.lockOverlay <> Invalid Then m.lockOverlay.visible = Not isUnlocked
-    
-    ' --- WATCH PROGRESS ---
-    If m.progressGroup <> Invalid
-        progress = 0
-        duration = 0
-        If content.HasField("watchProgress") Then progress = content.watchProgress
-        If content.HasField("duration") Then duration = content.duration
-        If progress > 0 And duration > 0
-            m.progressFill.width = Int(m.top.width * (progress / duration))
-            m.progressGroup.visible = true
-        Else
-            m.progressGroup.visible = false
-        End If
-    End If
-    
-    ' --- RANK BADGE (Top Ten rows) ---
-    If m.rankBadge <> Invalid
-        rankNum = 0
-        If content.HasField("rankNumber") Then rankNum = content.rankNumber
-        If rankNum > 0
-            m.rankBadgeLabel.text = Str(rankNum).Trim()
-            badgeY = m.top.height - 56
-            If m.rankBadgeBg <> Invalid Then m.rankBadgeBg.translation = [0, badgeY]
-            If m.rankBadgeLabel <> Invalid Then m.rankBadgeLabel.translation = [0, badgeY]
-            m.rankBadge.visible = true
-        Else
-            m.rankBadge.visible = false
-        End If
-    End If
-End Sub
-
-Sub ClearPoster()
-    m.posterImage.uri = ""
-    If m.lockOverlay <> Invalid Then m.lockOverlay.visible = false
-    If m.progressGroup <> Invalid Then m.progressGroup.visible = false
-End Sub
-
-' =============================================================================
-' FOCUS -- Red border + scale (scale only for large posters to prevent overlap)
-' =============================================================================
 Sub OnFocusChange()
-    focusPercent = m.top.focusPercent
-
-    ' Only scale up if poster is large enough (>=360px tall).
-    ' Smaller posters (Public Square uses 300px) skip scale to prevent
-    ' overlapping into adjacent rows.
-    allowScale = (m.top.height >= 360)
-
-    If focusPercent > 0.5
-        ' FOCUSED: show red border, deepen shadow
-        targetScale = [1.1, 1.1]
-        If Not allowScale Then targetScale = [1.0, 1.0]
-        If m.focusBorder <> Invalid Then m.focusBorder.visible = true
-        If m.shadow <> Invalid Then m.shadow.opacity = 0.7
-    Else
-        ' UNFOCUSED: normal scale, hide border
-        targetScale = [1.0, 1.0]
-        If m.focusBorder <> Invalid Then m.focusBorder.visible = false
-        If m.shadow <> Invalid Then m.shadow.opacity = 0.4
-    End If
-
-    ' Animate the scale transition
-    If m.posterContainer <> Invalid
-        m.scaleInterp.keyValue = [m.posterContainer.scale, targetScale]
-        m.scaleAnim.control = "start"
-    End If
+    focused = (m.top.focusPercent > 0.5)
+    m.focusRing.visible = focused
+    target = [1.0, 1.0]
+    If focused Then target = [m.FOCUS_SCALE, m.FOCUS_SCALE]
+    m.zoomInterp.keyValue = [m.posterGroup.scale, target]
+    m.zoomAnim.control = "start"
 End Sub
+
+' ---- small helpers -----------------------------------------------------------
+
+' Reads a text field from a film safely ("" if it's missing).
+Function Field(node as Object, name as String) as String
+    If node = Invalid Or Not node.HasField(name) Then Return ""
+    value = node[name]
+    If value = Invalid Then Return ""
+    If Type(value) = "roString" Or Type(value) = "String" Then Return value
+    Return ""
+End Function
+
+' 4.5 -> "4.50", 5 -> "5", 4.99 -> "4.99"
+Function FormatPrice(amount as Float) as String
+    cents = Int(amount * 100 + 0.5)
+    dollars = Int(cents / 100)
+    rest = cents - dollars * 100
+    If rest = 0 Then Return Str(dollars).Trim()
+    restStr = Str(rest).Trim()
+    If rest < 10 Then restStr = "0" + restStr
+    Return Str(dollars).Trim() + "." + restStr
+End Function

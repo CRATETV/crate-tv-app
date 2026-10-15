@@ -5,6 +5,7 @@ import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { signStreamUrl } from './_lib/signStreamUrl.js';
+import { resolveMovieAccess } from './_lib/entitlements.js';
 
 function toDate(val: any): Date | null {
     if (!val) return null;
@@ -79,46 +80,24 @@ export async function GET(request: Request) {
 
     let isUnlocked = !movie.isForSale && !movie.isWatchPartyPaid;
 
+    // Access uses the website's own rules (api/_lib/entitlements.ts). This used
+    // to treat any festival pass as unlocking every paid film. (Oct 2026)
     if (!isUnlocked && deviceId) {
         const db = getAdminDb();
         if (db) {
-            const linkDoc = await db.collection('roku_links').doc(deviceId).get();
-            if (linkDoc.exists) {
-                const userId = linkDoc.data()?.userId;
-                const userDoc = await db.collection('users').doc(userId).get();
-                const userData = userDoc.data();
-                
-                if (userData) {
-                    // Check rentals
-                    if (userData.rentals && userData.rentals[movieId]) {
-                        const exp = toDate(userData.rentals[movieId]);
-                        if (exp && exp > new Date()) isUnlocked = true;
-                    }
-                    
-                    // Check passes
-                    if (!isUnlocked) {
-                        if (userData.hasJuryPass || userData.hasFestivalAllAccess || userData.hasCrateFestPass) {
-                            isUnlocked = true;
-                        } else if (userData.festivalPassExpiry) {
-                            const exp = toDate(userData.festivalPassExpiry);
-                            if (exp && exp > new Date()) isUnlocked = true;
-                        } else if (userData.crateFestPassExpiry) {
-                            const exp = toDate(userData.crateFestPassExpiry);
-                            if (exp && exp > new Date()) isUnlocked = true;
-                        }
-                    }
-                }
-            }
+            const access = await resolveMovieAccess(db, { deviceId, movieKey: movieId, mode: 'ondemand' });
+            isUnlocked = access.granted;
         }
     }
-    
+
     const rokuMovie = await formatMovieForRoku(movie, categoriesData, isUnlocked);
 
     return new Response(JSON.stringify(rokuMovie, null, 2), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=3600, stale-while-revalidate',
+        // Answers depend on who is asking (deviceId), so never cache them.
+        'Cache-Control': deviceId ? 'private, no-store' : 's-maxage=3600, stale-while-revalidate',
       },
     });
   } catch (error) {

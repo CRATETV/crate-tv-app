@@ -125,6 +125,7 @@ export interface RokuMovie extends Movie {
 }
 
 export interface RokuFeed {
+  viewer?: { streakMonths: number; bestMonths: number; badges: string[] };
   version: number;
   timestamp: string;
   announcement?: string;

@@ -1,89 +1,107 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Live Chat Overlay
-    Read-only chat panel shown during watch party playback.
-    Sits on the right side of the screen, semi-transparent.
-    Shows the last 6 messages. New messages push old ones up.
-    Roku users watch -- mobile users type.
+    ============================================================================
+    CRATE TV - Live chat panel (watch parties only)
+    ============================================================================
+    Read-only: Roku viewers read along; people type on cratetv.net from their
+    phone and it appears here. Shows the last 5 messages, refreshed every
+    5 seconds (ChatOverlay.brs).
+
+    HIDE / SHOW: press Down (or the * button) during a watch party. The choice
+    is remembered for the next party (saved on this Roku). A short note says
+    how to bring it back. CrateVideoPlayer.brs sends the key here (toggle).
+
+    LIVE REACTIONS: when people tap 😂 😲 ❤️ 👏 😢 on cratetv.net, each one
+    floats up the right side of the TV for a few seconds (images in
+    images/reactions/). They show even when the chat panel is hidden.
+
+    LAYOUT: a dark card on the right, above the progress bar. Names in grey,
+    the director's name in gold with a check mark. Positions are screen
+    positions (the player's `screen` group already lines up with the TV).
+    ============================================================================
 -->
 <component name="ChatOverlay" extends="Group">
     <interface>
         <field id="movieKey"  type="string"  value=""    onChange="OnMovieKeyChange" />
         <field id="authToken" type="string"  value="" />
+        <!-- set by the player: true while a watch party is playing -->
         <field id="isVisible" type="boolean" value="false" onChange="OnVisibleChange" />
+        <!-- the player sets this (any value) to hide/show the chat -->
+        <field id="toggle"    type="boolean" alwaysNotify="true" onChange="OnToggle" />
     </interface>
 
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
     <script type="text/brightscript" uri="ChatOverlay.brs" />
 
     <children>
-        <!--
-            Panel sits in the bottom-right of the screen.
-            Safe area: x=1340, y=680, width=520, height=300
-            Semi-transparent dark background so film is still visible.
-        -->
-        <Group id="panel" translation="[1340, 680]" visible="false">
+        <Timer id="toastTimer" duration="3.5" repeat="false" />
+        <Timer id="reactionTick" duration="0.3" repeat="true" />
 
-            <!-- Panel background -- dark, semi-transparent -->
-            <Rectangle id="panelBg"
-                width="540" height="310"
-                color="#0A0A0A" opacity="0.82" />
+        <!-- Live reactions float up here (pool of images, ChatOverlay.brs) -->
+        <Group id="reactionLayer" />
 
-            <!-- Top accent line -->
-            <Rectangle width="540" height="3" color="#EF4444" />
+        <Group id="panel" translation="[1364, 460]" visible="false">
+            <Poster width="460" height="470" uri="pkg:/images/ui/card.9.png" opacity="0.9" />
+            <Label text="●  Live chat" color="#FFFFFF" translation="[24, 18]">
+                <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+            </Label>
+            <Label text="▼  Hide" color="#8C8C8C" width="412" horizAlign="right" translation="[24, 22]">
+                <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="18" />
+            </Label>
+            <Rectangle width="412" height="1" color="#2A2A2A" translation="[24, 54]" />
+            <Label id="emptyLabel" text="No messages yet. Chat from your phone at cratetv.net." color="#8C8C8C"
+                   width="412" wrap="true" maxLines="2" translation="[24, 70]">
+                <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="20" />
+            </Label>
+            <Group id="msgRow0" translation="[24, 64]">
+                <Label id="msgUser0" text="" color="#B3B3B3" width="412" maxLines="1">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="19" />
+                </Label>
+                <Label id="msgText0" text="" color="#FFFFFF" width="412" maxLines="2" wrap="true" translation="[0, 24]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="21" />
+                </Label>
+            </Group>
+            <Group id="msgRow1" translation="[24, 144]">
+                <Label id="msgUser1" text="" color="#B3B3B3" width="412" maxLines="1">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="19" />
+                </Label>
+                <Label id="msgText1" text="" color="#FFFFFF" width="412" maxLines="2" wrap="true" translation="[0, 24]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="21" />
+                </Label>
+            </Group>
+            <Group id="msgRow2" translation="[24, 224]">
+                <Label id="msgUser2" text="" color="#B3B3B3" width="412" maxLines="1">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="19" />
+                </Label>
+                <Label id="msgText2" text="" color="#FFFFFF" width="412" maxLines="2" wrap="true" translation="[0, 24]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="21" />
+                </Label>
+            </Group>
+            <Group id="msgRow3" translation="[24, 304]">
+                <Label id="msgUser3" text="" color="#B3B3B3" width="412" maxLines="1">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="19" />
+                </Label>
+                <Label id="msgText3" text="" color="#FFFFFF" width="412" maxLines="2" wrap="true" translation="[0, 24]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="21" />
+                </Label>
+            </Group>
+            <Group id="msgRow4" translation="[24, 384]">
+                <Label id="msgUser4" text="" color="#B3B3B3" width="412" maxLines="1">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="19" />
+                </Label>
+                <Label id="msgText4" text="" color="#FFFFFF" width="412" maxLines="2" wrap="true" translation="[0, 24]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="21" />
+                </Label>
+            </Group>
+        </Group>
 
-            <!-- Header -->
-            <Rectangle width="12" height="12" color="#EF4444"
-                translation="[14, 12]" />
-            <Label text="LIVE CHAT"
-                font="font:SmallBoldSystemFont" color="#EBEBEB"
-                translation="[34, 8]" />
-
-            <!-- Divider -->
-            <Rectangle width="540" height="1" color="#2A2A2A"
-                translation="[0, 32]" />
-
-            <!--
-                6 message rows -- each has username (red) + message (white).
-                Row 0 = oldest visible, Row 5 = newest (bottom).
-                Each row is 40px tall. Stack starts at y=38.
-            -->
-            <Group id="msgRow0" translation="[0, 38]">
-                <Label id="msgUser0" text="" font="font:SmallBoldSystemFont"
-                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
-                <Label id="msgText0" text="" font="font:SmallSystemFont"
-                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
-            </Group>
-            <Group id="msgRow1" translation="[0, 88]">
-                <Label id="msgUser1" text="" font="font:SmallBoldSystemFont"
-                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
-                <Label id="msgText1" text="" font="font:SmallSystemFont"
-                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
-            </Group>
-            <Group id="msgRow2" translation="[0, 138]">
-                <Label id="msgUser2" text="" font="font:SmallBoldSystemFont"
-                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
-                <Label id="msgText2" text="" font="font:SmallSystemFont"
-                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
-            </Group>
-            <Group id="msgRow3" translation="[0, 188]">
-                <Label id="msgUser3" text="" font="font:SmallBoldSystemFont"
-                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
-                <Label id="msgText3" text="" font="font:SmallSystemFont"
-                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
-            </Group>
-            <Group id="msgRow4" translation="[0, 238]">
-                <Label id="msgUser4" text="" font="font:SmallBoldSystemFont"
-                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
-                <Label id="msgText4" text="" font="font:SmallSystemFont"
-                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
-            </Group>
-            <Group id="msgRow5" translation="[0, 278]">
-                <Label id="msgUser5" text="" font="font:SmallBoldSystemFont"
-                    color="#EF4444" translation="[12, 2]" width="140" maxLines="1" />
-                <Label id="msgText5" text="" font="font:SmallSystemFont"
-                    color="#E0E0E0" translation="[156, 2]" width="370" maxLines="2" wrap="true" />
-            </Group>
-
+        <!-- Short note after hiding/showing -->
+        <Group id="toast" translation="[1364, 860]" visible="false">
+            <Poster width="460" height="52" uri="pkg:/images/ui/pill_dark.9.png" />
+            <Label id="toastLabel" text="" color="#FFFFFF" width="460" height="52" horizAlign="center" vertAlign="center">
+                <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+            </Label>
         </Group>
     </children>
 </component>

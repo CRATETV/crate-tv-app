@@ -1,84 +1,87 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Movie Poster Item (V4 Studio)
-    
-    CRATE STANDARD: Poster [240, 360] / Focus Ring [248, 368] @ [-4, -4]
-    CLEAN UI: No "Press OK" labels. No title text on poster.
-    FOCUS: Red rounded focus ring PNG + 1.1x scale transform.
-    ROUNDED: corner_mask overlay creates rounded poster corners.
-    SMART SIZING: Dynamically adjusts all elements based on width/height fields.
-    RowList auto-sets itemContent when scrolling.
+    ============================================================================
+    CRATE TV - Poster tile (one film in a row on the Home screen)
+    ============================================================================
+
+    WHERE IT'S USED
+      HomeScene's RowList draws one of these per film (itemComponentName =
+      "MoviePosterItem"). The RowList sets `width` / `height` from
+      HomeScene's rowItemSize and fills `itemContent` with the film.
+
+    WHAT IT SHOWS
+      - The poster, with rounded corners (tile_corner_mask.png covers the
+        corners with the page's black background colour).
+      - A white focus ring and a gentle zoom when the viewer lands on it.
+      - A small dark pill in the top-right for locked films:
+        lock icon + price (e.g. "$4.99"), or just the lock if there's no price.
+      - A thin red progress bar along the bottom if the viewer started it.
+      - TOP 10 rows only: a big rank number to the left of the poster,
+        like the Netflix Top 10 row. HomeScene gives those rows wider tiles
+        (see TOP_TEN_TILE_WIDTH in HomeScene.brs) and sets `rankNumber`.
+
+    TO CHANGE THE LOOK
+      - Poster size: roku/source/Theme.brs (tileWidth / tileHeight) and
+        HomeScene.brs (rowItemSize). Keep both the same.
+      - Focus zoom amount: FOCUS_SCALE in MoviePosterItem.brs.
+      - Ring and mask images: roku/images/ui/focus_ring_tile.png and
+        tile_corner_mask.png (made for a 214 x 321 poster).
+    ============================================================================
 -->
 <component name="MoviePosterItem" extends="Group">
     <interface>
-        <field id="itemContent" type="node" onChange="OnContentChange" />
-        <field id="focusPercent" type="float" value="0.0" onChange="OnFocusChange" />
-        <field id="rowFocusPercent" type="float" value="0.0" />
-        <field id="itemHasFocus" type="boolean" value="false" />
-        <field id="width" type="float" value="240" />
-        <field id="height" type="float" value="360" />
+        <!-- Set by the RowList -->
+        <field id="itemContent"     type="node"    onChange="OnContentChange" />
+        <field id="focusPercent"    type="float"   value="0.0" onChange="OnFocusChange" />
+        <field id="rowFocusPercent" type="float"   value="0.0" />
+        <field id="itemHasFocus"    type="boolean" value="false" />
+        <field id="width"           type="float"   value="214" onChange="Layout" />
+        <field id="height"          type="float"   value="321" onChange="Layout" />
     </interface>
 
+    <script type="text/brightscript" uri="pkg:/source/Theme.brs" />
     <script type="text/brightscript" uri="MoviePosterItem.brs" />
 
     <children>
-        <Group id="posterContainer">
-            <!-- Shadow -->
-            <Rectangle id="shadow" width="244" height="364" color="#000000" opacity="0.4" translation="[4, 6]" />
+        <!-- TOP 10 rank number (only visible on the Top 10 row) -->
+        <Label id="rankLabel" text="" visible="false" color="#3A3A3A" horizAlign="right" vertAlign="bottom">
+            <Font role="font" uri="pkg:/fonts/InterDisplay-Black.ttf" size="250" />
+        </Label>
 
-            <!-- Background -->
-            <Rectangle id="posterBg" width="240" height="360" color="#1A1A1A" />
+        <!-- Everything that zooms on focus sits in posterGroup -->
+        <Group id="posterGroup">
+            <!-- Placeholder colour + film title, visible until the poster loads (or if it fails) -->
+            <Rectangle id="posterBg" width="214" height="321" color="#1C1C1C" />
+            <Label id="fallbackTitle" text="" color="#8C8C8C" width="186" height="293" translation="[14, 14]"
+                   wrap="true" maxLines="5" horizAlign="center" vertAlign="center">
+                <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+            </Label>
 
-            <!-- Shimmer loading state -->
-            <Rectangle id="shimmerBase" width="240" height="360" color="#252525" />
-            <Rectangle id="shimmerBar"  width="240" height="360" color="#333333" opacity="0.0" />
+            <!-- The poster image. Fades in once loaded (see OnPosterLoadStatus). -->
+            <Poster id="posterImage" width="214" height="321" loadWidth="214" loadHeight="321"
+                    loadDisplayMode="scaleToZoom" loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.0" />
 
-            <!-- Poster image -->
-            <Poster id="posterImage" width="240" height="360"
-                    loadWidth="240" loadHeight="360" loadDisplayMode="limitSize"
-                    loadingBitmapOpacity="0.0"
-                    failedBitmapUri="pkg:/images/poster_placeholder.png" />
+            <!-- Rounded corners -->
+            <Poster id="cornerMask" width="214" height="321" uri="pkg:/images/ui/tile_corner_mask.png" />
 
-            <!-- Lock overlay -->
-            <Group id="lockOverlay" visible="false">
-                <Rectangle id="lockOverlayRect" width="240" height="360" color="#000000" opacity="0.55" />
-                <!-- Lock icon: red pill badge at bottom -->
-                <Rectangle width="240" height="52" color="#EF4444" opacity="0.95" translation="[0, 308]" />
-                <Label id="lockOverlayLabel" text="PREMIERE" font="font:SmallBoldSystemFont" color="#FFFFFF" width="240" height="52" horizAlign="center" vertAlign="center" translation="[0, 308]" />
-                <!-- Lock shackle (top arc approximated with rectangles) -->
-                <Rectangle width="30" height="5" color="#FFFFFF" translation="[105, 120]" />
-                <Rectangle width="5" height="22" color="#FFFFFF" translation="[105, 120]" />
-                <Rectangle width="5" height="22" color="#FFFFFF" translation="[130, 120]" />
-                <!-- Lock body -->
-                <Rectangle width="40" height="30" color="#FFFFFF" translation="[100, 138]" />
-                <!-- Keyhole -->
-                <Rectangle width="10" height="10" color="#EF4444" translation="[115, 143]" />
-                <Rectangle width="6" height="10" color="#EF4444" translation="[117, 152]" />
+            <!-- Locked film: lock + price pill, top-right -->
+            <Group id="lockPill" visible="false">
+                <Poster id="lockPillBg" width="104" height="38" uri="pkg:/images/ui/pill_dark.9.png" />
+                <Poster id="lockIcon" width="20" height="20" uri="pkg:/images/ui/icon_lock.png" translation="[12, 9]" />
+                <Label id="lockPrice" text="" color="#FFFFFF" height="38" vertAlign="center" translation="[38, 0]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                </Label>
             </Group>
 
-            <!-- Watch progress bar -->
-            <Group id="progressGroup" visible="false" translation="[0, 352]">
-                <Rectangle id="progressBg" width="240" height="8" color="#333333" />
-                <Rectangle id="progressFill" width="0" height="8" color="#EF4444" />
+            <!-- Continue-watching progress -->
+            <Group id="progressGroup" visible="false">
+                <Rectangle id="progressTrack" width="214" height="5" color="#FFFFFF" opacity="0.25" />
+                <Rectangle id="progressFill"  width="0"   height="5" color="#EF4444" />
             </Group>
 
-            <!-- Rounded corner mask -- cuts poster into rounded rect shape -->
-            <Poster id="cornerMask" width="240" height="360"
-                    uri="pkg:/images/corner_mask_240x360.png" />
-
-            <!-- Rank badge (Top Ten only) -- bottom-left corner -->
-            <Group id="rankBadge" visible="false">
-                <Rectangle id="rankBadgeBg" width="56" height="56" color="#EF4444" opacity="0.92" translation="[0, 304]" />
-                <Label id="rankBadgeLabel" text="" font="font:BoldSystemFont" color="#FFFFFF"
-                       width="56" height="56" horizAlign="center" vertAlign="center"
-                       translation="[0, 304]" />
-            </Group>
-
-            <!-- Red rounded focus ring (PNG) -- visible only when focused -->
-            <Poster id="focusBorder" width="248" height="368"
-                    uri="pkg:/images/focus_ring_red_248x368.png"
-                    translation="[-4, -4]"
-                    visible="false" />
+            <!-- White focus ring, 7px outside the poster -->
+            <Poster id="focusRing" width="228" height="335" uri="pkg:/images/ui/focus_ring_tile.png"
+                    translation="[-7, -7]" visible="false" />
         </Group>
     </children>
 </component>

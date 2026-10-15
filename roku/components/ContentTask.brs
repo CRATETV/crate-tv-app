@@ -27,10 +27,28 @@ Sub ExecuteTask()
         FetchLinkCode()
     Else If taskType = "pollAuth"
         PollAuth()
+    Else If taskType = "getJson"
+        GetJson()
     Else
         m.top.errorMessage = "Unknown task type: " + taskType
         m.top.taskStatus = "error"
     End If
+End Sub
+
+' =============================================================================
+' GENERIC GET (Send to TV checks, Audience Choice tallies...)
+' Set feedUrl; the raw JSON text comes back in actorResults (field reused).
+' =============================================================================
+Sub GetJson()
+    url = m.top.feedUrl
+    If url = Invalid Or url = ""
+        m.top.taskStatus = "error"
+        Return
+    End If
+    body = MakeGetRequest(url)
+    If body = Invalid Then body = ""
+    m.top.actorResults = body
+    If body = "" Then m.top.taskStatus = "error" Else m.top.taskStatus = "success"
 End Sub
 
 ' =============================================================================
@@ -105,10 +123,11 @@ Sub FetchLinkCode()
     
     jsonString = MakeGetRequest(url)
     
+    ' If cratetv.net can't be reached, say so. (This used to invent a code on
+    ' the Roku, which the website had never heard of, so linking always failed.)
     If jsonString = Invalid Or jsonString = ""
-        ' API may not be ready -- generate a local code for display
-        Print "CrateTV [Task]: Link code API unavailable, generating local code"
-        GenerateLocalLinkCode()
+        m.top.errorMessage = "Couldn't reach Crate TV. Check your internet connection"
+        m.top.taskStatus = "error"
         Return
     End If
     
@@ -129,9 +148,8 @@ Sub FetchLinkCode()
         End If
     End If
     
-    ' Fallback: generate a local code
-    Print "CrateTV [Task]: No code in API response, generating local code"
-    GenerateLocalLinkCode()
+    m.top.errorMessage = "Couldn't get a code right now"
+    m.top.taskStatus = "error"
 End Sub
 
 Sub GenerateLocalLinkCode()
@@ -252,6 +270,23 @@ Sub FetchAndParseFeed()
         Return
     End If
     
+    ' The linked viewer's watch streak (for the Account page), if sent
+    contentTree.AddField("streakMonths", "integer", false)
+    contentTree.AddField("bestStreakMonths", "integer", false)
+    contentTree.AddField("badgeText", "string", false)
+    If Type(json) = "roAssociativeArray" And Type(json.viewer) = "roAssociativeArray"
+        v = json.viewer
+        If v.streakMonths <> Invalid Then contentTree.streakMonths = Int(v.streakMonths)
+        If v.bestMonths <> Invalid Then contentTree.bestStreakMonths = Int(v.bestMonths)
+        If Type(v.badges) = "roArray" And v.badges.Count() > 0
+            names = []
+            For Each b in v.badges
+                If Type(b) = "roString" Or Type(b) = "String" Then names.Push(b)
+            End For
+            contentTree.badgeText = JoinStrings(names, "  ·  ")
+        End If
+    End If
+
     m.top.feedData = contentTree
     m.top.taskStatus = "success"
     Print "CrateTV [Task]: SUCCESS - " + Str(contentTree.GetChildCount()) + " rows loaded"
@@ -963,6 +998,28 @@ Function CreateMovieNode(data as Object) as Object
     node.isUnlocked = isUnlocked
     node.isFree = isUnlocked
     If data.purchaseUrl <> Invalid Then node.purchaseUrl = data.purchaseUrl Else node.purchaseUrl = ""
+
+    ' Series ("Made in New Jersey"...): the episodes this Roku can play, in order.
+    ' Each is { id, title, synopsis, duration (seconds), url }. url is empty when
+    ' the series is locked. TitleScene lists them.
+    node.AddField("isSeries", "boolean", false)
+    node.AddField("episodes", "array", false)
+    node.isSeries = (data.isSeries <> Invalid And data.isSeries = true)
+    eps = []
+    If Type(data.episodes) = "roArray"
+        For Each ep in data.episodes
+            If Type(ep) = "roAssociativeArray"
+                e = { id: "", title: "", synopsis: "", duration: 0, url: "" }
+                If ep.id <> Invalid Then e.id = Box(ep.id).ToStr()
+                If ep.title <> Invalid Then e.title = ep.title
+                If ep.synopsis <> Invalid Then e.synopsis = ep.synopsis
+                If ep.duration <> Invalid And (Type(ep.duration) = "roInt" Or Type(ep.duration) = "roFloat" Or Type(ep.duration) = "Integer" Or Type(ep.duration) = "Float" Or Type(ep.duration) = "Double" Or Type(ep.duration) = "roDouble") Then e.duration = Int(ep.duration)
+                If ep.url <> Invalid Then e.url = NormalizeUrl(ep.url)
+                eps.Push(e)
+            End If
+        End For
+    End If
+    node.episodes = eps
     
     node.AddField("watchPartyStartTime", "string", false)
     node.AddField("isWatchPartyEnabled", "boolean", false)
@@ -985,6 +1042,40 @@ Function CreateMovieNode(data as Object) as Object
 
     node.AddField("zineUrl", "string", false)
     If data.zineUrl <> Invalid And data.zineUrl <> "" Then node.zineUrl = data.zineUrl Else node.zineUrl = ""
+
+    ' --------------------------------------------------------------------
+    ' Extra details used by the redesigned Home billboard, poster tiles and
+    ' Title page (Oct 2026). All are optional: a missing value just hides
+    ' that bit of the design.
+    ' --------------------------------------------------------------------
+    ' Price for locked films (shown as "$4.99" on the tile and title page).
+    ' End card (CrateVideoPlayer): offer "Support the filmmaker" only where the
+    ' website does: free films with support switched on.
+    node.AddField("supportEnabled", "boolean", false)
+    node.AddField("forSale", "boolean", false)
+    node.supportEnabled = (data.isSupportEnabled <> Invalid And data.isSupportEnabled = true)
+    node.forSale = (data.isForSale <> Invalid And data.isForSale = true)
+    node.AddField("salePrice", "float", false)
+    node.salePrice = 0
+    If data.salePrice <> Invalid
+        If Type(data.salePrice) = "roFloat" Or Type(data.salePrice) = "Float" Or Type(data.salePrice) = "roInt" Or Type(data.salePrice) = "Integer" Or Type(data.salePrice) = "roDouble" Or Type(data.salePrice) = "Double"
+            node.salePrice = data.salePrice
+        End If
+    End If
+
+    ' Laurel / award (e.g. "Audience Choice Award" + "2026"), shown in gold.
+    node.AddField("awardName", "string", false)
+    node.AddField("awardYear", "string", false)
+    node.awardName = SafeString(data.awardName)
+    node.awardYear = SafeString(data.awardYear)
+
+    ' True only when the admin uploaded a real wide (landscape) image in the
+    ' Roku asset manager. The feed otherwise sends the poster in heroImage too.
+    ' Wide art fills the whole billboard; a portrait poster is placed on the
+    ' right half instead so it isn't stretched.
+    node.AddField("hasWideArt", "boolean", false)
+    wide = SafeString(data.heroImage)
+    node.hasWideArt = (wide <> "" And wide <> SafeString(data.poster) And wide <> SafeString(data.tvPoster) And wide <> SafeString(data.hdPosterUrl))
 
     Return node
 End Function

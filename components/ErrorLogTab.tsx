@@ -23,6 +23,35 @@ const ErrorLogTab: React.FC = () => {
     const [originFilter, setOriginFilter] = useState<'all' | 'client' | 'server'>('all');
     const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    // "Run health check now": runs the alert robot (api/health-check-cron.ts)
+    // and emails the report, even when everything is fine.
+    const [healthStatus, setHealthStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+    const [healthMessage, setHealthMessage] = useState('');
+
+    const runHealthCheck = useCallback(async () => {
+        const password = sessionStorage.getItem('adminPassword');
+        if (!password) return;
+        setHealthStatus('running');
+        setHealthMessage('');
+        try {
+            const res = await fetch('/api/health-check-cron', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Health check failed.');
+            const parts: string[] = [];
+            parts.push(data.problems ? `${data.problems} problem${data.problems === 1 ? '' : 's'} need a look` : 'No problems');
+            if (data.fixed) parts.push(`${data.fixed} fixed automatically`);
+            parts.push(data.emailed ? 'report emailed' : 'email could not be sent');
+            setHealthMessage(parts.join(' · '));
+            setHealthStatus('done');
+        } catch (err: any) {
+            setHealthMessage(err.message);
+            setHealthStatus('error');
+        }
+    }, []);
 
     const filteredLogs = useMemo(() => {
         let result = logs;
@@ -117,6 +146,18 @@ const ErrorLogTab: React.FC = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex flex-col items-start gap-1">
+                        <button
+                            onClick={runHealthCheck}
+                            disabled={healthStatus === 'running'}
+                            className="bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white font-black py-2.5 px-4 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10"
+                        >
+                            {healthStatus === 'running' ? 'Checking...' : 'Run health check now'}
+                        </button>
+                        {healthMessage && (
+                            <span className={`text-[10px] font-bold ${healthStatus === 'error' ? 'text-red-500' : 'text-gray-400'}`}>{healthMessage}</span>
+                        )}
+                    </div>
                     <div className="flex rounded-xl border border-white/10 overflow-hidden">
                         {(['all', 'client', 'server'] as const).map(o => (
                             <button

@@ -1,86 +1,72 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Header Navigation (V4 Studio)
-    
-    HOME | NOW STREAMING | PUBLIC SQUARE | SEARCH | ACCOUNT
-    SmallSystemFont, auto-width, 250px spacing between items.
+    ============================================================================
+    CRATE TV - Header menu (top of every main tab)
+    ============================================================================
+
+      [CRATE]   Home   Now Streaming   Public Square   Search   Account     ● LIVE WATCH PARTY   7:42 PM
+
+    - On Home it floats over the billboard on a soft black-to-transparent
+      fade (fade_top.png), like Netflix. On every other tab it sits on a solid
+      black 72px bar (MainScene sets overArtwork), so nothing is dimmed.
+    - The tab you're on is white with a short red bar under it.
+    - When the menu has focus (press Up from the first row), the item you're
+      on is white and bold-ish; the others are grey.
+    - The red "LIVE WATCH PARTY" pill appears only while a party is live
+      (MainScene sets watchPartyIsLive). Press Right past "Account" to reach it.
+
+    MENU ORDER IS IMPORTANT: MainScene.OnNavSelectionChange() opens a tab by
+    its number: 0 Home, 1 Now Streaming, 2 Public Square, 3 Search,
+    4 Account, -1 the live party pill. If you add/reorder items, update both.
+    ============================================================================
 -->
 <component name="Header" extends="Group">
     <interface>
-        <field id="selectedIndex"    type="integer" value="0"     alwaysNotify="true" />
-        <field id="focusedIndex"     type="integer" value="0" />
-        <field id="isActive"         type="boolean" value="false"  onChange="OnActiveChange" />
-        <field id="watchPartyIsLive" type="boolean" value="false"  onChange="OnWatchPartyLiveChange" />
+        <field id="selectedIndex"    type="integer" value="0"     alwaysNotify="true" />  <!-- tab opened (OK) -->
+        <field id="focusedIndex"     type="integer" value="0" />                          <!-- item highlighted -->
+        <field id="isActive"         type="boolean" value="false" onChange="OnActiveChange" />  <!-- menu has focus -->
+        <field id="watchPartyIsLive" type="boolean" value="false" onChange="OnWatchPartyLiveChange" />
+        <!-- true on Home: float over the artwork on a soft fade. false on other
+             tabs: solid black bar, so their headings are never dimmed. -->
+        <field id="overArtwork"      type="boolean" value="true"  onChange="OnBackgroundModeChange" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Theme.brs" />
     <script type="text/brightscript" uri="Header.brs" />
 
     <children>
-        <!--
-            All children start hidden. MainScene.brs reveals them in OnHomeFeedReady()
-            only after the feed data has returned -- eliminating the launch flash.
-        -->
-        <Rectangle id="navBg" width="1920" height="60" color="#050505" opacity="0.97" visible="false" />
-        <Rectangle id="navBottomLine" width="1920" height="1" color="#1A1A1A" translation="[0, 59]" visible="false" />
+        <Timer id="clockTimer" duration="20" repeat="true" />
 
-        <Poster id="headerLogo" width="120" height="40" uri="pkg:/images/crate_logo_small.png" translation="[48, 10]" visible="false" />
+        <!-- Everything starts hidden; MainScene reveals the header once the feed has loaded. -->
+        <Poster id="navBg" uri="pkg:/images/ui/fade_top.png" width="1920" height="170" visible="false" />
+        <Rectangle id="navSolidBg" width="1920" height="72" color="#000000" visible="false" />
 
-        <!-- HOME(0) | NOW STREAMING(1) | PUBLIC SQUARE(2) | SEARCH(3) | ACCOUNT(4) -->
-        <Group id="navItemsGroup" translation="[240, 0]" visible="false">
-            <Group id="navItem0" translation="[0, 0]">
-                <Label id="navLabel0" text="HOME" font="font:SmallSystemFont" color="#EBEBEB" height="56" vertAlign="center" />
-                <Rectangle id="navUnderline0" width="70" height="3" color="#EF4444" translation="[0, 56]" visible="true" />
-            </Group>
-            <Group id="navItem1" translation="[150, 0]">
-                <Label id="navLabel1" text="NOW STREAMING" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
-                <Rectangle id="navUnderline1" width="180" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
-            </Group>
-            <Group id="navItem2" translation="[460, 0]">
-                <Label id="navLabel2" text="PUBLIC SQUARE" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
-                <Rectangle id="navUnderline2" width="175" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
-            </Group>
-            <Group id="navItem3" translation="[750, 0]">
-                <Label id="navLabel3" text="SEARCH" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
-                <Rectangle id="navUnderline3" width="90" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
-            </Group>
-            <Group id="navItem4" translation="[960, 0]">
-                <Label id="navLabel4" text="ACCOUNT" font="font:SmallSystemFont" color="#A0A0A0" height="56" vertAlign="center" />
-                <Rectangle id="navUnderline4" width="110" height="3" color="#EF4444" translation="[0, 56]" visible="false" />
-            </Group>
+        <!-- Logo: hidden by request (Oct 2026). To bring it back, set
+             SHOW_LOGO = true in Header.brs. -->
+        <Poster id="headerLogo" width="150" height="37" uri="pkg:/images/crate_logo_small.png" translation="[96, 18]" visible="false" />
+
+        <!-- Menu items. Header.brs spaces them out to fit their text. -->
+        <Group id="navItemsGroup" translation="[96, 0]" visible="false">
+            <Group id="navItem0"><Label id="navLabel0" text="Home"          color="#FFFFFF" height="72" vertAlign="center"><Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" /></Label><Rectangle id="navUnderline0" width="28" height="3" color="#EF4444" translation="[0, 58]" /></Group>
+            <Group id="navItem1"><Label id="navLabel1" text="Now Streaming" color="#B3B3B3" height="72" vertAlign="center"><Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" /></Label><Rectangle id="navUnderline1" width="28" height="3" color="#EF4444" translation="[0, 58]" visible="false" /></Group>
+            <Group id="navItem2"><Label id="navLabel2" text="Public Square" color="#B3B3B3" height="72" vertAlign="center"><Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" /></Label><Rectangle id="navUnderline2" width="28" height="3" color="#EF4444" translation="[0, 58]" visible="false" /></Group>
+            <Group id="navItem3"><Label id="navLabel3" text="Search"        color="#B3B3B3" height="72" vertAlign="center"><Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" /></Label><Rectangle id="navUnderline3" width="28" height="3" color="#EF4444" translation="[0, 58]" visible="false" /></Group>
+            <Group id="navItem4"><Label id="navLabel4" text="Account"       color="#B3B3B3" height="72" vertAlign="center"><Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" /></Label><Rectangle id="navUnderline4" width="28" height="3" color="#EF4444" translation="[0, 58]" visible="false" /></Group>
         </Group>
 
-        <!--
-            LIVE WATCH PARTY ALERT -- visible only when a party is active.
-            Sits on the right side of the nav bar. User can navigate to it
-            with the remote and press OK to join the party.
-            Hidden by default, shown/hidden by MainScene polling.
-        -->
-        <Group id="livePartyAlert" translation="[1480, 0]" visible="false">
-            <!-- Red pill background -->
-            <Rectangle id="alertBg" width="310" height="40"
-                color="#EF4444" translation="[0, 8]" />
-            <!-- Pulsing dot -->
-            <Rectangle width="10" height="10" color="#EBEBEB"
-                translation="[14, 23]" />
-            <!-- Alert text -->
-            <Label id="alertLabel"
-                text="LIVE WATCH PARTY"
-                font="font:SmallBoldSystemFont"
-                color="#EBEBEB"
-                width="270" height="40"
-                vertAlign="center"
-                translation="[30, 8]" />
-            <!-- Focus ring -- shown when user navigates to this item (Crate Red) -->
-            <Poster id="alertFocusRing"
-                width="318" height="48"
-                uri="pkg:/images/focus_ring_red_248x368.png"
-               
-                translation="[-4, 4]"
-                visible="false" />
+        <!-- LIVE WATCH PARTY pill (only while a party is live) -->
+        <Group id="livePartyAlert" translation="[1340, 12]" visible="false">
+            <Poster id="alertFocusRing" width="324" height="56" uri="pkg:/images/ui/btn_focus.9.png" translation="[-4, -4]" visible="false" />
+            <Poster id="alertBg" width="316" height="48" uri="pkg:/images/ui/pill_red.9.png" />
+            <Label id="alertLabel" text="●  LIVE WATCH PARTY" color="#FFFFFF" width="316" height="48" horizAlign="center" vertAlign="center">
+                <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+            </Label>
         </Group>
 
-        <Label id="clockLabel" font="font:SmallSystemFont" color="#666666" translation="[1750, 20]" />
+        <Label id="clockLabel" color="#B3B3B3" width="140" height="72" horizAlign="right" vertAlign="center" translation="[1684, 0]" visible="false">
+            <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="24" />
+        </Label>
     </children>
 </component>

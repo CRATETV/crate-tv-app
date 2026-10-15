@@ -4,6 +4,8 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { isMovieReleased, moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
 import { getAiRecommendations } from './_lib/recommendations.js';
 import { signStreamUrl } from './_lib/signStreamUrl.js';
+import { isOutsidePartner } from './_lib/partnerRules.js';
+import { streakSummary } from './_lib/streaks.js';
 
 function sanitizeUrl(url: string): string {
     if (!url) return '';
@@ -16,6 +18,40 @@ function toDate(val: any): Date | null {
     if (typeof val === 'object' && val._seconds) return new Date(val._seconds * 1000);
     const d = new Date(val);
     return isNaN(d.getTime()) ? null : d;
+}
+
+// A Roku can only play actual video files (MP4/HLS on our storage). YouTube and
+// Vimeo links work on the website (embedded players) but can't play on a Roku,
+// so they're left out of the Roku catalogue rather than shown broken.
+function isRokuPlayable(url: string | undefined | null): boolean {
+    if (!url || typeof url !== 'string') return false;
+    const u = url.toLowerCase();
+    return !(u.includes('youtube.com') || u.includes('youtu.be') || u.includes('vimeo.com'));
+}
+
+// Series (e.g. "Made in New Jersey"): the episodes the Roku can play, in order.
+// Episode video addresses are only included when the viewer has access, and
+// are signed (short-lived) like full films.
+async function rokuEpisodes(movie: Movie, isUnlocked: boolean) {
+    // Any title with episodes counts, even if "series" wasn't switched on in the admin.
+    if (!Array.isArray(movie.episodes) || movie.episodes.length === 0) return undefined;
+    const playable = movie.episodes.filter(ep => ep && isRokuPlayable(ep.url));
+    if (playable.length === 0) return undefined;
+    return Promise.all(playable.map(async (ep, i) => {
+        let url = '';
+        if (isUnlocked) {
+            const raw = sanitizeUrl(ep.url);
+            const signed = await signStreamUrl(raw);
+            url = signed ? signed.url : raw;
+        }
+        return {
+            id: ep.id || `${movie.key}-ep${i + 1}`,
+            title: ep.title || `Episode ${i + 1}`,
+            synopsis: (ep.synopsis || '').replace(/<[^>]+>/g, '').trim(),
+            duration: ep.duration || 0,
+            url,
+        };
+    }));
 }
 
 function isReleased(movie: Movie | undefined | null): boolean {
@@ -108,6 +144,13 @@ async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: b
         isWatchPartyEnabled: movie.isWatchPartyEnabled === true,
         isFestival: isFestivalOverride,
         isUnlocked: isUnlocked,
+        // End card after a film (Roku): "Support the filmmaker" shows when the
+        // website would offer it (free films with support switched on), and
+        // "Read the zine" when the film has one.
+        isSupportEnabled: movie.isSupportEnabled !== false,
+        zineUrl: (movie as any).zineUrl || '',
+        isSeries: movie.isSeries === true || (Array.isArray(movie.episodes) && movie.episodes.length > 0),
+        episodes: await rokuEpisodes(movie, isUnlocked),
         purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`
     } as RokuMovie;
 }
@@ -278,22 +321,36 @@ export async function GET(request: Request) {
                     });
                 }
 
+                // Jury pass: everything (same as the website, api/_lib/entitlements.ts).
                 if (userData?.hasJuryPass) unlockedMovies.add('ALL');
-                
-                // Check Festival Pass Expiry
-                if (userData?.festivalPassExpiry) {
-                    const exp = toDate(userData.festivalPassExpiry);
-                    if (exp && exp > new Date()) unlockedMovies.add('ALL');
-                } else if (userData?.hasFestivalAllAccess) {
-                    unlockedMovies.add('ALL');
-                }
 
-                // Check Crate Fest Pass Expiry
-                if (userData?.crateFestPassExpiry) {
-                    const exp = toDate(userData.crateFestPassExpiry);
-                    if (exp && exp > new Date()) unlockedMovies.add('ALL');
-                } else if (userData?.hasCrateFestPass) {
-                    unlockedMovies.add('ALL');
+                // FIX (Oct 2026): a festival pass and a Crate Fest pass used to add
+                // 'ALL' here, which unlocked EVERY paid film on Crate on the Roku,
+                // e.g. a 48-hour rental kept playing forever for a pass holder.
+                // The website only lets these passes open their own festival's
+                // films, so the Roku now does the same.
+                const nowDate = new Date();
+                const festivalPassActive = userData?.festivalPassExpiry
+                    ? (toDate(userData.festivalPassExpiry) || new Date(0)) > nowDate
+                    : userData?.hasFestivalAllAccess === true;
+                if (festivalPassActive) {
+                    if (!festSnap) festSnap = await db.collection('festival').doc('schedule').collection('days').get();
+                    festSnap.forEach((doc: any) => {
+                        const day = doc.data();
+                        day.blocks?.forEach((block: any) => {
+                            // PWFF / Crate's own festival blocks only, not partner festivals
+                            if (!isOutsidePartner(block.partnerId || day.partnerId)) {
+                                block.movieKeys?.forEach((k: string) => unlockedMovies.add(k));
+                            }
+                        });
+                    });
+                }
+                const crateFestPassActive = userData?.crateFestPassExpiry
+                    ? (toDate(userData.crateFestPassExpiry) || new Date(0)) > nowDate
+                    : userData?.hasCrateFestPass === true;
+                if (crateFestPassActive) {
+                    const blocks = (config as any).crateFest?.movieBlocks || [];
+                    blocks.forEach((b: any) => (b.movieKeys || []).forEach((k: string) => unlockedMovies.add(k)));
                 }
             }
         }
@@ -308,7 +365,10 @@ export async function GET(request: Request) {
         const hasPoster = !!m.poster || !!m.tvPoster || !!m.rokuHeroImage;
         const isNotUnlisted = !m.isUnlisted;
         const released = isReleased(m) || isLiveOverride;
-        const hasStream = !!m.rokuStreamUrl || !!m.fullMovie || !!m.liveStreamUrl;
+        // Something the Roku can actually play: a video file (not a YouTube/Vimeo
+        // link), a live stream, or, for a series, at least one playable episode.
+        const hasStream = isRokuPlayable(m.rokuStreamUrl) || isRokuPlayable(m.fullMovie) || !!m.liveStreamUrl
+            || (Array.isArray(m.episodes) && m.episodes.some(ep => ep && isRokuPlayable(ep.url)));
         
         const valid = hasTitle && hasPoster && isNotUnlisted && released && hasStream;
         
@@ -627,7 +687,28 @@ export async function GET(request: Request) {
             return formatMovieForRoku(m, assets[m.key], isUnlocked, isCrateFest || isExplicitlyLive, isCrateFest);
         }));
 
+    // The linked viewer's watch streak + badges, for the Roku Account page.
+    // Just for fun: never unlocks anything. Skipped quietly on any error.
+    let viewer: { streakMonths: number; bestMonths: number; badges: string[] } | undefined;
+    if (deviceIdParam) {
+        try {
+            const db = getAdminDb();
+            const link = db ? (await db.collection('roku_links').doc(deviceIdParam).get()).data() : null;
+            if (db && link?.userId) {
+                const sum = await streakSummary(db, link.userId);
+                viewer = {
+                    streakMonths: sum.monthly.current,
+                    bestMonths: sum.monthly.best,
+                    badges: sum.badges.slice(0, 4).map(b => b.label),
+                };
+            }
+        } catch (e) {
+            console.warn('[roku-feed] streak summary skipped:', e);
+        }
+    }
+
     const response: RokuFeed = {
+        viewer,
         version: Date.now(),
         timestamp: new Date().toISOString(),
         announcement: (config as any).announcement || '',

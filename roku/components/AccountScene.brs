@@ -1,6 +1,10 @@
 ' ##############################################################################
-' CRATE TV - Account Scene Controller
-' Dynamic identity (name + avatar from linking), proper spacing, sign out.
+' CRATE TV - Account tab logic (layout notes are in AccountScene.xml)
+' ##############################################################################
+'
+' The name, email and photo come from linking (saved in the Roku's registry by
+' AccountLinkScene.brs). KEYS: OK = the button; Up/Back = back to the menu.
+' In the sign-out dialog: Left/Right choose, OK confirms, Back cancels.
 ' ##############################################################################
 
 Sub Init()
@@ -21,6 +25,9 @@ Sub Init()
     m.confirmDialog = m.top.FindNode("confirmDialog")
     m.confirmYesBg = m.top.FindNode("confirmYesBg")
     m.confirmNoBg = m.top.FindNode("confirmNoBg")
+    m.signOutLabel = m.top.FindNode("signOutLabel")
+    m.confirmYesLabel = m.top.FindNode("confirmYesLabel")
+    m.confirmNoLabel = m.top.FindNode("confirmNoLabel")
     
     m.theme = GetThemeConfig()
     m.focusedButton = "signout"
@@ -51,22 +58,29 @@ Sub PopulateAccountInfo()
     End If
     
     ' --- Avatar (from linking) ---
+    ' Photo if we have one; otherwise the first letter of their name
     avatarUrl = RegistryRead("avatarUrl", regSection)
     If avatarUrl <> Invalid And avatarUrl <> ""
         m.avatarPoster.uri = avatarUrl
-        m.avatarFallback.visible = false
-        m.avatarFallbackText.visible = false
     Else
         m.avatarPoster.visible = false
     End If
+    m.avatarFallbackText.text = UCase(Left(m.userNameLabel.text, 1))
     
     ' --- Status ---
+    ' Not linked yet: the button links the account instead of "Sign Out".
+    ' (Before Oct 2026 it said "Sign Out" even when nobody was signed in.)
     If IsDeviceLinked()
-        m.statusValueLabel.text = "Linked"
+        m.statusValueLabel.text = "●  Linked to this Roku"
         m.statusValueLabel.color = "#4ADE80"
+        m.signOutLabel.text = "Sign Out"
     Else
-        m.statusValueLabel.text = "Not Linked"
+        m.statusValueLabel.text = "●  Not linked"
         m.statusValueLabel.color = "#EF4444"
+        m.signOutLabel.text = "Link your account"
+        m.userNameLabel.text = "Not linked yet"
+        m.userEmailLabel.text = "Link to watch films you buy on cratetv.net"
+        m.avatarFallbackText.text = "?"
     End If
     
     ' --- Subscription ---
@@ -75,8 +89,8 @@ Sub PopulateAccountInfo()
         m.subscriptionLabel.text = "Crate TV Member"
         m.subscriptionDetail.text = "Stream all available content"
     Else
-        m.subscriptionLabel.text = "Free Tier"
-        m.subscriptionDetail.text = "Watch free films on Crate TV"
+        m.subscriptionLabel.text = "Free"
+        m.subscriptionDetail.text = "Free films, plus anything you buy"
     End If
     
     ' --- Device ---
@@ -96,33 +110,30 @@ Sub PopulateAccountInfo()
         m.deviceIdLabel.text = ""
     End If
     
-    ' --- Version ---
-    deviceInfo = CreateObject("roDeviceInfo")
-    osVersion = deviceInfo.GetOsVersion()
-    if osVersion <> Invalid and osVersion.major <> Invalid
-        ' Convert to strings properly
-        majorStr = Box(osVersion.major).ToStr()
-        minorStr = Box(osVersion.minor).ToStr()
-        m.appVersionLabel.text = "v" + majorStr + "." + minorStr
-    else
-        m.appVersionLabel.text = "v1.0"
-    end if
-    
+    ' --- Channel version (from the manifest, e.g. 2.2.1) ---
+    m.appVersionLabel.text = "Crate TV " + CreateObject("roAppInfo").GetVersion()
+
     Print "CrateTV [Account]: User=" + m.userNameLabel.text + " Device=" + modelName
 End Sub
 
+' White = highlighted, grey = not (the same look as the film page buttons).
 Sub UpdateButtonFocus()
     If m.dialogOpen
-        If m.focusedButton = "confirm_yes"
-            m.confirmYesBg.color = m.theme.PRIMARY_ACCENT
-            m.confirmNoBg.color = m.theme.SURFACE_LIGHT
-        Else
-            m.confirmYesBg.color = m.theme.SURFACE_LIGHT
-            m.confirmNoBg.color = m.theme.PRIMARY_ACCENT
-        End If
-        m.signOutBg.color = m.theme.SURFACE_LIGHT
+        SetButtonLook(m.confirmYesBg, m.confirmYesLabel, m.focusedButton = "confirm_yes")
+        SetButtonLook(m.confirmNoBg,  m.confirmNoLabel,  m.focusedButton = "confirm_no")
+        SetButtonLook(m.signOutBg,    m.signOutLabel,    false)
     Else
-        m.signOutBg.color = m.theme.PRIMARY_ACCENT
+        SetButtonLook(m.signOutBg, m.signOutLabel, true)
+    End If
+End Sub
+
+Sub SetButtonLook(bg as Object, label as Object, focused as Boolean)
+    If focused
+        bg.uri = "pkg:/images/ui/btn_focus.9.png"
+        label.color = "#000000"
+    Else
+        bg.uri = "pkg:/images/ui/btn_idle.9.png"
+        label.color = "#FFFFFF"
     End If
 End Sub
 
@@ -177,7 +188,11 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
     End If
     
     If key = "OK"
-        ShowConfirmDialog()
+        If IsDeviceLinked()
+            ShowConfirmDialog()
+        Else
+            m.top.signOutRequested = true     ' MainScene opens the link screen
+        End If
         Return true
     End If
     
@@ -188,3 +203,27 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
     
     Return true  ' Consume all keys to prevent focus leak
 End Function
+
+' Watch streak + badges from the catalogue (roku-feed "viewer"), if linked.
+Sub OnFeedData()
+    fd = m.top.feedData
+    If fd = Invalid Or Not IsDeviceLinked() Or Not fd.HasField("streakMonths") Then Return
+    months = fd.streakMonths
+    badges = ""
+    If fd.HasField("badgeText") Then badges = fd.badgeText
+    If months <= 0 And badges = "" Then Return
+    If months = 1
+        text = "1 month in a row"
+    Else If months > 1
+        text = Str(months).Trim() + " months in a row"
+    Else
+        text = "Watch this month to start one"
+    End If
+    If fd.HasField("bestStreakMonths") And fd.bestStreakMonths > months Then text = text + "  ·  best " + Str(fd.bestStreakMonths).Trim()
+    m.top.FindNode("streakLabel").text = text
+    If badges = "" Then badges = "None yet: finish a festival to earn one"
+    m.top.FindNode("badgesLabel").text = badges
+    m.top.FindNode("streakRow").visible = true
+    m.top.FindNode("detailsCard").height = 400
+    m.top.FindNode("buttonGroup").translation = [96, 850]
+End Sub

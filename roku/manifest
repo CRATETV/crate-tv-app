@@ -6,7 +6,7 @@
 # Channel Properties
 title=Crate TV
 major_version=2
-minor_version=1
+minor_version=3
 build_version=1
 
 # SceneGraph Application
@@ -20,8 +20,18 @@ splash_screen_sd=pkg:/images/splash_sd.png
 splash_color=#050505
 splash_min_time=2000
 
+# Screensaver (source/ScreenSaver.brs + components/CrateScreensaver.xml):
+# a slideshow of film artwork shown when the TV is idle while Crate TV is open.
+# private=1: only inside Crate TV, not in the Roku's system screensaver list.
+screensaver_title=Crate TV
+screensaver_private=1
+
 # UI Resolution
-ui_resolutions=fhd,hd
+# fhd ONLY: every screen is laid out for 1920x1080, and Roku shrinks it
+# automatically on 720p TVs. (Before Oct 2026 this said "fhd,hd", which told
+# Roku the channel had separate 720p layouts. It doesn't, so on 720p TVs
+# screens came out the wrong size.)
+ui_resolutions=fhd
 
 # ==============================================================================
 # DEEP LINKING SUPPORT (CRITICAL FOR CERTIFICATION)
@@ -58,9 +68,3 @@ supports_graphicsSettings=1
 # Thread-safe access to registry (recommended for production)
 thread_safe_registry=1
 
-# ==============================================================================
-# OPTIONAL: SCREENSAVER SUPPORT
-# ==============================================================================
-# Uncomment to enable custom screensaver (requires implementation)
-# screensaver_title=Crate TV Screensaver
-# screensaver_private=1

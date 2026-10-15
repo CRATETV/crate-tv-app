@@ -1,5 +1,81 @@
 # Changelog
 
+## 2026-10 — Phone ↔ TV features
+
+- **Send to TV.** A new button on every film page on cratetv.net (signed-in viewers) opens that film on the Roku linked to their account within about 10 seconds, while Crate TV is open on the Roku. If they can watch it, it starts playing; if not, its page shows how to unlock it. "Sent from your phone" appears at the top of the TV.
+  - `api/send-to-tv.ts`: you can only send to your own linked Roku, notes expire after 2 minutes, and nothing is unlocked by it.
+  - The Roku checks only while it is open and linked (`StartSendToTvChecks` in `MainScene.brs`).
+- **Live reactions on the TV.** The 😂 😲 ❤️ 👏 😢 buttons on the website's watch party page now float up the Roku screen too, released a few at a time like a crowd. They show even when the chat is hidden. The images are drawn from Noto Color Emoji (open licence).
+- **Vote from the couch.** For festival blocks with Audience Choice, the Roku watch party screen shows a QR code to vote on a phone, with live results bars that refresh every 15 seconds, and the final results once voting closes. Public counts only (`api/audience?tally=`), never who voted.
+- **End card after a film.** When a film finishes on Roku, a card shows QR codes to support the filmmaker (free films with support on; it opens the website's support form directly via `?action=support`), read the zine (if there is one), and share the film. It closes on OK/Back or after 30 seconds.
+- **Fixed: the screensaver never appeared.** A Roku only starts its screensaver when no video is playing, and Home kept starting one trailer preview after another. Previews now stop after 2 minutes without a button press (`STOP_PREVIEWS_AFTER_IDLE_SECONDS` in `HomeScene.brs`), so the TV can go quiet.
+- **Watch streak on the TV.** The Roku Account page shows the linked viewer's streak (🔥 "4 months in a row · best 6") and their latest badges.
+
+## 2026-10 — Alert robot: check, fix, report
+
+- **The health check now fixes what's safe and emails a plain-English report.** It runs every 15 minutes, free, on what Crate already has (Vercel cron, Firestore, Resend).
+  - **Fixed automatically:**
+    - watch parties stuck on "live" (6h+ with nothing happening for 4h+), ended exactly like admin "End Party";
+    - ticket sales that charged the customer but didn't save to the ticket list, restored once and never duplicated.
+  - **Reported with what it means and what to do:**
+    - error spikes, grouped (normal viewer Wi-Fi noise is ignored);
+    - "permission denied" errors;
+    - the site or the Roku catalogue not loading (checked hourly);
+    - long parties that are still active.
+  - The same open problem is emailed at most every 6 hours. Silent when all is well.
+- **Admin → Error Log → "Run health check now"** runs it on demand and always emails the report (an "all clear" if nothing's wrong).
+- Payment errors now save the full sale details so a lost sale can be rebuilt.
+- Rules in `api/_lib/healthRules.ts`, 7 new tests.
+
+## 2026-10 — Roku channel redesign (version 2.2)
+
+- **Netflix-style look.** Black background, the Inter font everywhere, and a large billboard at the top of Home that follows whichever poster is highlighted (art, title, details, award, synopsis, cast). Poster rows have rounded corners, a white focus outline, a small lift on focus, price pills on locked films and red progress bars. The Top 10 row has large rank numbers.
+- **New film page.** OK on a poster now opens the film's page, with Play / Resume / Start over / Trailer. Locked films show a QR code and the web address to unlock on cratetv.net, instead of silently playing the trailer. Deep links from Roku search still start playing straight away (a Roku rule).
+- **Player.** Crate's own controls: progress bar, time left, pause screen, and Left/Right to skip 10 seconds. These hide while the film plays. Watch parties show a "LIVE" badge and block skipping.
+- **Fixed:**
+  - the menu logo image was missing;
+  - the clock never updated;
+  - films were drawn 60 px too low;
+  - Back after a film ended could skip a screen;
+  - the Top 10 row removed films from their other rows;
+  - the chat helper was missing its settings file;
+  - screens imported `Utils.brs` while the file is `utils.brs` (now they match);
+  - some XML comments weren't strictly valid.
+- **Trailer previews.** Rest on a film for 3 seconds on Home (2.5 on a film page) and its trailer fades in behind the text, with sound. It stops as soon as you move. Switch to silent in `TrailerPreview.xml` (`mute`).
+  - **No trailer?** For films the viewer can already watch (free or owned), it plays a 1-minute clip from a third of the way into the film. Nothing to set up; the rule is in `source/Preview.brs`. Locked films without a trailer show artwork only, because the full film is never sent to a Roku that hasn't paid.
+- Previews are skipped on older low-power Rokus, when memory is low, or when the viewer has turned off autoplay in their Roku settings.
+- **Works on 720p TVs.** The channel told Roku it had separate 720p layouts (`ui_resolutions=fhd,hd`) but didn't, so on 720p TVs screens came out the wrong size. It's now `fhd`, and Roku scales it down cleanly.
+- **Linking a Roku is easier and safer.**
+  - The TV shows a QR code: scan it and the link page opens with the code filled in.
+  - cratetv.net/link now works; the TV had been sending people there, but the page was only at /link-roku.
+  - The website checks the viewer's sign-in before linking. Before, the browser could name any account.
+  - The Account tab says "Link your account" when the Roku isn't linked (it used to say "Sign Out").
+  - If cratetv.net can't be reached, the TV says so. Before, it made up a code that could never work.
+  - The code refreshes by itself instead of expiring with an error.
+- **Every screen now has the new look.** Search, Account, Now Streaming, the watch party screen and the actor page were restyled to match Home: black, the Inter font, white rounded buttons and the same poster tiles.
+  - Search: a cleaner keyboard; results use a white focus outline.
+  - Account: a profile card, a details card, and a QR code for managing the account on a phone.
+  - Now Streaming: a billboard like Home. The zine card is hidden when there's no zine.
+- **Series show their episodes** (e.g. "Made in New Jersey"). The film page lists episodes with number, title, length and a line of description. Play starts episode 1, or "Continue episode N". After an episode ends, the next one is highlighted.
+  - The website's Roku catalogue (`api/roku-feed`) now sends each series' episodes. Episode videos are only included when the viewer has access, and are signed like full films.
+- **YouTube/Vimeo-hosted titles are left out on Roku.** A Roku can't play YouTube or Vimeo links. Those titles (e.g. the Caribbean Fix episodes) used to slip into the catalogue and fail to play, or empty the row. They still play on the website.
+- **Search:** no more pop-out bio card covering the results; highlighting an actor shows a one-line caption instead.
+- **Top menu:** the CRATE logo and the clock are removed (switches: `SHOW_LOGO` and `SHOW_CLOCK` in `Header.brs`).
+- **Fixed (paid films):** on the Roku, a festival pass or Crate Fest pass unlocked *every* paid film on Crate, so a 48-hour rental kept playing for anyone holding a pass. The Roku now follows the website's rules: festival passes open their own festival's films, a jury pass opens everything, and rentals end after 48 hours. The same fix is in `api/roku-movie-details`, which now uses the website's shared access check and no longer caches per-viewer answers.
+- **Live chat (watch parties) restyled** to match the channel: a dark card with the last 5 messages and the director's name in gold. **Down (or *) hides or shows it**, and the choice is remembered on that Roku. While hidden, the Roku stops fetching messages.
+- **Fonts:** added ▼ ▲ ◀ ✕, which were missing from the trimmed fonts. The player hint "◀ ▶ Skip" was showing a blank box.
+- **Launch screen:** just a thin moving bar, no logo or "Loading content" text. Roku's own splash already shows the logo.
+- **Screensaver:** no logo, clock or "On Crate TV" text; only the artwork and the film's title.
+- **Screensaver.** When the TV is idle while Crate TV is open, a slow slideshow of film artwork plays, cross-fading with a gentle zoom. It's in `CrateScreensaver.xml/.brs` and `source/ScreenSaver.brs`.
+- **Fixed:** the actor page (from Search) was built in a way Roku doesn't allow, which could freeze or crash the channel, and it played films directly. It now loads in the background, uses Home's tiles and opens the film page.
+- **Security:** the website's actor profile (`api/get-public-actor-profile`) returned every film's private full-video address, including paid films. It now hides them, like the main catalogue does.
+- **Fixed:** the Account tab showed the Roku's software version as the channel version.
+- **Fixed:** the "10" on the Top 10 row was cut off. It's drawn slightly smaller and tucked further behind the poster, and the Top 10 tiles are a little wider.
+- **Unlocks without restarting.** On a locked film's page, a linked Roku re-checks every 15 seconds for up to 10 minutes. Once the purchase on cratetv.net goes through, the page switches to Play by itself.
+- **Fixed:** Public Square crashed the channel. Its tiles borrowed the old Home tile's code; it now uses the same tiles as Home and opens the film page.
+- 19 unused screens moved out of the package to `roku-archive/`.
+- Detailed notes at the top of every Roku file, plus `docs/ROKU-GUIDE.md`.
+
 ## 2026-10 — Laurel finishes from the signature wreath
 
 - **Every laurel finish now uses the signature painted wreath** (`public/laurel-wreath.png`), not the older drawn one: Signature, White, Black, Gold, Silver and Rose Gold. The solid finishes are the same wreath filled with one colour.

@@ -1,237 +1,141 @@
 ' ##############################################################################
-' CRATE TV - Actor Detail Scene
-' Displays actor photo, bio, and filmography
+' CRATE TV - Actor page logic (layout and history are in ActorDetailScene.xml)
+' ##############################################################################
+'
+' KEYS: Left/Right move along the films (the RowList handles it), OK opens
+' the film page, Back returns to Search.
 ' ##############################################################################
 
 Sub Init()
-    Print "CrateTV [ActorDetail]: Initializing..."
-    
-    m.header = m.top.FindNode("header")
-    m.loadingSpinner = m.top.FindNode("loadingSpinner")
     m.contentGroup = m.top.FindNode("contentGroup")
-    m.actorPhoto = m.top.FindNode("actorPhoto")
-    m.actorName = m.top.FindNode("actorName")
-    m.actorBio = m.top.FindNode("actorBio")
-    m.filmographyLabel = m.top.FindNode("filmographyLabel")
-    m.moviesGrid = m.top.FindNode("moviesGrid")
-    m.errorLabel = m.top.FindNode("errorLabel")
-    
-    m.actorData = Invalid
-    m.movies = []
-    
-    ' Observe field to trigger loading
-    m.top.ObserveField("actorSlug", "OnActorSlugSet")
-    
-    ' Grid selection
-    m.moviesGrid.ObserveField("itemSelected", "OnMovieSelected")
-    
-    ' Set initial focus to grid when content loads
-    m.moviesGrid.SetFocus(true)
+    m.actorPhoto   = m.top.FindNode("actorPhoto")
+    m.actorName    = m.top.FindNode("actorName")
+    m.actorBio     = m.top.FindNode("actorBio")
+    m.filmsRow     = m.top.FindNode("filmsRow")
+    m.noFilmsLabel = m.top.FindNode("noFilmsLabel")
+    m.statusLabel  = m.top.FindNode("statusLabel")
+    m.task = Invalid
+
+    m.filmsRow.itemComponentName = "MoviePosterItem"
+    m.filmsRow.ObserveField("rowItemSelected", "OnFilmSelected")
+    ' Coming back from a film page: put focus back on the films
+    m.top.ObserveField("focusedChild", "OnFocusChange")
 End Sub
 
+' Download the profile in the background (never on the drawing thread).
 Sub OnActorSlugSet()
     slug = m.top.actorSlug
-    If slug <> Invalid And slug <> ""
-        Print "CrateTV [ActorDetail]: Loading actor slug = " + slug
-        LoadActorData(slug)
-    End If
+    If slug = Invalid Or slug = "" Then Return
+    m.statusLabel.text = "Loading..."
+    m.statusLabel.visible = true
+    m.contentGroup.visible = false
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.taskType = "fetchActorProfile"
+    task.searchQuery = slug
+    task.ObserveField("taskStatus", "OnProfileLoaded")
+    task.control = "run"
+    m.task = task
 End Sub
 
-Sub LoadActorData(slug as String)
-    ShowLoading(true)
-    
-    ' Call API endpoint
-    url = "https://cratetv.net/api/actor-profile?slug=" + slug
-    Print "CrateTV [ActorDetail]: GET " + url
-    
-    request = CreateObject("roUrlTransfer")
-    request.SetUrl(url)
-    request.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    request.InitClientCertificates()
-    
-    port = CreateObject("roMessagePort")
-    request.SetPort(port)
-    request.AsyncGetToString()
-    
-    While True
-        msg = Wait(5000, port)
-        If msg = Invalid
-            Print "CrateTV [ActorDetail]: Request timeout"
-            ShowError("Request timeout. Please try again.")
-            ShowLoading(false)
-            Exit While
-        Else If Type(msg) = "roUrlEvent"
-            code = msg.GetResponseCode()
-            Print "CrateTV [ActorDetail]: HTTP " + Str(code)
-            
-            If code = 200
-                responseStr = msg.GetString()
-                json = ParseJson(responseStr)
-                
-                If json <> Invalid And json.profile <> Invalid
-                    m.actorData = json.profile
-                    m.movies = json.films
-                    DisplayActorInfo()
-                Else
-                    ShowError("Invalid response format")
-                End If
-            Else
-                ShowError("Failed to load actor data (HTTP " + Str(code) + ")")
-            End If
-            
-            ShowLoading(false)
-            Exit While
-        End If
-    End While
-End Sub
+Sub OnProfileLoaded()
+    task = m.task
+    If task = Invalid Or (task.taskStatus <> "success" And task.taskStatus <> "error") Then Return
+    m.task = Invalid
 
-Sub DisplayActorInfo()
-    If m.actorData = Invalid Then Return
-    
-    ' Set actor name
-    m.actorName.text = m.actorData.name
-    
-    ' Set actor photo (prefer high res)
-    photoUrl = ""
-    If m.actorData.highResPhoto <> Invalid And m.actorData.highResPhoto <> ""
-        photoUrl = m.actorData.highResPhoto
-    Else If m.actorData.photo <> Invalid And m.actorData.photo <> ""
-        photoUrl = m.actorData.photo
+    data = Invalid
+    If task.taskStatus = "success" Then data = ParseJson(task.actorResults)
+    If data = Invalid Or data.profile = Invalid
+        m.statusLabel.text = "This profile couldn't load. Press Back to return to Search."
+        Return
     End If
-    
-    If photoUrl <> ""
-        m.actorPhoto.uri = photoUrl
-    End If
-    
-    ' Set bio
-    bio = ""
-    If m.actorData.bio <> Invalid
-        bio = m.actorData.bio
-    End If
+
+    profile = data.profile
+    m.actorName.text = TextOf(profile.name)
+    bio = TextOf(profile.bio)
+    If bio = "" Then bio = "No biography yet."
     m.actorBio.text = bio
-    
-    ' Build filmography grid
-    BuildFilmographyGrid()
-    
-    ' Show content
-    m.contentGroup.visible = true
-    m.moviesGrid.SetFocus(true)
-End Sub
 
-Sub BuildFilmographyGrid()
-    content = CreateObject("roSGNode", "ContentNode")
-    
-    If m.movies <> Invalid
-        For i = 0 To m.movies.Count() - 1
-            movie = m.movies[i]
-            child = CreateObject("roSGNode", "ContentNode")
-            
-            If movie.title <> Invalid
-                child.title = movie.title
-            Else
-                child.title = "Untitled"
+    photo = TextOf(profile.highResPhoto)
+    If photo = "" Then photo = TextOf(profile.photo)
+    ' S3 photos go through the site's image proxy (same as Search)
+    If photo <> "" And (Instr(1, photo, ".s3.") > 0 Or Instr(1, photo, ".amazonaws.com") > 0)
+        photo = "https://cratetv.net/api/proxy-image?url=" + photo
+    End If
+    m.actorPhoto.uri = photo
+
+    ' Their films, taken from the catalogue so price/unlock info is right
+    row = CreateObject("roSGNode", "ContentNode")
+    row.title = "Films on Crate TV"
+    films = data.films
+    If films <> Invalid
+        For Each f in films
+            key = TextOf(f.key)
+            node = FindInFeed(key)
+            If node <> Invalid
+                copy = node.Clone(false)
+                If copy.HasField("rankNumber") Then copy.rankNumber = 0
+                row.AppendChild(copy)
             End If
-            
-            ' Get poster URL
-            posterUrl = ""
-            If movie.poster <> Invalid And movie.poster <> ""
-                posterUrl = movie.poster
-            Else If movie.hdPosterUrl <> Invalid And movie.hdPosterUrl <> ""
-                posterUrl = movie.hdPosterUrl
-            End If
-            
-            child.HDPosterUrl = posterUrl
-            child.SDPosterUrl = posterUrl
-            
-            content.AppendChild(child)
         End For
     End If
-    
-    m.moviesGrid.content = content
-    
-    If m.movies.Count() = 0
-        m.filmographyLabel.text = "No films available"
+
+    m.statusLabel.visible = false
+    m.contentGroup.visible = true
+    If row.GetChildCount() > 0
+        content = CreateObject("roSGNode", "ContentNode")
+        content.AppendChild(row)
+        m.filmsRow.content = content
+        m.filmsRow.visible = true
+        m.noFilmsLabel.visible = false
+        m.filmsRow.SetFocus(true)
     Else
-        m.filmographyLabel.text = "Filmography (" + Str(m.movies.Count()).Trim() + " films)"
+        m.filmsRow.visible = false
+        m.noFilmsLabel.visible = true
     End If
 End Sub
 
-Sub OnMovieSelected()
-    index = m.moviesGrid.itemSelected
-    If index >= 0 And index < m.movies.Count()
-        movie = m.movies[index]
-        Print "CrateTV [ActorDetail]: Selected movie - " + movie.title
-        
-        ' Create video content node - match your Movie schema
-        videoContent = CreateObject("roSGNode", "ContentNode")
-        
-        ' Title
-        If movie.title <> Invalid
-            videoContent.title = movie.title
-        Else
-            videoContent.title = "Untitled"
-        End If
-        
-        ' Description
-        If movie.description <> Invalid
-            videoContent.description = movie.description
-        End If
-        
-        ' Stream URL - try multiple field names
-        streamUrl = ""
-        If movie.streamUrl <> Invalid And movie.streamUrl <> ""
-            streamUrl = movie.streamUrl
-        Else If movie.fullMovie <> Invalid And movie.fullMovie <> ""
-            streamUrl = movie.fullMovie
-        Else If movie.url <> Invalid And movie.url <> ""
-            streamUrl = movie.url
-        End If
-        
-        If streamUrl <> ""
-            videoContent.url = streamUrl
-            videoContent.streamUrl = streamUrl
-        End If
-        
-        ' Poster - try multiple field names
-        posterUrl = ""
-        If movie.poster <> Invalid And movie.poster <> ""
-            posterUrl = movie.poster
-        Else If movie.hdPosterUrl <> Invalid And movie.hdPosterUrl <> ""
-            posterUrl = movie.hdPosterUrl
-        End If
-        
-        If posterUrl <> ""
-            videoContent.HDPosterUrl = posterUrl
-            videoContent.SDPosterUrl = posterUrl
-        End If
-        
-        Print "CrateTV [ActorDetail]: Playing - url=" + streamUrl
-        
-        ' Signal to MainScene to play video
-        m.top.videoContent = videoContent
+Function FindInFeed(key as String) as Object
+    feed = m.top.feedData
+    If feed = Invalid Or key = "" Then Return Invalid
+    For i = 0 To feed.GetChildCount() - 1
+        r = feed.GetChild(i)
+        For j = 0 To r.GetChildCount() - 1
+            item = r.GetChild(j)
+            If item <> Invalid
+                If item.HasField("movieKey") And item.movieKey = key Then Return item
+                If item.id = key Then Return item
+            End If
+        End For
+    End For
+    Return Invalid
+End Function
+
+Function TextOf(value as Dynamic) as String
+    If value = Invalid Then Return ""
+    If Type(value) = "roString" Or Type(value) = "String" Then Return value
+    Return ""
+End Function
+
+Sub OnFilmSelected()
+    sel = m.filmsRow.rowItemSelected
+    content = m.filmsRow.content
+    If sel = Invalid Or content = Invalid Then Return
+    film = content.GetChild(sel[0]).GetChild(sel[1])
+    If film <> Invalid Then m.top.playContent = film     ' MainScene opens the film page
+End Sub
+
+Sub OnFocusChange()
+    If m.top.IsInFocusChain() And m.filmsRow.visible And m.contentGroup.visible And Not m.filmsRow.HasFocus()
+        m.filmsRow.SetFocus(true)
     End If
-End Sub
-
-Sub ShowLoading(visible as Boolean)
-    m.loadingSpinner.visible = visible
-    m.contentGroup.visible = Not visible
-    m.errorLabel.visible = false
-End Sub
-
-Sub ShowError(message as String)
-    m.errorLabel.text = message
-    m.errorLabel.visible = true
-    m.contentGroup.visible = false
 End Sub
 
 Function OnKeyEvent(key as String, press as Boolean) as Boolean
     If Not press Then Return false
-    
     If key = "back"
-        Print "CrateTV [ActorDetail]: Back pressed - returning to search"
         m.top.exitToSearch = true
         Return true
     End If
-    
     Return false
 End Function

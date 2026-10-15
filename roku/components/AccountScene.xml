@@ -1,137 +1,169 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ============================================================================
+    CRATE TV - Account tab
+    ============================================================================
+    Shows who this Roku is linked to, the device, and one button:
+      linked      -> "Sign Out" (asks to confirm first)
+      not linked  -> "Link your account" (opens the link screen)
+    AccountScene.brs fills in the text and handles the button.
+
+    LAYOUT (screen positions; `canvas` is shifted up 60px because this page
+    sits inside MainScene's sceneContainer, under the top menu)
+      Left:  title, profile (photo/initial, name, email, status), details card,
+             the button, help line.
+      Right: "Manage your account" card with a QR code to cratetv.net/account.
+      Confirm dialog: dark overlay + card, shown only when signing out.
+    ============================================================================
+-->
 <component name="AccountScene" extends="Group">
     <interface>
         <field id="signOutRequested" type="boolean" value="false" alwaysNotify="true" />
-        <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
+        <field id="exitRequested"    type="boolean" value="false" alwaysNotify="true" />
+        <!-- The catalogue (MainScene sets it): carries the viewer's watch streak -->
+        <field id="feedData"         type="node" onChange="OnFeedData" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
-    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
     <script type="text/brightscript" uri="AccountScene.brs" />
 
     <children>
-        <Rectangle width="1920" height="1080" color="#050505" />
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle width="1920" height="1080" color="#000000" />
 
-        <!-- PAGE TITLE -->
-        <Rectangle width="4" height="40" color="#EF4444" translation="[90, 40]" />
-        <Label text="My Account" font="font:LargeBoldSystemFont" color="#EBEBEB" translation="[108, 40]" />
+            <Label text="Account" color="#FFFFFF" translation="[96, 120]">
+                <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="56" />
+            </Label>
 
-        <!-- ===== LEFT CARD bg ===== -->
-        <Rectangle width="820" height="640" color="#0A0A0A" translation="[90, 110]" />
-        <Rectangle width="820" height="3" color="#EF4444" translation="[90, 110]" />
+            <!-- ===== Profile ===== -->
+            <Group translation="[96, 230]">
+                <Rectangle id="avatarFallback" width="132" height="132" color="#262626" />
+                <Label id="avatarFallbackText" text="C" color="#FFFFFF" width="132" height="132" horizAlign="center" vertAlign="center">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="60" />
+                </Label>
+                <Poster id="avatarPoster" width="132" height="132" uri="" loadDisplayMode="scaleToZoom" />
 
-        <!-- Avatar / Profile icon -->
-        <Poster id="avatarPoster" width="64" height="64" translation="[130, 150]"
-                uri="" loadDisplayMode="scaleToFit" />
-        <Rectangle id="avatarFallback" width="64" height="64" color="#2A2A2A" translation="[130, 150]" />
-        <Label id="avatarFallbackText" text="CTV" font="font:SmallestSystemFont" color="#EF4444"
-               translation="[130, 150]" width="64" height="64" horizAlign="center" vertAlign="center" />
+                <Label id="userNameLabel" text="" color="#FFFFFF" width="760" maxLines="1" translation="[168, 10]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="44" />
+                </Label>
+                <Label id="userEmailLabel" text="" color="#B3B3B3" width="760" maxLines="1" translation="[168, 70]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                </Label>
+                <Label id="statusValueLabel" text="" color="#4ADE80" translation="[168, 108]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                </Label>
+            </Group>
 
-        <!-- User name + email -->
-        <Label id="userNameLabel" text="Crate TV Member" font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[210, 152]" width="660" />
-        <Label id="userEmailLabel" text="Linked via device code" font="font:SmallSystemFont" color="#A0A0A0"
-               translation="[210, 186]" width="660" />
+            <!-- ===== Details card ===== -->
+            <Group translation="[96, 410]">
+                <Poster id="detailsCard" width="980" height="290" uri="pkg:/images/ui/card.9.png" />
 
-        <!-- Divider 1 -->
-        <Rectangle width="720" height="1" color="#1A1A1A" translation="[130, 240]" />
+                <Label text="PLAN" color="#8C8C8C" translation="[40, 34]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                </Label>
+                <Label id="subscriptionLabel" text="" color="#FFFFFF" width="420" maxLines="1" translation="[40, 64]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="28" />
+                </Label>
+                <Label id="subscriptionDetail" text="" color="#B3B3B3" width="420" maxLines="1" translation="[40, 104]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
 
-        <!-- STATUS -->
-        <Label text="STATUS" font="font:SmallSystemFont" color="#666666" translation="[130, 262]" />
-        <Label id="statusValueLabel" text="Linked" font="font:MediumBoldSystemFont" color="#4ADE80"
-               translation="[130, 296]" />
+                <Label text="DEVICE" color="#8C8C8C" translation="[520, 34]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                </Label>
+                <Label id="deviceModelLabel" text="" color="#FFFFFF" width="420" maxLines="1" translation="[520, 64]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="28" />
+                </Label>
+                <Label id="deviceIdLabel" text="" color="#B3B3B3" width="420" maxLines="1" translation="[520, 104]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
 
-        <!-- Divider 2 -->
-        <Rectangle width="720" height="1" color="#1A1A1A" translation="[130, 346]" />
+                <Rectangle width="900" height="1" color="#2A2A2A" translation="[40, 160]" />
 
-        <!-- SUBSCRIPTION -->
-        <Label text="SUBSCRIPTION" font="font:SmallSystemFont" color="#666666" translation="[130, 368]" />
-        <Label id="subscriptionLabel" text="Free Tier" font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[130, 402]" />
-        <Label id="subscriptionDetail" text="Watch free films on Crate TV" font="font:SmallSystemFont" color="#A0A0A0"
-               translation="[130, 438]" width="720" />
+                <Label text="CHANNEL VERSION" color="#8C8C8C" translation="[40, 188]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                </Label>
+                <Label id="appVersionLabel" text="" color="#FFFFFF" translation="[40, 218]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" />
+                </Label>
+                <Label text="NEED HELP?" color="#8C8C8C" translation="[520, 188]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                </Label>
+                <Label text="support@cratetv.net" color="#FFFFFF" translation="[520, 218]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" />
+                </Label>
 
-        <!-- Divider 3 -->
-        <Rectangle width="720" height="1" color="#1A1A1A" translation="[130, 482]" />
+                <!-- Watch streak + badges (only when linked and there's a streak) -->
+                <Group id="streakRow" translation="[0, 270]" visible="false">
+                    <Rectangle width="900" height="1" color="#2A2A2A" translation="[40, 0]" />
+                    <Label text="WATCH STREAK" color="#8C8C8C" translation="[40, 26]">
+                        <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                    </Label>
+                    <Poster uri="pkg:/images/ui/icon_fire.png" width="34" height="34" translation="[40, 56]" />
+                    <Label id="streakLabel" text="" color="#FFFFFF" width="400" maxLines="1" translation="[84, 58]">
+                        <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="26" />
+                    </Label>
+                    <Label text="BADGES" color="#8C8C8C" translation="[520, 26]">
+                        <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="20" />
+                    </Label>
+                    <Label id="badgesLabel" text="" color="#FFFFFF" width="420" wrap="true" maxLines="2" translation="[520, 58]">
+                        <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="22" />
+                    </Label>
+                </Group>
+            </Group>
 
-        <!-- DEVICE -->
-        <Label text="DEVICE" font="font:SmallSystemFont" color="#666666" translation="[130, 504]" />
-        <Label id="deviceModelLabel" text="" font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[130, 538]" />
-        <Label id="deviceIdLabel" text="" font="font:SmallSystemFont" color="#666666"
-               translation="[130, 572]" />
+            <!-- ===== The button (Sign Out / Link your account) ===== -->
+            <Group id="buttonGroup" translation="[96, 760]">
+                <Poster id="signOutBg" width="340" height="68" uri="pkg:/images/ui/btn_focus.9.png" />
+                <Label id="signOutLabel" text="Sign Out" color="#000000" width="340" height="68" horizAlign="center" vertAlign="center">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="26" />
+                </Label>
+            </Group>
 
-        <!-- Divider 4 -->
-        <Rectangle width="720" height="1" color="#1A1A1A" translation="[130, 618]" />
+            <!-- ===== Manage on your phone ===== -->
+            <Group translation="[1184, 230]">
+                <Poster width="640" height="560" uri="pkg:/images/ui/card.9.png" />
+                <Label text="Manage your account" color="#FFFFFF" width="640" horizAlign="center" translation="[0, 44]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="30" />
+                </Label>
+                <Label text="Purchases, tickets, profile and watch history" color="#B3B3B3" width="640" horizAlign="center" translation="[0, 92]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
+                <Rectangle width="292" height="292" color="#FFFFFF" translation="[174, 146]" />
+                <Poster id="qrCodePoster" width="260" height="260" translation="[190, 162]" loadingBitmapOpacity="0.0"
+                        uri="https://api.qrserver.com/v1/create-qr-code/?size=260x260&amp;margin=0&amp;data=https%3A%2F%2Fcratetv.net%2Faccount" />
+                <Label text="Scan with your phone, or visit" color="#8C8C8C" width="640" horizAlign="center" translation="[0, 466]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                </Label>
+                <Label text="cratetv.net/account" color="#FFFFFF" width="640" horizAlign="center" translation="[0, 500]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
+            </Group>
 
-        <!-- VERSION -->
-        <Label text="VERSION" font="font:SmallSystemFont" color="#666666" translation="[130, 640]" />
-        <Label id="appVersionLabel" text="" font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[130, 674]" />
-
-
-        <!-- ===== RIGHT CARD bg ===== -->
-        <Rectangle width="520" height="600" color="#0A0A0A" translation="[960, 110]" />
-        <Rectangle width="520" height="3" color="#EF4444" translation="[960, 110]" />
-
-        <!-- Manage Account -->
-        <Label text="Manage Account" font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[1000, 150]" />
-
-        <!-- URL box -->
-        <Rectangle width="440" height="50" color="#1A1A1A" translation="[1000, 200]" />
-        <Label text="  cratetv.net/account" font="font:MediumBoldSystemFont" color="#EF4444"
-               translation="[1000, 200]" width="440" height="50" vertAlign="center" />
-
-        <!-- Divider -->
-        <Rectangle width="440" height="1" color="#1A1A1A" translation="[1000, 270]" />
-
-        <!-- QR Code Section -->
-        <Label text="Explore Premium Content" 
-               font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[1000, 290]" width="440" height="30" horizAlign="center" vertAlign="center" />
-        
-        <!-- QR Code - Centered with white border -->
-        <Rectangle width="140" height="140" color="#EBEBEB" translation="[1150, 340]" />
-        <Poster id="qrCodePoster" width="130" height="130" translation="[1155, 345]"
-                uri="https://api.qrserver.com/v1/create-qr-code/?size=130x130&amp;data=https://cratetv.net" />
-        
-        <!-- URL below QR -->
-        <Label text="cratetv.net" 
-               font="font:SmallBoldSystemFont" color="#EF4444"
-               translation="[1000, 495]" width="440" height="25" horizAlign="center" vertAlign="center" />
-
-        <!-- Divider -->
-        <Rectangle width="440" height="1" color="#1A1A1A" translation="[1000, 540]" />
-
-        <!-- Sign Out Button -->
-        <Rectangle id="signOutBg" width="440" height="60" color="#EF4444" translation="[1000, 560]" />
-        <Label id="signOutLabel" text="Sign Out" font="font:MediumBoldSystemFont" color="#EBEBEB"
-               translation="[1000, 560]" width="440" height="60" horizAlign="center" vertAlign="center" />
-
-        <!-- Divider -->
-        <Rectangle width="440" height="1" color="#1A1A1A" translation="[1000, 630]" />
-
-        <!-- Support -->
-        <Label text="Need help?" font="font:SmallSystemFont" color="#666666" translation="[1000, 660]" />
-        <Label text="support@cratetv.net" font="font:SmallSystemFont" color="#A0A0A0"
-               translation="[1000, 692]" />
-
-        <!-- ===== CONFIRM DIALOG ===== -->
-        <Group id="confirmDialog" visible="false" translation="[460, 380]">
-            <Rectangle width="1000" height="250" color="#0A0A0A" />
-            <Rectangle width="1000" height="3" color="#EF4444" />
-            <Label text="Sign Out?" font="font:LargeBoldSystemFont" color="#EBEBEB"
-                   translation="[40, 30]" />
-            <Label text="You will need to re-link this device to your account."
-                   font="font:MediumSystemFont" color="#A0A0A0" translation="[40, 85]" width="920" />
-            <Rectangle id="confirmYesBg" width="460" height="56" color="#EF4444" translation="[40, 160]" />
-            <Label text="Yes, Sign Out" font="font:MediumBoldSystemFont" color="#EBEBEB"
-                   translation="[40, 160]" width="460" height="56" horizAlign="center" vertAlign="center" />
-            <Rectangle id="confirmNoBg" width="460" height="56" color="#1A1A1A" translation="[520, 160]" />
-            <Label text="Cancel" font="font:MediumBoldSystemFont" color="#EBEBEB"
-                   translation="[520, 160]" width="460" height="56" horizAlign="center" vertAlign="center" />
+            <!-- ===== Confirm sign out ===== -->
+            <Group id="confirmDialog" visible="false">
+                <Rectangle width="1920" height="1080" color="#000000" opacity="0.85" />
+                <Group translation="[560, 380]">
+                    <Poster width="800" height="320" uri="pkg:/images/ui/card.9.png" />
+                    <Label text="Sign out of Crate TV?" color="#FFFFFF" translation="[48, 44]">
+                        <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="40" />
+                    </Label>
+                    <Label text="Films you've bought stay in your account. You'll need to link this Roku again to watch them here."
+                           color="#B3B3B3" width="704" wrap="true" maxLines="2" translation="[48, 108]">
+                        <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="24" />
+                    </Label>
+                    <Poster id="confirmYesBg" width="240" height="64" uri="pkg:/images/ui/btn_idle.9.png" translation="[48, 212]" />
+                    <Label id="confirmYesLabel" text="Sign Out" color="#FFFFFF" width="240" height="64" horizAlign="center" vertAlign="center" translation="[48, 212]">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                    </Label>
+                    <Poster id="confirmNoBg" width="240" height="64" uri="pkg:/images/ui/btn_focus.9.png" translation="[308, 212]" />
+                    <Label id="confirmNoLabel" text="Cancel" color="#000000" width="240" height="64" horizAlign="center" vertAlign="center" translation="[308, 212]">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                    </Label>
+                </Group>
+            </Group>
         </Group>
     </children>
 </component>

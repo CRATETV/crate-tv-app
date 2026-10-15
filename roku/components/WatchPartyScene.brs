@@ -30,6 +30,14 @@ Sub Init()
     ' State
     m.noLiveState         = m.top.FindNode("noLiveState")
     m.blockState          = m.top.FindNode("blockState")
+    m.voteState           = m.top.FindNode("voteState")
+    m.voteRows            = m.top.FindNode("voteRows")
+    m.tallyTask           = Invalid
+    m.tallyBlockId        = ""
+    m.tallyTimer = CreateObject("roSGNode", "Timer")
+    m.tallyTimer.duration = 15
+    m.tallyTimer.repeat   = true
+    m.tallyTimer.ObserveField("fire", "FetchTally")
     m.currentFilm         = Invalid
     m.partyStatus         = "loading"
     m.scheduledStartTime  = 0   ' Unix seconds when party is scheduled
@@ -147,8 +155,10 @@ Sub OnPartyStatusReady()
     If task.partyType = "block" And partyStatus <> "ended"
         StopTimers()
         ShowState("block")
+        StartTally()          ' switches to the vote screen if voting is open
         Return
     End If
+    If task.partyType = "block" And partyStatus = "ended" Then StartTally()
 
     If partyStatus = "live" And isPlaying
         If m.isPaid And Not isUnlocked
@@ -230,9 +240,10 @@ Sub ShowPaidScreen()
 
     ' Generate QR via api.qrserver.com (same pattern as NowStreamingScene)
     encoded = watchPartyUrl.Replace(":", "%3A").Replace("/", "%2F")
-    qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=" + watchPartyUrl
+    qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=236x236&margin=0&data=" + encoded
     If m.paidQrPoster <> Invalid Then m.paidQrPoster.uri = qrUrl
-    If m.paidUrlLabel <> Invalid Then m.paidUrlLabel.text = watchPartyUrl
+    ' Show the address without "https://" (easier to read and type)
+    If m.paidUrlLabel <> Invalid Then m.paidUrlLabel.text = watchPartyUrl.Replace("https://", "")
 End Sub
 
 ' =============================================================================
@@ -274,7 +285,96 @@ Sub ShowState(state as String)
     If m.endedState   <> Invalid Then m.endedState.visible   = (state = "ended")
     If m.noLiveState  <> Invalid Then m.noLiveState.visible  = (state = "nolive")
     If m.blockState   <> Invalid Then m.blockState.visible   = (state = "block")
+    If m.voteState    <> Invalid Then m.voteState.visible    = (state = "vote")
 End Sub
+
+' =============================================================================
+' VOTE FROM THE COUCH (festival blocks with Audience Choice)
+' =============================================================================
+' Every 15 s, asks cratetv.net/api/audience?tally=<blockId> for the counts.
+' If the block has voting (2+ films) and it's open, or closed with votes,
+' this screen shows the QR to vote on a phone and live bars per film.
+Sub StartTally()
+    key = ""
+    If m.currentFilm <> Invalid And m.currentFilm.HasField("movieKey") Then key = m.currentFilm.movieKey
+    If key = "" And m.currentFilm <> Invalid Then key = m.currentFilm.id
+    If key = "" Then Return
+    m.tallyBlockId = key
+    encoder = CreateObject("roUrlTransfer")
+    m.top.FindNode("voteQr").uri = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=" + encoder.Escape("https://cratetv.net/watchparty/" + key)
+    m.top.FindNode("voteUrl").text = "cratetv.net/watchparty/" + key
+    FetchTally()
+    m.tallyTimer.control = "start"
+End Sub
+
+Sub FetchTally()
+    If m.tallyTask <> Invalid Or m.tallyBlockId = "" Then Return
+    task = CreateObject("roSGNode", "ContentTask")
+    task.taskType = "getJson"
+    task.feedUrl = "https://cratetv.net/api/audience?tally=" + m.tallyBlockId
+    task.ObserveField("taskStatus", "OnTally")
+    task.control = "run"
+    m.tallyTask = task
+End Sub
+
+Sub OnTally()
+    task = m.tallyTask
+    If task = Invalid Or (task.taskStatus <> "success" And task.taskStatus <> "error") Then Return
+    m.tallyTask = Invalid
+    If task.taskStatus <> "success" Then Return
+    t = ParseJson(task.actorResults)
+    If t = Invalid Or t.state = Invalid Then Return
+    total = 0
+    If t.total <> Invalid Then total = t.total
+    If t.state = "open"
+        m.top.FindNode("voteHeading").text = "Vote for Audience Choice"
+        m.top.FindNode("voteSub").text = "Scan with your phone to join the screening and vote for your favourite film."
+    Else If t.state = "closed" And total > 0
+        m.top.FindNode("voteHeading").text = "Audience Choice: the results"
+        m.top.FindNode("voteSub").text = "Voting has closed. Thank you for voting!"
+        m.top.FindNode("voteQrGroup").visible = false
+    Else
+        m.tallyTimer.control = "stop"      ' no voting for this block
+        Return
+    End If
+    If Type(t.results) = "roArray" Then DrawTally(t.results, total)
+    If total = 1 Then m.top.FindNode("voteTotal").text = "1 vote so far" Else m.top.FindNode("voteTotal").text = Str(total).Trim() + " votes so far"
+    ShowState("vote")
+End Sub
+
+' One row per film: title, a red bar sized by its share, and the percentage.
+Sub DrawTally(results as Object, total as Integer)
+    m.voteRows.RemoveChildrenIndex(m.voteRows.GetChildCount(), 0)
+    BAR = 760
+    y = 0
+    For Each r in results
+        row = m.voteRows.CreateChild("Group")
+        row.translation = [0, y]
+        title = row.CreateChild("Label")
+        title.text = r.title : title.font = CrateFontLocal("Inter-SemiBold", 24) : title.color = "#FFFFFF"
+        title.width = BAR - 100 : title.maxLines = 1
+        pct = row.CreateChild("Label")
+        share = 0
+        If r.share <> Invalid Then share = r.share
+        pct.text = Str(Int(share + 0.5)).Trim() + "%" : pct.font = CrateFontLocal("Inter-Bold", 24) : pct.color = "#FFFFFF"
+        pct.width = 100 : pct.horizAlign = "right" : pct.translation = [BAR - 100, 0]
+        track = row.CreateChild("Poster")
+        track.uri = "pkg:/images/ui/bar_track.9.png" : track.width = BAR : track.height = 10 : track.translation = [0, 38]
+        fill = row.CreateChild("Poster")
+        fill.uri = "pkg:/images/ui/bar_fill.9.png" : fill.height = 10 : fill.translation = [0, 38]
+        fill.width = Int(BAR * share / 100)
+        If fill.width < 10 And share > 0 Then fill.width = 10
+        fill.visible = (share > 0)
+        y = y + 64
+    End For
+End Sub
+
+Function CrateFontLocal(face as String, size as Integer) as Object
+    f = CreateObject("roSGNode", "Font")
+    f.uri = "pkg:/fonts/" + face + ".ttf"
+    f.size = size
+    Return f
+End Function
 
 Sub StopTimers()
     If m.countdownTimer <> Invalid Then m.countdownTimer.control = "stop"
@@ -289,6 +389,7 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
 
     If key = "back"
         StopTimers()
+        m.tallyTimer.control = "stop"
         m.top.exitRequested = true
         Return true
     End If

@@ -1,83 +1,73 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Main Scene (V4 Studio)
-    Root scene with:
-    - Header nav bar (HOME, THE SQUARE, SEARCH, MY ACCOUNT)
-    - Scene container viewport that swaps based on nav selection
-    - Login flow → Home → Video playback
+    ============================================================================
+    CRATE TV - Main Scene (the root of the whole channel)
+    ============================================================================
+    Children, drawn in this order (later = on top):
+      1. background       black
+      2. sceneContainer   the current page (Home, Search, Title page, player...)
+                          It starts 60px down; full-screen pages shift their
+                          own content up 60px to use the whole screen.
+      3. headerNav        the top menu. Drawn ABOVE the page so on Home it can
+                          float over the billboard artwork.
+      4. loadingGroup     launch screen shown until the first feed arrives
+      5. dialogContainer  pop-up messages
+
+    Logic: MainScene.brs (screen switching, Back, deep links, watch parties).
+    ============================================================================
 -->
 <component name="MainScene" extends="Scene">
     <interface>
-        <field id="currentScene" type="string" value="loading" />
-        <field id="selectedContent" type="node" />
-        <field id="exitApp" type="boolean" value="false" />
+        <field id="currentScene"     type="string" value="loading" />
+        <field id="selectedContent"  type="node" />
+        <field id="exitApp"          type="boolean" value="false" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
-    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Theme.brs" />
     <script type="text/brightscript" uri="MainScene.brs" />
 
     <children>
-        <!-- Background -->
-        <Rectangle id="background" width="1920" height="1080" color="#050505" />
+        <Rectangle id="background" width="1920" height="1080" color="#000000" />
 
-        <!-- Header Navigation Bar (persistent, above viewport) -->
-        <!-- visible="false" -- revealed in OnHomeFeedReady() after feed loads -->
-        <Header id="headerNav" translation="[0, 0]" visible="false" />
-
-        <!-- Scene Container / Viewport (below header) -->
-        <!-- Also starts hidden -- revealed atomically with the header -->
+        <!-- The current page. Hidden until the first feed has loaded. -->
         <Group id="sceneContainer" translation="[0, 60]" visible="false" />
 
-        <!-- LOADING COVER
-             Rendered LAST -- always on top. Pure black rectangle covers
-             sceneContainer until OnHomeFeedReady() hides it.
-             The CRATE logo is shown via manifest splash_screen_fhd/hd/sd
-             (native Roku splash -- displays before Main.brs even runs). -->
+        <!-- Top menu, on top of the page. Revealed in OnHomeFeedReady(). -->
+        <Header id="headerNav" translation="[0, 0]" visible="false" />
+
+        <!-- LAUNCH SCREEN: shown after Roku's own splash (manifest splash_screen_*)
+             until the catalogue is ready. -->
         <Group id="loadingGroup" visible="true">
-            <Rectangle width="1920" height="1080" color="#050505" />
-            <Group translation="[660, 400]">
-                <!-- CRATE wordmark in pure text (no image, no line cutting through) -->
-                <Label text="CRATE"
-                       font="font:LargeBoldSystemFont"
-                       color="#EBEBEB"
-                       width="600"
-                       horizAlign="center"
-                       translation="[0, 0]" />
-                <Label text="TELEVISION  ·  POWERED BY CREATIVES"
-                       font="font:SmallSystemFont"
-                       color="#555555"
-                       width="600"
-                       horizAlign="center"
-                       translation="[0, 56]" />
-                <!-- Red accent line, standalone below tagline -->
-                <Rectangle width="48" height="3" color="#EF4444" translation="[276, 82]" />
-                <Label text="Your independent cinema, streaming now."
-                       font="font:SmallSystemFont"
-                       color="#444444"
-                       width="600"
-                       horizAlign="center"
-                       translation="[0, 106]" />
-                <!-- Progress bar -->
-                <Rectangle width="600" height="4" color="#1A1A1A" translation="[0, 146]" />
-                <Rectangle id="loadingBar" width="60" height="4" color="#EF4444" translation="[0, 146]" />
-                <Group id="loadingDots" translation="[264, 166]">
-                    <Rectangle id="dot1" width="12" height="12" color="#EF4444" translation="[0,  0]" />
-                    <Rectangle id="dot2" width="12" height="12" color="#333333" translation="[22, 0]" />
-                    <Rectangle id="dot3" width="12" height="12" color="#333333" translation="[44, 0]" />
-                </Group>
-                <Label id="loadingText"
-                       text="Loading content..."
-                       font="font:SmallSystemFont"
-                       color="#888888"
-                       width="600"
-                       horizAlign="center"
-                       translation="[0, 196]" />
+            <Rectangle width="1920" height="1080" color="#000000" />
+            <!-- Only a thin moving bar, no logo or words (by request, Oct 2026).
+                 Roku's own splash screen (manifest splash_screen_*) shows the
+                 logo just before this. Something must move while loading, or
+                 the TV looks frozen, so the bar stays. -->
+            <Rectangle width="300" height="3" color="#262626" translation="[810, 538]" />
+            <Rectangle id="loadingBar" width="40" height="3" color="#EF4444" translation="[810, 538]" />
+            <Label id="loadingText" text="" visible="false" color="#8C8C8C" width="600" horizAlign="center" translation="[660, 584]">
+                <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="22" />
+            </Label>
+            <!-- Kept for MainScene.brs (animated dots); hidden in this design -->
+            <Group visible="false">
+                <Rectangle id="dot1" width="1" height="1" />
+                <Rectangle id="dot2" width="1" height="1" />
+                <Rectangle id="dot3" width="1" height="1" />
             </Group>
         </Group>
 
-        <!-- Global Dialog Container -->
+        <!-- Short note at the top, e.g. "Sent from your phone" (ShowToast in MainScene.brs) -->
+        <Group id="toast" translation="[660, 40]" visible="false">
+            <Poster width="600" height="60" uri="pkg:/images/ui/pill_dark.9.png" />
+            <Label id="toastLabel" text="" color="#FFFFFF" width="600" height="60" horizAlign="center" vertAlign="center">
+                <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+            </Label>
+        </Group>
+
+        <!-- Pop-up messages (ShowDialog in MainScene.brs) -->
         <Group id="dialogContainer" visible="false">
             <Rectangle id="dialogOverlay" width="1920" height="1080" color="#000000" opacity="0.85" />
             <Group id="dialogContent" translation="[560, 340]" />

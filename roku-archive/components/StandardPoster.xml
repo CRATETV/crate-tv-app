@@ -26,9 +26,11 @@
                     failedBitmapUri="pkg:/images/poster_placeholder.png" />
             <Group id="lockOverlay" visible="false">
                 <Rectangle id="lockOverlayRect" width="200" height="300" color="#000000" opacity="0.6" />
-                <Label id="lockOverlayLabel" text="&#x1F512;" font="font:LargeBoldSystemFont"
+                <Label id="lockOverlayLabel" text="&#x1F512;"
                        color="#EF4444" width="200" height="300"
-                       horizAlign="center" vertAlign="center" />
+                       horizAlign="center" vertAlign="center">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="42" />
+                </Label>
             </Group>
             <Group id="progressGroup" visible="false" translation="[0, 292]">
                 <Rectangle id="progressBg" width="200" height="8" color="#333333" />

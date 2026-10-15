@@ -121,7 +121,18 @@ Sub PopulateScene(film as Object)
         posterUrl = film.HDPosterUrl
     End If
     m.filmPoster.uri    = posterUrl
-    m.backdropPoster.uri = posterUrl
+    ' Wide artwork fills the screen; a portrait poster sits on the right.
+    wideUrl = ""
+    If film.HasField("hasWideArt") And film.hasWideArt And film.HasField("backdropUrl") And film.backdropUrl <> Invalid Then wideUrl = film.backdropUrl
+    If wideUrl <> ""
+        m.backdropPoster.translation = [0, 0]
+        m.backdropPoster.width = 1920 : m.backdropPoster.loadWidth = 1920
+        m.backdropPoster.uri = wideUrl
+        fl = m.top.FindNode("fadeLeft")
+        fl.translation = [0, 0] : fl.width = 1400
+    Else
+        m.backdropPoster.uri = posterUrl
+    End If
 
     ' -------------------------------------------------------------------------
     ' QR Code -- generated from zineUrl via api.qrserver.com
@@ -140,8 +151,8 @@ Sub PopulateScene(film as Object)
 
         ' Show the article slug as a readable hint under the QR
         ' e.g. "cratetv.net/zine/meridian-technical-deep-dive" → show last segment
-        displayUrl = zineUrl
-        If Len(displayUrl) > 36 Then displayUrl = Left(displayUrl, 33) + "..."
+        displayUrl = zineUrl.Replace("https://", "").Replace("http://", "").Replace("www.", "")
+        If Len(displayUrl) > 30 Then displayUrl = Left(displayUrl, 28) + "..."
         m.zineUrlLabel.text    = displayUrl
         m.zineUrlLabel.visible = true
     Else
@@ -149,8 +160,11 @@ Sub PopulateScene(film as Object)
         m.qrBorder.visible    = false
         m.qrPoster.visible    = false
         m.zineUrlLabel.visible = false
-        m.noZineLabel.visible  = true
+        m.noZineLabel.visible  = false
     End If
+    ' No zine: hide the whole card rather than show an empty one.
+    rightPanel = m.top.FindNode("rightPanel")
+    If rightPanel <> Invalid Then rightPanel.visible = (zineUrl <> "")
 
     ' Hide loading, show content
     m.loadingGroup.visible = false
@@ -177,10 +191,12 @@ Sub OnFocusChange()
     If m.top.IsInFocusChain()
         ' Only one focusable element -- the Watch button
         If m.watchFocusRing <> Invalid Then m.watchFocusRing.visible = true
-        If m.watchBtn <> Invalid Then m.watchBtn.color = "#CC2222"
+        If m.watchBtn <> Invalid Then m.watchBtn.uri = "pkg:/images/ui/btn_focus.9.png"
+        If m.watchBtnLabel <> Invalid Then m.watchBtnLabel.color = "#000000"
     Else
         If m.watchFocusRing <> Invalid Then m.watchFocusRing.visible = false
-        If m.watchBtn <> Invalid Then m.watchBtn.color = "#EF4444"
+        If m.watchBtn <> Invalid Then m.watchBtn.uri = "pkg:/images/ui/btn_idle.9.png"
+        If m.watchBtnLabel <> Invalid Then m.watchBtnLabel.color = "#FFFFFF"
     End If
 End Sub
 

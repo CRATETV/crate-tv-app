@@ -1,31 +1,45 @@
 ' ##############################################################################
-' CRATE TV - Live Chat Overlay Controller
+' CRATE TV - Live chat panel logic (layout and how hiding works: ChatOverlay.xml)
+' ##############################################################################
 '
-' Polls GET /api/get-watch-party-chat every 5 seconds.
-' Displays the most recent 6 messages in a scrolling panel.
-' Usernames in red, messages in white. Completely read-only on Roku.
-'
-' Call isVisible=true to start polling and show panel.
-' Call isVisible=false to stop polling and hide panel.
+' - While a watch party plays (isVisible = true), asks cratetv.net for the
+'   chat every 5 seconds (ChatTask) and shows the last ROWS messages.
+' - toggle: hide/show. Remembered on this Roku (registry key "chatHidden").
+' - Live reactions arrive with the chat; each new one floats up the screen
+'   (released a few at a time so a burst looks like a crowd, not a block).
 ' ##############################################################################
 
 Sub Init()
+    m.ROWS = 5
     m.panel = m.top.FindNode("panel")
+    m.emptyLabel = m.top.FindNode("emptyLabel")
+    m.toast = m.top.FindNode("toast")
+    m.toastLabel = m.top.FindNode("toastLabel")
+    m.toastTimer = m.top.FindNode("toastTimer")
+    m.toastTimer.ObserveField("fire", "HideToast")
 
-    ' Cache all 6 username + message label pairs
     m.userLabels = []
     m.textLabels = []
-    For i = 0 To 5
+    For i = 0 To m.ROWS - 1
         m.userLabels.Push(m.top.FindNode("msgUser" + Str(i).Trim()))
         m.textLabels.Push(m.top.FindNode("msgText" + Str(i).Trim()))
     End For
 
-    m.chatTask   = Invalid
-    m.pollTimer  = Invalid
-    m.movieKey   = ""
-    m.lastMsgTs  = 0   ' timestamp of newest message we've seen
+    m.chatTask = Invalid
+    m.movieKey = ""
+    m.userHidden = (RegistryRead("chatHidden", GetRegistryConfig().SECTION) = "true")
 
-    ' Poll timer -- every 5 seconds
+    ' Live reactions
+    m.REACTION_IMAGES = { "😂": "laugh", "😲": "wow", "❤️": "heart", "❤": "heart", "👏": "clap", "😢": "sad" }
+    m.MAX_FLOATING = 14
+    m.reactionLayer = m.top.FindNode("reactionLayer")
+    m.seenReactions = {}
+    m.reactionQueue = []
+    m.floaters = []
+    m.nextFloater = 0
+    m.reactionTick = m.top.FindNode("reactionTick")
+    m.reactionTick.ObserveField("fire", "ReleaseReaction")
+
     m.pollTimer = CreateObject("roSGNode", "Timer")
     m.pollTimer.duration = 5
     m.pollTimer.repeat   = true
@@ -36,26 +50,60 @@ Sub OnMovieKeyChange()
     m.movieKey = m.top.movieKey
 End Sub
 
+' Shown only during a watch party AND when the viewer hasn't hidden it.
 Sub OnVisibleChange()
-    show = m.top.isVisible
-    If m.panel <> Invalid Then m.panel.visible = show
+    UpdateShown()
+    ' Remind viewers who hid it last time that it's there
+    If m.top.isVisible And m.userHidden Then ShowToast("Chat is hidden  ·  press ▼ to show it")
+End Sub
 
-    If show
-        ' Start polling immediately
+Sub UpdateShown()
+    ' The panel shows only if not hidden; messages and reactions keep coming
+    ' for the whole watch party (reactions float even when the panel is hidden).
+    m.panel.visible = m.top.isVisible And Not m.userHidden
+    If m.top.isVisible
         PollChat()
-        If m.pollTimer <> Invalid Then m.pollTimer.control = "start"
+        m.pollTimer.control = "start"
+        m.reactionTick.control = "start"
     Else
-        If m.pollTimer <> Invalid Then m.pollTimer.control = "stop"
+        m.pollTimer.control = "stop"
+        m.reactionTick.control = "stop"
+        m.reactionQueue = []
         ClearMessages()
+        HideToast()
     End If
 End Sub
 
+' Down / * pressed in the player
+Sub OnToggle()
+    If Not m.top.isVisible Then Return
+    m.userHidden = Not m.userHidden
+    If m.userHidden
+        RegistryWrite("chatHidden", "true", GetRegistryConfig().SECTION)
+        ShowToast("Chat hidden  ·  press ▼ to show it again")
+    Else
+        RegistryWrite("chatHidden", "false", GetRegistryConfig().SECTION)
+        HideToast()
+    End If
+    UpdateShown()
+End Sub
+
+Sub ShowToast(text as String)
+    m.toastLabel.text = text
+    m.toast.visible = true
+    m.toastTimer.control = "stop"
+    m.toastTimer.control = "start"
+End Sub
+
+Sub HideToast()
+    m.toast.visible = false
+End Sub
+
 ' =============================================================================
-' POLL
+' FETCH (in the background, ChatTask)
 ' =============================================================================
 Sub PollChat()
     If m.movieKey = "" Then Return
-
     task = CreateObject("roSGNode", "ChatTask")
     task.movieKey  = m.movieKey
     task.authToken = m.top.authToken
@@ -66,85 +114,119 @@ End Sub
 
 Sub OnChatReady()
     task = m.chatTask
-    If task = Invalid Then Return
-    If task.taskStatus <> "success" Then Return
-
+    If task = Invalid Or task.taskStatus <> "success" Then Return
     raw = task.messages
     If raw = Invalid Or raw = "" Then Return
-
     parsed = ParseJson(raw)
     If parsed = Invalid Then Return
 
-    ' Response is { "messages": [...] } wrapper
+    ' Response is { "messages": [...] } (or just the list)
     messages = Invalid
     If Type(parsed) = "roAssociativeArray" And parsed.messages <> Invalid
         messages = parsed.messages
     Else If Type(parsed) = "roArray"
         messages = parsed
     End If
-
-    If messages = Invalid Then Return
-    If messages.Count() = 0 Then Return
-
-    RenderMessages(messages)
+    If messages <> Invalid Then RenderMessages(messages)
+    If Type(parsed) = "roAssociativeArray" And Type(parsed.reactions) = "roArray" Then QueueReactions(parsed.reactions)
 End Sub
 
 ' =============================================================================
-' RENDER -- take last 6 messages, fill rows bottom-up
+' LIVE REACTIONS
+' =============================================================================
+' New reactions join a queue; ReleaseReaction lets one float every 0.3 s.
+Sub QueueReactions(list as Object)
+    For Each r in list
+        If Type(r) = "roAssociativeArray" And r.id <> Invalid And Not m.seenReactions.DoesExist(r.id)
+            m.seenReactions[r.id] = true
+            img = Invalid
+            If r.emoji <> Invalid Then img = m.REACTION_IMAGES[r.emoji]
+            If img <> Invalid And m.reactionQueue.Count() < 40 Then m.reactionQueue.Push(img)
+        End If
+    End For
+    ' Forget old ids now and then so the list doesn't grow all night
+    If m.seenReactions.Count() > 400 Then m.seenReactions = {}
+End Sub
+
+Sub ReleaseReaction()
+    If m.reactionQueue.Count() = 0 Then Return
+    img = m.reactionQueue.Shift()
+    f = NextFloater()
+    ' Start low on the right (left of the chat panel when it's showing)
+    If m.panel.visible
+        x = 1180 + Rnd(150)
+    Else
+        x = 1560 + Rnd(240)
+    End If
+    f.poster.uri = "pkg:/images/reactions/" + img + ".png"
+    f.moveInterp.keyValue = [[x, 900], [x + Rnd(60) - 30, 380]]
+    f.anim.control = "stop"
+    f.anim.control = "start"
+End Sub
+
+' Reuses a small set of images so a big burst never slows the TV down.
+Function NextFloater() as Object
+    If m.floaters.Count() < m.MAX_FLOATING
+        poster = m.reactionLayer.CreateChild("Poster")
+        poster.width = 72 : poster.height = 72 : poster.opacity = 0
+        poster.id = "floater" + Str(m.floaters.Count()).Trim()
+        anim = m.top.CreateChild("ParallelAnimation")
+        a1 = anim.CreateChild("Animation") : a1.duration = 3.2 : a1.easeFunction = "outQuad"
+        moveInterp = a1.CreateChild("Vector2DFieldInterpolator")
+        moveInterp.fieldToInterp = poster.id + ".translation"
+        moveInterp.key = [0.0, 1.0]
+        a2 = anim.CreateChild("Animation") : a2.duration = 3.2 : a2.easeFunction = "linear"
+        fade = a2.CreateChild("FloatFieldInterpolator")
+        fade.fieldToInterp = poster.id + ".opacity"
+        fade.key = [0.0, 0.1, 0.7, 1.0]
+        fade.keyValue = [0.0, 1.0, 1.0, 0.0]
+        f = { poster: poster, anim: anim, moveInterp: moveInterp }
+        m.floaters.Push(f)
+        Return f
+    End If
+    f = m.floaters[m.nextFloater]
+    m.nextFloater = (m.nextFloater + 1) Mod m.MAX_FLOATING
+    Return f
+End Function
+
+' =============================================================================
+' SHOW the newest messages, oldest at the top
 ' =============================================================================
 Sub RenderMessages(messages as Object)
+    ClearMessages()
     total = messages.Count()
-
-    ' We show at most 6 rows. Take the last 6 messages.
-    startIdx = total - 6
+    m.emptyLabel.visible = (total = 0)
+    startIdx = total - m.ROWS
     If startIdx < 0 Then startIdx = 0
 
-    ' Clear all rows first
-    ClearMessages()
-
-    ' Fill rows 0..5 with messages startIdx..total-1
-    rowIdx = 0
+    row = 0
     For mi = startIdx To total - 1
         msg = messages[mi]
-        If msg = Invalid Then Continue For
+        If msg <> Invalid And row < m.ROWS
+            name = ""
+            text = ""
+            isDirector = false
+            If msg.userName <> Invalid Then name = msg.userName
+            If msg.text <> Invalid Then text = msg.text
+            If msg.isVerifiedDirector <> Invalid And msg.isVerifiedDirector = true Then isDirector = true
+            If Len(name) > 24 Then name = Left(name, 22) + "…"
 
-        ' Exact field names from /api/get-chat-messages response
-        username   = ""
-        msgText    = ""
-        isDirector = false
-        If msg.userName          <> Invalid Then username   = msg.userName
-        If msg.text              <> Invalid Then msgText    = msg.text
-        If msg.isVerifiedDirector <> Invalid Then isDirector = msg.isVerifiedDirector
-
-        ' Truncate long usernames
-        If Len(username) > 16 Then username = Left(username, 14) + ".."
-
-        ' Director messages get a checkmark prefix on their name
-        If isDirector And username <> "" Then username = username + " [D]"
-
-        If rowIdx <= 5
-            uLabel = m.userLabels[rowIdx]
-            tLabel = m.textLabels[rowIdx]
-            If uLabel <> Invalid
-                uLabel.text  = username
-                ' Director name in bright white, regular users in red
-                If isDirector
-                    uLabel.color = "#FFFFFF"
-                Else
-                    uLabel.color = "#EF4444"
-                End If
+            If isDirector
+                m.userLabels[row].text = name + "  ✓ Director"
+                m.userLabels[row].color = "#E8C15A"
+            Else
+                m.userLabels[row].text = name
+                m.userLabels[row].color = "#B3B3B3"
             End If
-            If tLabel <> Invalid Then tLabel.text = msgText
+            m.textLabels[row].text = text
+            row = row + 1
         End If
-        rowIdx = rowIdx + 1
     End For
 End Sub
 
 Sub ClearMessages()
-    For i = 0 To 5
-        uLabel = m.userLabels[i]
-        tLabel = m.textLabels[i]
-        If uLabel <> Invalid Then uLabel.text = ""
-        If tLabel <> Invalid Then tLabel.text = ""
+    For i = 0 To m.ROWS - 1
+        m.userLabels[i].text = ""
+        m.textLabels[i].text = ""
     End For
 End Sub

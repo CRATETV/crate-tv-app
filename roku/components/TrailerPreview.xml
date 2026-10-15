@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ============================================================================
+    CRATE TV - Trailer preview (the trailer that plays behind the artwork)
+    ============================================================================
+    Used by the Home billboard and the film page (TitleScene), Netflix-style:
+    rest on a film for a few seconds and its trailer fades in behind the text.
+    Any button press that moves away stops it.
+
+    HOW A SCREEN USES IT
+      preview.url     = "https://...trailer.mp4"
+      preview.control = "play"     start (fades in once the video is actually playing)
+      preview.control = "stop"     stop and hide
+      preview.isPlaying            true while it's visible and playing
+      preview.finished             fires when the trailer ends or can't play
+
+    SOUND
+      `mute` is false: previews play with sound, like Netflix on TV.
+      To make every preview silent, change value="false" to value="true" below.
+
+    IMPORTANT
+      A Roku can only play one video at a time. Screens must stop the preview
+      BEFORE asking MainScene to play a film (HomeScene and TitleScene do).
+
+    Logic: TrailerPreview.brs
+    ============================================================================
+-->
+<component name="TrailerPreview" extends="Group">
+    <interface>
+        <field id="url"       type="string"  value="" />
+        <!-- For a clip from the film itself (source/Preview.brs): where to start
+             (0.33 = a third in; 0 = from the beginning) and how long (0 = to the end). -->
+        <field id="startPercent" type="float"   value="0" />
+        <field id="maxSeconds"   type="integer" value="0" />
+        <field id="control"   type="string"  value="" alwaysNotify="true" onChange="OnControl" />
+        <field id="mute"      type="boolean" value="false" onChange="OnMute" />
+        <field id="width"     type="float"   value="1920" onChange="OnSize" />
+        <field id="height"    type="float"   value="1080" onChange="OnSize" />
+        <field id="isPlaying" type="boolean" value="false" />
+        <field id="finished"  type="boolean" value="false" alwaysNotify="true" />
+    </interface>
+
+    <script type="text/brightscript" uri="TrailerPreview.brs" />
+
+    <children>
+        <Video id="video" width="1920" height="1080" enableUI="false" loop="false" />
+        <Timer id="clipTimer" repeat="false" />
+    </children>
+</component>

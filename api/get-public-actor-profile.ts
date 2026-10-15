@@ -2,6 +2,7 @@
 // Path: /api/get-public-actor-profile
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { ActorProfile, Movie } from '../types.js';
+import { isPublicEmbedUrl } from './get-live-data.js';
 
 export async function GET(request: Request) {
   try {
@@ -35,7 +36,16 @@ export async function GET(request: Request) {
         const movie = doc.data() as Movie;
         if (movie.cast && movie.cast.some(c => c.name.trim().toLowerCase() === profile.name.trim().toLowerCase())) {
             // FIX: Spread movie first, then set key to doc.id to avoid TS2783 error
-            films.push({ ...movie, key: doc.id });
+            // SECURITY (Oct 2026): never send a film's private video address in
+            // this public response. Same rule as api/get-live-data.ts: only
+            // public embeds (YouTube/Vimeo) keep it. Before this, anyone could
+            // read a paid film's full video address from an actor's page.
+            const { rokuStreamUrl: _hiddenRoku, ...rest } = movie as any;
+            films.push({
+                ...rest,
+                fullMovie: isPublicEmbedUrl(movie.fullMovie) ? movie.fullMovie : (undefined as any),
+                key: doc.id,
+            });
         }
     });
 

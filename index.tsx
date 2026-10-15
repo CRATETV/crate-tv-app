@@ -235,6 +235,7 @@ const AppRouter: React.FC = () => {
         return <JuryRoomPage />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
+    case '/link':          // the address the Roku shows on screen
     case '/link-roku':
       return user ? <LinkRokuPage /> : <RedirectToLogin />;
     case '/festival':

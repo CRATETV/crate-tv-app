@@ -41,7 +41,21 @@ export async function GET(request: Request) {
       };
     });
 
-    return new Response(JSON.stringify({ messages }), {
+    // Live reactions from the last 10 seconds (the 😂 😲 ❤️ 👏 😢 buttons on
+    // cratetv.net). The Roku asks every 5 seconds and floats each one up the
+    // TV once (it remembers ids it has shown). Added Oct 2026.
+    let reactions: { id: string; emoji: string }[] = [];
+    if (searchParams.get('reactions') === '1') {
+      try {
+        const rSnap = await db.collection('watch_parties').doc(movieKey).collection('live_reactions')
+          .where('timestamp', '>=', new Date(Date.now() - 10_000))
+          .limit(60)
+          .get();
+        reactions = rSnap.docs.map(d => ({ id: d.id, emoji: String(d.data().emoji || '') }));
+      } catch { /* reactions are a bonus; never break the chat over them */ }
+    }
+
+    return new Response(JSON.stringify({ messages, reactions }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',

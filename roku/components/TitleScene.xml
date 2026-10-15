@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ============================================================================
+    CRATE TV - Title page (the film's own page, like Netflix's)
+    ============================================================================
+
+    Opens when the viewer presses OK on a poster (Home), a search result,
+    or a Public Square film. MainScene.LoadTitleScene() opens it and hides
+    the header; Back returns to where the viewer was.
+
+    LAYOUT (screen positions; `canvas` is shifted up 60px because this scene
+    sits inside MainScene's sceneContainer, which starts at y=60)
+      - Artwork: wide image full screen, or portrait poster on the right,
+        melting into black (same technique as the Home billboard).
+      - Left: eyebrow, title, details, award, synopsis, cast, director.
+      - Buttons row at y=830 (TitleScene.brs decides which buttons appear):
+          unlocked film:   [▶ Play] or [▶ Resume] [Start over]   [Trailer]
+          watch party:     [▶ Join watch party]                [Trailer]
+          locked film:     [▶ Watch trailer] + the "Unlock" card on the right
+      - "Unlock" card (locked films only): a QR code that opens the film's
+        page on cratetv.net on the viewer's phone, the price, and the web
+        address to type if they'd rather.
+
+    WHAT THE BUTTONS DO (TitleScene.brs -> OnButtonPressed)
+      Play / Resume / Join  -> sets playContent; MainScene plays it (and sends
+                               watch-party films to the watch party lobby)
+      Start over            -> plays from 0 (clears the saved position)
+      Trailer               -> plays the trailer only (no progress saved)
+
+    TRAILER PREVIEW
+      After previewTimer (2.5 s) the trailer fades in behind the text, with
+      sound (TrailerPreview.xml). It stops when a button is pressed or the
+      viewer leaves the page.
+
+    SERIES (e.g. "Made in New Jersey")
+      The page lists the episodes under the buttons: number, title, length
+      and a line of description. Play starts episode 1 (or "Continue
+      episode N" where they left off). OK on an episode plays it; when it
+      ends and they come back here, the next episode is already highlighted.
+      Only episodes that are real video files show: YouTube/Vimeo-hosted
+      episodes can't play on a Roku (the website still plays them).
+
+    UNLOCKING WHILE THE PAGE IS OPEN (locked films)
+      If this Roku is linked to a Crate account, the page re-checks the
+      catalogue every 15 seconds (unlockTimer) for up to 10 minutes. As soon
+      as the purchase shows up, the "Unlock" card disappears and the buttons
+      switch to Play: no need to restart the channel. If the Roku isn't
+      linked, the card says to link it first (Account tab).
+    ============================================================================
+-->
+<component name="TitleScene" extends="Group">
+    <interface>
+        <field id="content"       type="node"    onChange="OnContentChange" />   <!-- the film -->
+        <field id="playContent"   type="node"    alwaysNotify="true" />          <!-- MainScene plays this -->
+        <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
+        <!-- "Send to TV" with an episode: MainScene sets this to play that episode -->
+        <field id="playEpisodeIndex" type="integer" value="-1" alwaysNotify="true" onChange="OnPlayEpisodeRequested" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Theme.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Preview.brs" />
+    <script type="text/brightscript" uri="TitleScene.brs" />
+
+    <children>
+        <Timer id="previewTimer" duration="2.5" repeat="false" />
+        <Timer id="unlockTimer"  duration="15"  repeat="true" />
+
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle width="1920" height="1080" color="#000000" />
+
+            <Poster id="art" width="1040" height="1080" translation="[880, 0]"
+                    loadDisplayMode="scaleToZoom" loadWidth="1040" loadHeight="1080"
+                    loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.0" />
+            <TrailerPreview id="trailer" width="1920" height="1080" />
+            <Poster id="fadeLeft"   uri="pkg:/images/ui/fade_left.png"   width="840"  height="1080" translation="[508, 0]" />
+            <Poster id="fadeBottom" uri="pkg:/images/ui/fade_bottom.png" width="1920" height="520"  translation="[0, 560]" />
+
+            <!-- Film info, stacked by TitleScene.brs (LayoutInfo) -->
+            <Group id="info" translation="[96, 150]">
+                <Label id="eyebrow" text="" color="#EF4444">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                </Label>
+                <Label id="title" text="" color="#FFFFFF" width="980" wrap="true" maxLines="2" lineSpacing="-6">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="76" />
+                </Label>
+                <Label id="meta" text="" color="#B3B3B3" width="980">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
+                </Label>
+                <Label id="award" text="" color="#E8C15A" width="980">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
+                <Label id="synopsis" text="" color="#D2D2D2" width="860" wrap="true" maxLines="4" lineSpacing="5">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="27" />
+                </Label>
+                <Label id="cast" text="" color="#8C8C8C" width="860" wrap="true" maxLines="2">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="23" />
+                </Label>
+                <Label id="director" text="" color="#8C8C8C" width="860" maxLines="1">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="23" />
+                </Label>
+            </Group>
+
+            <!-- Buttons are created in TitleScene.brs (y moves up for series) -->
+            <Group id="buttons" translation="[96, 860]" />
+
+            <!-- SERIES ONLY: the episode list (rows built in TitleScene.brs,
+                 3 visible at a time, scrolls). Down from the buttons enters it,
+                 Up from the first episode goes back to the buttons. -->
+            <Group id="episodesGroup" translation="[96, 650]" visible="false">
+                <Label id="episodesHeading" text="Episodes" color="#FFFFFF">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="30" />
+                </Label>
+                <Label id="episodesCount" text="" color="#8C8C8C" translation="[150, 6]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="22" />
+                </Label>
+                <Group id="episodeRows" translation="[0, 52]" />
+                <Label id="episodesMore" text="" color="#8C8C8C" translation="[0, 350]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="20" />
+                </Label>
+            </Group>
+
+            <!-- Unlock card (locked films only) -->
+            <Group id="unlockCard" translation="[1404, 520]" visible="false">
+                <Poster width="420" height="470" uri="pkg:/images/ui/card.9.png" />
+                <Label text="Unlock this film" color="#FFFFFF" width="380" horizAlign="center" translation="[20, 28]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="28" />
+                </Label>
+                <Label id="unlockPrice" text="" color="#B3B3B3" width="380" horizAlign="center" translation="[20, 70]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="22" />
+                </Label>
+                <Rectangle width="232" height="232" color="#FFFFFF" translation="[94, 112]" />
+                <Poster id="qrCode" width="216" height="216" translation="[102, 120]" loadingBitmapOpacity="0.0" />
+                <Label text="Scan with your phone, or visit" color="#8C8C8C" width="380" horizAlign="center" translation="[20, 362]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="20" />
+                </Label>
+                <Label id="unlockUrl" text="" color="#FFFFFF" width="380" horizAlign="center" translation="[20, 392]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                </Label>
+                <Label id="unlockNote" text="" color="#8C8C8C" width="380" horizAlign="center" translation="[20, 426]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="18" />
+                </Label>
+            </Group>
+        </Group>
+    </children>
+</component>

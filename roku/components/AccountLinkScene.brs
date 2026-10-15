@@ -1,7 +1,18 @@
 ' ##############################################################################
-' CRATE TV - Account Link Scene Controller
-' Handles device linking with 6-digit code and auth polling
-' FIXED: Properly uses ContentTask with taskStatus and linkCode fields
+' CRATE TV - Link this Roku (layout + how linking works: AccountLinkScene.xml)
+' ##############################################################################
+'
+' STEPS
+'   1. FetchLinkCode: ask cratetv.net for a code for this Roku (ContentTask
+'      "getLinkCode"), show it, and draw the QR code that opens
+'      cratetv.net/link?code=<code>.
+'   2. Every AUTH_POLL_INTERVAL seconds (Config.brs), ask whether the code has
+'      been used (ContentTask "pollAuth").
+'   3. Linked -> save the name/email for the Account tab and tell MainScene
+'      (linkComplete), which reloads Home with the viewer's films unlocked.
+'   After ~10 minutes without a link, a fresh code is fetched automatically.
+'
+' KEYS: OK or Back = "Not now". (If the code couldn't load, OK retries.)
 ' ##############################################################################
 
 Sub Init()
@@ -11,11 +22,11 @@ Sub Init()
     m.codeSpinner = m.top.FindNode("codeSpinner")
     m.skipButtonBg = m.top.FindNode("skipButtonBg")
     m.skipButtonLabel = m.top.FindNode("skipButtonLabel")
-    m.focusRing = m.top.FindNode("focusRing")
+    m.qrCode = m.top.FindNode("qrCode")
     
     m.isPolling = false
     m.pollAttempts = 0
-    m.maxPollAttempts = 60
+    m.maxPollAttempts = 120          ' x 5 seconds = 10 minutes, then a fresh code
     m.skipButtonFocused = false
     
     m.theme = GetThemeConfig()
@@ -38,8 +49,9 @@ End Sub
 ' =============================================================================
 Sub FetchLinkCode()
     m.codeSpinner.visible = true
-    m.linkCodeLabel.text = "------"
-    m.statusLabel.text = "Generating code..."
+    m.linkCodeLabel.text = ""
+    m.qrCode.uri = ""
+    m.statusLabel.text = "Getting your code..."
     m.errorLabel.visible = false
     
     deviceId = ""
@@ -79,7 +91,17 @@ Sub OnLinkCodeTaskComplete()
             End If
             
             m.linkCodeLabel.text = formattedCode
-            m.statusLabel.text = "Waiting for link..."
+            m.statusLabel.text = "Waiting for you to link..."
+
+            ' QR code -> cratetv.net/link?code=ABC123 (same free QR service the
+            ' film page uses). Spaces/dashes removed; the website accepts either.
+            plain = ""
+            For ci = 1 To Len(linkCode)
+                ch = UCase(Mid(linkCode, ci, 1))
+                If (ch >= "A" And ch <= "Z") Or (ch >= "0" And ch <= "9") Then plain = plain + ch
+            End For
+            encoder = CreateObject("roUrlTransfer")
+            m.qrCode.uri = "https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=0&data=" + encoder.Escape("https://cratetv.net/link?code=" + plain)
             
             ' Start polling for authentication
             StartAuthPolling()
@@ -118,14 +140,11 @@ Sub OnPollTimer()
     m.pollAttempts = m.pollAttempts + 1
     
     If m.pollAttempts >= m.maxPollAttempts
+        ' Code is about to run out: quietly get a fresh one.
         StopAuthPolling()
-        ShowError("Link code expired. Press OK to get a new code.")
+        FetchLinkCode()
         Return
     End If
-    
-    remainingTime = (m.maxPollAttempts - m.pollAttempts) * GetApiConfig().AUTH_POLL_INTERVAL
-    minutes = Int(remainingTime / 60)
-    m.statusLabel.text = "Waiting for link... (" + Str(minutes).Trim() + " min remaining)"
     
     deviceId = ""
     If m.global <> Invalid And m.global.HasField("deviceId") And m.global.deviceId <> Invalid
@@ -151,8 +170,8 @@ Sub OnAuthPollComplete()
     If status = "success"
         If task.isLinked
             StopAuthPolling()
-            m.statusLabel.text = "Device linked successfully!"
-            m.linkCodeLabel.color = "#00CC00"
+            m.statusLabel.text = "Linked! Loading your films..."
+            m.statusLabel.color = "#4ADE80"
             
             ' Store auth token if provided
             If task.authToken <> Invalid And task.authToken <> ""
@@ -193,11 +212,13 @@ End Sub
 Sub ShowError(message as String)
     m.errorLabel.text = message
     m.errorLabel.visible = true
+    m.statusLabel.visible = false
     m.top.errorMessage = message
 End Sub
 
 Sub ClearError()
     m.errorLabel.visible = false
+    m.statusLabel.visible = true
     m.errorLabel.text = ""
     m.top.errorMessage = ""
 End Sub
@@ -205,16 +226,15 @@ End Sub
 ' =============================================================================
 ' SKIP BUTTON
 ' =============================================================================
+' "Not now" is the only button, so it always looks focused (white).
 Sub UpdateSkipButtonFocus(focused as Boolean)
     m.skipButtonFocused = focused
     If focused
-        m.skipButtonBg.color = m.theme.SURFACE_ELEVATED
-        m.skipButtonLabel.color = m.theme.TEXT_PRIMARY
-        m.focusRing.visible = true
+        m.skipButtonBg.uri = "pkg:/images/ui/btn_focus.9.png"
+        m.skipButtonLabel.color = "#000000"
     Else
-        m.skipButtonBg.color = m.theme.SURFACE_LIGHT
-        m.skipButtonLabel.color = m.theme.TEXT_SECONDARY
-        m.focusRing.visible = false
+        m.skipButtonBg.uri = "pkg:/images/ui/btn_idle.9.png"
+        m.skipButtonLabel.color = "#FFFFFF"
     End If
 End Sub
 
@@ -231,15 +251,13 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
     If Not press Then Return false
     
     If key = "OK"
-        If m.skipButtonFocused
-            OnSkipPressed()
-            Return true
-        End If
         If m.errorLabel.visible
             ClearError()
             FetchLinkCode()
             Return true
         End If
+        OnSkipPressed()
+        Return true
     End If
     
     If key = "back"

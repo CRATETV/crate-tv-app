@@ -1,153 +1,149 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Video Player (CERTIFICATION READY 2025)
-    
-    CERTIFICATION REQUIREMENTS ADDRESSED:
-    - Full-screen cinematic playback with zero UI clutter
-    - Proper Video node configuration with isFullScreen=true
-    - enableUI=false to hide Roku's default trickplay bar
-    - All overlays properly managed to pass "Visual Clutter" check
+    ============================================================================
+    CRATE TV - Video player
+    ============================================================================
+
+    LAYOUT
+      Everything is inside `screen`, shifted up 60px. The player lives inside
+      MainScene's sceneContainer (which starts 60px down), and before Oct 2026
+      films were drawn 60px too low: a black strip at the top and the bottom
+      of the picture cut off. The shift puts the video exactly on the screen.
+
+    ON-SCREEN CONTROLS (Netflix-style, hidden while the film plays)
+      Appear when the viewer pauses, presses OK, or skips (Left/Right/FF/RW),
+      then fade out after 4 seconds of playback (Roku certification: no
+      clutter during playback). They show:
+        - top:    film title
+        - bottom: play/pause symbol, progress bar, time left, key hints
+      During a live WATCH PARTY there's no progress bar and skipping is
+      blocked (everyone watches in sync); a "LIVE" badge shows instead.
+      The live chat sits on the right; Down (or *) hides/shows it.
+
+    Logic: CrateVideoPlayer.brs
+    ============================================================================
 -->
 <component name="CrateVideoPlayer" extends="Group">
     <interface>
-        <field id="content" type="node" onChange="OnContentChange" />
+        <field id="content"          type="node"    onChange="OnContentChange" />
         <field id="playbackComplete" type="boolean" value="false" alwaysNotify="true" />
-        <field id="closeRequested" type="boolean" value="false" alwaysNotify="true" />
-        <field id="currentPosition" type="integer" value="0" />
-        <field id="duration" type="integer" value="0" />
-        <field id="state" type="string" value="none" />
+        <field id="closeRequested"   type="boolean" value="false" alwaysNotify="true" />
+        <field id="currentPosition"  type="integer" value="0" />
+        <field id="duration"         type="integer" value="0" />
+        <field id="state"            type="string"  value="none" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
-    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Theme.brs" />
     <script type="text/brightscript" uri="CrateVideoPlayer.brs" />
 
     <children>
-        <!-- 
-            ================================================================
-            VIDEO NODE - CRITICAL CONFIGURATION FOR CERTIFICATION
-            ================================================================
-            - width/height set to 1920x1080 (FHD) for full-screen
-            - enableUI="false" disables Roku's default trickplay bar
-            - notificationInterval="1" for smooth progress tracking
-            - All transport controls handled via remote (no on-screen UI)
-            ================================================================
-        -->
-        <Video
-            id="videoNode"
-            width="1920"
-            height="1080"
-            enableUI="false"
-            notificationInterval="1"
-            translation="[0, 0]"
-            fillMode="full"
-            displayMode="scale-to-fill"
-        />
+        <Timer id="controlsTimer" duration="4" repeat="false" />
 
-        <!--
-            ================================================================
-            LOADING OVERLAY
-            ================================================================
-            Only visible during buffering/loading states
-            Automatically hidden when playback starts (passes Visual Clutter check)
-            ================================================================
-        -->
-        <Group id="loadingOverlay" visible="false">
-            <Rectangle
-                width="1920"
-                height="1080"
-                color="#050505"
-                opacity="0.8"
-            />
-            <Label
-                id="loadingLabel"
-                text="Loading..."
-                font="font:MediumSystemFont"
-                color="#EBEBEB"
-                width="400"
-                horizAlign="center"
-                translation="[760, 520]"
-            />
+        <Group id="screen" translation="[0, -60]">
+            <Rectangle width="1920" height="1080" color="#000000" />
+
+            <!-- The video. Roku's own controls are off (enableUI=false); ours are below. -->
+            <Video id="videoNode" width="1920" height="1080" enableUI="false" notificationInterval="1" />
+
+            <!-- Buffering -->
+            <Group id="loadingOverlay" visible="false">
+                <Poster width="220" height="64" uri="pkg:/images/ui/pill_dark.9.png" translation="[850, 508]" />
+                <Label id="loadingLabel" text="Loading..." color="#FFFFFF" width="220" height="64" horizAlign="center" vertAlign="center" translation="[850, 508]">
+                    <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                </Label>
+            </Group>
+
+            <!-- ===================== CONTROLS ===================== -->
+            <Group id="controls" visible="false" opacity="1.0">
+                <Poster uri="pkg:/images/ui/fade_player_top.png"    width="1920" height="220" />
+                <Poster uri="pkg:/images/ui/fade_player_bottom.png" width="1920" height="420" translation="[0, 660]" />
+
+                <Label id="ctlTitle" text="" color="#FFFFFF" width="1300" maxLines="1" translation="[96, 70]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="40" />
+                </Label>
+
+                <!-- Bottom bar (hidden during live watch parties) -->
+                <Group id="seekBar" translation="[96, 948]">
+                    <!-- Play / pause symbol -->
+                    <Label id="ctlPlayIcon" text="▶" color="#FFFFFF" width="40" height="40" vertAlign="center" visible="false">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="32" />
+                    </Label>
+                    <Group id="ctlPauseIcon">
+                        <Rectangle width="9" height="30" color="#FFFFFF" translation="[6, 5]" />
+                        <Rectangle width="9" height="30" color="#FFFFFF" translation="[22, 5]" />
+                    </Group>
+                    <!-- Progress track + fill + position dot -->
+                    <Poster id="barTrack" uri="pkg:/images/ui/bar_track.9.png" width="1500" height="6" translation="[64, 17]" />
+                    <Poster id="barFill"  uri="pkg:/images/ui/bar_fill.9.png"  width="0"    height="6" translation="[64, 17]" />
+                    <Poster id="barDot"   uri="pkg:/images/ui/pill_red.9.png"  width="20"   height="20" translation="[54, 10]" />
+                    <!-- Time left -->
+                    <Label id="ctlTime" text="" color="#FFFFFF" width="150" height="40" horizAlign="right" vertAlign="center" translation="[1578, 0]">
+                        <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="24" />
+                    </Label>
+                    <!-- Key hints -->
+                    <Label id="ctlHint" text="OK  Pause     ◀ ▶  Skip 10 seconds     BACK  Exit" color="#B3B3B3" translation="[64, 50]">
+                        <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="20" />
+                    </Label>
+                </Group>
+            </Group>
+
+            <!-- LIVE badge for watch parties (top-left) -->
+            <Group id="syncBanner" visible="false" translation="[96, 130]">
+                <Poster id="syncBg" width="330" height="44" uri="pkg:/images/ui/pill_red.9.png" />
+                <Label id="syncLabel" text="●  LIVE  ·  Watching together" color="#FFFFFF" width="330" height="44" horizAlign="center" vertAlign="center">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="20" />
+                </Label>
+            </Group>
+
+            <!-- Playback error -->
+            <Group id="errorOverlay" visible="false">
+                <Rectangle width="1920" height="1080" color="#000000" opacity="0.92" />
+                <Label id="errorTitle" text="This film couldn't play" color="#FFFFFF" width="1000" horizAlign="center" translation="[460, 390]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="48" />
+                </Label>
+                <Label id="errorMessage" text="" color="#B3B3B3" width="1000" horizAlign="center" wrap="true" maxLines="3" translation="[460, 466]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                </Label>
+                <Group translation="[860, 590]">
+                    <Poster width="200" height="60" uri="pkg:/images/ui/btn_focus.9.png" />
+                    <Label text="Try again" color="#000000" width="200" height="60" horizAlign="center" vertAlign="center">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                    </Label>
+                </Group>
+                <Label text="OK  Try again     BACK  Go back" color="#8C8C8C" width="1000" horizAlign="center" translation="[460, 672]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="20" />
+                </Label>
+            </Group>
+
+            <!-- END CARD: shown when a film finishes (not trailers or watch
+                 parties). QR codes to support the filmmaker, read the zine,
+                 or share the film. Closes on OK/Back or after 30 seconds.
+                 Tiles are built in CrateVideoPlayer.brs (ShowEndCard). -->
+            <Group id="endCard" visible="false">
+                <Rectangle width="1920" height="1080" color="#000000" opacity="0.94" />
+                <Label text="THANKS FOR WATCHING" color="#EF4444" width="1920" horizAlign="center" translation="[0, 170]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                </Label>
+                <Label id="endTitle" text="" color="#FFFFFF" width="1600" horizAlign="center" maxLines="1" translation="[160, 210]">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="56" />
+                </Label>
+                <Group id="endTiles" translation="[0, 330]" />
+                <Group translation="[860, 880]">
+                    <Poster width="200" height="64" uri="pkg:/images/ui/btn_focus.9.png" />
+                    <Label text="Back" color="#000000" width="200" height="64" horizAlign="center" vertAlign="center">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                    </Label>
+                </Group>
+                <Label id="endCountdown" text="" color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 962]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="20" />
+                </Label>
+            </Group>
+
+            <!-- Live chat during watch parties (read-only), bottom-right -->
+            <ChatOverlay id="chatOverlay" isVisible="false" />
         </Group>
-
-        <!--
-            ================================================================
-            WATCH PARTY SYNC BANNER (Optional Feature)
-            ================================================================
-            Only visible during live sync events
-            Can be disabled if not using watch party features
-            ================================================================
-        -->
-        <Group id="syncBanner" visible="false" translation="[0, 0]">
-            <Rectangle
-                width="1920"
-                height="60"
-                color="#EF4444"
-                opacity="0.95"
-            />
-            <Label
-                id="syncLabel"
-                text="🔴 LIVE WATCH PARTY - Synced with community"
-                font="font:SmallBoldSystemFont"
-                color="#EBEBEB"
-                width="1920"
-                horizAlign="center"
-                translation="[0, 18]"
-            />
-        </Group>
-
-        <!--
-            ================================================================
-            ERROR OVERLAY
-            ================================================================
-            Only visible when playback fails
-            Provides retry option and clear error messaging
-            ================================================================
-        -->
-        <Group id="errorOverlay" visible="false">
-            <Rectangle
-                width="1920"
-                height="1080"
-                color="#050505"
-                opacity="0.95"
-            />
-            <Label
-                id="errorTitle"
-                text="Playback Error"
-                font="font:LargeBoldSystemFont"
-                color="#EBEBEB"
-                width="800"
-                horizAlign="center"
-                translation="[560, 400]"
-            />
-            <Label
-                id="errorMessage"
-                font="font:MediumSystemFont"
-                color="#A0A0A0"
-                width="800"
-                horizAlign="center"
-                wrap="true"
-                translation="[560, 480]"
-            />
-            <Rectangle
-                id="retryButton"
-                width="200"
-                height="50"
-                color="#EF4444"
-                translation="[860, 580]"
-            />
-            <Label
-                text="Retry (OK)"
-                font="font:SmallBoldSystemFont"
-                color="#EBEBEB"
-                width="200"
-                horizAlign="center"
-                translation="[860, 592]"
-            />
-        </Group>
-        <!-- Live chat overlay -- shown during watch party playback, read-only -->
-        <ChatOverlay id="chatOverlay" isVisible="false" />
-
     </children>
 </component>

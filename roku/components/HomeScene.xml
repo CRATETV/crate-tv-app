@@ -1,114 +1,152 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    CRATE TV - Home Scene (V4 Studio)
-    
-    - Hero spotlight: 1740x675 cinematic poster + info panel
-    - REMOVED: "Press OK to Play" overlay (user found it cluttered)
-    - RowList: LargeBoldSystemFont row headers, dynamic from API titles
-    - Focus: 6px red border + 1.1x scale on posters
+    ============================================================================
+    CRATE TV - Home screen (redesigned Oct 2026, Netflix-style)
+    ============================================================================
+
+    LAYOUT (1920 x 1080 screen; this scene sits 60px down inside MainScene's
+    sceneContainer, so everything lives in `canvas`, shifted up 60px, which
+    lets us place things using true screen positions)
+
+      0-80    Header (drawn by MainScene/Header on top of this scene)
+      0-720   BILLBOARD: big artwork of the focused film, fading into black
+              - wide image (if one was uploaded): fills the whole screen
+              - portrait poster: fills the right side (x 880-1920)
+      120-560 Film info on the left: eyebrow, title, details, award,
+              synopsis, credits  (billboardInfo, stacked in HomeScene.brs)
+      612+    ROWS of posters (RowList). The focused row always sits here
+              (vertFocusAnimationStyle="fixedFocus"), with the next row
+              peeking in below, like Netflix.
+
+    WHAT HAPPENS WHEN...
+      - The viewer moves to a poster: the billboard switches to that film
+        (text instantly, artwork after a short pause; see HomeScene.brs).
+      - The viewer presses OK: `selectedContent` is set and MainScene opens
+        the Title page (TitleScene) for that film.
+      - The viewer is idle for 20 seconds: the billboard slowly cycles
+        through the featured ("hero") films from the admin.
+      - Up from the first row: focus moves to the header menu.
+
+    TO CHANGE THE LOOK: colours/fonts in roku/source/Theme.brs; positions
+    below; poster sizes in HomeScene.brs (TILE_* constants).
+    ============================================================================
 -->
 <component name="HomeScene" extends="Group">
     <interface>
-        <field id="selectedContent" type="node" alwaysNotify="true" />
-        <field id="playContent" type="node" alwaysNotify="true" />
-        <field id="exitRequested" type="boolean" value="false" alwaysNotify="true" />
-        <field id="deepLinkContentId" type="string" value="" />
-        <field id="focusedContent" type="node" />
-        <field id="feedDataReady" type="node" alwaysNotify="true" />
+        <!-- MainScene listens to these -->
+        <field id="selectedContent"   type="node"    alwaysNotify="true" />  <!-- OK on a poster -> Title page -->
+        <field id="playContent"       type="node"    alwaysNotify="true" />  <!-- deep links -> play straight away -->
+        <field id="directPlay"        type="boolean" value="false" />        <!-- true when playContent must skip the Title page -->
+        <field id="exitRequested"     type="boolean" value="false" alwaysNotify="true" />  <!-- up/back -> header menu -->
+        <field id="feedDataReady"     type="node"    alwaysNotify="true" />  <!-- feed loaded (MainScene caches it) -->
+        <!-- MainScene sets these -->
+        <field id="deepLinkContentId" type="string"  value="" />
+        <field id="feedData"          type="node" />                         <!-- cached feed from a previous visit -->
+        <!-- Read by other code -->
+        <field id="focusedContent"    type="node" />
     </interface>
 
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/source/ResolutionManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Theme.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Preview.brs" />
     <script type="text/brightscript" uri="HomeScene.brs" />
 
     <children>
-        <!-- HERO CYCLING TIMER -->
-        <Timer id="heroTimer" duration="8" repeat="true" />
+        <!-- Timers: idle billboard cycling, and a short delay before swapping artwork -->
+        <Timer id="heroTimer"      duration="8"    repeat="true" />
+        <Timer id="artDelayTimer"  duration="0.35" repeat="false" />
+        <!-- How long the viewer rests on a film before its trailer starts (seconds) -->
+        <Timer id="previewTimer"   duration="3"    repeat="false" />
 
-        <!-- BACKGROUND -->
-        <Rectangle id="bgRect" width="1920" height="1080" color="#050505" />
-        <Poster id="dynamicBackdrop" width="1920" height="1080" loadWidth="1920" loadHeight="1080" loadDisplayMode="scaleToFill" loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.3" />
+        <Group id="canvas" translation="[0, -60]">
+            <Rectangle id="bgRect" width="1920" height="1140" color="#000000" />
 
-        <!-- ============================================================ -->
-        <!-- HERO SPOTLIGHT (1740 x 675) -->
-        <!-- ============================================================ -->
-        <Group id="heroSpotlight" translation="[90, 10]" visible="false">
-            <Rectangle id="heroCardBg" width="1740" height="675" color="#0A0A0A" opacity="0.85" />
+            <!-- ======================= BILLBOARD ======================= -->
+            <Group id="billboard" visible="false">
+                <!-- Artwork. HomeScene.brs sizes/positions it for wide vs portrait art. -->
+                <Poster id="billboardArt" width="1040" height="1080" translation="[880, 0]"
+                        loadDisplayMode="scaleToZoom" loadWidth="1040" loadHeight="1080"
+                        loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.0" />
+                <!-- Trailer preview: fades in over the artwork after a few seconds
+                     (TrailerPreview.xml). Sound/mute is set there. -->
+                <TrailerPreview id="billboardTrailer" width="1920" height="1080" />
+                <!-- Fades that melt the artwork into the black page -->
+                <Poster id="fadeLeft"   uri="pkg:/images/ui/fade_left.png"   width="840"  height="1080" translation="[508, 0]" />
+                <Poster id="fadeBottom" uri="pkg:/images/ui/fade_bottom.png" width="1920" height="420"  translation="[0, 300]" />
+                <Rectangle width="1920" height="420" color="#000000" translation="[0, 720]" />
 
-            <!-- Poster (left) -->
-            <Rectangle id="heroPosterBg" width="430" height="645" color="#1A1A1A" translation="[15, 15]" />
-            <Poster id="heroPosterImage" width="430" height="645" loadWidth="430" loadHeight="645" loadDisplayMode="scaleToFill" loadingBitmapOpacity="0.0" failedBitmapUri="pkg:/images/poster_placeholder.png" translation="[15, 15]" />
-            <!-- Rounded corner mask for hero poster -->
-            <Poster id="heroPosterCornerMask" width="430" height="645" uri="pkg:/images/corner_mask_430x645.png" translation="[15, 15]" />
-
-            <!-- Accent divider -->
-            <Rectangle id="accentLine" width="4" height="615" color="#EF4444" translation="[470, 30]" />
-
-            <!-- Info (right) -->
-            <Group id="heroInfo" translation="[500, 25]">
-                <Label id="heroTitle" text="" font="font:LargeBoldSystemFont" color="#EBEBEB" width="1200" maxLines="2" wrap="true" translation="[0, 0]" />
-                <Label id="heroMeta" text="" font="font:SmallSystemFont" color="#A0A0A0" width="1200" translation="[0, 85]" />
-                <Label id="heroGenre" text="" font="font:SmallSystemFont" color="#EF4444" width="1200" translation="[0, 115]" />
-                <Label id="heroDesc" text="" font="font:SmallSystemFont" color="#CCCCCC" width="1200" maxLines="5" wrap="true" translation="[0, 155]" />
-
-                <!-- CAST (y=400) -->
-                <Group id="heroCastSection" translation="[0, 400]" visible="false">
-                    <Label id="heroCastHeader" text="CAST" font="font:SmallBoldSystemFont" color="#999999" />
-                    <Label id="heroCastLabel" font="font:SmallSystemFont" color="#A0A0A0" width="1200" maxLines="1" translation="[0, 28]" />
+                <!-- Film info. HomeScene.brs (LayoutBillboardInfo) stacks these
+                     top-to-bottom and skips empty lines (e.g. no award). -->
+                <Group id="billboardInfo" translation="[96, 120]">
+                    <Label id="heroEyebrow" text="" color="#EF4444">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="22" />
+                    </Label>
+                    <Label id="heroTitle" text="" color="#FFFFFF" width="860" wrap="true" maxLines="2" lineSpacing="-6">
+                        <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="66" />
+                    </Label>
+                    <Label id="heroMeta" text="" color="#B3B3B3" width="860">
+                        <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="24" />
+                    </Label>
+                    <Label id="heroAward" text="" color="#E8C15A" width="860">
+                        <Font role="font" uri="pkg:/fonts/Inter-SemiBold.ttf" size="22" />
+                    </Label>
+                    <Label id="heroDesc" text="" color="#D2D2D2" width="800" wrap="true" maxLines="3" lineSpacing="4">
+                        <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                    </Label>
+                    <Label id="heroCredits" text="" color="#8C8C8C" width="800" maxLines="1">
+                        <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="22" />
+                    </Label>
                 </Group>
-
-                <!-- DIRECTOR (y=470 -- 70px clear of cast) -->
-                <Group id="heroDirectorSection" translation="[0, 470]" visible="false">
-                    <Label id="heroDirectorHeader" text="DIRECTOR" font="font:SmallBoldSystemFont" color="#999999" />
-                    <Label id="heroDirectorLabel" font="font:SmallSystemFont" color="#A0A0A0" width="1200" maxLines="1" translation="[0, 28]" />
-                </Group>
-
-                <!-- NO "Press OK to Play" -- REMOVED per user request -->
-                <!-- NO Watch Party badge -- REMOVED per user request -->
             </Group>
+
+            <!-- ======================= ROWS ======================= -->
+            <RowList
+                id="rowList"
+                translation="[0, 612]"
+                itemSize="[1920, 400]"
+                itemSpacing="[0, 30]"
+                showRowLabel="[true]"
+                showRowCounter="[false]"
+                rowLabelOffset="[[96, 12]]"
+                rowLabelColor="#E5E5E5"
+                focusXOffset="[96]"
+                drawFocusFeedback="false"
+                vertFocusAnimationStyle="fixedFocus"
+                rowFocusAnimationStyle="fixedFocusWrap"
+                visible="false">
+                <Font role="rowLabelFont" uri="pkg:/fonts/Inter-SemiBold.ttf" size="30" />
+            </RowList>
         </Group>
 
-        <!-- ============================================================ -->
-        <!-- ROW LIST -- LargeBoldSystemFont for massive row headers -->
-        <!-- Crate Standard: 240x360 with custom focus ring only -->
-        <!-- ============================================================ -->
-        <RowList
-            id="rowList"
-            translation="[0, 710]"
-            itemSize="[1920, 490]"
-            itemSpacing="[0, 40]"
-            showRowLabel="[true]"
-            showRowCounter="[false]"
-            rowLabelOffset="[[90, 20]]"
-            rowLabelColor="#EBEBEB"
-            rowLabelFont="font:LargeBoldSystemFont"
-            focusXOffset="[90]"
-            drawFocusFeedback="false"
-            vertFocusAnimationStyle="floatingFocus"
-            rowFocusAnimationStyle="floatingFocus"
-            visible="false"
-        />
-
-        <!-- LOADING STATE -->
+        <!-- ======================= LOADING ======================= -->
         <Group id="loadingGroup" visible="true">
-            <Rectangle width="1920" height="1080" color="#050505" />
-            <Group translation="[760, 520]">
-                <Rectangle id="loadingBar" width="400" height="4" color="#333333" />
+            <Rectangle width="1920" height="1080" color="#000000" translation="[0, -60]" />
+            <Group translation="[760, 470]">
+                <Rectangle id="loadingBar" width="400" height="4" color="#262626" />
                 <Rectangle id="loadingProgress" width="100" height="4" color="#EF4444" />
-                <Label id="loadingText" text="Loading your experience..." font="font:SmallSystemFont" color="#A0A0A0" width="400" horizAlign="center" translation="[0, 24]" />
+                <Label id="loadingText" text="" visible="false" color="#8C8C8C" width="400" horizAlign="center" translation="[0, 22]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="22" />
+                </Label>
             </Group>
         </Group>
 
-        <!-- ERROR STATE -->
+        <!-- ======================= ERROR ======================= -->
         <Group id="errorGroup" visible="false">
-            <Rectangle width="1920" height="1080" color="#050505" />
-            <Group translation="[560, 380]">
-                <Label id="errorIcon" text="⚠" font="font:LargeBoldSystemFont" color="#EF4444" width="800" horizAlign="center" />
-                <Label id="errorTitle" text="Something went wrong" font="font:LargeBoldSystemFont" color="#EBEBEB" width="800" horizAlign="center" translation="[0, 80]" />
-                <Label id="errorMessage" text="Unable to load content." font="font:MediumSystemFont" color="#A0A0A0" width="800" horizAlign="center" wrap="true" translation="[0, 150]" />
-                <Rectangle id="retryBtn" width="200" height="50" color="#EF4444" translation="[300, 250]">
-                    <Label text="TRY AGAIN" font="font:SmallBoldSystemFont" color="#EBEBEB" width="200" height="50" horizAlign="center" vertAlign="center" />
-                </Rectangle>
+            <Rectangle width="1920" height="1080" color="#000000" translation="[0, -60]" />
+            <Group translation="[560, 330]">
+                <Label id="errorTitle" text="We couldn't load Crate TV" color="#FFFFFF" width="800" horizAlign="center">
+                    <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="48" />
+                </Label>
+                <Label id="errorMessage" text="Check your internet connection and try again." color="#B3B3B3" width="800" horizAlign="center" wrap="true" maxLines="3" translation="[0, 80]">
+                    <Font role="font" uri="pkg:/fonts/Inter-Regular.ttf" size="26" />
+                </Label>
+                <Group translation="[300, 200]">
+                    <Poster width="200" height="60" uri="pkg:/images/ui/btn_focus.9.png" />
+                    <Label text="Try again" color="#000000" width="200" height="60" horizAlign="center" vertAlign="center">
+                        <Font role="font" uri="pkg:/fonts/Inter-Bold.ttf" size="24" />
+                    </Label>
+                </Group>
             </Group>
         </Group>
     </children>

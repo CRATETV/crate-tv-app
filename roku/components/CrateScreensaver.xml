@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ============================================================================
+    CRATE TV - Screensaver (runs when the TV is idle while Crate TV is open)
+    ============================================================================
+    A slow slideshow of film artwork, like a cinema lobby:
+      - Wide artwork (a film's hero image) fills the screen.
+      - Portrait posters sit on the right, melting into black, like Home.
+      - Each image drifts slowly (a gentle zoom), then cross-fades to the next.
+      - The film's title is shown small at the bottom left.
+      - No logo or clock (by request). Nothing stays in one place: every
+        image and title fades out after one slide, so the screen can't be marked.
+    Any button press closes it (Roku handles that).
+
+    Started by RunScreenSaver() in source/ScreenSaver.brs. Images come from the
+    same catalogue as Home (ContentTask), shuffled each time.
+
+    TO CHANGE: seconds per slide = slideTimer duration below. Fade and zoom
+    speeds are at the top of CrateScreensaver.brs.
+    ============================================================================
+-->
+<component name="CrateScreensaver" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="CrateScreensaver.brs" />
+
+    <children>
+        <Rectangle width="1920" height="1080" color="#000000" />
+        <Timer id="slideTimer" duration="10" repeat="true" />
+
+        <!-- Two slides; one shows while the next loads, then they cross-fade -->
+        <Group id="slideA" opacity="0.0">
+            <Poster id="artA" width="1920" height="1080" loadDisplayMode="scaleToZoom" loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" />
+            <Poster id="fadeLeftA" uri="pkg:/images/ui/fade_left.png" width="840" height="1080" translation="[508, 0]" />
+            <Poster uri="pkg:/images/ui/fade_bottom.png" width="1920" height="420" translation="[0, 660]" />
+            <Label id="titleA" text="" color="#FFFFFF" width="1200" maxLines="1" translation="[96, 920]">
+                <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="48" />
+            </Label>
+        </Group>
+        <Group id="slideB" opacity="0.0">
+            <Poster id="artB" width="1920" height="1080" loadDisplayMode="scaleToZoom" loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" />
+            <Poster id="fadeLeftB" uri="pkg:/images/ui/fade_left.png" width="840" height="1080" translation="[508, 0]" />
+            <Poster uri="pkg:/images/ui/fade_bottom.png" width="1920" height="420" translation="[0, 660]" />
+            <Label id="titleB" text="" color="#FFFFFF" width="1200" maxLines="1" translation="[96, 920]">
+                <Font role="font" uri="pkg:/fonts/InterDisplay-Bold.ttf" size="48" />
+            </Label>
+        </Group>
+
+    </children>
+</component>

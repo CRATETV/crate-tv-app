@@ -17,7 +17,7 @@ Sub Main()
     End If
 
     ' Public endpoint -- no auth required
-    url = "https://cratetv.net/api/get-chat-messages?movieKey=" + movieKey + "&limit=20"
+    url = "https://cratetv.net/api/get-chat-messages?movieKey=" + movieKey + "&limit=20&reactions=1"
 
     http = CreateObject("roUrlTransfer")
     http.SetUrl(url)

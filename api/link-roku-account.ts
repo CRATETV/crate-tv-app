@@ -1,20 +1,37 @@
 
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+// api/link-roku-account.ts
+//
+// Links a Roku to the signed-in viewer's Crate account. The TV shows a
+// 6-character code (api/get-roku-link-code); the viewer enters it, or scans
+// the QR code, at cratetv.net/link. The Roku then sees the link via
+// api/roku/poll-auth and its catalogue unlocks what the account owns.
+//
+// SECURITY (Oct 2026): the account is taken from the viewer's verified sign-in
+// token, not from an id the browser sends. Before, anyone who knew another
+// person's account id could have linked a Roku to that account.
+
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+
+const json = (data: unknown, status: number) =>
+    new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
 export async function POST(request: Request) {
   try {
-    const { uid, rokuLinkCode } = await request.json();
+    const { idToken, rokuLinkCode } = await request.json();
 
-    if (!uid || !rokuLinkCode) {
-      return new Response(JSON.stringify({ error: 'Identity and ShortCode required.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    if (!idToken) return json({ error: 'Please sign in to link your Roku.' }, 401);
+    if (!rokuLinkCode) return json({ error: 'Enter the code shown on your TV.' }, 400);
 
     const initError = getInitializationError();
     if (initError) throw new Error(initError);
+
+    let uid: string;
+    try {
+        uid = (await getAdminAuth()!.verifyIdToken(String(idToken))).uid;
+    } catch {
+        return json({ error: 'Your sign-in has expired. Please sign in again.' }, 401);
+    }
     
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
@@ -32,9 +49,7 @@ export async function POST(request: Request) {
         .get();
     
     if (codeQuery.empty) {
-        return new Response(JSON.stringify({ error: 'Voucher code invalid or expired.' }), {
-            status: 404, headers: { 'Content-Type': 'application/json' }
-        });
+        return json({ error: "That code didn't work. It may have expired: check the code on your TV (it refreshes) and try again." }, 404);
     }
 
     const codeDoc = codeQuery.docs[0];
@@ -68,16 +83,10 @@ export async function POST(request: Request) {
 
     await batch.commit();
 
-    return new Response(JSON.stringify({ success: true, message: 'Handshake successful. Device authorized.' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ success: true, message: 'Your Roku is linked. It will update by itself in a few seconds.' }, 200);
 
   } catch (error) {
     console.error("[Linking Process Failure]:", error);
-    return new Response(JSON.stringify({ error: "System rejected the handshake protocol." }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Something went wrong linking your Roku. Please try again.' }, 500);
   }
 }

@@ -3,9 +3,21 @@ import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import { useAuth } from '../contexts/AuthContext';
 
+// Link a Roku to your Crate account: cratetv.net/link (or /link-roku).
+// The TV shows a 6-character code and a QR code. Scanning the QR opens this
+// page with ?code=ABC123 already filled in, so the viewer only presses Link.
+
+// Read ?code= from the address (the TV's QR code puts it there).
+const codeFromUrl = (): string => {
+    try {
+        const raw = new URLSearchParams(window.location.search).get('code') || '';
+        return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    } catch { return ''; }
+};
+
 const LinkRokuPage: React.FC = () => {
-    const { user } = useAuth();
-    const [code, setCode] = useState('');
+    const { user, getUserIdToken } = useAuth();
+    const [code, setCode] = useState(codeFromUrl);
     const [status, setStatus] = useState<'idle' | 'linking' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
 
@@ -17,17 +29,20 @@ const LinkRokuPage: React.FC = () => {
         setMessage('');
 
         try {
+            const idToken = await getUserIdToken();
+            if (!idToken) throw new Error('Please sign in again, then link your Roku.');
             const response = await fetch('/api/link-roku-account', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: user.uid, rokuLinkCode: code.trim() }),
+                // The server checks this sign-in token to know whose account to link.
+                body: JSON.stringify({ idToken, rokuLinkCode: code.trim() }),
             });
             const data = await response.json();
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to link account.');
             }
             setStatus('success');
-            setMessage('Success! Your Roku device is now linked to your Crate TV account.');
+            setMessage(data.message || 'Your Roku is linked. It will update by itself in a few seconds.');
 
         } catch (err) {
             setStatus('error');
@@ -73,7 +88,7 @@ const LinkRokuPage: React.FC = () => {
                 <div className="w-full max-w-lg text-center animate-[fadeIn_0.5s_ease-out]">
                     <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter uppercase">Link Roku</h1>
                     <p className="text-gray-400 mb-10 text-lg">
-                        Enter the 6-character code displayed on your TV screen to sync your Crate TV profile.
+                        Enter the 6-character code shown on your TV. Your films and tickets will then play on your Roku.
                     </p>
 
                     <div className="bg-[#111] border border-white/5 p-10 rounded-[2.5rem] shadow-2xl">
@@ -82,7 +97,7 @@ const LinkRokuPage: React.FC = () => {
                                 <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                                 </div>
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Device Active</h2>
+                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Roku linked</h2>
                                 <p className="text-gray-400 text-sm leading-relaxed">{message}</p>
                                 <button onClick={(e) => handleNavigate(e, '/')} className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs mt-4">Return Home</button>
                             </div>
@@ -90,13 +105,13 @@ const LinkRokuPage: React.FC = () => {
                             <form onSubmit={handleSubmit} className="space-y-8">
                                 <div>
                                     <label htmlFor="rokuCode" className="text-[10px] font-black uppercase text-gray-500 tracking-[0.4em] mb-4 block">
-                                        Roku Handshake Code
+                                        Code on your TV
                                     </label>
                                     <input
                                         type="text"
                                         id="rokuCode"
                                         value={code}
-                                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                        onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
                                         className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-center text-5xl tracking-[0.5em] font-black text-white focus:outline-none focus:border-red-600 transition-all placeholder:text-gray-800"
                                         placeholder="------"
                                         required
@@ -109,7 +124,7 @@ const LinkRokuPage: React.FC = () => {
                                     disabled={status === 'linking'}
                                     className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-sm shadow-xl transition-all active:scale-95 disabled:bg-gray-800"
                                 >
-                                    {status === 'linking' ? 'Authorizing...' : 'Establish Handshake'}
+                                    {status === 'linking' ? 'Linking...' : 'Link my Roku'}
                                 </button>
                                 {status === 'error' && <p className="text-red-500 text-xs font-black uppercase tracking-widest mt-4">{message}</p>}
                             </form>
