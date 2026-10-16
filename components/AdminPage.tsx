@@ -17,14 +17,10 @@ import ErrorLogTab from './ErrorLogTab';
 import SubmissionsTab from './SubmissionsTab';
 import { isNewSubmission } from './MoviePipelineTab';
 import PartnersAdminTab from './PartnersAdminTab';
-import ContractsTab from './ContractsTab';
-import DiscoveryEngine from './DiscoveryEngine';
 import CrateFestEditor from './CrateFestEditor';
 import PromoCodeManager from './PromoCodeManager';
 import PermissionsManager from './PermissionsManager';
 import EditorialManager from './EditorialManager';
-import JuryRoomTab from './JuryRoomTab';
-import AcademyIntelTab from './AcademyIntelTab';
 import AdminPayoutsTab from './AdminPayoutsTab';
 import AdminRevenueFlowTab from './AdminRevenueFlowTab';
 import AdminShopRequestsTab from './AdminShopRequestsTab';
@@ -43,47 +39,19 @@ import HeroManager from './HeroManager';
 import UserDiagnosticsTab from './UserDiagnosticsTab';
 import { PWFF_PARTNER_ID } from '../api/_lib/partnerRules';
 import AudienceChoiceAdmin from './AudienceChoiceAdmin';
+import AdminSidebar from './admin/AdminSidebar';
+import AdminOverview from './admin/AdminOverview';
+import EarningsPayoutsTab from './admin/EarningsPayoutsTab';
+import ContractsCenterTab from './admin/ContractsCenterTab';
+import ActorApprovalsTab from './admin/ActorApprovalsTab';
+import { TAB_META, SELF_HEADED, groupOf } from './admin/tabMeta';
+import { ACCENT } from './admin/ui';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB MAP — consolidated Sept 2026.
-// 31 tabs (5 of which had no button at all) → 22, grouped by what you're doing.
-// Each merged tab renders the old tools stacked inside it, so nothing was lost.
+// TAB MAP — names, icons, groups and descriptions live in admin/tabMeta.ts
+// (Oct 2026 refresh). Tab IDs are unchanged so staff permissions keep working.
 // ─────────────────────────────────────────────────────────────────────────────
-const ALL_TABS: Record<string, string> = {
-    pulse: '⚡ Dashboard',
-    submissions: '📥 Submissions',
-    movies: '🎞️ Catalog',
-    homepage: '🏠 Homepage',
-    watchParty: '🍿 Watch Party',
-    pwff: '🎬 PWFF Festival',
-    partners: '🤝 Partner Festivals',
-    analytics: '📊 Stats',
-    users: '🧠 Users',
-    email: '✉️ Email',
-    spotlight: '✨ Monthly Spotlight',
-    editorial: '✍️ Editorial',
-    outreach: '🎯 Outreach',
-    vouchers: '🎫 Promo Codes',
-    ticketCodes: '🎟️ Access Codes',
-    jury: '⚖️ Jury',
-    crateFestHub: '🎪 Crate Fest (future)',
-    categories: '📂 Rows & Categories',
-    laurels: '🏆 Laurels',
-    money: '💰 Payouts & Revenue',
-    contracts: '📄 Contracts',
-    discovery: '🔬 Grants & Research',
-    shop: '🛍️ Shop',
-    roku: '📺 Roku',
-    system: '🛡️ Logs & Security',
-    permissions: '🔑 Permissions',
-};
-
-const TAB_GROUPS: { title: string; ids: string[]; collapsible?: boolean }[] = [
-    { title: 'Daily', ids: ['pulse', 'submissions', 'movies', 'homepage', 'watchParty', 'pwff', 'analytics', 'users'] },
-    { title: 'Audience & Growth', ids: ['email', 'spotlight', 'editorial', 'outreach', 'vouchers', 'ticketCodes'] },
-    { title: 'Festivals & Library', ids: ['partners', 'jury', 'crateFestHub', 'categories', 'laurels'] },
-    { title: 'Business & System', ids: ['money', 'contracts', 'shop', 'discovery', 'roku', 'system', 'permissions'], collapsible: true },
-];
+const ALL_TABS: Record<string, string> = Object.fromEntries(Object.entries(TAB_META).map(([id, m]) => [id, m.label]));
 
 // Old tab IDs that may still be saved in Firestore permission grants →
 // the tab they now live in. Keeps every existing staff grant working.
@@ -141,8 +109,10 @@ const AdminPage: React.FC = () => {
     const [permissions, setPermissions] = useState<Record<string, string[]>>({});
     
     const [activeTab, setActiveTab] = useState('pulse');
-    const [tabSearch, setTabSearch] = useState('');
-    const [showMoreTools, setShowMoreTools] = useState(false);
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [showMoneyTools, setShowMoneyTools] = useState(false);
+    // Sidebar badges / Overview "needs attention".
+    const [counts, setCounts] = useState({ submissions: 0, actors: 0, payouts: 0, contracts: 0 });
     const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
@@ -159,19 +129,12 @@ const AdminPage: React.FC = () => {
 
     const allowedTabs = useMemo(() => {
         if (isMaster) return Object.keys(ALL_TABS);
-        const specificTabs = normalizeTabIds(permissions[role] || []);
+        const granted = normalizeTabIds(permissions[role] || []);
+        // Actor approvals used to live inside Submissions — keep that access.
+        const specificTabs = granted.includes('submissions') ? [...granted, 'actors'] : granted;
         // Only the dashboard is always visible — everything else must be granted
         return [...new Set(['pulse', ...specificTabs])].filter(tab => !MASTER_ONLY.includes(tab));
     }, [role, permissions, isMaster]);
-
-    const filteredTabs = useMemo(() => {
-        const entries = Object.entries(ALL_TABS).filter(([tabId]) => allowedTabs.includes(tabId));
-        if (!tabSearch.trim()) return entries;
-        const q = tabSearch.toLowerCase();
-        return entries.filter(([tabId, label]) =>
-            label.toLowerCase().includes(q) || tabId.toLowerCase().includes(q)
-        );
-    }, [allowedTabs, tabSearch]);
 
     useEffect(() => {
         if (isAuthenticated && !allowedTabs.includes(activeTab)) {
@@ -283,6 +246,33 @@ const AdminPage: React.FC = () => {
             setIsLoading(false);
         }
     }, []);
+
+    // ── Sidebar badges: actors waiting, payout requests, unsigned agreements ──
+    const refreshCounts = useCallback(async () => {
+        const pass = sessionStorage.getItem('adminPassword');
+        if (!pass) return;
+        const post = (url: string, body: Record<string, unknown> = {}) => fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass, ...body }),
+        }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+        const [actors, payouts, contracts] = await Promise.all([
+            allowedTabs.includes('actors') ? post('/api/get-actor-submissions') : Promise.resolve(null),
+            allowedTabs.includes('money') ? post('/api/get-payouts') : Promise.resolve(null),
+            allowedTabs.includes('contracts') ? post('/api/contracts', { action: 'admin-list' }) : Promise.resolve(null),
+        ]);
+        setCounts(c => ({
+            ...c,
+            actors: actors ? (actors.submissions || []).filter((x: any) => x.status === 'pending').length : c.actors,
+            payouts: payouts ? (payouts.payoutRequests || []).filter((x: any) => x.status === 'pending').length : c.payouts,
+            contracts: contracts ? (contracts.requests || []).filter((x: any) => x.status === 'sent').length : c.contracts,
+        }));
+    }, [allowedTabs]);
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        refreshCounts();
+        const t = setInterval(() => { if (document.visibilityState === 'visible') refreshCounts(); }, 5 * 60_000);
+        return () => clearInterval(t);
+    }, [isAuthenticated, refreshCounts]);
+    useEffect(() => { if (isAuthenticated) refreshCounts(); }, [activeTab]);
 
     // ── Film submissions: "NEW" badge, mark-as-seen, and background check ──
     const newSubmissionCount = useMemo(() => pipeline.filter(isNewSubmission).length, [pipeline]);
@@ -460,7 +450,8 @@ const AdminPage: React.FC = () => {
     const navigateTo = (tabId: string) => {
         if (allowedTabs.includes(tabId)) {
             setActiveTab(tabId);
-            setTabSearch('');
+            setMobileNavOpen(false);
+            window.scrollTo({ top: 0 });
         }
     };
 
@@ -480,7 +471,7 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, operatorName: name, type, data: dataToSave }),
             });
             if (response.ok) {
-                setSaveMessage(`Manifest Synchronized.`);
+                setSaveMessage('Saved.');
                 await fetchAllData(pass!);
             } else {
                 // A rejected save (bad auth, validation error, server fault)
@@ -504,26 +495,26 @@ const AdminPage: React.FC = () => {
 
     if (!isAuthenticated) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#050505] text-white p-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B0B0D] text-white p-4 relative overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(60% 50% at 30% 20%, rgba(255,59,92,0.18), transparent 70%), radial-gradient(50% 50% at 75% 80%, rgba(123,77,255,0.16), transparent 70%)" }}></div>
                 <div className="relative z-10 w-full max-w-md space-y-12 animate-[fadeIn_0.8s_ease-out]">
                     <div className="text-center space-y-4">
-                        <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Crate</h2>
-                        <div className="h-px w-20 bg-red-600 mx-auto"></div>
-                        <h1 className="text-sm font-black uppercase tracking-[0.5em] text-gray-500">Infrastructure Terminal</h1>
+                        <span className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black text-white" style={{ background: 'linear-gradient(135deg, #FF9A3C, #FF3B5C 35%, #D63BD9 65%, #7B4DFF)' }}>C</span>
+                        <h1 className="text-3xl font-black tracking-tight text-white">CRATE Studio</h1>
+                        <p className="text-sm text-[#A1A1AD]">Sign in to run CRATE TV.</p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-8">
+                    <form onSubmit={handleLogin} className="bg-[#131318]/90 backdrop-blur border border-white/10 p-8 md:p-10 rounded-[2rem] shadow-2xl space-y-8">
                         <div className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-600 ml-2">Operator Key</label>
+                                <label className="text-[13px] font-semibold text-[#C9C9D1] ml-1">Admin password</label>
                                 <div className="relative group">
                                     <input 
                                         type={showPassword ? "text" : "password"} 
                                         value={password} 
                                         onChange={(e) => setPassword(e.target.value)} 
                                         placeholder="••••••••" 
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-xl tracking-widest font-mono text-white focus:border-red-600 transition-all outline-none" 
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-lg tracking-widest text-white focus:border-white/40 transition-all outline-none" 
                                         required 
                                     />
                                     <button 
@@ -540,30 +531,31 @@ const AdminPage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-600 ml-2">Operator Handle</label>
+                                <label className="text-[13px] font-semibold text-[#C9C9D1] ml-1">Your name</label>
                                 <input 
                                     type="text" 
                                     value={loginName} 
                                     onChange={(e) => setLoginName(e.target.value)} 
-                                    placeholder="e.g. ARCHITECT_01" 
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest text-white focus:border-red-600 transition-all outline-none" 
+                                    placeholder="e.g. Salome" 
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-base text-white focus:border-white/40 transition-all outline-none" 
                                 />
                             </div>
                         </div>
-                        {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center animate-shake">{error}</p>}
+                        {error && <p className="text-[#FF6B85] text-sm font-semibold text-center animate-shake">{error}</p>}
                         <button 
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-2xl uppercase tracking-[0.3em] text-xs shadow-2xl shadow-red-900/40 transition-all transform active:scale-95" 
+                            className="w-full text-white font-black py-4 rounded-2xl text-base shadow-2xl transition-all transform active:scale-95 hover:brightness-110"
+                            style={{ background: 'linear-gradient(90deg, #FF3B5C, #D63BD9)' }}
                             type="submit"
                         >
-                            Authorize Session
+                            Sign in
                         </button>
                         <div className="pt-6 border-t border-white/5 space-y-3">
                             {crateUser?.email ? (
-                                <button type="button" onClick={handleAccountLogin} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all">
+                                <button type="button" onClick={handleAccountLogin} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-3.5 rounded-2xl text-sm transition-all">
                                     Continue as {crateUser.email}
                                 </button>
                             ) : (
-                                <a href="/login?redirect=/admin" className="block text-center w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all">
+                                <a href="/login?redirect=/admin" className="block text-center w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold py-3.5 rounded-2xl text-sm transition-all">
                                     Staff: sign in with your Crate account
                                 </a>
                             )}
@@ -576,118 +568,53 @@ const AdminPage: React.FC = () => {
     
     if (isLoading) return <LoadingSpinner />;
 
-    return (
-        <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
-            <div className="max-w-[1800px] mx-auto p-4 md:p-10">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-12 border-b border-white/5 pb-10 gap-6">
-                    <div className="flex items-center gap-6">
-                        <h1 className="text-4xl font-black uppercase tracking-tighter italic">Studio <span className="text-red-600">Command</span></h1>
-                        <div className="flex flex-col gap-1">
-                            <div className="bg-red-600/10 border border-red-500/20 px-3 py-1.5 rounded-xl flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Session: {sessionStorage.getItem('operatorName')}</span>
-                            </div>
-                            {assignedJobTitle && (
-                                <div className="bg-indigo-600/10 border border-indigo-500/20 px-3 py-1 rounded-lg flex items-center gap-2">
-                                    <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Assigned Function: {assignedJobTitle}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-6">
-                        <button 
-                            onClick={handleLogout}
-                            className="bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-600/30 text-gray-500 hover:text-red-500 font-black px-6 py-3 rounded-2xl uppercase tracking-widest text-[9px] transition-all active:scale-95"
-                        >
-                            Disconnect Terminal
-                        </button>
-                    </div>
-                </div>
+    const operatorName = sessionStorage.getItem('operatorName') || '';
+    const activeMeta = TAB_META[activeTab];
+    const activeGroup = groupOf(activeTab);
+    const badges: Record<string, number> = { submissions: newSubmissionCount, actors: counts.actors, money: counts.payouts, contracts: counts.contracts };
+    const sidebar = (
+        <AdminSidebar
+            allowedTabs={allowedTabs}
+            activeTab={activeTab}
+            onNavigate={navigateTo}
+            badges={badges}
+            operatorName={operatorName}
+            jobTitle={assignedJobTitle}
+            onLogout={handleLogout}
+        />
+    );
 
-                {/* Monthly Spotlight reminder — only shown to admins with spotlight access */}
-                {!spotlightReady && allowedTabs.includes('spotlight') && (
-                    <div className="mb-6 flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                            <span className="text-amber-400 text-lg">✨</span>
-                            <div>
-                                <p className="text-amber-300 text-xs font-black uppercase tracking-widest">Monthly Spotlight Not Set</p>
-                                <p className="text-amber-500/70 text-[11px] mt-0.5">Pick a film for next month's email blast before the first Monday.</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => navigateTo('spotlight')}
-                            className="flex-shrink-0 bg-amber-500 hover:bg-amber-400 text-black font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
-                        >
-                            Pick Film →
-                        </button>
+    return (
+        <div className="min-h-screen bg-[#0B0B0D] text-white selection:bg-[#FF3B5C] selection:text-white">
+            {/* Desktop sidebar */}
+            <aside className="hidden lg:block fixed inset-y-0 left-0 w-72 bg-[#0E0E12] border-r border-white/[0.07] z-40">{sidebar}</aside>
+
+            {/* Mobile top bar + drawer */}
+            <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0B0B0D]/90 backdrop-blur border-b border-white/[0.07]">
+                <button onClick={() => setMobileNavOpen(true)} className="flex items-center gap-2 text-white font-bold" aria-label="Open menu">
+                    <span className="text-xl" aria-hidden>☰</span>
+                    <span>{activeMeta?.icon} {activeMeta?.label}</span>
+                </button>
+                {(newSubmissionCount + counts.actors + counts.payouts + counts.contracts) > 0 && (
+                    <span className="min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-black flex items-center justify-center text-[#0B0B0D]" style={{ background: ACCENT.amber }}>{newSubmissionCount + counts.actors + counts.payouts + counts.contracts}</span>
+                )}
+            </div>
+            {mobileNavOpen && (
+                <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
+                    <div className="w-[85%] max-w-xs h-full bg-[#0E0E12] border-r border-white/10 shadow-2xl">{sidebar}</div>
+                    <button className="flex-1 bg-black/60" aria-label="Close menu" onClick={() => setMobileNavOpen(false)} />
+                </div>
+            )}
+
+            <main className="lg:pl-72">
+                <div className="max-w-[1500px] mx-auto px-4 md:px-8 lg:px-10 py-6 md:py-10">
+                {activeMeta && !SELF_HEADED.has(activeTab) && (
+                    <div className="mb-8">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] mb-2" style={{ color: activeGroup ? ACCENT[activeGroup.accent] : ACCENT.coral }}>{activeGroup?.title}</p>
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3"><span aria-hidden>{activeMeta.icon}</span>{activeMeta.label}</h1>
+                        <p className="text-[15px] text-[#A1A1AD] mt-2">{activeMeta.desc}</p>
                     </div>
                 )}
-
-                <div className="flex pb-4 mb-10 gap-2 scrollbar-hide flex-col">
-
-                    {/* ── TAB SEARCH ── */}
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="relative flex-shrink-0">
-                            <input
-                                type="text"
-                                placeholder="Search tabs…"
-                                value={tabSearch}
-                                onChange={e => setTabSearch(e.target.value)}
-                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-red-500/40 w-52 pr-8 transition-colors"
-                            />
-                            {tabSearch && (
-                                <button onClick={() => setTabSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white text-sm">✕</button>
-                            )}
-                        </div>
-                        {tabSearch && filteredTabs.length > 0 && (
-                            <div className="flex gap-2 flex-wrap">
-                                {filteredTabs.map(([tabId, label]) => (
-                                    <button key={tabId} onClick={() => { navigateTo(tabId); setTabSearch(''); }}
-                                        className={`flex-shrink-0 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}>
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        {tabSearch && filteredTabs.length === 0 && (
-                            <p className="text-gray-700 text-[10px] uppercase tracking-widest">No tabs found</p>
-                        )}
-                    </div>
-
-                    {TAB_GROUPS.map(group => {
-                        const ids = group.ids.filter(id => allowedTabs.includes(id));
-                        if (ids.length === 0) return null;
-                        const open = !group.collapsible || showMoreTools || ids.includes(activeTab);
-                        return (
-                            <div key={group.title} className="mt-3">
-                                {group.collapsible ? (
-                                    <button onClick={() => setShowMoreTools(!showMoreTools)} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 hover:text-gray-400 transition-colors mb-2">
-                                        <span>{open ? '▾' : '▸'}</span><span>{group.title}</span>
-                                    </button>
-                                ) : (
-                                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 mb-2">{group.title}</p>
-                                )}
-                                {open && (
-                                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-hide flex-wrap">
-                                        {ids.map(tabId => (
-                                            <button
-                                                key={tabId}
-                                                onClick={() => navigateTo(tabId)}
-                                                className={`relative flex-shrink-0 px-5 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
-                                            >
-                                                {ALL_TABS[tabId]}
-                                                {tabId === 'submissions' && newSubmissionCount > 0 && (
-                                                    <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-black text-[9px] font-black flex items-center justify-center">{newSubmissionCount}</span>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {/* Content-level guard — never renders a tab the current role isn't permitted to see */}
@@ -709,16 +636,19 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'spotlight' && <MonthlySpotlightTab allMovies={movies} />}
                     {activeTab === 'pulse' && (
-                        <div className="space-y-8">
-                            {newSubmissionCount > 0 && allowedTabs.includes('submissions') && (
-                                <button onClick={() => navigateTo('submissions')} className="w-full flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-4 text-left hover:bg-amber-500/15 transition-colors">
-                                    <span className="text-amber-300 text-xs font-black uppercase tracking-widest">📥 {newSubmissionCount} new film submission{newSubmissionCount === 1 ? '' : 's'} waiting for review</span>
-                                    <span className="text-amber-400 text-[10px] font-black uppercase tracking-widest">Review →</span>
-                                </button>
-                            )}
+                        <AdminOverview
+                            operatorName={operatorName}
+                            isMaster={isMaster}
+                            allowedTabs={allowedTabs}
+                            counts={{ ...counts, submissions: newSubmissionCount }}
+                            spotlightMissing={!spotlightReady}
+                            filmCount={Object.keys(movies).length}
+                            onNavigate={navigateTo}
+                        >
                             <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />
-                        </div>
+                        </AdminOverview>
                     )}
+                    {activeTab === 'actors' && <ActorApprovalsTab onCountChange={(n) => setCounts(c => ({ ...c, actors: n }))} />}
                     {activeTab === 'email' && (
                         <div className="space-y-16">
                             <section><SectionTitle>Inbox & one-to-one replies</SectionTitle><StudioMail /></section>
@@ -752,19 +682,23 @@ const AdminPage: React.FC = () => {
                             onMarkAllViewed={markAllSubmissionsViewed}
                         />
                     )}
-                    {activeTab === 'contracts' && <ContractsTab />}
+                    {activeTab === 'contracts' && <ContractsCenterTab movies={movies} pipeline={pipeline} categories={categories} />}
                     {activeTab === 'partners' && <PartnersAdminTab allMovies={movies} />}
-                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
-                    {activeTab === 'jury' && (
-                        <div className="space-y-16">
-                            <JuryRoomTab pipeline={pipeline} />
-                            <AcademyIntelTab pipeline={pipeline} movies={movies} />
-                        </div>
-                    )}
                     {activeTab === 'money' && (
-                        <div className="space-y-16">
-                            <AdminPayoutsTab />
-                            <section><SectionTitle>Where the revenue came from</SectionTitle><AdminRevenueFlowTab /></section>
+                        <div className="space-y-10">
+                            <EarningsPayoutsTab onOpenTab={navigateTo} />
+                            <section className="rounded-3xl border border-white/[0.07] bg-[#131318]">
+                                <button onClick={() => setShowMoneyTools(v => !v)} className="w-full flex items-center justify-between px-6 py-5 text-left">
+                                    <span><span className="block text-white font-bold">More tools</span><span className="block text-sm text-[#8A8A96]">Payout requests with decline option, payout keys, and festival revenue flow.</span></span>
+                                    <span className="text-[#A1A1AD]">{showMoneyTools ? '▾' : '▸'}</span>
+                                </button>
+                                {showMoneyTools && (
+                                    <div className="px-6 pb-6 space-y-16">
+                                        <AdminPayoutsTab />
+                                        <section><SectionTitle>Where festival revenue came from</SectionTitle><AdminRevenueFlowTab /></section>
+                                    </div>
+                                )}
+                            </section>
                         </div>
                     )}
                     {activeTab === 'shop' && (
@@ -854,8 +788,9 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'permissions' && <PermissionsManager allTabs={Object.fromEntries(Object.entries(ALL_TABS).filter(([id]) => !MASTER_ONLY.includes(id)))} initialPermissions={Object.fromEntries(Object.entries(permissions).map(([r, ids]) => [r, normalizeTabIds(ids)]))} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     </>)}
                 </div>
-            </div>
-            {saveMessage && <SaveStatusToast message={saveMessage} isError={false} onClose={() => setSaveMessage('')} />}
+                </div>
+            </main>
+            {saveMessage && <SaveStatusToast message={saveMessage} isError={/fail|not saved/i.test(saveMessage)} onClose={() => setSaveMessage('')} />}
         </div>
     );
 };

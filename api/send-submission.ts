@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         const bodyHtml = `
             <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">Catalog Submission</p>
             <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;text-transform:uppercase;">New Film Submitted</h1>
-            <p style="margin:0 0 20px;">A new film has been routed to the Grand Jury Hub for adjudication.</p>
+            <p style="margin:0 0 20px;">A new film has been added to the submissions pipeline for review.</p>
             <p style="margin:0 0 8px;"><strong>Film:</strong> ${escapeHtml(filmTitle)}</p>
             <p style="margin:0 0 8px;"><strong>Director:</strong> ${escapeHtml(directorName)}</p>
             <p style="margin:0 0 8px;"><strong>Contact:</strong> ${escapeHtml(email) || 'N/A'}</p>

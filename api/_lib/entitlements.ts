@@ -43,10 +43,9 @@ interface FestivalBlock { id: string; price: number; movieKeys: string[]; day?: 
  * is to grant exactly what each real page's UI already promises, no more and no less, since
  * granting less breaks legitimate paying customers and granting more is a real leak.
  *
- * Known, accepted gap: MoviePage.tsx's client-only "guest jury" localStorage flag
- * (crate_guest_jury_active) has no server-side equivalent and is not checked here — an
- * internal preview/testing mechanism, not a real entitlement, so a guest-jury tester's
- * client will show a play button that this endpoint won't yet honor.
+ * Jury Passes are no longer sold (Grand Jury removed Oct 2026). hasJuryPass is still
+ * honored so anyone who bought one before keeps the full access they paid for. The old
+ * client-only "guest jury" localStorage flag has been removed entirely.
  *
  * One deliberate exception to "mirror the client exactly": mode 'live' for a standalone
  * (non-block) movie does NOT mirror WatchPartyPage.tsx's `if (!movie.isWatchPartyPaid)

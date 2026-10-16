@@ -1,6 +1,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
-import { PARTNER_SHARE, fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE, computeRevenueByFilm } from './_lib/filmmakerBalance.js';
+import { fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE, computeRevenueByFilm, fetchFilmDeals } from './_lib/filmmakerBalance.js';
+import { splitRevenue } from './_lib/revenueSplit.js';
 import { findAllCreditMatches, normalize } from './_lib/creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './_lib/shopRevenue.js';
 
@@ -68,7 +69,9 @@ export async function POST(request: Request) {
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
-            db.collection('payout_requests').where('directorName', '==', directorName.trim()).where('status', '==', 'completed').get(),
+            // All completed payouts, matched by name below the same way balances are (case/spacing-insensitive),
+            // so a payout recorded in admin under the credited spelling still counts here.
+            db.collection('payout_requests').where('status', '==', 'completed').get(),
             db.collection('traffic_events').where('platform', '==', 'ROKU').get(),
             computeShopRevenueByFilmmaker(db, SYSTEM_RESET_DATE).catch(() => new Map()),
         ]);
@@ -93,7 +96,14 @@ export async function POST(request: Request) {
 
         const filmmakerFilms = findAllCreditMatches(Object.values(allMovies), directorName);
 
-        const revenueByFilm = await computeRevenueByFilm(db, allPayments, Object.values(allMovies));
+        const [revenueByFilm, deals] = await Promise.all([
+            computeRevenueByFilm(db, allPayments, Object.values(allMovies)),
+            fetchFilmDeals(db),
+        ]);
+        const me = normalize(directorName);
+        // This filmmaker's part of each revenue type, after the film's split and co-credits.
+        const mine = (film: Movie, cents: number) =>
+            splitRevenue(cents, film, deals[film.key]).payees.filter(p => normalize(p.name) === me).reduce((s, p) => s + p.amount, 0);
 
         const filmPerformances: FilmmakerFilmPerformance[] = await Promise.all(filmmakerFilms.map(async film => {
             const rev = revenueByFilm[film.title] || { donations: 0, tickets: 0, vodRentals: 0 };
@@ -110,15 +120,17 @@ export async function POST(request: Request) {
                 grossDonations: rev.donations,
                 grossAdRevenue: rev.tickets, // Displaying tickets in the "Ad Revenue" slot for filmmaker view
                 grossRentalRevenue: rev.vodRentals,
-                netDonationEarnings: Math.round(rev.donations * PARTNER_SHARE),
-                netAdEarnings: Math.round(rev.tickets * PARTNER_SHARE),
-                netRentalEarnings: Math.round(rev.vodRentals * PARTNER_SHARE),
-                totalEarnings: Math.round((rev.donations + rev.tickets + rev.vodRentals) * PARTNER_SHARE),
+                netDonationEarnings: mine(film, rev.donations),
+                netAdEarnings: mine(film, rev.tickets),
+                netRentalEarnings: mine(film, rev.vodRentals),
+                totalEarnings: mine(film, rev.donations + rev.tickets + rev.vodRentals),
                 sentimentData
             };
         }));
 
-        const totalPaidOut = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+        const totalPaidOut = payoutHistorySnapshot.docs
+            .filter(doc => normalize(doc.data().directorName || '') === normalize(directorName))
+            .reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
         const totalShopRevenue = shopRevenueByName.get(normalize(directorName))?.cents || 0;
         const totalEarnings = filmPerformances.reduce((sum, f) => sum + f.totalEarnings, 0) + totalShopRevenue;
 

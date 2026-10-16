@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import PublicS3Uploader from './PublicS3Uploader';
+import ContractText from './ContractText';
 
 const ActorSignupPage: React.FC = () => {
     const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -10,12 +11,32 @@ const ActorSignupPage: React.FC = () => {
     // State for uploader URLs
     const [photoUrl, setPhotoUrl] = useState('');
     const [highResPhotoUrl, setHighResPhotoUrl] = useState('');
+    // Actor Portal Agreement — accepted as part of submitting the profile.
+    const [agreed, setAgreed] = useState(false);
+    const [showAgreement, setShowAgreement] = useState(false);
+    const [agreementText, setAgreementText] = useState('');
+    const [agreementVersion, setAgreementVersion] = useState('');
+    const openAgreement = async () => {
+        setShowAgreement(v => !v);
+        if (agreementText) return;
+        try {
+            const res = await fetch('/api/contracts?template=actor-portal');
+            const d = await res.json();
+            if (res.ok) { setAgreementText(d.text); setAgreementVersion(d.template?.version || ''); }
+        } catch { /* the link still works on retry */ }
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
         if (!photoUrl || !highResPhotoUrl) {
             setError('Please upload both a profile photo and a high-resolution photo.');
+            setStatus('error');
+            return;
+        }
+        if (!agreed) {
+            setError('Please read and accept the Actor Portal Agreement.');
+            setStatus('error');
             return;
         }
 
@@ -29,6 +50,7 @@ const ActorSignupPage: React.FC = () => {
             ...data,
             photoUrl,
             highResPhotoUrl,
+            agreementAccepted: true,
         };
 
         try {
@@ -121,6 +143,19 @@ const ActorSignupPage: React.FC = () => {
                                     <input type="url" id="imdbUrl" name="imdbUrl" className="form-input" placeholder="https://www.imdb.com/name/nm..." />
                                 </div>
                                 
+                                <div className="rounded-xl border border-gray-700 bg-gray-900/40 p-4 space-y-3">
+                                    <label className="flex items-start gap-3 text-sm text-gray-300">
+                                        <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 w-4 h-4" />
+                                        <span>I've read and agree to the <button type="button" onClick={openAgreement} className="underline text-white">Actor Portal Agreement</button>, and I agree that submitting this form with my name is my electronic signature.</span>
+                                    </label>
+                                    {showAgreement && (
+                                        <div className="max-h-80 overflow-y-auto rounded-lg bg-white p-5">
+                                            {agreementText ? <ContractText text={agreementText} /> : <p className="text-gray-500 text-sm">Loading…</p>}
+                                            {agreementVersion && <p className="text-xs text-gray-400 mt-4">Version {agreementVersion}</p>}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
                                     {status === 'submitting' ? 'Submitting...' : 'Submit Profile for Review'}
                                 </button>

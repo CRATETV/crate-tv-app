@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10 — Filmmaker onboarding, quiet declines, database backups
+
+- **Declining a submission is quiet and final.** "✕ Decline & delete" removes it from Submissions with no email; the filmmaker can't see submission statuses anywhere. For films that were never approved, the uploaded film file and poster are deleted from storage too (never if a catalog film uses them).
+- **Automatic onboarding.** Approving a film (premium or catalog) now puts the Filmmaker Distribution Agreement (with the film's current split) and the Rights & Clearances Warranty in the same approval email, plus "Set up my dashboard". Approving twice never sends duplicates. After signing, the filmmaker's copy email and the signed page show the dashboard and payout-method step.
+- **Films missing agreements** list in Contracts: every film with a credited filmmaker and no distribution agreement yet (public-domain classics excluded), with one button to send both agreements in one email (`admin-onboard`).
+- **Fixed:** the approval email's "View Your Dashboard" button went to `/creator-dashboard`, which doesn't exist. It now goes to `/filmmaker-signup`.
+- **Backups:** `npm run backup` saves the whole database to `~/crate-backups/crate-backup-<date>.ndjson.gz`; `npm run restore -- <file> --only <collection or doc> [--missing-only] [--confirm]` brings things back (preview unless `--confirm`). See the Operations Manual.
+
+## 2026-10 — CRATE Studio: new admin panel, earnings & payouts, contracts, actor approvals
+
+- **New admin look and navigation.** A sidebar with six groups (Home, Films & content, Live & festivals, People, Money & legal, Platform), plain names, a description on every page, and a search box (press `/` or ⌘K). Badges show what's waiting. Works on phones (menu button at the top). Tab IDs are unchanged, so staff permissions still work; staff who could open Submissions can also open the new Actor approvals.
+- **Overview** replaces the Dashboard landing: what needs you (submissions, actors, payout requests, unsigned agreements, spotlight), a money snapshot, quick links, and the existing live dashboard below.
+- **Earnings & payouts** (`components/admin/EarningsPayoutsTab.tsx`, `api/admin-earnings.ts`): total revenue and where it went (filmmakers, CRATE, festival, partner festivals), month-by-month chart, every film's revenue and split, who you owe, one-click Pay (opens PayPal / Cash App / Venmo with the amount filled in; Zelle and checks copy the details), record payout with optional receipt email, payout history. Money is never moved automatically.
+- **Custom split per film.** Default stays 70/30. A film's own split and payees are stored in `film_deals/<movieKey>` (`api/_lib/revenueSplit.ts`, tested in `tests/revenueSplit.test.ts`).
+- **Fixed: co-credited films were over-counted.** Each credited director/producer was given the full 70%, so a film with two credits showed 140% owed. The filmmaker share is now divided among them (equally, or by the shares set on the film). Balances for co-credited filmmakers will drop to the correct amount.
+- **Filmmakers choose how they're paid** on their dashboard (`components/PayoutPreferenceCard.tsx`, `api/payee-preferences.ts`), saved to `payee_profiles`.
+- **Contracts signed inside CRATE** (`api/contracts.ts`, `/sign` page, `components/admin/ContractsCenterTab.tsx`). Six templates in `api/_lib/contractTemplates.ts`: Filmmaker Distribution Agreement, Rights & Clearances Warranty, Festival Submission Terms, Actor Portal Agreement, Appearance & Likeness Release, Payee Information & Tax Acknowledgement. Each signature stores the exact text, version, SHA-256 fingerprint, typed name, email, time, IP and browser; signer and owner get an email. The upload vault stays for PDFs and W-9s. **Have a lawyer review the templates.**
+- **Actor approvals tab** (the queue that was inside Submissions). Actors now accept the Actor Portal Agreement when they submit a profile.
+- **Removed `api/actor-signup.ts`** — no page used it, and calling it directly could switch on the actor portal for someone else's account and change cast photos on films.
+- Admin sign-in screen refreshed.
+
+## 2026-10 — Cleanup: unused tools removed
+
+- **Grand Jury removed.** The `/jury` page, the Jury and Academy Intelligence admin tab, the footer link, the $25 Jury Pass in the payment window, and the jury scoring endpoints (`get-jury-dashboard-data`, `save-jury-review`). Anyone who already bought a Jury Pass keeps full access (`hasJuryPass` is still honored on the website and Roku).
+- **Security fix that came with it:** a guest Jury Pass was only remembered in the visitor's browser, and the film page trusted it. That shortcut is gone.
+- **Grants & Research admin tab removed**, with its seven AI tools (Grant Writer, Fund Strategist, Partnership Finder, Strategic Command, Deep Horizon Scraper, Rights Auditor, Archive Scout) and their endpoints.
+- **Pages removed:** `/edu`, `/pitchdeck`, `/filmfestivalmodule` (a demo), `/developer-guide` (replaced by the CRATE TV Operations Manual). These addresses now show the normal "not found" page.
+- Kept on purpose: Crate Fest (for a future online festival), Contracts, Monthly Spotlight, Cratemas, Top 10, Red Carpet (PWFF opening night) and the actor portal.
+- Wording: "Ingest Film into Jury Room" is now "Add Film to Pipeline"; the new-submission email no longer mentions the Grand Jury.
+
 ## 2026-10 — Roku certification fixes
 
 - **Screensaver removed.** Roku's certification rule 4.5 doesn't allow a channel's own screensaver. When the TV is idle, the Roku's own screensaver runs instead (trailer previews still stop after 2 minutes so it can start). The old files are in `roku-archive/`.

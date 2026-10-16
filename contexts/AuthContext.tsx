@@ -47,7 +47,6 @@ interface AuthContextType {
     unlockFestivalBlock: (blockId: string) => Promise<void>;
     grantFestivalAllAccess: () => Promise<void>;
     grantCrateFestPass: () => Promise<void>;
-    grantJuryPass: () => Promise<void>;
     purchaseMovie: (movieKey: string) => Promise<void>;
     unlockWatchParty: (movieKey: string) => Promise<void>;
     subscribe: () => Promise<void>; 
@@ -444,11 +443,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(currentUser => currentUser ? ({ ...currentUser, ...update }) : null);
     };
 
-    const grantJuryPass = async () => {
-        if (!user || user.hasJuryPass) return;
-        setUser(currentUser => currentUser ? ({ ...currentUser, hasJuryPass: true }) : null);
-    };
-
     const purchaseMovie = async (movieKey: string) => {
         if (!user) return;
         // Local-only optimistic update — see note above unlockFestivalBlock.
@@ -507,12 +501,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName, claimActiveSession: writeSessionToken,
         watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie, updatePlaybackProgress,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
-        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
+        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, purchaseMovie, unlockWatchParty, subscribe
     }), [
         user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
         watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie, updatePlaybackProgress,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
-        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
+        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, purchaseMovie, unlockWatchParty, subscribe
     ]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

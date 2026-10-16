@@ -6,6 +6,9 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { addPipelineEntryToCatalog } from './_lib/addToCatalog.js';
+import { ensureFilmOnboardingRequests, renderOnboardingStepsHtml, renderFilmmakerNextStepsHtml } from './_lib/contracts.js';
+import { fetchFilmDeals } from './_lib/filmmakerBalance.js';
+import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { publishBlockReason } from './_lib/publishGate.js';
 import { LOGO_URL_ON_DARK } from './_lib/emailBranding.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -99,6 +102,26 @@ export async function POST(request: Request) {
         }
 
         // Send filmmaker notification
+
+        // Onboarding: the filmmaker's two agreements go out in this same email.
+        let onboardingHtml = '';
+        const onboardingEmail = String(email || data.submitterEmail || '').trim();
+        if (onboardingEmail && movieKey) {
+            try {
+                const share = filmmakerShareOf((await fetchFilmDeals(db))[movieKey]);
+                const links = await ensureFilmOnboardingRequests(db, {
+                    movieKey,
+                    filmTitle: String(title || ''),
+                    recipientName: String(data.submitterName || (director || '').split(',')[0] || '').trim() || 'Filmmaker',
+                    recipientEmail: onboardingEmail,
+                    filmmakerPercent: Math.round(share * 10000) / 100,
+                });
+                onboardingHtml = renderOnboardingStepsHtml(links) + renderFilmmakerNextStepsHtml();
+            } catch (e) {
+                console.warn('Could not create onboarding agreements (non-fatal):', e);
+            }
+        }
+
         const resendApiKey = process.env.RESEND_API_KEY;
         if (!resendApiKey || !email) {
             return new Response(JSON.stringify({ success: true, emailSent: false }), {
@@ -154,7 +177,8 @@ export async function POST(request: Request) {
           <p style="margin:12px 0 0;color:#92400e;font-size:11px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Also: <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=gradient" style="color:#92400e;font-weight:700;">Gradient</a> &middot; <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=white" style="color:#92400e;font-weight:700;">White</a> &middot; <a href="https://cratetv.net/api/generate-laurel-svg?award=Official+Selection&year=${new Date().getFullYear()}&color=silver" style="color:#92400e;font-weight:700;">Silver</a></p>
         </td>
       </tr></table>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+      ${onboardingHtml}
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;"><tr>
         <td bgcolor="#E50914" style="background:#E50914;border-radius:8px;">
           <a href="https://cratetv.net" style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">VISIT CRATETV</a>
         </td>

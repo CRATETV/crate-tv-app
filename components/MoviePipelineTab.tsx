@@ -204,7 +204,7 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm("Are you sure you want to permanently delete this submission? This cannot be undone.")) return;
+        if (!window.confirm("Decline and delete this submission? The filmmaker will NOT be notified. This can't be undone.")) return;
         setProcessingId(id);
         try {
             await deleteMoviePipelineEntry(id);
@@ -218,7 +218,7 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
     };
 
     const handleApprove = async (item: MoviePipelineEntry) => {
-        if (!window.confirm(`Approve "${item.title}" for PREMIUM? An approval email will be sent to ${item.email || 'the filmmaker'}.`)) return;
+        if (!window.confirm(`Approve "${item.title}" for PREMIUM? An approval email with their two CRATE agreements to sign will be sent to ${item.email || 'the filmmaker'}.`)) return;
         setProcessingId(item.id);
         try {
             const res = await fetch('/api/approve-film-submission', {
@@ -238,7 +238,7 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
     };
 
     const handleAddToCatalog = async (item: MoviePipelineEntry) => {
-        if (!window.confirm(`Add "${item.title}" to the general catalog? A notification email will be sent to ${item.email || 'the filmmaker'}.`)) return;
+        if (!window.confirm(`Add "${item.title}" to the general catalog? An email with their two CRATE agreements to sign will be sent to ${item.email || 'the filmmaker'}.`)) return;
         setProcessingId(item.id);
         try {
             const res = await fetch('/api/add-to-catalog', {
@@ -388,9 +388,9 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                     onClick={() => handleDelete(item.id)}
                     disabled={processingId === item.id}
                     className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-red-500/20 transition-all disabled:opacity-50"
-                    title="Reject — removes from pipeline, no email sent"
+                    title="Decline — deletes it from your submissions. The filmmaker is not notified."
                 >
-                    ✕ Reject
+                    {processingId === item.id ? '...' : '✕ Decline & delete'}
                 </button>
             )}
             {(item.status === 'approved' || item.status === 'catalog') && (
@@ -600,7 +600,7 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Manual Entry Protocol</h3>
                     <button onClick={() => setIsFormVisible(!isFormVisible)} className="text-xs bg-red-600 hover:bg-red-700 text-white font-black py-2 px-6 rounded-xl shadow-xl transition-all">
-                        {isFormVisible ? 'Hide Ingestion Interface' : 'Ingest Film into Jury Room'}
+                        {isFormVisible ? 'Hide Ingestion Interface' : 'Add Film to Pipeline'}
                     </button>
                 </div>
 

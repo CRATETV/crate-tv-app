@@ -4,6 +4,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
+import { getTemplate, renderContract } from './_lib/contractTemplates.js';
+import { recordSignature } from './_lib/contracts.js';
 
 const escHtml = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const safeUrl = (v: unknown) => { const s = String(v ?? '').trim(); return /^https?:\/\//i.test(s) ? escHtml(s) : ''; };
@@ -18,8 +20,11 @@ export async function POST(request: Request) {
     if (!rateLimit(`actor-bio:${getIP(request)}`, 5, 60 * 60_000)) {
       return new Response(JSON.stringify({ error: 'Too many submissions. Please try again later.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
-    const { actorName, email, bio, photoUrl, highResPhotoUrl, imdbUrl } = await request.json();
+    const { actorName, email, bio, photoUrl, highResPhotoUrl, imdbUrl, agreementAccepted } = await request.json();
 
+    if (agreementAccepted !== true) {
+      return new Response(JSON.stringify({ error: 'Please read and accept the Actor Portal Agreement.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     if (!actorName || !email || !bio || !photoUrl || !highResPhotoUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
         status: 400,
@@ -44,7 +49,25 @@ export async function POST(request: Request) {
         status: 'pending',
     };
 
-    await db.collection('actorSubmissions').add(submissionData);
+    const submissionRef = await db.collection('actorSubmissions').add(submissionData);
+
+    // Record the Actor Portal Agreement they accepted, with the exact text shown.
+    const agreement = getTemplate('actor-portal');
+    if (agreement) {
+      try {
+        const signatureId = await recordSignature(db, {
+          template: agreement,
+          text: renderContract(agreement, { signerName: String(actorName).trim() }),
+          signerName: String(actorName).trim().slice(0, 120),
+          signerEmail: String(email).trim().toLowerCase().slice(0, 200),
+          typedSignature: String(actorName).trim().slice(0, 120),
+          ip: getIP(request),
+          userAgent: request.headers.get('user-agent') || '',
+          context: 'actor-signup',
+        });
+        await submissionRef.update({ agreementSignatureId: signatureId, agreementVersion: agreement.version });
+      } catch (e) { console.error('[submit-actor-bio] could not record agreement', e); }
+    }
     
     const bodyHtml = `
       <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;color:#ef4444;">New Submission</p>

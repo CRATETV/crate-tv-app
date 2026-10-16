@@ -1,6 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
-import { fetchAllRelevantPayments, getSquareCredentials, computeRevenueByFilm, PARTNER_SHARE } from './_lib/filmmakerBalance.js';
+import { fetchAllRelevantPayments, getSquareCredentials, computeRevenueByFilm, fetchFilmDeals } from './_lib/filmmakerBalance.js';
+import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
 
         const revenueByFilm = await computeRevenueByFilm(db, allPayments, movies);
         const revenue = revenueByFilm[movie.title] || { donations: 0, tickets: 0, vodRentals: 0 };
+        const PARTNER_SHARE = filmmakerShareOf((await fetchFilmDeals(db))[movie.key]);
 
         const sentimentSnap = await db.collection('movies').doc(movieKey).collection('sentiment').orderBy('timestamp', 'asc').get();
         const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);

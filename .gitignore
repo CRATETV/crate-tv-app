@@ -23,3 +23,7 @@ ops/diagnostics/
 .DS_Store
 __MACOSX/
 *.log
+
+# Database backups (npm run backup) — contain customer data, never commit
+*.ndjson.gz
+crate-backups/

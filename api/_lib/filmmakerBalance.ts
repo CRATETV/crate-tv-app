@@ -1,12 +1,24 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { Movie } from '../../types.js';
-import { getCreditedNames, normalize } from './creditMatch.js';
+import { normalize } from './creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './shopRevenue.js';
 import { getFestivalConclusionTime } from './festivalTiming.js';
 import { isOutsidePartner } from './partnerRules.js';
+import { DEFAULT_FILMMAKER_SHARE, FilmDeal, splitRevenue } from './revenueSplit.js';
 
 export const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
-export const PARTNER_SHARE = 0.70;
+// Default filmmaker share. A film can have its own split (see revenueSplit.ts).
+export const PARTNER_SHARE = DEFAULT_FILMMAKER_SHARE;
+
+/** Every film's custom deal, keyed by movie key (missing = default 70/30). */
+export async function fetchFilmDeals(db: Firestore): Promise<Record<string, FilmDeal>> {
+    const deals: Record<string, FilmDeal> = {};
+    try {
+        const snap = await db.collection('film_deals').get();
+        snap.forEach(doc => { deals[doc.id] = doc.data() as FilmDeal; });
+    } catch { /* no deals yet — everyone on the default split */ }
+    return deals;
+}
 
 export interface SquarePayment {
     amount_money: { amount: number };
@@ -115,19 +127,24 @@ export interface FilmRevenue {
 export async function computeRevenueByFilm(
     db: Firestore,
     allPayments: SquarePayment[],
-    movies: Movie[]
+    movies: Movie[],
+    /** Optional: told about every payment that counts toward a film (admin Earnings page). */
+    onCounted?: (title: string, field: keyof FilmRevenue, amount: number, payment: SquarePayment) => void,
 ): Promise<Record<string, FilmRevenue>> {
     const festivalConclusionTime = await getFestivalConclusionTime(db);
     // Trimmed both sides — see matching note in revenueAttribution.ts.
     const movieByTitle = new Map(movies.map(m => [(m.title || '').trim(), m]));
 
     const revenueByFilm: Record<string, FilmRevenue> = {};
+    let current: SquarePayment | null = null;
     const add = (title: string, field: keyof FilmRevenue, amount: number) => {
         if (!revenueByFilm[title]) revenueByFilm[title] = { donations: 0, tickets: 0, vodRentals: 0 };
         revenueByFilm[title][field] += amount;
+        if (onCounted && current) onCounted(title, field, amount, current);
     };
 
     for (const p of allPayments) {
+        current = p;
         const details = parseNote(p.note);
         if (!details.title) continue;
 
@@ -171,11 +188,12 @@ export interface FilmmakerBalanceSummary {
 export async function computeAllFilmmakerBalances(db: Firestore): Promise<Map<string, FilmmakerBalanceSummary>> {
     const { accessToken, locationId } = getSquareCredentials();
 
-    const [allPayments, moviesSnapshot, completedPayoutsSnapshot, shopRevenueByName] = await Promise.all([
+    const [allPayments, moviesSnapshot, completedPayoutsSnapshot, shopRevenueByName, deals] = await Promise.all([
         accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([]),
         db.collection('movies').get(),
         db.collection('payout_requests').where('status', '==', 'completed').get(),
         computeShopRevenueByFilmmaker(db, SYSTEM_RESET_DATE).catch(() => new Map()),
+        fetchFilmDeals(db),
     ]);
 
     const movies: Movie[] = moviesSnapshot.docs.map(d => ({ key: d.id, ...d.data() } as Movie));
@@ -193,14 +211,15 @@ export async function computeAllFilmmakerBalances(db: Firestore): Promise<Map<st
     for (const movie of movies) {
         const rev = revenueByFilm[movie.title];
         if (!rev) continue;
-        const filmEarnings = Math.round((rev.donations + rev.tickets + rev.vodRentals) * PARTNER_SHARE);
-        if (filmEarnings <= 0) continue;
-        for (const rawName of getCreditedNames(movie)) {
-            const key = normalize(rawName);
+        // The filmmaker side is divided among the payees — not given in full to each.
+        const split = splitRevenue(rev.donations + rev.tickets + rev.vodRentals, movie, deals[movie.key]);
+        for (const payee of split.payees) {
+            if (payee.amount <= 0) continue;
+            const key = normalize(payee.name);
             if (!key) continue;
             const existing = earningsByName.get(key);
-            if (existing) existing.totalEarnings += filmEarnings;
-            else earningsByName.set(key, { directorName: rawName, totalEarnings: filmEarnings });
+            if (existing) existing.totalEarnings += payee.amount;
+            else earningsByName.set(key, { directorName: payee.name, totalEarnings: payee.amount });
         }
     }
 

@@ -37,8 +37,6 @@ import FestivalPage from './components/FestivalPage';
 import FestivalProgramPage from './components/FestivalProgramPage';
 import PwffPage from './components/PwffPage';
 import CrateFestPage from './components/CrateFestPage';
-import FilmFestivalModule from './components/FilmFestivalModule';
-import DeveloperGuidePage from './components/DeveloperGuidePage';
 import ThankYouPage from './components/ThankYouPage';
 import TopTenPage from './components/TopTenPage';
 import ActorPortalPage from './components/ActorPortalPage';
@@ -57,10 +55,8 @@ import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
 import SubmissionTermsPage from './components/SubmissionTermsPage';
-import PitchDeckPage from './components/PitchDeckPage';
+import SignPage from './components/SignPage';
 import ZinePage from './components/ZinePage';
-import JuryRoomPage from './components/JuryRoomPage';
-import InstitutionalGatewayPage from './components/InstitutionalGatewayPage';
 import LibraryPage from './components/LibraryPage';
 import ClaimPage from './components/ClaimPage';
 import MyFestivalPage from './components/MyFestivalPage';
@@ -225,14 +221,10 @@ const AppRouter: React.FC = () => {
       return user ? <App /> : <LandingPage />;
     case '/library':
       return <LibraryPage />;
-    case '/edu':
-      return <InstitutionalGatewayPage />;
     case '/zine':
       return <ZinePage />;
     case '/shop':
       return <MerchPage />;
-    case '/jury':
-        return <JuryRoomPage />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/link':          // the address the Roku shows on screen
@@ -262,10 +254,10 @@ const AppRouter: React.FC = () => {
       return user ? <CratemasPage /> : <RedirectToLogin />;
     case '/top-ten':
       return <TopTenPage />;
+    case '/sign':
+      return <SignPage />;
     case '/submission-terms':
       return <SubmissionTermsPage />;
-    case '/pitchdeck':
-      return <PitchDeckPage />;
     case '/portal': {
       if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
       if (user && (user.isActor || user.isFilmmaker || user.isIndustryPro)) {
@@ -318,10 +310,6 @@ const AppRouter: React.FC = () => {
     }
     case '/admin':
       return <AdminPage />;
-    case '/filmfestivalmodule':
-      return <FilmFestivalModule />;
-    case '/developer-guide':
-      return <DeveloperGuidePage />;
     default:
       return <NotFoundPage />;
   }

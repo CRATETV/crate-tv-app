@@ -116,8 +116,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const hasAccess = useMemo(() => {
     if (!movie) return false;
-    const hasGuestPass = localStorage.getItem('crate_guest_jury_active') === 'true';
-    if (hasJuryPass || hasGuestPass) return true;
+    // Legacy: Jury Passes are no longer sold, but anyone who bought one
+    // keeps full access (matches api/_lib/entitlements.ts and the Roku feed).
+    if (hasJuryPass) return true;
 
     // Festival catalog rewatch — same access logic as the live event, so a
     // ticket holder can come back during the 7-day window and just press
@@ -829,7 +830,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
                              <img src={movie.poster} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
-                             <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
+                             <p className="text-gray-400 max-w-md">This selection requires a rental to stream.</p>
                              <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${displayPrice}</button>
                              <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>

@@ -8,7 +8,7 @@ declare const Square: any;
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass' | 'juryPass';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass';
     onClose: () => void;
     onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
     priceOverride?: number; 
@@ -30,7 +30,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
             
             <div className="flex-grow flex flex-col justify-center">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
-                    {type === 'juryPass' ? 'Grand Jury Credentials' : type === 'watchPartyTicket' ? 'Live Screening Pass' : type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
+                    {type === 'watchPartyTicket' ? 'Live Screening Pass' : type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
                 </p>
                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{details.title}</h3>
                 <p className="text-xs text-gray-400 mt-2 font-mono">Issued to: {details.email || 'Verified Member'}</p>
@@ -44,7 +44,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
                     </div>
                     <div>
                         <p className="text-[7px] text-gray-500 uppercase font-black">Rank</p>
-                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">{type === 'juryPass' ? 'Jury Member' : 'Patron'}</p>
+                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">Patron</p>
                     </div>
                 </div>
                 <div className="bg-white p-1 rounded">
@@ -92,7 +92,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const basePrice = useMemo(() => {
         if (priceOverride !== undefined) return priceOverride;
         switch (paymentType) {
-            case 'juryPass': return 25.00;
             case 'subscription': return 4.99;
             case 'pass': return 50.00;
             // Fall back to block.price when set — callers that pass `block` but
@@ -119,7 +118,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const itemTitle = useMemo(() => {
         if (movie) return movie.title;
         if (block) return block.title;
-        if (paymentType === 'juryPass') return 'Grand Jury Credentials';
         if (paymentType === 'subscription') return 'Premium Subscription';
         if (paymentType === 'pass') return 'Festival All-Access Pass';
         if (paymentType === 'crateFestPass') return 'Crate Fest All-Access';

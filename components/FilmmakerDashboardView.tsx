@@ -4,6 +4,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import HypeMap from './HypeMap';
+import PayoutPreferenceCard from './PayoutPreferenceCard';
 
 const formatCurrency = (amountInCents: number) => `$${((amountInCents || 0) / 100).toFixed(2)}`;
 
@@ -322,7 +323,7 @@ const FilmmakerDashboardView: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-8 md:space-y-10">
-                                <p className="text-gray-400 text-sm md:text-xl leading-relaxed font-medium max-w-2xl">Your balance is your <span className="text-white font-bold">70% share</span> of all ticket sales and tips, plus your share of sales on any shop products made from your artwork. Crate TV keeps 30% of tickets/tips to cover hosting and distribution; shop items using your artwork carry their own agreed share. Once your balance reaches {formatCurrency(MINIMUM_PAYOUT_CENTS)}, you can request a payout.</p>
+                                <p className="text-gray-400 text-sm md:text-xl leading-relaxed font-medium max-w-2xl">Your balance is your <span className="text-white font-bold">filmmaker share</span> of ticket sales, rentals and tips (70% unless your agreement with CRATE says otherwise, divided with any co-credited director or producer), plus your share of shop products made from your artwork. CRATE keeps the rest to cover hosting, streaming and distribution. Once your balance reaches {formatCurrency(MINIMUM_PAYOUT_CENTS)}, you can request a payout.</p>
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <button
                                         disabled={analytics.balance < MINIMUM_PAYOUT_CENTS || payoutStatus === 'submitting' || payoutStatus === 'success'}
@@ -339,6 +340,7 @@ const FilmmakerDashboardView: React.FC = () => {
                                 {payoutStatus === 'error' && payoutError && (
                                     <p role="alert" className="text-red-400 text-[10px] font-black uppercase tracking-widest">{payoutError}</p>
                                 )}
+                                <PayoutPreferenceCard />
                                 {payoutStatus === 'success' && (
                                     <div className="flex items-center gap-3 animate-pulse">
                                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
