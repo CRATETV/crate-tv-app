@@ -83,7 +83,7 @@ async function dumpCollection(col, top) {
 }
 
 console.log(`\nBacking up the CRATE TV database to\n   ${file}\n`);
-await write({ backup: 'crate-firestore', version: 1, createdAt: new Date().toISOString(), project: db.app.options.credential?.projectId || null, skipped: [...skip] });
+await write({ backup: 'crate-firestore', version: 1, createdAt: new Date().toISOString(), project: JSON.parse(fs.readFileSync(keyPath, "utf8")).project_id || null, skipped: [...skip] });
 for (const col of await db.listCollections()) {
     if (skip.has(col.id)) { console.log(`  ${col.id}: skipped`); continue; }
     await dumpCollection(col, col.id);
