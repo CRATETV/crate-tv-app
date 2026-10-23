@@ -117,7 +117,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                               the hover zoom could also push the image past the rounded
                               corners, "peeking" out past where it should've been clipped. */}
                           <img
-                              src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                              src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}&w=500`}
                               alt={movie.title}
                               className="absolute top-0 right-0 h-full w-[55%] object-cover object-center group-hover/ranked:scale-105 transition-transform duration-300"
                               onContextMenu={(e) => e.preventDefault()}

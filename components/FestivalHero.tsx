@@ -33,7 +33,7 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
       {heroImage && (
         <div className="absolute inset-0 z-0">
             <img 
-                src={`/api/proxy-image?url=${encodeURIComponent(heroImage)}`} 
+                src={`/api/proxy-image?url=${encodeURIComponent(heroImage)}&w=1600`} 
                 className="w-full h-full object-cover opacity-40 blur-sm" 
                 alt="" 
                 referrerPolicy="no-referrer"

@@ -25,6 +25,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [isImageLoaded, setIsImageLoaded]     = useState(false);
+  // 0 = shrunk poster from our proxy, 1 = the original file straight from
+  // storage, 2 = both failed, show the title instead of an empty shimmer.
+  const [posterAttempt, setPosterAttempt]     = useState(0);
   const [showExpanded, setShowExpanded]       = useState(false);
   const [isMuted, setIsMuted]                 = useState(true);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
@@ -47,6 +50,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
     return movie.posterVariants[week % movie.posterVariants.length];
   }, [movie.poster, movie.posterVariants]);
+  useEffect(() => { setPosterAttempt(0); }, [currentPoster]);
 
   const releaseDate       = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
   const isActuallyComingSoon = releaseDate && releaseDate > now;
@@ -238,15 +242,26 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
       {/* ── POSTER ─────────────────────────────────────────────── */}
       <div className={`relative w-full h-full overflow-hidden rounded-lg transition-all duration-300 ${showExpanded ? 'brightness-50' : ''}`}>
-        {!isImageLoaded && <div className="absolute inset-0 shimmer-bg" />}
-        <img
-          src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
-          alt={movie.title}
-          className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-          loading="lazy"
-          onLoad={() => setIsImageLoaded(true)}
-          crossOrigin="anonymous"
-        />
+        {!isImageLoaded && posterAttempt < 2 && <div className="absolute inset-0 shimmer-bg" />}
+        {posterAttempt < 2 ? (
+          <img
+            key={`${currentPoster}-${posterAttempt}`}
+            src={posterAttempt === 0
+              ? `/api/proxy-image?url=${encodeURIComponent(currentPoster)}&w=500`
+              : (currentPoster || '').trim().replace(/\s/g, '%20')}
+            alt={movie.title}
+            className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setIsImageLoaded(true)}
+            onError={() => { setIsImageLoaded(false); setPosterAttempt(a => a + 1); }}
+            {...(posterAttempt === 0 ? { crossOrigin: 'anonymous' as const } : {})}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-end bg-gradient-to-br from-zinc-800 to-black p-3">
+            <span className="text-white font-black uppercase tracking-tight text-sm leading-tight line-clamp-3">{movie.title}</span>
+          </div>
+        )}
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
@@ -303,7 +318,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               />
             ) : (
               <img
-                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}&w=900`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
@@ -312,7 +327,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             {/* Poster fade-in overlay when preview ends */}
             {previewEnded && videoSrc && (
               <img
-                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}&w=900`}
                 alt={movie.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
                 crossOrigin="anonymous"
@@ -491,7 +506,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
                 />
               ) : (
                 <img
-                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
+                  src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}&w=900`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
