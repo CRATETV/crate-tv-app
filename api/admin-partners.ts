@@ -16,13 +16,15 @@
 //   approve     { partnerId, note? }      → publishes the lineup live
 //   sales       { partnerId }             → live sales, ticket lines, payout breakdown
 //   setPayout   { partnerId, deductions, deductionsNote?, paidAmount?, paidNote?, markPaid? }
+//   deleteFestival { partnerId, confirmName } → removes a festival completely (for test
+//               festivals). Refuses PWFF and any festival with unrefunded paid tickets.
 
 import { randomBytes } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { isMasterAdmin } from './_lib/adminAuth.js';
 import { logServerError } from './_lib/logError.js';
-import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup, loadScheduledScreenings, partnerOverlaps } from './_lib/partners.js';
+import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup, loadScheduledScreenings, partnerOverlaps, deletePartnerFestival } from './_lib/partners.js';
 import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
 import { sendPartnerInvite, notifyPartnerReviewed } from './_lib/partnerEmails.js';
 
@@ -124,6 +126,15 @@ export async function POST(request: Request) {
                 return json({ success: true });
             }
 
+            case 'deleteFestival': {
+                const p = await load();
+                // Typing the name is the "are you sure": it can't be undone.
+                if (String(body.confirmName || '').trim() !== p.name.trim()) {
+                    throw new HttpError(400, `Type the festival's name exactly ("${p.name}") to delete it.`);
+                }
+                const result = await deletePartnerFestival(db, p);
+                return json({ success: true, ...result });
+            }
             case 'invite': {
                 const p = await load();
                 const email = String(body.email || '').trim().toLowerCase();

@@ -8,7 +8,7 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getAdminAuth } from './firebaseAdmin.js';
 import { assembleAndSyncMasterData } from '../publish-data.js';
 import { blockAccessExpiry } from './watchPartyRules.js';
@@ -17,7 +17,7 @@ import {
     PartnerRecord, PartnerDraft, PublicPartnerFestival, TicketLike,
     buildPublishPlan, checkDraft, blocksRemovedWithSales, computeSales, partnerPassItemId, SalesSummary,
     festivalCleanupDueMs, partnerFilmKey, partnerStorageKey, PartnerCleanup,
-    PWFF_PARTNER_ID, PWFF_PASS_ITEM_ID, selectPwffDays, blockWindow, findScheduleOverlaps, ScheduleWindow,
+    PWFF_PARTNER_ID, PWFF_PASS_ITEM_ID, selectPwffDays, blockWindow, findScheduleOverlaps, ScheduleWindow, isSafeId,
 } from './partnerRules.js';
 
 export const PARTNERS = 'partners';
@@ -63,7 +63,7 @@ export async function getPublishedBlocks(db: Firestore, partnerId: string): Prom
 const chunk = <T,>(arr: T[], size: number) => Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
 
 /** All ticket records that belong to this partner (blocks, pass, film rentals). */
-export async function getPartnerTickets(db: Firestore, partner: PartnerRecord, blockIds: string[], filmKeys: string[]): Promise<(TicketLike & { id: string; email?: string | null; uid?: string | null })[]> {
+export async function getPartnerTickets(db: Firestore, partner: PartnerRecord, blockIds: string[], filmKeys: string[]): Promise<(TicketLike & { id: string; email?: string | null; uid?: string | null; refunded?: boolean })[]> {
     const col = db.collection('festival_tickets');
     const ids = [...new Set([...blockIds, ...filmKeys, partnerPassItemId(partner.id)])];
     const snaps = await Promise.all([
@@ -86,6 +86,7 @@ export async function getPartnerTickets(db: Firestore, partner: PartnerRecord, b
             itemId: data.itemId,
             paymentType: data.paymentType,
             amountPaid: data.amountPaid,
+            refunded: data.refunded === true,
             partnerId: data.partnerId || null,
             email: data.email || null,
             uid: data.uid || null,
@@ -300,6 +301,109 @@ export async function runPartnerCleanup(db: Firestore, partner: PartnerRecord): 
     try { await assembleAndSyncMasterData(db); }
     catch (e) { console.error('[partner-cleanup] Catalog republish failed:', e); }
     return cleanup;
+}
+
+
+// ─── Delete a whole festival (test festivals) ─────────────────────────────
+
+export interface PartnerDeletion {
+    deletedFilms: number;
+    keptFilms: number;
+    deletedBlocks: number;
+    deletedFiles: number;
+    failedFiles: string[];
+}
+
+/** Why a festival can't be deleted, or null if it can. Pure, so it's tested. */
+export function deletionBlocker(partner: Pick<PartnerRecord, 'id'>, tickets: { amountPaid?: number; refunded?: boolean }[]): string | null {
+    if (partner.id === PWFF_PARTNER_ID) return "PWFF's committee can't be deleted here.";
+    const paid = tickets.filter(t => Number(t.amountPaid) > 0 && t.refunded !== true);
+    if (paid.length) {
+        return `${paid.length} paid ticket${paid.length > 1 ? 's were' : ' was'} sold for this festival. Refund ${paid.length > 1 ? 'them' : 'it'} in Payments & refunds (and tick "mark ticket refunded") before deleting, so nobody loses something they paid for.`;
+    }
+    return null;
+}
+
+/**
+ * Removes a festival completely: its schedule, its films (records + uploaded
+ * files), its watch parties and chat, invites and the partner itself.
+ * Films the festival let CRATE keep in the main catalog stay, files and all.
+ * Ticket and sales records are never deleted (they're the money history).
+ * Refuses if any paid ticket hasn't been refunded.
+ */
+export async function deletePartnerFestival(db: Firestore, partner: PartnerRecord): Promise<PartnerDeletion> {
+    const daysCol = db.collection('festival').doc('schedule').collection('days');
+    const daySnap = await daysCol.where('partnerId', '==', partner.id).get();
+    const blocks = daySnap.docs.flatMap(d => (d.data().blocks || []) as any[]);
+    const blockIds = blocks.map(b => b.id).filter(Boolean) as string[];
+
+    // Every film this festival ever had: published, draft, and anything in its blocks.
+    const filmKeys = new Set<string>([
+        ...(partner.published?.filmKeys || []),
+        ...(partner.draft?.films || []).map(f => partnerFilmKey(partner.id, f.id)),
+        ...blocks.flatMap(b => (b.movieKeys || []) as string[]),
+    ]);
+
+    const tickets = await getPartnerTickets(db, partner, blockIds, [...filmKeys]);
+    const blocker = deletionBlocker(partner, tickets);
+    if (blocker) throw new HttpError(409, blocker);
+
+    const bucket = process.env.AWS_S3_BUCKET_NAME || '';
+    let region = process.env.AWS_S3_REGION || 'us-east-1';
+    if (region === 'global') region = 'us-east-1';
+    const s3 = bucket && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        ? new S3Client({ region, credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY } })
+        : null;
+
+    // 1. Films. Kept-in-catalog films stay, and so do their files.
+    const keepFiles = new Set<string>();
+    let deletedFilms = 0, keptFilms = 0;
+    for (const key of filmKeys) {
+        const ref = db.collection('movies').doc(key);
+        const movie = (await ref.get()).data();
+        if (!movie) continue;
+        if (movie.keepInCatalogAfterFestival === true && partner.cleanup?.deletedAt) {
+            keptFilms++;
+            for (const url of [movie.fullMovie, movie.poster, movie.tvPoster, movie.trailer]) {
+                const k = partnerStorageKey(url, bucket, partner.id);
+                if (k) keepFiles.add(k);
+            }
+            continue;
+        }
+        await ref.delete();
+        await db.collection('data').doc('movies').update({ [key]: FieldValue.delete() }).catch(() => {});
+        deletedFilms++;
+    }
+
+    // 2. Uploaded files: everything in this festival's own folder, except kept films' files.
+    let deletedFiles = 0;
+    const failedFiles: string[] = [];
+    if (s3 && isSafeId(partner.id)) {
+        let token: string | undefined;
+        do {
+            const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `partners/${partner.id}/`, ContinuationToken: token }));
+            for (const obj of page.Contents || []) {
+                if (!obj.Key || keepFiles.has(obj.Key)) continue;
+                try { await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: obj.Key })); deletedFiles++; }
+                catch (e) { failedFiles.push(obj.Key); console.error('[partner-delete] S3 delete failed:', obj.Key, e); }
+            }
+            token = page.IsTruncated ? page.NextContinuationToken : undefined;
+        } while (token);
+    }
+
+    // 3. Schedule, watch parties (with their chat), invites, and the partner.
+    for (const d of daySnap.docs) await d.ref.delete();
+    for (const id of blockIds) {
+        await db.recursiveDelete(db.collection('watch_parties').doc(id)).catch(e => console.error('[partner-delete] watch party cleanup failed:', id, e));
+    }
+    const invites = await db.collection(PARTNER_INVITES).where('partnerId', '==', partner.id).get();
+    for (const d of invites.docs) await d.ref.delete();
+    await db.collection(PARTNERS).doc(partner.id).delete();
+
+    try { await assembleAndSyncMasterData(db); }
+    catch (e) { console.error('[partner-delete] Catalog republish failed:', e); }
+
+    return { deletedFilms, keptFilms, deletedBlocks: blockIds.length, deletedFiles, failedFiles };
 }
 
 

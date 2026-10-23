@@ -204,6 +204,44 @@ const Sales: React.FC<{ p: AdminPartner; onSaved: () => void }> = ({ p, onSaved 
     );
 };
 
+// Removes a festival completely. Meant for test festivals; the server refuses
+// if anyone paid for a ticket that hasn't been refunded.
+const DeleteFestival: React.FC<{ p: AdminPartner; onDeleted: () => void }> = ({ p, onDeleted }) => {
+    const [open, setOpen] = useState(false);
+    const [typed, setTyped] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState('');
+    const matches = typed.trim() === p.name.trim();
+    const remove = async () => {
+        setBusy(true); setErr('');
+        try {
+            await callAdminPartners('deleteFestival', { partnerId: p.id, confirmName: typed });
+            onDeleted();
+        } catch (e) { setErr((e as Error).message); setBusy(false); }
+    };
+    if (!open) {
+        return (
+            <div className="md:col-span-2 pt-3 border-t border-white/10">
+                <button className="text-[10px] font-black uppercase tracking-widest text-red-400 hover:text-red-300" onClick={() => setOpen(true)}>Delete this festival…</button>
+            </div>
+        );
+    }
+    return (
+        <div className="md:col-span-2 mt-2 rounded-xl border border-red-500/40 bg-red-950/30 p-4 space-y-3">
+            <p className="text-sm font-black text-red-200">Delete {p.name} for good?</p>
+            <p className="text-xs text-gray-300 leading-relaxed">This removes its festival page, schedule, films and uploaded files, watch parties and chat, and its team's portal access. It can't be undone. Ticket and sales records are kept for your money history. Films it let CRATE keep in the main catalog stay.</p>
+            <p className="text-xs text-gray-300">If anyone paid for a ticket, refund it first in Payments &amp; refunds.</p>
+            <label className={label} htmlFor={`del-${p.id}`}>Type <span className="text-white normal-case tracking-normal">{p.name}</span> to confirm</label>
+            <input id={`del-${p.id}`} className={input} value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off" />
+            {err && <p className="text-sm text-red-400">{err}</p>}
+            <div className="flex gap-2 flex-wrap">
+                <button className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-black uppercase tracking-widest text-[11px] px-5 py-3 rounded-xl" disabled={!matches || busy} onClick={remove}>{busy ? 'Deleting…' : 'Delete festival'}</button>
+                <button className={btnGhost} disabled={busy} onClick={() => { setOpen(false); setTyped(''); setErr(''); }}>Cancel</button>
+            </div>
+        </div>
+    );
+};
+
 const PartnerCard: React.FC<{ p: AdminPartner; onChanged: () => void }> = ({ p, onChanged }) => {
     const [open, setOpen] = useState<'lineup' | 'team' | 'sales' | 'settings' | null>(p.review?.state === 'submitted' ? 'lineup' : null);
     const [note, setNote] = useState('');
@@ -314,6 +352,7 @@ const PartnerCard: React.FC<{ p: AdminPartner; onChanged: () => void }> = ({ p, 
                         <button className={btnGhost} disabled={busy} onClick={() => run(() => callAdminPartners('update', { partnerId: p.id, status: p.status === 'archived' ? 'active' : 'archived' }), p.status === 'archived' ? 'Restored.' : 'Archived.')}>{p.status === 'archived' ? 'Restore' : 'Archive'}</button>
                     </div>
                     <p className="text-[11px] text-gray-500 md:col-span-2">Changing the web address after launch breaks links already shared. Archiving hides the partner's portal access; published blocks stay until removed.</p>
+                    {p.id !== PWFF_PARTNER_ID && <DeleteFestival p={p} onDeleted={onChanged} />}
                 </div>
             )}
         </div>
