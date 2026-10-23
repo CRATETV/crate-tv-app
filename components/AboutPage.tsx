@@ -88,7 +88,7 @@ const AboutPage: React.FC = () => {
                         <div className="space-y-6">
                             <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">Founded By</p>
                             <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none">Salome Denoon</h2>
-                            <p className="text-gray-400 text-lg md:text-xl leading-relaxed max-w-3xl">Crate TV was founded by Salome Denoon in 2014, out of a simple belief: independent films deserve a permanent home, not a one-week festival run. What began as a way to keep great stories alive after the festival lights go down has grown into a platform built filmmaker-first—home to the Playhouse West Film Festival and a home for the work that major platforms overlook.</p>
+                            <p className="text-gray-400 text-lg md:text-xl leading-relaxed max-w-3xl">Crate TV was founded by Salome Denoon in 2022, out of a simple belief: independent films deserve a permanent home, not a one-week festival run. What began as a way to keep great stories alive after the festival lights go down has grown into a platform built filmmaker-first—home to the Playhouse West Film Festival and a home for the work that major platforms overlook.</p>
                         </div>
                     </section>
 
@@ -116,9 +116,6 @@ const AboutPage: React.FC = () => {
                     </section>
                 </div>
 
-                <footer className="py-20 text-center opacity-30">
-                     <p className="text-[10px] font-black text-gray-700 uppercase tracking-[1em] mr-[-1em]">AUTHENTICITY_VERIFIED // INDEPENDENT_CORE // 2025_CYCLE</p>
-                </footer>
             </main>
 
             <CollapsibleFooter />

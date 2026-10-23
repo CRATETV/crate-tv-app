@@ -107,12 +107,24 @@ const Header: React.FC<HeaderProps> = ({
                         )}
                         
                         {/* No logo in the top menu (Oct 2026, by choice). */}
+
+                        {/* Phones: a way back home on every page except home itself. */}
+                        {window.location.pathname !== '/' && (
+                            <a
+                                href="/"
+                                onClick={(e) => handleNavigate(e, '/')}
+                                className="md:hidden flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-gray-300 hover:text-white transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                                Home
+                            </a>
+                        )}
                     </div>
 
-                    {/* Only show Nav links if user is logged in */}
-                    {user && showNavLinks && (
+                    {/* Home is always shown on desktop; the other links need a login. */}
+                    {(
                         <nav className="hidden md:flex items-center gap-10">
-                            {navLinks.map(link => (
+                            {(user && showNavLinks ? navLinks : navLinks.slice(0, 1)).map(link => (
                                 <a 
                                     key={link.path} 
                                     href={link.path} 

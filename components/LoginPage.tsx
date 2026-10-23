@@ -73,7 +73,13 @@ const LoginPage: React.FC = () => {
             {/* ── HEADER ── */}
             <header className="relative z-10 p-6 md:p-10 flex items-center justify-between">
                 {/* No logo here (Oct 2026): the sign-in and join pages stay clean. */}
-                <span aria-hidden="true" />
+                <a
+                    href="/"
+                    onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
+                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                    ← Home
+                </a>
                 <button
                     onClick={() => switchView(isLoginView ? 'signup' : 'login')}
                     className="text-sm text-gray-400 hover:text-white transition-colors"

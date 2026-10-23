@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Header from './Header';
 
 const faqs = [
     {
@@ -45,6 +46,7 @@ const FaqPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#050505] text-white">
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             {/* Hero */}
             <div className="relative overflow-hidden">
