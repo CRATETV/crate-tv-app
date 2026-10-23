@@ -135,6 +135,13 @@ const LandingPage: React.FC = () => {
             .slice(0, 24);
     }, [movies, categories]);
 
+    // Three rows for the moving poster wall (repeats posters when the catalog is small).
+    const posterRows = useMemo(() => {
+        if (!modernPosters.length) return [[], [], []] as string[][];
+        const fill = (offset: number) => Array.from({ length: Math.max(10, Math.ceil(modernPosters.length / 3)) }, (_, i) => modernPosters[(offset + i) % modernPosters.length]);
+        return [fill(0), fill(Math.ceil(modernPosters.length / 3)), fill(Math.ceil((2 * modernPosters.length) / 3))];
+    }, [modernPosters]);
+
     const topTenMovies = useMemo(() => {
         const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
         return (Object.values(movies) as Movie[])
@@ -174,51 +181,121 @@ const LandingPage: React.FC = () => {
             />
             
             <main className="flex-grow">
-                {/* SECTION 1: HERO */}
-                <section className="relative h-[95vh] flex flex-col items-center justify-center overflow-hidden border-b border-white/10 pt-16 sm:pt-0">
-                    <div className="absolute inset-0 z-0 grid grid-cols-3 md:grid-cols-6 gap-4 opacity-30 scale-110 rotate-[-5deg] pointer-events-none animate-slow-pan">
-                        {modernPosters.concat(modernPosters).map((url, i) => (
-                            <div key={i} className="aspect-[2/3] rounded-xl overflow-hidden bg-gray-900 shadow-2xl">
-                                <img src={url} className="w-full h-full object-cover" alt="" />
+                {/* SECTION 1: HERO — Oct 2026 redesign: moving poster wall, brand-gradient
+                    headline, top-3 film stack, one-bar email signup. Words still come from
+                    Admin → Homepage (hero settings). */}
+                <section className="relative min-h-[100svh] flex items-center overflow-hidden border-b border-white/10 pt-24 pb-16 md:pt-20">
+                    {/* Moving poster wall */}
+                    <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
+                        <div className="absolute -inset-x-40 -inset-y-24 flex flex-col justify-center gap-5 opacity-[0.38]"
+                            style={{ transform: 'perspective(1400px) rotateX(14deg) rotateZ(-7deg) scale(1.15)' }}>
+                            {[0, 1, 2].map(row => {
+                                const list = posterRows[row];
+                                if (!list.length) return null;
+                                return (
+                                    <div key={row} className="flex w-max gap-5 animate-marquee hero-wall-row"
+                                        style={{ animationDuration: `${90 + row * 25}s`, animationDirection: row % 2 ? 'reverse' : 'normal' }}>
+                                        {[...list, ...list].map((url, i) => (
+                                            <div key={i} className="w-[150px] md:w-[190px] aspect-[2/3] rounded-2xl overflow-hidden bg-[#141418] shadow-[0_20px_60px_rgba(0,0,0,0.6)] ring-1 ring-white/10 flex-shrink-0">
+                                                <img src={url} className="w-full h-full object-cover" alt="" loading={i < 8 ? 'eager' : 'lazy'} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    {/* Light, colour and vignette */}
+                    <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden
+                        style={{ background: 'radial-gradient(60% 55% at 22% 42%, rgba(255,59,92,0.28), transparent 70%), radial-gradient(50% 50% at 85% 70%, rgba(123,77,255,0.26), transparent 70%), radial-gradient(40% 40% at 70% 10%, rgba(255,154,60,0.14), transparent 70%)' }} />
+                    <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-[#050505] via-[#050505]/80 to-[#050505]/30" aria-hidden />
+                    <div className="absolute inset-x-0 bottom-0 h-48 z-10 pointer-events-none bg-gradient-to-t from-[#050505] to-transparent" aria-hidden />
+                    <div className="absolute inset-x-0 top-0 h-32 z-10 pointer-events-none bg-gradient-to-b from-[#050505] to-transparent" aria-hidden />
+
+                    <div className="relative z-20 w-full max-w-[1400px] mx-auto px-6 md:px-12 grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-8 items-center animate-[fadeIn_1s_ease-out]">
+                        {/* Words + signup */}
+                        <div className="text-center lg:text-left space-y-8 md:space-y-10">
+                            <div className="inline-flex items-center gap-3 rounded-full bg-white/[0.06] backdrop-blur-md border border-white/15 pl-3 pr-5 py-2">
+                                <span className="relative flex h-2.5 w-2.5">
+                                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#FF9A3C] opacity-75 animate-ping" />
+                                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#FF9A3C]" />
+                                </span>
+                                <span className="text-[11px] md:text-xs font-black uppercase tracking-[0.25em] text-white/90">{hero.eyebrow}</span>
                             </div>
-                        ))}
-                    </div>
-                    
-                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-[#050505]"></div>
-                    <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.15)_0%,transparent_70%)]"></div>
 
-                    <div className="relative z-20 max-w-5xl px-6 text-center space-y-12 animate-[fadeIn_1s_ease-out]">
-                        <div className="space-y-4">
-                            <p className="text-red-500 font-black uppercase tracking-[0.2em] sm:tracking-[0.6em] text-xs md:text-sm">{hero.eyebrow}</p>
-                            <h1 className="text-fluid-hero font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-[0_20px_50px_rgba(0,0,0,1)]">
-                                {hero.headlineLine1} <br/><span className="text-red-600">{hero.headlineLine2}</span>
+                            <h1 className="font-black uppercase tracking-tighter leading-[0.84] text-[clamp(3.6rem,15vw,9.5rem)]">
+                                <span className="block text-white drop-shadow-[0_12px_40px_rgba(0,0,0,0.8)]">{hero.headlineLine1}</span>
+                                <span className="block bg-clip-text text-transparent pb-2"
+                                    style={{ backgroundImage: 'linear-gradient(92deg, #FF9A3C 0%, #FF3B5C 32%, #D63BD9 66%, #7B4DFF 100%)' }}>
+                                    {hero.headlineLine2}
+                                </span>
                             </h1>
+
+                            <p className="text-xl md:text-3xl text-white/85 font-medium max-w-2xl mx-auto lg:mx-0 leading-snug tracking-tight">
+                                {hero.subheadline}
+                            </p>
+
+                            <div className="w-full max-w-xl mx-auto lg:mx-0">
+                                <p className="text-sm md:text-base text-white/60 mb-3">{hero.emailPromptText}</p>
+                                <form onSubmit={(e) => { e.preventDefault(); openAuthModal('signup'); }}
+                                    className="relative flex flex-col sm:flex-row gap-3 sm:gap-0 sm:items-center rounded-[1.4rem] sm:rounded-full p-2 bg-black/55 backdrop-blur-xl border border-white/15 shadow-[0_30px_80px_rgba(0,0,0,0.55)] focus-within:border-white/40 transition-colors">
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="Your email address"
+                                        aria-label="Email address"
+                                        className="flex-grow bg-transparent px-5 py-4 text-white text-lg placeholder:text-white/40 outline-none"
+                                        required
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="rounded-full px-8 py-4 text-[#0B0B0D] font-black text-lg tracking-tight transition-all hover:brightness-110 hover:scale-[1.03] active:scale-95 shadow-[0_12px_40px_rgba(255,255,255,0.18)] whitespace-nowrap"
+                                        style={{ backgroundImage: 'linear-gradient(180deg, #FFFFFF, #E9E9EE)' }}
+                                    >
+                                        {hero.ctaButtonText} →
+                                    </button>
+                                </form>
+                                <ul className="mt-5 flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-white/65">
+                                    <li className="flex items-center gap-2"><span className="text-[#1FCB7A]">●</span> Free to watch</li>
+                                    <li className="flex items-center gap-2"><span className="text-[#3BB2FF]">●</span> Web, Roku &amp; Chromecast</li>
+                                    <li className="flex items-center gap-2"><span className="text-[#FFC53D]">●</span> 70% goes to filmmakers</li>
+                                </ul>
+                            </div>
                         </div>
 
-                        <p className="text-2xl md:text-4xl text-gray-200 font-medium max-w-3xl mx-auto leading-tight tracking-tight">
-                            {hero.subheadline}
-                        </p>
-
-                        <div className="w-full max-w-2xl mx-auto pt-8">
-                            <p className="text-lg text-gray-400 mb-6">{hero.emailPromptText}</p>
-                            <form onSubmit={(e) => { e.preventDefault(); openAuthModal('signup'); }} className="flex flex-col md:flex-row gap-4">
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Email Address"
-                                    className="flex-grow p-6 bg-black/80 backdrop-blur-xl border-2 border-white/10 rounded-2xl text-white text-xl focus:border-red-600 outline-none transition-all shadow-2xl"
-                                    required
-                                />
-                                <button
-                                    type="submit"
-                                    className="bg-red-600 hover:bg-red-700 text-white font-black py-6 px-12 rounded-2xl text-2xl uppercase tracking-tighter transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_60px_rgba(239,68,68,0.4)]"
-                                >
-                                    {hero.ctaButtonText}
-                                </button>
-                            </form>
-                        </div>
+                        {/* Top 3 right now (desktop) */}
+                        {topTenMovies.length >= 3 && (
+                            <div className="hidden lg:block relative h-[560px]" aria-label="Most watched right now">
+                                <p className="absolute -top-2 right-6 text-[11px] font-black uppercase tracking-[0.25em] text-white/60">Most watched right now</p>
+                                {topTenMovies.slice(0, 3).map((m, i) => {
+                                    const pos = [
+                                        { left: '22%', top: '8%', rot: -2, z: 30, w: 265 },
+                                        { left: '0%', top: '24%', rot: -9, z: 10, w: 205 },
+                                        { left: '62%', top: '22%', rot: 8, z: 20, w: 205 },
+                                    ][i];
+                                    return (
+                                        <button key={m.key} onClick={() => openAuthModal('signup')}
+                                            className="hero-float absolute rounded-[1.6rem] overflow-hidden ring-1 ring-white/20 shadow-[0_40px_90px_rgba(0,0,0,0.75)] transition-transform duration-500 hover:scale-[1.04] hover:z-40 group"
+                                            style={{ left: pos.left, top: pos.top, width: pos.w, zIndex: pos.z, transform: `rotate(${pos.rot}deg)`, animationDelay: `${i * 1.3}s` }}
+                                            aria-label={`${m.title} — sign up to watch`}>
+                                            <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                                            <span className="absolute inset-x-0 bottom-0 p-4 pt-14 bg-gradient-to-t from-black/90 to-transparent text-left opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="block text-white text-sm font-bold">Sign up free to watch →</span>
+                                            </span>
+                                            <span className={`absolute top-3 ${i === 2 ? 'right-3' : 'left-3'} min-w-[38px] h-[38px] px-2 rounded-full flex items-center justify-center font-black text-white text-lg shadow-lg`}
+                                                style={{ backgroundImage: 'linear-gradient(135deg, #FF9A3C, #FF3B5C)' }}>{i + 1}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
+
+                    <a href="#crate-top-ten" className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex-col items-center gap-2 text-white/50 hover:text-white text-[10px] font-black uppercase tracking-[0.3em]" aria-label="Scroll down">
+                        Explore
+                        <span className="w-px h-8 bg-gradient-to-b from-white/60 to-transparent" />
+                    </a>
                 </section>
 
                 {/* SECTION 1.5: TITLE MARQUEE */}
@@ -236,7 +313,7 @@ const LandingPage: React.FC = () => {
 
                 {/* SECTION 2: TOP 10 */}
                 {topTenMovies.length > 0 && (
-                    <section className="py-32 px-4 md:px-12 bg-black">
+                    <section id="crate-top-ten" className="py-32 px-4 md:px-12 bg-black">
                         <div className="max-w-[1800px] mx-auto">
                             <MovieCarousel 
                                 title={

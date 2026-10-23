@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10 — Payments & refunds, email header
+
+- **Payments & refunds** (Admin → Money & legal; master login only): every Square payment for the last 30 days to a year, matched to the customer's email where CRATE has a ticket record; **possible double charges** flagged (same buyer, item and amount within 15 minutes — `api/_lib/duplicateCharges.ts`, tested); full or partial **refund through Square** with a reason, optional customer email, and an option to mark a cancelled ticket as refunded so the help desk never restores it. The amount is re-checked against Square, a one-time key stops double-clicks refunding twice, and every refund is logged (`refunds` collection + audit log). Access isn't removed automatically.
+- New ticket records now store the exact `squarePaymentId`, so refunds match customers exactly.
+- **Email header:** phone mail apps in dark mode were turning the black header light grey and hiding the white logo. The header is now one picture (`public/email-header.png`, logo on "midnight glow"), and the four email logo files are now a logo badge with its own background, so the logo shows clearly everywhere, including emails already sent.
+
 ## 2026-10 — Filmmaker onboarding, quiet declines, database backups
 
 - **Declining a submission is quiet and final.** "✕ Decline & delete" removes it from Submissions with no email; the filmmaker can't see submission statuses anywhere. For films that were never approved, the uploaded film file and poster are deleted from storage too (never if a catalog film uses them).

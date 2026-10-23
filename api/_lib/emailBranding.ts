@@ -31,8 +31,19 @@
 // Oct 2026: new CRATE logo. Both are wide PNGs (email apps can't show SVG);
 // the old names (crate-logo-email.png, logo-tagline.png) also hold the new
 // logo so emails sent before the change update too.
+//
+// Oct 23 2026: phone mail apps in dark mode (Gmail on iPhone especially)
+// recolour emails — the black header turned light grey and the white logo
+// vanished. Pictures are never recoloured, so the logo now always sits on
+// its own "midnight glow" background baked into the image:
+//   - email-header.png: the full-width header banner used by every email
+//     built with renderBrandedEmail.
+//   - the four logo files below are now a rounded logo "badge" (same shape
+//     as before), so older one-off email templates — and emails already
+//     sent — show the logo clearly on light or dark backgrounds.
 export const LOGO_URL = 'https://cratetv.net/email-logo-on-light.png';
 export const LOGO_URL_ON_DARK = 'https://cratetv.net/email-logo-on-dark.png';
+export const HEADER_BANNER_URL = 'https://cratetv.net/email-header.png';
 
 export interface BrandedEmailOptions {
     /** Used as the <title> tag — not shown in the body, but shows in some mail-client tab/preview UI. */
@@ -59,18 +70,18 @@ export const renderBrandedEmail = ({ title, bodyHtml, footerTagline }: BrandedEm
             <td align="center" style="padding: 40px 20px;">
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#ffffff" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
 
-                    <!-- Dark Header Bar with Logo -->
+                    <!-- Header: one picture (logo on midnight glow), so dark-mode mail apps can't wash it out -->
                     <tr>
-                        <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 32px 40px;">
-                            <a href="https://cratetv.net" target="_blank">
-                                <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="130" style="display: block; border: 0;">
+                        <td align="center" bgcolor="#0b0b0d" style="background-color: #0b0b0d; padding: 0; line-height: 0; font-size: 0;">
+                            <a href="https://cratetv.net" target="_blank" style="display: block;">
+                                <img src="${HEADER_BANNER_URL}" alt="CRATE TV" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0;">
                             </a>
                         </td>
                     </tr>
 
                     <!-- Red accent line -->
                     <tr>
-                        <td bgcolor="#ef4444" style="background-color: #ef4444; height: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                        <td bgcolor="#FF3B5C" style="background-color: #FF3B5C; height: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>
                     </tr>
 
                     <!-- Core Content -->
@@ -101,7 +112,7 @@ export const renderBrandedEmail = ({ title, bodyHtml, footerTagline }: BrandedEm
 /** Standard CTA button, styled to match the shared template — for emails that need one big "click here" action. */
 export const renderEmailButton = (text: string, url: string): string => `
 <table cellpadding="0" cellspacing="0" width="100%"><tr><td align="center" style="padding-top: 8px;">
-    <a href="${url}" style="background-color: #ef4444; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 10px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+    <a href="${url}" style="background-color: #FF3B5C; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 10px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
         ${text}
     </a>
 </td></tr></table>

@@ -461,6 +461,9 @@ export async function POST(request: Request) {
     }
 
     // --- PROCESS TRANSACTION ---
+    // Kept so the ticket record can point at the exact Square payment
+    // (Admin → Payments & refunds uses it to match refunds to customers).
+    let squarePaymentId: string | null = null;
     if (amountInCents > 0 && sourceId !== 'PROMO_VOUCHER') {
         const squareUrl = isProduction 
           ? 'https://connect.squareup.com/v2/payments' 
@@ -493,6 +496,7 @@ export async function POST(request: Request) {
             const errorMessage = data.errors?.[0]?.detail || 'Payment failed.';
             throw new Error(errorMessage);
         }
+        squarePaymentId = data.payment?.id || null;
     }
 
     // --- FINALIZE PROMO CODE USAGE ---
@@ -599,6 +603,7 @@ export async function POST(request: Request) {
             isFestivalBlock: paymentType === 'block',
             uid: uid || null,
             partnerId: purchasePartnerId,
+            squarePaymentId,
         };
         try {
             await db.collection('festival_tickets').add(ticketRecord);
