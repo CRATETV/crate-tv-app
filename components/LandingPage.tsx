@@ -307,7 +307,7 @@ const LandingPage: React.FC = () => {
                         <AnimatedStat value={totalFilmCount} suffix="+" label="Films Streaming" />
                         <AnimatedStat value={70} suffix="%" label="Goes To Filmmakers" />
                         <AnimatedStat value={3} label="Ways To Watch — Web, Roku, Cast" />
-                        <AnimatedStat value={2014} label="Founded" plainNumber />
+                        <AnimatedStat value={2022} label="Founded" plainNumber />
                     </div>
                 </section>
 

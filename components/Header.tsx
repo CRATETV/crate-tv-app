@@ -121,8 +121,9 @@ const Header: React.FC<HeaderProps> = ({
                         )}
                     </div>
 
-                    {/* Home is always shown on desktop; the other links need a login. */}
-                    {(
+                    {/* Signed in: the full menu. Signed out: just a way back home,
+                        except on the home page itself, where it would do nothing. */}
+                    {((user && showNavLinks) || window.location.pathname !== '/') && (
                         <nav className="hidden md:flex items-center gap-10">
                             {(user && showNavLinks ? navLinks : navLinks.slice(0, 1)).map(link => (
                                 <a 
