@@ -709,7 +709,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
         // The PWFF all-access pass doesn't cover partner festivals (Festival in a box).
         const owningBlock = festivalData.flatMap(d => d.blocks || []).find(b => b.id === movieKey || (b.movieKeys || []).includes(movieKey));
-        if (hasFestivalAllAccess && !isOutsidePartner(owningBlock?.partnerId)) return true;
+        // ...and opens festival blocks only, never a standalone paid watch party.
+        if (owningBlock && hasFestivalAllAccess && !isOutsidePartner(owningBlock.partnerId)) return true;
         if (unlockedFestivalBlockIds.has(movieKey)) return true;
 
         // If this movie belongs to a festival block, gate on the BLOCK's price not the movie's
@@ -876,6 +877,36 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         setIsBackstageVerified(true);
         setVerifiedBackstageKey(key.trim().toUpperCase());
     }, [movieKey, unlockWatchParty]);
+
+    // Announce the director in chat once their backstage key is accepted.
+    // The server re-checks the key and posts each director only once per party.
+    const announcedDirectorRef = useRef(false);
+    useEffect(() => {
+        if (!isBackstageVerified || !verifiedBackstageKey || !user || announcedDirectorRef.current) return;
+        announcedDirectorRef.current = true;
+        (async () => {
+            try {
+                const idToken = await getUserIdToken();
+                if (!idToken) { announcedDirectorRef.current = false; return; }
+                await fetch('/api/send-chat-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        movieKey,
+                        userName: user.name || user.email,
+                        userAvatar: user.avatar || 'fox',
+                        announceDirectorEntry: true,
+                        isVerifiedDirector: true,
+                        backstageKey: verifiedBackstageKey,
+                        idToken,
+                    }),
+                });
+            } catch (e) {
+                announcedDirectorRef.current = false;
+                console.error('[WatchParty] director announcement failed:', e);
+            }
+        })();
+    }, [isBackstageVerified, verifiedBackstageKey, user, movieKey, getUserIdToken]);
 
     const handleBackstageSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

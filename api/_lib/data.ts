@@ -1,5 +1,6 @@
 
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { openSnapshot, PRIVATE_SNAPSHOT_KEY } from './privateSnapshot.js';
 import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig, aboutData as fallbackAbout, promoCodesData as fallbackPromos } from '../../constants.js';
 
 let cachedData: any = null;
@@ -45,6 +46,21 @@ export const getApiData = async (options: { noCache?: boolean } = {}) => {
     
     if (!client || !bucketName) return getFallbackData();
     
+    // The real data lives in the scrambled private snapshot (see
+    // privateSnapshot.ts). live-data.json is the public-safe copy, used only
+    // if the snapshot doesn't exist yet (before the first publish with this
+    // code) or can't be read.
+    try {
+        const sealed = await client.send(new GetObjectCommand({ Bucket: bucketName, Key: PRIVATE_SNAPSHOT_KEY }));
+        if (sealed.Body) {
+            const data = openSnapshot(await sealed.Body.transformToByteArray());
+            if (!options.noCache) { cachedData = data; lastFetchTime = now; }
+            return data;
+        }
+    } catch (err: any) {
+        if (err?.name !== 'NoSuchKey') console.error('[Data API] Private snapshot unreadable, using live-data.json.', err);
+    }
+
     try {
         const command = new GetObjectCommand({ 
             Bucket: bucketName, 

@@ -1,6 +1,10 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
+import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
+
+// Set per request from the festival schedule: films in paid festival blocks.
+let paidKeys = new Set<string>();
 
 const isMovieVisible = (movie: Movie | undefined | null): boolean => {
     if (!movie || movie.isUnlisted) return false;
@@ -12,13 +16,15 @@ const isMovieVisible = (movie: Movie | undefined | null): boolean => {
     // further down, mislabeled as "trailerUrl" too). Excluding paid titles entirely rather
     // than trying to bolt on a check this feed has no session to check against — paid/
     // premier titles belong in roku-feed.ts's properly-gated "Premier Access" row instead.
-    const isFree = !movie.isForSale && !movie.isWatchPartyPaid;
+    // Festival films are priced by their block, so check that too (Oct 23 2026).
+    const isFree = isFreeForEveryone(movie, paidKeys);
     return isReleased && isFree && !!movie.fullMovie && !!movie.poster;
 };
 
 export async function GET(request: Request) {
   try {
     const apiData = await getApiData();
+    paidKeys = paidFestivalFilmKeys(apiData.festivalData);
     const moviesData = apiData.movies || {};
     const categoriesData = apiData.categories || {};
     

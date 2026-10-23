@@ -44,6 +44,8 @@ export async function GET(request: Request) {
             films.push({
                 ...rest,
                 fullMovie: isPublicEmbedUrl(movie.fullMovie) ? movie.fullMovie : (undefined as any),
+                // Episode files too (this page never plays them).
+                ...(Array.isArray((rest as any).episodes) ? { episodes: (rest as any).episodes.map((ep: any) => isPublicEmbedUrl(ep?.url) ? ep : { ...ep, url: undefined }) } : {}),
                 key: doc.id,
             });
         }

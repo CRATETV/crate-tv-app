@@ -306,6 +306,13 @@ export async function POST(request: Request) {
             if (promoData && promoData.usedCount >= promoData.maxUses) {
                 return new Response(JSON.stringify({ error: "This promo code has reached its maximum usage limit." }), { status: 403 });
             }
+            // A code made for one item only works on that item. Checkout used to
+            // apply any code to anything (only the "check code" button looked),
+            // so a 100%-off code for one film could unlock a festival pass by
+            // calling this endpoint directly (Oct 23 2026).
+            if (promoData?.itemId && promoData.itemId !== itemId) {
+                return new Response(JSON.stringify({ error: "This promo code doesn't apply to this item." }), { status: 403 });
+            }
         }
     }
 
@@ -364,6 +371,17 @@ export async function POST(request: Request) {
         } else {
             const movieData = movieDoc.data();
             purchasePartnerId = movieData?.partnerId || null;
+            // A paid watch party film that isn't for sale on its own is sold
+            // only as a party ticket. A $5 "rental" of it used to be possible by
+            // calling this endpoint directly (Oct 23 2026). Festival films stay
+            // rentable: their block decides that, as before.
+            if (paymentType === 'movie' && movieData?.isWatchPartyPaid === true && movieData?.isForSale !== true) {
+                const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+                const inFestivalBlock = daysSnap.docs.some(d => (d.data().blocks || []).some((b: any) => Array.isArray(b?.movieKeys) && b.movieKeys.includes(itemId)));
+                if (!inFestivalBlock) {
+                    return new Response(JSON.stringify({ error: 'This film is shown as a paid watch party. Please buy a watch party ticket instead.' }), { status: 400 });
+                }
+            }
             const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;

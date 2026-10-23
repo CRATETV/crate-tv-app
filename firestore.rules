@@ -54,7 +54,23 @@ service cloud.firestore {
           || !protectedFieldUnchanged('unlockedBlocks', [])
           || !protectedFieldUnchanged('unlockedBlockIds', [])
           || !protectedFieldUnchanged('unlockedFestivalDays', [])
-          || !protectedFieldUnchanged('partnerPasses', {});
+          || !protectedFieldUnchanged('partnerPasses', {})
+          // Oct 23 2026: the pass end dates also grant access (a date in the
+          // future counts as a pass), and the filmmaker fields decide who can
+          // see film earnings and request payouts. All set by the server only.
+          || !protectedFieldUnchanged('festivalPassExpiry', null)
+          || !protectedFieldUnchanged('crateFestPassExpiry', null)
+          || !protectedFieldUnchanged('verifiedFilmmakerName', null)
+          || !protectedFieldUnchanged('isIndustryPro', false)
+          || !roleMatchesClaim('isFilmmaker')
+          || !roleMatchesClaim('isActor');
+    }
+
+    // The app copies isFilmmaker / isActor from the account's server-set
+    // role onto the profile. That copy is allowed; any other change isn't.
+    function roleMatchesClaim(field) {
+      return protectedFieldUnchanged(field, false)
+          || request.resource.data[field] == (request.auth.token.get(field, false) == true);
     }
 
     // ── Users ──────────────────────────────────────────────────────────

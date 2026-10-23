@@ -1,16 +1,11 @@
-// Query + aggregation logic for the watch party admin dashboard. Call
-// getBlockViewershipStats(blockId) from WatchPartyManager (or wherever the
-// dashboard lives) and render the returned object however fits the UI.
-
-import { getDbInstance } from './firebaseClient';
-
-// A session counts as "watching right now" only if its most recent
-// heartbeat landed within this window. useWatchHeartbeat sends one every
-// 20s (and only while the video is actually playing and the tab is
-// visible — see its own comments), so 2x that plus a little slack covers
-// one missed beat from a slow connection without letting someone who
-// paused/left minutes ago still read as "watching."
-const LIVE_WINDOW_MS = 45000;
+// Viewership numbers for the Watch Party Manager (admin panel).
+//
+// These used to be added up in the browser by reading every viewer's
+// `watchSessions` record straight from the database. The admin panel signs in
+// with the admin password, not a regular CRATE account, so the database
+// refused that read ("Missing or insufficient permissions"). The numbers now
+// come from /api/admin-watch-party-stats, which adds them up on the server
+// (api/_lib/watchPartyStats.ts, the same code as the post-party report email).
 
 export interface BlockViewershipStats {
   uniqueViewers: number;
@@ -19,82 +14,20 @@ export interface BlockViewershipStats {
   peakConcurrentViewers: number; // highest simultaneous count over the party's whole run, not just now
   peakDeviceSplit: { mobile: number; desktop: number };
   sessionsUnder2Min: number; // quick bounces — people who clicked but barely watched
-  watchingNow: number; // live count — heartbeat within the last LIVE_WINDOW_MS
+  watchingNow: number; // live count — heartbeat within the last 45 seconds
 }
 
 export async function getBlockViewershipStats(blockId: string): Promise<BlockViewershipStats> {
-  const db = getDbInstance();
-  if (!db) {
-    throw new Error('Firestore is not initialized. Cannot get viewership stats.');
-  }
+  let password = '';
+  try { password = sessionStorage.getItem('adminPassword') || ''; } catch { /* no storage */ }
+  if (!password) throw new Error('Sign in to the admin panel again to see viewer numbers.');
 
-  const snapshot = await db.collection('watchSessions').where('blockId', '==', blockId).get();
-
-  const seenUsers = new Set<string>();
-  let totalSeconds = 0;
-  let mobileCount = 0;
-  let desktopCount = 0;
-  let bounces = 0;
-  let watchingNow = 0;
-  const now = Date.now();
-
-  // Sweep-line peak concurrency — see api/_lib/watchPartyStats.ts (the
-  // server-side twin used for the post-party report email) for the full
-  // rationale; keep the two in sync if this logic changes.
-  const events: { time: number; delta: number }[] = [];
-
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    seenUsers.add(data.userId);
-    totalSeconds += data.watchSeconds || 0;
-
-    if (data.device === 'mobile') mobileCount++;
-    else desktopCount++;
-
-    if ((data.watchSeconds || 0) < 120) bounces++;
-
-    const lastHeartbeatMs = data.lastHeartbeat?.toMillis?.();
-    if (lastHeartbeatMs && !data.endedAt && now - lastHeartbeatMs < LIVE_WINDOW_MS) {
-      watchingNow++;
-    }
-
-    const startMs = data.startedAt?.toMillis?.();
-    const endMs = (data.endedAt || data.lastHeartbeat)?.toMillis?.();
-    if (startMs && endMs && endMs >= startMs) {
-      events.push({ time: startMs, delta: 1 });
-      events.push({ time: endMs, delta: -1 });
-    }
+  const res = await fetch('/api/admin-watch-party-stats', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blockId, password }),
   });
-
-  events.sort((a, b) => a.time - b.time || b.delta - a.delta);
-  let current = 0;
-  let peakConcurrentViewers = 0;
-  for (const e of events) {
-    current += e.delta;
-    if (current > peakConcurrentViewers) peakConcurrentViewers = current;
-  }
-
-  const uniqueViewers = seenUsers.size;
-  const totalWatchMinutes = Math.round(totalSeconds / 60);
-  const averageWatchMinutes = uniqueViewers > 0 ? Math.round(totalWatchMinutes / uniqueViewers) : 0;
-
-  return {
-    uniqueViewers,
-    totalWatchMinutes,
-    averageWatchMinutes,
-    peakConcurrentViewers,
-    peakDeviceSplit: { mobile: mobileCount, desktop: desktopCount },
-    sessionsUnder2Min: bounces,
-    watchingNow,
-  };
+  if (res.status === 401) throw new Error('Your admin sign-in expired. Sign in again to see viewer numbers.');
+  if (!res.ok) throw new Error('The server could not add up the viewer numbers. Try again in a minute.');
+  return res.json();
 }
-
-// Example: render this in the admin panel as a card per block:
-//
-// const stats = await getBlockViewershipStats(block.id);
-// <div>
-//   <p>{stats.uniqueViewers} unique viewers</p>
-//   <p>{stats.averageWatchMinutes} min avg watch time</p>
-//   <p>{stats.sessionsUnder2Min} quick bounces (under 2 min)</p>
-//   <p>{stats.peakDeviceSplit.mobile} mobile / {stats.peakDeviceSplit.desktop} desktop</p>
-// </div>

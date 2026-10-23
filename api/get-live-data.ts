@@ -2,19 +2,10 @@ import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
-// YouTube/Vimeo links are public embeds anyway and the catalog page needs
-// them to show the embedded player. Anything else is one of OUR video files
-// and must only ever reach a viewer as a short-lived signed link from
-// /api/get-stream-url.
-export function isPublicEmbedUrl(url: unknown): boolean {
-    if (typeof url !== 'string' || !url) return false;
-    try {
-        const host = new URL(url).hostname.replace(/^www\./, '');
-        return ['youtube.com', 'm.youtube.com', 'youtu.be', 'vimeo.com', 'player.vimeo.com'].includes(host);
-    } catch {
-        return false;
-    }
-}
+// Shared with the TV feeds and the Roku: one rule for what's free and what's
+// safe to publish (api/_lib/paidRules.ts).
+import { isPublicEmbedUrl, paidFestivalFilmKeys, publicSafeMovie } from './_lib/paidRules.js';
+export { isPublicEmbedUrl };
 
 function filterCategories(data: any) {
     if (data.categories) {
@@ -36,11 +27,15 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const noCache = searchParams.get('noCache') === 'true';
 
-        const data = await getApiData({ noCache });
+        // A copy: the cached record is shared, and it must keep its real links.
+        const data: any = { ...(await getApiData({ noCache })) };
+        // The fallback data carries the promo code list; never publish it.
+        delete data.promoCodes;
 
         if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
             const movieArray = Object.values(data.movies) as Movie[];
+            const paidKeys = paidFestivalFilmKeys(data.festivalData);
 
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
@@ -76,12 +71,9 @@ export async function GET(request: Request) {
                 // never need the raw link (they all use signed links now), so
                 // it is now withheld for every title unless it's a public
                 // YouTube/Vimeo embed.
-                const isFree = !m.isForSale && !m.isWatchPartyPaid;
-                const filtered: Movie = isPublicEmbedUrl(m.fullMovie) ? m : { ...m, fullMovie: undefined as any };
-                if (!isFree && Array.isArray(filtered.episodes)) {
-                    filtered.episodes = filtered.episodes.map(ep => ({ ...ep, url: undefined as any }));
-                }
-                finalMovies[m.key] = filtered;
+                // Oct 23 2026: also never publishes rokuStreamUrl (it was the raw
+                // file link too), and judges "free" with festival block prices.
+                finalMovies[m.key] = publicSafeMovie(m, paidKeys);
             });
 
             data.movies = finalMovies;

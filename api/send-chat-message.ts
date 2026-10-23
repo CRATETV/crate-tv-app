@@ -33,12 +33,12 @@ export async function POST(request: Request) {
 
     const {
       movieKey, userName, userAvatar, text,
-      isVerifiedDirector, isAdmin, isSystemMessage,
+      isVerifiedDirector, isAdmin, isSystemMessage, announceDirectorEntry,
       idToken, backstageKey, adminPassword: __raw_adminPassword,
     } = await request.json();
     const adminPassword = await resolveAdminCredential(__raw_adminPassword);
 
-    if (!movieKey || !userName || !userAvatar || !text) {
+    if (!movieKey || !userName || !userAvatar || (!text && announceDirectorEntry !== true)) {
       return new Response(JSON.stringify({ error: 'Missing required fields for chat message.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
 
     let grantedAdmin = false;
     let grantedDirector = false;
+    let senderUid: string | null = null;
 
     if (wantsAdmin) {
       const validPwd = !!adminPassword &&
@@ -75,6 +76,7 @@ export async function POST(request: Request) {
       let uid: string;
       try {
         uid = (await auth.verifyIdToken(idToken)).uid;
+        senderUid = uid;
       } catch {
         return new Response(JSON.stringify({ error: 'Invalid or expired session — please refresh.' }), { status: 401 });
       }
@@ -92,6 +94,34 @@ export async function POST(request: Request) {
           grantedDirector = true;
         }
       }
+    }
+
+    // "The director has entered the chat." Sent by the watch party page once a
+    // director's backstage key is accepted. Only a real, checked backstage key
+    // can post it, and the fixed message id means each director is announced
+    // once per party, however many times they reload or rejoin.
+    if (announceDirectorEntry === true) {
+      if (!grantedDirector || !senderUid) {
+        return new Response(JSON.stringify({ error: 'Only a verified director can be announced.' }), { status: 403 });
+      }
+      const name = String(userName).trim().slice(0, 60) || 'The director';
+      try {
+        await db.collection('watch_parties').doc(movieKey).collection('messages')
+          .doc(`director-entered-${senderUid}`)
+          .create({
+            userName: 'CRATE',
+            userAvatar,
+            text: `🎬 Director ${name} has entered the chat`,
+            isVerifiedDirector: false,
+            isAdmin: false,
+            isSystemMessage: true,
+            timestamp: FieldValue.serverTimestamp(),
+          });
+      } catch (e: any) {
+        // Already announced for this party: nothing to do.
+        if (e?.code !== 6 && !/already exists/i.test(String(e?.message))) throw e;
+      }
+      return new Response(JSON.stringify({ success: true }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
 
     const newMessage = {

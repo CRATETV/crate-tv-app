@@ -106,7 +106,10 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
 
         let granted = false;
         if (unlockedWatchPartyKeys.includes(movieKey)) granted = true;
-        else if (hasFestivalAllAccess && !isOutsidePartner(parentBlock?.partnerId)) granted = true;
+        // A festival pass opens festival films only. A standalone paid watch
+        // party (no festival block) used to fall into this line too, so every
+        // pass holder got every paid watch party free (found Oct 23 2026).
+        else if (parentBlock && hasFestivalAllAccess && !isOutsidePartner(parentBlock.partnerId)) granted = true;
         else if (isBlockUnlocked(movieKey)) granted = true;
         else if (parentBlock) {
             if (isBlockUnlocked(parentBlock.id)) granted = true;
@@ -151,13 +154,20 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
         const status = await getPartyStatus(db, parentBlock.id);
         if ((hasFestivalAllAccess && !isOutsidePartner(parentBlock.partnerId)) || isBlockUnlocked(parentBlock.id) || unlockedWatchPartyKeys.includes(parentBlock.id)) {
             granted = status === 'ended';
-        } else if (!(parentBlock.price > 0)) {
+        } else if (parentBlock.price === 0) {
+            // Only a block priced at exactly $0 is free. A block with no
+            // price set counts as paid (same as the watch party rule above).
             granted = true;
         } else if (status === 'ended' && isRented(movieKey)) {
             granted = true;
         }
     } else if (!movieData.isForSale) {
-        granted = true;
+        // A paid watch party film used to be free here: it isn't "for sale",
+        // so opening its regular film page played it without a ticket
+        // (found Oct 23 2026). Now it needs the party ticket or a rental.
+        granted = movieData.isWatchPartyPaid === true
+            ? (unlockedWatchPartyKeys.includes(movieKey) || isRented(movieKey))
+            : true;
     } else {
         granted = isRented(movieKey);
     }

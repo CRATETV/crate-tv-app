@@ -14,15 +14,16 @@
 // Admin SDK (which bypasses the client-facing security rules by
 // design) — same pattern already used in process-square-payment.ts.
 //
-// It only grants access if the caller actually has a legitimate reason:
-//   - the block is free (price 0 or no price set), OR
-//   - the caller already has hasFestivalAllAccess, OR
-//   - the caller already holds a rental/ticket for this specific movie
+// It only saves a ticket when the playback rules (api/_lib/entitlements.ts)
+// already let this person into the party: a free party, a festival pass for
+// a festival block, or a block ticket. A current rental is honored but never
+// turned into a permanent ticket.
 // This prevents someone from calling the endpoint directly to grant
 // themselves free access to a paid block.
 
 import admin from 'firebase-admin';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { resolveMovieAccess } from './_lib/entitlements.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -72,30 +73,17 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true, alreadyUnlocked: true });
     }
 
-    // Verify the caller actually has a legitimate reason for access.
-    const hasAllAccess = userData.hasFestivalAllAccess === true;
-    const hasDirectRental = !!(userData.rentals && userData.rentals[movieKey]);
-
-    let blockIsFree = false;
-    const movieSnap = await db.collection('movies').doc(movieKey).get();
-    if (movieSnap.exists) {
-      const movieData = movieSnap.data() || {};
-      const parentBlockId = movieData.parentFestivalBlock;
-      if (parentBlockId) {
-        // Check PWFF-style per-day blocks first
-        const daysSnap = await db.collection('festival_days').get();
-        for (const dayDoc of daysSnap.docs) {
-          const blocks: any[] = dayDoc.data()?.blocks || [];
-          const block = blocks.find(b => b.id === parentBlockId);
-          if (block) {
-            blockIsFree = !block.price || block.price === 0;
-            break;
-          }
-        }
-      }
+    // Same rules as playback (api/_lib/entitlements.ts). This used to save a
+    // permanent ticket for ANY party to anyone with a festival pass, or with
+    // any rental of the film ever, even an expired one (fixed Oct 23 2026).
+    const rentalExp = userData.rentals?.[movieKey];
+    if (rentalExp && new Date(rentalExp) > new Date()) {
+      // A current rental already lets them in; don't turn it into a
+      // permanent ticket.
+      return res.status(200).json({ ok: true, viaRental: true });
     }
-
-    if (!hasAllAccess && !hasDirectRental && !blockIsFree) {
+    const access = await resolveMovieAccess(db, { uid, movieKey, mode: 'live' });
+    if (!access.granted) {
       return res.status(403).json({ error: 'No valid access found for this watch party' });
     }
 

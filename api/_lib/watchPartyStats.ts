@@ -12,7 +12,11 @@ export interface WatchPartyStats {
     peakConcurrentViewers: number;
     peakDeviceSplit: { mobile: number; desktop: number };
     sessionsUnder2Min: number;
+    watchingNow: number; // heartbeat within the last 45s
 }
+
+// Same live window as services/watchPartyAdminStats.ts.
+const LIVE_WINDOW_MS = 45000;
 
 export async function computeWatchPartyStats(db: Firestore, blockId: string): Promise<WatchPartyStats> {
     const snapshot = await db.collection('watchSessions').where('blockId', '==', blockId).get();
@@ -22,6 +26,8 @@ export async function computeWatchPartyStats(db: Firestore, blockId: string): Pr
     let mobileCount = 0;
     let desktopCount = 0;
     let bounces = 0;
+    let watchingNow = 0;
+    const now = Date.now();
     // Sweep-line peak concurrency: +1 at each session's start, -1 at its
     // effective end (endedAt if it left cleanly, otherwise its last
     // heartbeat — covers a dropped connection that never fired the
@@ -38,6 +44,9 @@ export async function computeWatchPartyStats(db: Firestore, blockId: string): Pr
         else desktopCount++;
 
         if ((data.watchSeconds || 0) < 120) bounces++;
+
+        const lastHeartbeatMs = data.lastHeartbeat?.toMillis?.();
+        if (lastHeartbeatMs && !data.endedAt && now - lastHeartbeatMs < LIVE_WINDOW_MS) watchingNow++;
 
         const startMs = data.startedAt?.toMillis?.();
         const endMs = (data.endedAt || data.lastHeartbeat)?.toMillis?.();
@@ -66,5 +75,6 @@ export async function computeWatchPartyStats(db: Firestore, blockId: string): Pr
         peakConcurrentViewers,
         peakDeviceSplit: { mobile: mobileCount, desktop: desktopCount },
         sessionsUnder2Min: bounces,
+        watchingNow,
     };
 }

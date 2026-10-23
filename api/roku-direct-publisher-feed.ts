@@ -2,6 +2,7 @@
 // It will be accessible at the path /api/roku-direct-publisher-feed
 
 import { getApiData } from './_lib/data.js';
+import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { Movie, Category } from '../types.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
@@ -24,6 +25,8 @@ function isReleased(movie: Movie | undefined | null): boolean {
 export async function GET(request: Request) {
   try {
     const apiData = await getApiData();
+    // Films in paid festival blocks are paid too (Oct 23 2026).
+    const paidKeys = paidFestivalFilmKeys(apiData.festivalData);
     const moviesData: Record<string, Movie> = { ...fallbackMovies, ...(apiData.movies || {}) };
     const categoriesData: Record<string, Category> = { ...fallbackCategories, ...(apiData.categories || {}) };
 
@@ -71,7 +74,7 @@ export async function GET(request: Request) {
       // auth/device concept at all, so a paid title has no session to gate against. It used
       // to expose every released movie's raw fullMovie URL regardless of price. Excluding
       // paid titles entirely; they remain available (properly gated) through roku-feed.ts.
-      .filter((movie): movie is Movie => !!movie && isReleased(movie) && !!movie.fullMovie && !movie.isForSale && !movie.isWatchPartyPaid)
+      .filter((movie): movie is Movie => !!movie && isReleased(movie) && !!movie.fullMovie && isFreeForEveryone(movie, paidKeys))
       .map((movie: Movie) => {
         const releaseDate = toDate(movie.releaseDateTime) || new Date();
         return {

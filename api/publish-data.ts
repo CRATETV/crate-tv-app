@@ -1,6 +1,8 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { sealSnapshot, PRIVATE_SNAPSHOT_KEY } from './_lib/privateSnapshot.js';
+import { publicSafeData } from './_lib/paidRules.js';
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { Movie, EditorialStory } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -114,11 +116,25 @@ export const assembleAndSyncMasterData = async (db: Firestore) => {
             requestChecksumCalculation: 'WHEN_REQUIRED',
         });
 
+        // 1. The real data (with video links), scrambled. Written first: the
+        //    server reads this one, so it must exist before the public copy
+        //    loses its links.
+        const sealed = sealSnapshot(liveData);
+        if (!sealed) throw new Error('Cannot seal the private snapshot (no secret configured). Public file left unchanged.');
+        await s3Client.send(new PutObjectCommand({
+            Bucket: bucketName,
+            Key: PRIVATE_SNAPSHOT_KEY,
+            Body: sealed,
+            ContentType: 'application/octet-stream',
+            CacheControl: 'no-store, max-age=0'
+        }));
+
+        // 2. The public file: same data, but no video links for anyone to copy.
         // CRITICAL: Block until S3 update is finished to guarantee next-fetch consistency
         await s3Client.send(new PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
-            Body: Buffer.from(JSON.stringify(liveData, null, 2)),
+            Body: Buffer.from(JSON.stringify(publicSafeData(liveData), null, 2)),
             ContentType: 'application/json',
             CacheControl: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
         }));

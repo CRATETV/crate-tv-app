@@ -139,8 +139,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         // that's actually true and not just how the button looks.
         return allPartyStates[parentFestivalBlock.id]?.status === 'ended';
       }
-      // Free block — anyone can rewatch
-      if (!(parentFestivalBlock.price > 0)) return true;
+      // Free block — anyone can rewatch. Only an explicit $0 is free; a block
+      // with no price set counts as paid (matches api/_lib/entitlements.ts).
+      if (parentFestivalBlock.price === 0) return true;
 
       // Once this block's watch party has actually ended, its films move
       // into the general catalog automatically and become individually
@@ -156,10 +157,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       return false;
     }
 
-    if (!movie.isForSale) return true;
+    if (!movie.isForSale) {
+      // A paid watch party film needs the party ticket (or a rental) here too;
+      // it used to play for free from this page (Oct 23 2026).
+      if (!movie.isWatchPartyPaid) return true;
+      if (unlockedWatchPartyKeys.has(movieKey)) return true;
+    }
     const expiration = rentals[movieKey];
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey, hasJuryPass, parentFestivalBlock, hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, allPartyStates]);
+
+  // A paid watch party film that isn't for sale on its own: the way in is a
+  // ticket for the party, not the regular "Unlock" rental.
+  const isPaidPartyOnly = !!movie && movie.isWatchPartyPaid === true && !movie.isForSale && !parentFestivalBlock;
 
   // Watch streaks: counts once the viewer has really watched 5 minutes (components/WatchStreaks.tsx).
   useWatchMilestone('film', movieKey, hasAccess && playerMode === 'full' && !isPaused && !isEnded);
@@ -830,8 +840,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
                              <img src={movie.poster} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
-                             <p className="text-gray-400 max-w-md">This selection requires a rental to stream.</p>
-                             <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${displayPrice}</button>
+                             <p className="text-gray-400 max-w-md">{isPaidPartyOnly ? 'This film is shown as a paid watch party.' : 'This selection requires a rental to stream.'}</p>
+                             {isPaidPartyOnly ? (
+                               <button onClick={() => { window.history.pushState({}, '', `/watchparty/${movieKey}`); window.dispatchEvent(new Event('pushstate')); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Get a watch party ticket</button>
+                             ) : (
+                               <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${displayPrice}</button>
+                             )}
                              <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>
                     )
@@ -953,6 +967,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             </svg>
                             Play
                         </button>
+                    ) : isPaidPartyOnly ? (
+                        <>
+                            <p className="text-center text-gray-400 text-sm mb-2">
+                                This film is shown as a paid watch party.
+                            </p>
+                            <button
+                                onClick={() => { window.history.pushState({}, '', `/watchparty/${movieKey}`); window.dispatchEvent(new Event('pushstate')); }}
+                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(245,158,11,0.3)] active:scale-95 transition-all mb-3"
+                            >
+                                Get a watch party ticket
+                            </button>
+                        </>
                     ) : (
                         <>
                             {displayPrice && (

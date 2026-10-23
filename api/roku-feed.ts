@@ -1,4 +1,9 @@
 import { getApiData } from './_lib/data.js';
+import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
+
+// Films in paid festival blocks (their block has the price, not the film).
+// Refreshed at the start of every request from the festival schedule.
+let paidKeys = new Set<string>();
 import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { isMovieReleased, moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
@@ -104,7 +109,7 @@ async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: b
         description = `Visit cratetv.net to unlock this title${priceStr}. ${description}`;
     }
 
-    const isMovieFree = movie.isForSale !== true && movie.isWatchPartyPaid !== true;
+    const isMovieFree = isFreeForEveryone(movie, paidKeys);
 
     // SECURITY: Build response object explicitly - NEVER include fullMovie or rokuStreamUrl for locked content
     return {
@@ -179,6 +184,7 @@ export async function GET(request: Request) {
     }
 
     const apiData = await getApiData({ noCache: true });
+    paidKeys = paidFestivalFilmKeys(apiData.festivalData);
     const moviesObj: Record<string, Movie> = { ...fallbackMovies, ...(apiData.movies || {}) };
     const categoriesObj: Record<string, Category> = { ...fallbackCategories, ...(apiData.categories || {}) };
 
@@ -321,6 +327,26 @@ export async function GET(request: Request) {
                     });
                 }
 
+                // 4. Watch party tickets and old day passes (same as the website,
+                //    api/_lib/entitlements.ts). Festival films used to count as free
+                //    on the Roku, so these were never needed here before Oct 23 2026.
+                const partyKeys: string[] = Array.isArray(userData?.unlockedWatchPartyKeys) ? userData.unlockedWatchPartyKeys : [];
+                const dayPasses: number[] = Array.isArray(userData?.unlockedFestivalDays) ? userData.unlockedFestivalDays : [];
+                partyKeys.forEach(k => unlockedMovies.add(k));
+                if (partyKeys.length > 0 || dayPasses.length > 0) {
+                    if (!festSnap) festSnap = await db.collection('festival').doc('schedule').collection('days').get();
+                    const partyKeySet = new Set(partyKeys);
+                    festSnap.forEach((doc: any) => {
+                        const day = doc.data();
+                        const dayUnlocked = !isOutsidePartner(day.partnerId) && day.day != null && dayPasses.includes(day.day);
+                        day.blocks?.forEach((block: any) => {
+                            if (dayUnlocked || partyKeySet.has(block.id)) {
+                                block.movieKeys?.forEach((k: string) => unlockedMovies.add(k));
+                            }
+                        });
+                    });
+                }
+
                 // Jury pass: everything (same as the website, api/_lib/entitlements.ts).
                 if (userData?.hasJuryPass) unlockedMovies.add('ALL');
 
@@ -396,7 +422,7 @@ export async function GET(request: Request) {
             .map((k: string) => moviesObj[k])
             .filter((m: Movie) => m && isValidForRoku(m, true))
             .map((m: Movie) => {
-                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isMovieFree = isFreeForEveryone(m, paidKeys);
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                 return formatMovieForRoku(m, assets[m.key], isUnlocked, isLive, true);
             }));
@@ -425,7 +451,7 @@ export async function GET(request: Request) {
             return dateB.getTime() - dateA.getTime();
         })
         .map(m => {
-            const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+            const isMovieFree = isFreeForEveryone(m, paidKeys);
             const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
             return formatMovieForRoku(m, assets[m.key], isUnlocked);
         }));
@@ -446,7 +472,7 @@ export async function GET(request: Request) {
             .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .slice(0, 10)
             .map(m => {
-                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isMovieFree = isFreeForEveryone(m, paidKeys);
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
             }));
@@ -481,7 +507,7 @@ export async function GET(request: Request) {
                             .filter((m: Movie) => m && isValidForRoku(m))
                             .slice(0, 10)
                             .map((m: Movie) => {
-                                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                                const isMovieFree = isFreeForEveryone(m, paidKeys);
                                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
                             }));
@@ -501,7 +527,7 @@ export async function GET(request: Request) {
                             .map((k: string) => moviesObj[k])
                             .filter((m: Movie) => m && isValidForRoku(m))
                             .map((m: Movie) => {
-                                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                                const isMovieFree = isFreeForEveryone(m, paidKeys);
                                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
                             }));
@@ -541,7 +567,7 @@ export async function GET(request: Request) {
                             .map(r => moviesObj[r.movieKey])
                             .filter(m => isValidForRoku(m))
                             .map(m => {
-                                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                                const isMovieFree = isFreeForEveryone(m, paidKeys);
                                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
                             }));
@@ -587,7 +613,7 @@ export async function GET(request: Request) {
                 return movieKeys.indexOf(a.key) - movieKeys.indexOf(b.key);
             })
             .map((movie: Movie) => {
-                const isMovieFree = !movie.isForSale && !movie.isWatchPartyPaid;
+                const isMovieFree = isFreeForEveryone(movie, paidKeys);
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || isMovieFree;
                 return formatMovieForRoku(movie, assets[movie.key], isUnlocked);
             }));
@@ -617,7 +643,7 @@ export async function GET(request: Request) {
         const allValidMovies = await Promise.all((Object.values(moviesObj) as Movie[])
             .filter(m => isValidForRoku(m))
             .map((m: Movie) => {
-                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isMovieFree = isFreeForEveryone(m, paidKeys);
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
             }));
@@ -644,7 +670,7 @@ export async function GET(request: Request) {
             .map(item => moviesObj[item.movieKey])
             .filter(m => m && isValidForRoku(m))
             .map(m => {
-                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isMovieFree = isFreeForEveryone(m, paidKeys);
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
             }));
@@ -658,7 +684,7 @@ export async function GET(request: Request) {
             .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .slice(0, 5)
             .map(m => {
-                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                const isMovieFree = isFreeForEveryone(m, paidKeys);
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
             }));
@@ -682,7 +708,7 @@ export async function GET(request: Request) {
         .map(m => {
             const isCrateFest = (config as any).crateFest?.movieBlocks?.some((b: any) => b.movieKeys?.includes(m.key));
             const isExplicitlyLive = (config as any).activeParties?.[m.key];
-            const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+            const isMovieFree = isFreeForEveryone(m, paidKeys);
             const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
             return formatMovieForRoku(m, assets[m.key], isUnlocked, isCrateFest || isExplicitlyLive, isCrateFest);
         }));
