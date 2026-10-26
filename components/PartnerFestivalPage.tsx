@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import HostWithCrateCta from './HostWithCrateCta';
 import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
 import { FilmBlock, Movie, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types';
@@ -164,6 +165,7 @@ const PartnerFestivalPage: React.FC<{ slug: string }> = ({ slug }) => {
                         })}
                 </div>
                 <p className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mt-16">Presented by {fest.name} · Streaming on Crate TV</p>
+                <HostWithCrateCta className="mt-8 max-w-2xl mx-auto" />
             </main>
 
             {voteBlockId && (

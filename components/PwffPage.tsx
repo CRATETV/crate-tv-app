@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import HostWithCrateCta from './HostWithCrateCta';
 import { Movie, FilmBlock, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -740,6 +741,7 @@ const ProgrammeMode: React.FC = () => {
                             )}
                     </div>
                 )}
+                <HostWithCrateCta className="mt-16" />
             </div>
 
             {voteBlockId && (

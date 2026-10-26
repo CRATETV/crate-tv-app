@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10 — "Want this for your festival?" on festival pages
+
+- A small box at the bottom of the PWFF page and every partner festival page: "Host your festival on CRATE" (→ /host) and "Premiere your film" (→ /premiere). People watching a festival include organizers and filmmakers, so each festival CRATE hosts advertises the next one. `components/HostWithCrateCta.tsx`.
+
 ## 2026-10 — "Hide automatically after" and a "Just Premiered" row
 
 - **Hide automatically after** (Movie Editor → Access & Monetization): set a date and time and, from that moment, the film is hidden everywhere (home rows, library, search) and can't be bought (rentals or tickets refused by the server). The website hides it right away; the hourly job (`auto-unlist-expired-festival-films`, now every hour at :05) unlists it for good and updates Roku. To bring it back: clear the date and switch visibility back on.
