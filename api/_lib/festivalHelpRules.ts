@@ -11,6 +11,7 @@
 
 import { blockAccessExpiry } from './watchPartyRules.js';
 import { partnerIdFromPassItem, PWFF_PASS_ITEM_ID } from './partnerRules.js';
+import { isFestivalPassActive, partnerPassIsCurrent } from './festivalPass.js';
 
 export interface HelpTicket {
     id: string;
@@ -85,6 +86,8 @@ export function diagnoseTicket(
         blocks: Map<string, HelpBlockInfo>;
         pwff: PwffWindow | null;
         labels?: Map<string, string>;
+        /** partnerId → when that partner's last festival was cleaned up (ms). */
+        partnerCleanedAt?: Map<string, number>;
     },
 ): TicketDiagnosis {
     const itemId = String(t.itemId || '');
@@ -96,7 +99,8 @@ export function diagnoseTicket(
 
     // PWFF all-access pass
     if (itemId === PWFF_PASS_ITEM_ID) {
-        const hasIt = !!user.hasFestivalAllAccess || (!!user.festivalPassExpiry && Date.parse(user.festivalPassExpiry) > ctx.nowMs);
+        // A pass is good for one festival; only its end date counts.
+        const hasIt = isFestivalPassActive(user, ctx.nowMs);
         if (hasIt) return out({ kind: 'ok' });
         // Only restore a pass for THIS year's festival: bought no more than
         // 180 days before it starts, and the rewatch week isn't over yet.
@@ -110,7 +114,11 @@ export function diagnoseTicket(
     // Partner festival pass
     const passPartner = partnerIdFromPassItem(itemId);
     if (passPartner) {
-        if (user.partnerPasses?.[passPartner]) return out({ kind: 'ok' });
+        // A pass from a partner's previous year doesn't open this year's festival.
+        const cleanedAt = ctx.partnerCleanedAt?.get(passPartner) ?? null;
+        if (!partnerPassIsCurrent(purchasedAtMs, cleanedAt)) return out({ kind: 'ended' });
+        const granted = user.partnerPasses?.[passPartner];
+        if (granted && partnerPassIsCurrent(Date.parse(granted) || null, cleanedAt)) return out({ kind: 'ok' });
         return out({ kind: 'grant-partner-pass', partnerId: passPartner });
     }
 

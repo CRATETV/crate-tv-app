@@ -11,6 +11,7 @@ import { getAiRecommendations } from './_lib/recommendations.js';
 import { signStreamUrl } from './_lib/signStreamUrl.js';
 import { isOutsidePartner } from './_lib/partnerRules.js';
 import { streakSummary } from './_lib/streaks.js';
+import { isFestivalPassActive } from './_lib/festivalPass.js';
 
 function sanitizeUrl(url: string): string {
     if (!url) return '';
@@ -327,20 +328,20 @@ export async function GET(request: Request) {
                     });
                 }
 
-                // 4. Watch party tickets and old day passes (same as the website,
-                //    api/_lib/entitlements.ts). Festival films used to count as free
-                //    on the Roku, so these were never needed here before Oct 23 2026.
+                // 4. Watch party tickets (same as the website, api/_lib/entitlements.ts).
+                //    Festival films used to count as free on the Roku, so these were
+                //    never needed here before Oct 23 2026. Day passes are covered by
+                //    the dated block unlocks above; the old day NUMBER ("day 1") isn't
+                //    used, since it would open day 1 of every future festival.
                 const partyKeys: string[] = Array.isArray(userData?.unlockedWatchPartyKeys) ? userData.unlockedWatchPartyKeys : [];
-                const dayPasses: number[] = Array.isArray(userData?.unlockedFestivalDays) ? userData.unlockedFestivalDays : [];
                 partyKeys.forEach(k => unlockedMovies.add(k));
-                if (partyKeys.length > 0 || dayPasses.length > 0) {
+                if (partyKeys.length > 0) {
                     if (!festSnap) festSnap = await db.collection('festival').doc('schedule').collection('days').get();
                     const partyKeySet = new Set(partyKeys);
                     festSnap.forEach((doc: any) => {
                         const day = doc.data();
-                        const dayUnlocked = !isOutsidePartner(day.partnerId) && day.day != null && dayPasses.includes(day.day);
                         day.blocks?.forEach((block: any) => {
-                            if (dayUnlocked || partyKeySet.has(block.id)) {
+                            if (partyKeySet.has(block.id)) {
                                 block.movieKeys?.forEach((k: string) => unlockedMovies.add(k));
                             }
                         });
@@ -356,9 +357,8 @@ export async function GET(request: Request) {
                 // The website only lets these passes open their own festival's
                 // films, so the Roku now does the same.
                 const nowDate = new Date();
-                const festivalPassActive = userData?.festivalPassExpiry
-                    ? (toDate(userData.festivalPassExpiry) || new Date(0)) > nowDate
-                    : userData?.hasFestivalAllAccess === true;
+                // One festival only: an old pass with no end date no longer counts.
+                const festivalPassActive = isFestivalPassActive(userData, nowDate.getTime());
                 if (festivalPassActive) {
                     if (!festSnap) festSnap = await db.collection('festival').doc('schedule').collection('days').get();
                     festSnap.forEach((doc: any) => {

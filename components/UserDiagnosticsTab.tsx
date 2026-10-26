@@ -146,11 +146,11 @@ const UserDiagnosticsTab: React.FC = () => {
                     </Card>
 
                     <Card title="Festival Access">
-                        <Flag label="Full Festival Access" on={!!result.festivalAccess?.hasFestivalAllAccess} />
+                        <Flag label="Full festival pass (this festival)" on={!!result.festivalAccess?.hasFestivalAllAccess} />
                         <Flag label="Crate Fest Pass" on={!!result.festivalAccess?.hasCrateFestPass} />
                         <Flag label="Jury Pass" on={!!result.festivalAccess?.hasJuryPass} />
                         {result.festivalAccess?.festivalPassExpiry && (
-                            <p className="text-xs text-gray-500 pt-2">Pass expiry: {formatDate(result.festivalAccess.festivalPassExpiry)}</p>
+                            <p className="text-xs text-gray-500 pt-2">Full pass {new Date(result.festivalAccess.festivalPassExpiry) > new Date() ? 'ends' : 'ended'}: {formatDate(result.festivalAccess.festivalPassExpiry)} ({new Date(result.festivalAccess.festivalPassExpiry).getFullYear()} festival)</p>
                         )}
                         {(result.festivalAccess?.unlockedBlockIds.length ?? 0) > 0 && (
                             <div className="pt-2">

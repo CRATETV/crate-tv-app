@@ -1,6 +1,7 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../../types.js';
 import { selectPwffDays } from './partnerRules.js';
+import { festivalPassExpiryFor } from './festivalPass.js';
 
 // While the festival is running — which, for revenue purposes, includes
 // the full on-demand rewatch week after the live screenings end, not
@@ -51,4 +52,15 @@ export async function getFestivalConclusionTime(db: Firestore): Promise<Date | n
     // ended — filmmaker eligibility doesn't start until the rewatch
     // week built on top of that has also fully elapsed.
     return new Date(latestMs + FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+}
+
+/**
+ * End date for a full festival pass granted right now: the last PWFF block,
+ * plus the rewatch week, plus a grace day (see festivalPass.ts).
+ */
+export async function computeFestivalPassExpiry(db: Firestore): Promise<string> {
+    const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+    const blocks = selectPwffDays(daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] }))
+        .flatMap(d => d.blocks || []);
+    return festivalPassExpiryFor(blocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
 }

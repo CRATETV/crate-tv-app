@@ -117,6 +117,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             watchedMovies: Array.isArray(data.watchedMovies) ? data.watchedMovies.filter((item: any): item is string => typeof item === 'string') : [],
             likedMovies: Array.isArray(data.likedMovies) ? data.likedMovies.filter((item: any): item is string => typeof item === 'string') : [],
             hasFestivalAllAccess: data.hasFestivalAllAccess === true,
+            festivalPassExpiry: typeof data.festivalPassExpiry === 'string' ? data.festivalPassExpiry : undefined,
             unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
             unlockedBlocks: (data.unlockedBlocks && typeof data.unlockedBlocks === 'object') ? data.unlockedBlocks : {},
             purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : [],

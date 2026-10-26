@@ -7,6 +7,7 @@
 // a password or anything that would let the caller act as the user.
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { isFestivalPassActive } from './_lib/festivalPass.js';
 
 export async function POST(request: Request) {
     try {
@@ -95,7 +96,8 @@ export async function POST(request: Request) {
                 isPremiumSubscriber: !!profile?.isPremiumSubscriber,
             },
             festivalAccess: {
-                hasFestivalAllAccess: !!profile?.hasFestivalAllAccess,
+                // true only while the pass is for the current festival (it has an end date)
+                hasFestivalAllAccess: isFestivalPassActive(profile),
                 festivalPassExpiry: profile?.festivalPassExpiry || null,
                 hasCrateFestPass: !!profile?.hasCrateFestPass,
                 crateFestPassExpiry: profile?.crateFestPassExpiry || null,

@@ -13,6 +13,7 @@ import { getAdminAuth } from './firebaseAdmin.js';
 import { assembleAndSyncMasterData } from '../publish-data.js';
 import { blockAccessExpiry } from './watchPartyRules.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../../types.js';
+import { partnerPassIsCurrent } from './festivalPass.js';
 import {
     PartnerRecord, PartnerDraft, PublicPartnerFestival, TicketLike,
     buildPublishPlan, checkDraft, blocksRemovedWithSales, computeSales, partnerPassItemId, SalesSummary,
@@ -199,7 +200,15 @@ export async function grantBlocksToUser(db: Firestore, uid: string, partnerId: s
 async function extendPassHolders(db: Firestore, partner: PartnerRecord, blocks: any[]): Promise<void> {
     if (!blocks.length || partner.id === PWFF_PARTNER_ID) return; // the PWFF pass already covers every PWFF block
     const passTickets = await db.collection('festival_tickets').where('itemId', '==', partnerPassItemId(partner.id)).get();
-    const uids = [...new Set(passTickets.docs.map(d => d.data().uid).filter(Boolean) as string[])];
+    // Only this year's passes: a pass bought before the partner's last
+    // festival was cleaned up belonged to that earlier festival.
+    const cleanedAtMs = Date.parse(String(partner.cleanup?.deletedAt || '')) || null;
+    const current = passTickets.docs.map(d => d.data()).filter(t => {
+        if (t.refunded || t.revoked) return false;
+        const boughtMs = t.purchasedAt?.toDate ? t.purchasedAt.toDate().getTime() : Date.parse(String(t.purchasedAt || ''));
+        return partnerPassIsCurrent(Number.isFinite(boughtMs) ? boughtMs : null, cleanedAtMs);
+    });
+    const uids = [...new Set(current.map(t => t.uid).filter(Boolean) as string[])];
     for (const uid of uids) {
         try { await grantBlocksToUser(db, uid, partner.id, blocks); }
         catch (e) { console.error(`[partners] Failed to extend pass for ${uid}:`, e); }

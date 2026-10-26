@@ -1,4 +1,8 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
+import { blockAccessExpiry } from './_lib/watchPartyRules.js';
+import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
+import { festivalPassExpiryFor } from './_lib/festivalPass.js';
+import { selectPwffDays } from './_lib/partnerRules.js';
 
 // Auto-grants festival access to a user whose email is on the PWFF invite
 // list, the first time they sign in or sign up. This used to write
@@ -39,6 +43,10 @@ export async function POST(request: Request) {
 
         const inviteRef = db.collection('pwff_invites').doc(email.toLowerCase().trim());
 
+        const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+        const pwffBlocks = selectPwffDays(daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] })).flatMap(d => d.blocks || []);
+        const passExpiry = festivalPassExpiryFor(pwffBlocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+
         const granted = await db.runTransaction(async (tx) => {
             const inviteDoc = await tx.get(inviteRef);
             if (!inviteDoc.exists) return false;
@@ -47,13 +55,19 @@ export async function POST(request: Request) {
 
             const userRef = db.collection('users').doc(uid);
             if (inviteData.accessType === 'block' && inviteData.blockId) {
-                const expiry = new Date();
-                expiry.setFullYear(expiry.getFullYear() + 1);
+                // Same window as a bought block ticket, not a whole year.
+                const block = pwffBlocks.find((b: any) => b?.id === inviteData.blockId);
+                const expiry = blockAccessExpiry({
+                    nowMs: Date.now(),
+                    screeningStartTime: block?.screeningStartTime || block?.watchPartyStartTime,
+                    rewatchWindowMs: FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS,
+                });
                 tx.set(userRef, {
                     unlockedBlocks: { [inviteData.blockId]: expiry.toISOString() },
                 }, { merge: true });
             } else {
-                tx.set(userRef, { hasFestivalAllAccess: true }, { merge: true });
+                // Good for this festival only (see festivalPass.ts).
+                tx.set(userRef, { hasFestivalAllAccess: true, festivalPassExpiry: passExpiry }, { merge: true });
             }
 
             tx.update(inviteRef, {

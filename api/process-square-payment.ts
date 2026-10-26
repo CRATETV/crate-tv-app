@@ -7,6 +7,8 @@ import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
+import { isFestivalPassActive, laterExpiry } from './_lib/festivalPass.js';
+import { computeFestivalPassExpiry } from './_lib/festivalTiming.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
 import { getPartner, getPublishedBlocks, grantBlocksToUser } from './_lib/partners.js';
@@ -267,13 +269,13 @@ export async function POST(request: Request) {
                     return (userData?.unlockedWatchPartyKeys || []).includes(itemId);
                 }
                 if (paymentType === 'block' && itemId) {
-                    if (itemId === 'full-festival-pass') return !!userData?.hasFestivalAllAccess;
+                    if (itemId === 'full-festival-pass') return isFestivalPassActive(userData);
                     const passPartner = partnerIdFromPassItem(itemId);
                     if (passPartner) return !!userData?.partnerPasses?.[passPartner];
                     const expiry = userData?.unlockedBlocks?.[itemId];
                     return !!expiry && new Date(expiry) > new Date();
                 }
-                if (paymentType === 'pass') return !!userData?.hasFestivalAllAccess;
+                if (paymentType === 'pass') return isFestivalPassActive(userData);
                 if (paymentType === 'crateFestPass') {
                     const expiry = userData?.crateFestPassExpiry;
                     return !!userData?.hasCrateFestPass && (!expiry || new Date(expiry) > new Date());
@@ -722,9 +724,13 @@ export async function POST(request: Request) {
     // All-access pass — unlock all blocks
     if (db && uid && itemId === 'full-festival-pass') {
         try {
+            // Good for THIS festival only: ends a week (+1 day) after the last block.
+            const passExpiry = await computeFestivalPassExpiry(db);
+            const current = (await db.collection('users').doc(uid).get()).data()?.festivalPassExpiry;
             await db.collection('users').doc(uid).set({
                 hasFestivalAllAccess: true,
                 festivalAllAccessGrantedAt: new Date().toISOString(),
+                festivalPassExpiry: laterExpiry(current, passExpiry),
             }, { merge: true });
             console.log(`[Payment API] Granted festival all-access to user ${uid}`);
         } catch (e) {

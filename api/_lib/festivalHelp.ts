@@ -5,6 +5,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../../types.js';
 import { grantBlocksToUser, getPublishedBlocks, getPartner, PARTNERS } from './partners.js';
 import { selectPwffDays, partnerIdFromPassItem, PWFF_PASS_ITEM_ID } from './partnerRules.js';
+import { computeFestivalPassExpiry } from './festivalTiming.js';
+import { laterExpiry } from './festivalPass.js';
 import { HelpTicket, HelpBlockInfo, TicketDiagnosis, diagnoseTicket, ownedTickets, pwffWindowOf } from './festivalHelpRules.js';
 
 // ─── Gathering the viewer's tickets ───────────────────────────────────────
@@ -25,7 +27,7 @@ export async function loadTickets(db: Firestore, uid: string, email: string): Pr
     return [...byId.values()];
 }
 
-export interface Catalog { blocks: Map<string, HelpBlockInfo & { link: string }>; labels: Map<string, string>; links: Map<string, string>; pwff: ReturnType<typeof pwffWindowOf> }
+export interface Catalog { blocks: Map<string, HelpBlockInfo & { link: string }>; labels: Map<string, string>; links: Map<string, string>; pwff: ReturnType<typeof pwffWindowOf>; partnerCleanedAt: Map<string, number> }
 
 export async function loadCatalog(db: Firestore, tickets: HelpTicket[]): Promise<Catalog> {
     const [daysSnap, settingsSnap, partnersSnap] = await Promise.all([
@@ -35,6 +37,13 @@ export async function loadCatalog(db: Firestore, tickets: HelpTicket[]): Promise
     ]);
     const partnerSlug = new Map<string, { name: string; slug: string }>();
     partnersSnap?.docs.forEach(d => partnerSlug.set(d.id, { name: String(d.data().name || d.id), slug: String(d.data().slug || d.id) }));
+    // When each partner's previous festival was cleaned up: passes bought before that were for last year.
+    const partnerCleanedAt = new Map<string, number>();
+    partnersSnap?.docs.forEach(d => {
+        const raw = d.data().cleanup?.deletedAt;
+        const ms = raw?.toDate ? raw.toDate().getTime() : Date.parse(String(raw || ''));
+        if (Number.isFinite(ms) && ms > 0) partnerCleanedAt.set(d.id, ms);
+    });
 
     const blocks = new Map<string, HelpBlockInfo & { link: string }>();
     const days = daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] });
@@ -66,7 +75,7 @@ export async function loadCatalog(db: Firestore, tickets: HelpTicket[]): Promise
         if (title) labels.set(keys[i], title);
         links.set(keys[i], `/movie/${keys[i]}`);
     });
-    return { blocks, labels, links, pwff };
+    return { blocks, labels, links, pwff, partnerCleanedAt };
 }
 
 export async function diagnose(db: Firestore, uid: string, email: string) {
@@ -75,7 +84,7 @@ export async function diagnose(db: Firestore, uid: string, email: string) {
     const [userSnap, catalog] = await Promise.all([db.collection('users').doc(uid).get(), loadCatalog(db, mine)]);
     const user = userSnap.data() || {};
     const results = mine.map(t => diagnoseTicket(t, user, {
-        nowMs: Date.now(), rewatchWindowMs: FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS, blocks: catalog.blocks, pwff: catalog.pwff, labels: catalog.labels,
+        nowMs: Date.now(), rewatchWindowMs: FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS, blocks: catalog.blocks, pwff: catalog.pwff, labels: catalog.labels, partnerCleanedAt: catalog.partnerCleanedAt,
     }));
     return { mine, results, catalog };
 }
@@ -99,6 +108,7 @@ export async function applyRepairs(db: Firestore, uid: string, mine: HelpTicket[
         if (a.kind === 'grant-partner-pass') { partnerPasses.add(a.partnerId); fixed.add(r.ticketId); }
     }
     if (Object.keys(blockGrants).length || allAccess || partyKeys.length) {
+        const passExpiry = allAccess ? await computeFestivalPassExpiry(db) : '';
         await db.runTransaction(async tx => {
             const data = (await tx.get(userRef)).data() || {};
             const patch: Record<string, unknown> = {};
@@ -108,7 +118,11 @@ export async function applyRepairs(db: Firestore, uid: string, mine: HelpTicket[
                 for (const [id, exp] of Object.entries(blockGrants)) if (!next[id] || next[id] < exp) next[id] = exp;
                 patch.unlockedBlocks = next;
             }
-            if (allAccess) { patch.hasFestivalAllAccess = true; patch.festivalAllAccessGrantedAt = new Date().toISOString(); }
+            if (allAccess) {
+                patch.hasFestivalAllAccess = true;
+                patch.festivalAllAccessGrantedAt = new Date().toISOString();
+                patch.festivalPassExpiry = laterExpiry(data.festivalPassExpiry, passExpiry);
+            }
             if (partyKeys.length) patch.unlockedWatchPartyKeys = [...new Set([...(data.unlockedWatchPartyKeys || []), ...partyKeys])];
             tx.set(userRef, patch, { merge: true });
         });

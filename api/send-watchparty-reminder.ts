@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { isFestivalPassActive } from './_lib/festivalPass.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
@@ -49,8 +50,10 @@ export async function POST(request: Request) {
             if (email) emails.add(email);
         });
 
+        // Only people whose pass is for THIS festival (not last year's).
         const passHoldersSnap = await db.collection('users').where('hasFestivalAllAccess', '==', true).get();
         passHoldersSnap.forEach(doc => {
+            if (!isFestivalPassActive(doc.data())) return;
             const email = doc.data().email;
             if (email) emails.add(email);
         });

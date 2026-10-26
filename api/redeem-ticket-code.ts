@@ -1,6 +1,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
+import { festivalPassExpiryFor, laterExpiry } from './_lib/festivalPass.js';
 import { selectPwffDays } from './_lib/partnerRules.js';
 
 // Redeems a festival ticket code (full festival pass, single-day pass, or a
@@ -73,6 +74,9 @@ export async function POST(request: Request) {
             rewatchWindowMs: FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS,
         }).toISOString();
 
+        // A full-pass code is good for this festival only (see festivalPass.ts).
+        const passExpiry = festivalPassExpiryFor(selectPwffDays(scheduleDays as any[]).flatMap((d: any) => d.blocks || []), FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+
         type RedeemResult =
             | { ok: false; error: string }
             | { ok: true; type: string; blockTitle?: string; dayNumber?: number };
@@ -93,6 +97,7 @@ export async function POST(request: Request) {
             if (codeData.type === 'full_pass') {
                 tx.set(userRef, {
                     hasFestivalAllAccess: true,
+                    festivalPassExpiry: laterExpiry(userData.festivalPassExpiry, passExpiry),
                     festivalAccessGrantedAt: new Date().toISOString(),
                     festivalAccessSource: 'ticket_code',
                 }, { merge: true });

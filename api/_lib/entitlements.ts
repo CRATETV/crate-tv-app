@@ -1,5 +1,6 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { isOutsidePartner } from './partnerRules.js';
+import { isFestivalPassActive } from './festivalPass.js';
 
 export type AccessMode = 'ondemand' | 'live';
 
@@ -58,20 +59,16 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
     const userData = (await db.collection('users').doc(resolvedUid).get()).data() || {};
     const now = new Date();
 
-    const hasFestivalAllAccess = userData.hasFestivalAllAccess === true ||
-        !!(userData.festivalPassExpiry && new Date(userData.festivalPassExpiry) > now);
+    // A full festival pass is good for one festival (its end date), not forever.
+    const hasFestivalAllAccess = isFestivalPassActive(userData, now.getTime());
     const hasJuryPass = userData.hasJuryPass === true;
     const unlockedBlocks: Record<string, string> = userData.unlockedBlocks || {};
-    const unlockedDays: number[] = Array.isArray(userData.unlockedFestivalDays) ? userData.unlockedFestivalDays : [];
-    const allBlocks = unlockedDays.length > 0 ? await getFestivalBlocks(db) : [];
+    // Day passes are honoured through the dated block unlocks they grant.
+    // (Old day passes only stored a day NUMBER — "day 1" — which would have
+    // opened day 1 of every future festival, so that number is no longer used.)
     const isBlockUnlocked = (blockId: string) => {
         const exp = unlockedBlocks[blockId];
         if (exp && new Date(exp) > now) return true;
-        // Day passes redeemed before Oct 2026 only recorded the day number.
-        if (unlockedDays.length > 0) {
-            const block = allBlocks.find(b => b.id === blockId);
-            if (block?.day != null && unlockedDays.includes(block.day)) return true;
-        }
         return Array.isArray(userData.unlockedBlockIds) && userData.unlockedBlockIds.includes(blockId);
     };
     const unlockedWatchPartyKeys: string[] = userData.unlockedWatchPartyKeys || [];

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10 — Festival passes are good for one festival
+
+- **Full festival pass now ends.** It used to be a forever `hasFestivalAllAccess: true`, so a 2026 pass would have opened every future festival free. A pass now carries `festivalPassExpiry` = the last PWFF block + the rewatch week + 1 day (`api/_lib/festivalPass.ts`, tested), and only that date is checked: website, watch parties, Roku, help button, reminder emails. Purchases, full-pass codes, PWFF invites and help-button repairs all set it. Old passes with no end date (all from the 2026 festival) count as ended; nothing to migrate.
+- **Day passes:** the old day-NUMBER fallback ("day 1") is gone — it would have opened day 1 of every future festival. Day passes still work through their dated block unlocks.
+- **Partner festivals:** a partner pass only carries over to blocks of the same year. Passes bought before that partner's last cleanup aren't extended to, or restored for, the next edition.
+- **Invite block tickets** last the normal block window, not a whole year.
+- **Roku:** same one-festival rule, and the old day-number fallback is gone there too.
+- Admin → Audience lookup shows when someone's full pass ends and which festival it's for.
+
 ## 2026-10 — Payments & refunds, email header
 
 - **Payments & refunds** (Admin → Money & legal; master login only): every Square payment for the last 30 days to a year, matched to the customer's email where CRATE has a ticket record; **possible double charges** flagged (same buyer, item and amount within 15 minutes — `api/_lib/duplicateCharges.ts`, tested); full or partial **refund through Square** with a reason, optional customer email, and an option to mark a cancelled ticket as refunded so the help desk never restores it. The amount is re-checked against Square, a one-time key stops double-clicks refunding twice, and every refund is logged (`refunds` collection + audit log). Access isn't removed automatically.

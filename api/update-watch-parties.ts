@@ -6,6 +6,7 @@ import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 import { getBackstageKey, setBackstageKey } from './_lib/backstage.js';
 import { shouldAutoStart, tryAdvanceBlock, tryAutoEnd, newBackstageKey, SERVER_ADVANCE_GRACE_MS } from './_lib/watchPartyLifecycle.js';
 import { isOutsidePartner } from './_lib/partnerRules.js';
+import { isFestivalPassActive } from './_lib/festivalPass.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
@@ -47,8 +48,10 @@ async function collectReminderRecipients(db: FirebaseFirestore.Firestore, blockI
             if (email) emails.add(email);
         });
     } else {
+        // Only people whose pass is for THIS festival (not last year's).
         const passHoldersSnap = await db.collection('users').where('hasFestivalAllAccess', '==', true).get();
         passHoldersSnap.forEach(doc => {
+            if (!isFestivalPassActive(doc.data())) return;
             const email = doc.data().email;
             if (email) emails.add(email);
         });

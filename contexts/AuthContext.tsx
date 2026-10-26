@@ -10,6 +10,7 @@ import {
 import { User } from '../types';
 import firebase from 'firebase/compat/app';
 import { toast } from '../components/Toast';
+import { isFestivalPassActive } from '../api/_lib/festivalPass';
 
 interface AuthContextType {
     user: User | null;
@@ -360,11 +361,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }).catch(err => console.error("Progress sync failed:", err));
     }, [user]);
 
-    const hasFestivalAllAccess = useMemo(() => {
-        if (user?.hasFestivalAllAccess) return true; // Legacy support
-        if (user?.festivalPassExpiry && new Date(user.festivalPassExpiry) > new Date()) return true;
-        return false;
-    }, [user]);
+    // A full festival pass is good for one festival — only its end date counts
+    // (old passes with no end date were from 2026 and have ended).
+    const hasFestivalAllAccess = useMemo(() => isFestivalPassActive(user), [user]);
 
     const hasCrateFestPass = useMemo(() => {
         if (user?.hasCrateFestPass) return true; // Legacy support

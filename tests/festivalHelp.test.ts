@@ -40,7 +40,9 @@ test('refunded or revoked tickets and film rentals always go to a person', () =>
 
 test('the all-access pass is restored only for THIS year\'s festival', () => {
     assert.equal(diagnoseTicket(t({ itemId: 'full-festival-pass', paymentType: 'block' }), {}, ctx).action.kind, 'grant-all-access');
-    assert.equal(diagnoseTicket(t({ itemId: 'full-festival-pass', paymentType: 'block' }), { hasFestivalAllAccess: true }, ctx).action.kind, 'ok');
+    assert.equal(diagnoseTicket(t({ itemId: 'full-festival-pass', paymentType: 'block' }), { hasFestivalAllAccess: true, festivalPassExpiry: '2027-09-01T00:00:00Z' }, ctx).action.kind, 'ok');
+    // An old pass with no end date (or last year's end date) needs restoring, not "ok".
+    assert.equal(diagnoseTicket(t({ itemId: 'full-festival-pass', paymentType: 'block' }), { hasFestivalAllAccess: true }, ctx).action.kind, 'grant-all-access');
     // A 2026 pass doesn't unlock the 2027 festival.
     assert.equal(diagnoseTicket(t({ itemId: 'full-festival-pass', paymentType: 'block', purchasedAtMs: Date.parse('2026-08-01T00:00:00Z') }), {}, ctx).action.kind, 'ended');
     // After the rewatch week, nothing to restore.
@@ -50,6 +52,10 @@ test('the all-access pass is restored only for THIS year\'s festival', () => {
 test('partner passes and single watch-party tickets are restored when missing', () => {
     assert.deepEqual(diagnoseTicket(t({ itemId: 'partner-pass:fest-a', paymentType: 'block' }), {}, ctx).action, { kind: 'grant-partner-pass', partnerId: 'fest-a' });
     assert.equal(diagnoseTicket(t({ itemId: 'partner-pass:fest-a', paymentType: 'block' }), { partnerPasses: { 'fest-a': 'x' } }, ctx).action.kind, 'ok');
+    // Last year's partner pass doesn't open this year's edition.
+    const cleaned = { ...ctx, partnerCleanedAt: new Map([['fest-a', Date.parse('2026-09-01T00:00:00Z')]]) };
+    assert.equal(diagnoseTicket(t({ itemId: 'partner-pass:fest-a', paymentType: 'block', purchasedAtMs: Date.parse('2026-08-01T00:00:00Z') }), {}, cleaned).action.kind, 'ended');
+    assert.equal(diagnoseTicket(t({ itemId: 'partner-pass:fest-a', paymentType: 'block' }), { partnerPasses: { 'fest-a': '2026-08-01T00:00:00Z' } }, cleaned).action.kind, 'grant-partner-pass');
     assert.deepEqual(diagnoseTicket(t({ itemId: 'luna', paymentType: 'watchPartyTicket' }), {}, ctx).action, { kind: 'grant-watch-party', movieKey: 'luna' });
 });
 
