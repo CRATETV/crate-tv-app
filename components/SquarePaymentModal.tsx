@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
-import { PWYW_MIN_DOLLARS, PWYW_SUGGESTED, payWhatYouWantCents } from '../api/_lib/paymentRules';
+import { PWYW_MIN_DOLLARS, PWYW_SUGGESTED, payWhatYouWantCents, PREMIERE_PRICES_CENTS, PREMIERE_LABELS } from '../api/_lib/paymentRules';
 
 declare const Square: any;
 
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass' | 'premiereBooking' | 'premiereBalance';
+    /** Premiere payments only: the film being premiered. */
+    premiereFilmTitle?: string;
     onClose: () => void;
     onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
     priceOverride?: number; 
@@ -65,7 +67,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     paymentType,
     onClose,
     onPaymentSuccess,
-    priceOverride
+    priceOverride,
+    premiereFilmTitle
 }) => {
     const { user, getUserIdToken } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
@@ -108,6 +111,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
             case 'movie': return movie?.salePrice ?? 5.00;
             case 'watchPartyTicket': return movie?.watchPartyPrice ?? 5.00;
             case 'crateFestPass': return 15.00;
+            case 'premiereBooking':
+            case 'premiereBalance': return (PREMIERE_PRICES_CENTS[paymentType] || 0) / 100;
             default: return 0;
         }
     }, [paymentType, priceOverride, movie, block]);
@@ -130,8 +135,9 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         if (paymentType === 'pass') return 'Festival All-Access Pass';
         if (paymentType === 'crateFestPass') return 'Crate Fest All-Access';
         if (paymentType === 'billSavingsDeposit') return 'Savings Pot Deposit';
+        if (PREMIERE_LABELS[paymentType]) return `${PREMIERE_LABELS[paymentType]}${premiereFilmTitle ? ` · ${premiereFilmTitle}` : ''}`;
         return 'Crate TV Item';
-    }, [movie, block, paymentType]);
+    }, [movie, block, paymentType, premiereFilmTitle]);
 
     const isFree = useMemo(() => appliedPromo?.isFree === true, [appliedPromo]);
 
@@ -262,7 +268,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                     amount: displayAmount,
                     paymentType,
                     itemId: movie?.key || block?.id || (paymentType === 'pass' ? 'full-festival-pass' : paymentType),
-                    movieTitle: movie?.title,
+                    movieTitle: movie?.title ?? premiereFilmTitle,
                     directorName: movie?.director,
                     blockTitle: block?.title,
                     email: user?.email,
@@ -436,7 +442,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {!['donation', 'billSavingsDeposit'].includes(paymentType) && !isPwyw && (
+                            {!['donation', 'billSavingsDeposit', 'premiereBooking', 'premiereBalance'].includes(paymentType) && !isPwyw && (
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Promotion Logic</p>
                                     <div className="flex gap-2">

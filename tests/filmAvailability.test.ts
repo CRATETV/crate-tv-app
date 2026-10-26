@@ -31,9 +31,12 @@ test('just premiered: right after it ends, through the weekend', () => {
     assert.equal(isJustPremiered(film, 'ended', premiere + 48 * H), true);
 });
 
-test('just premiered: gone once hidden, unlisted, or a week later', () => {
+test('just premiered: gone once past its hide time, its party is switched off, or a week later', () => {
     assert.equal(isJustPremiered(film, 'ended', Date.parse(film.availableUntil)), false);
-    assert.equal(isJustPremiered({ ...film, isUnlisted: true }, 'ended', premiere + 5 * H), false);
+    assert.equal(isJustPremiered({ ...film, isWatchPartyEnabled: false }, 'ended', premiere + 5 * H), false);
+    // Kept hidden from the catalog until the premiere: still shows its weekend.
+    assert.equal(isJustPremiered({ ...film, isUnlisted: true }, 'ended', premiere + 5 * H), true);
+    assert.equal(isJustPremiered({ ...film, partnerId: 'pwff' } as any, 'ended', premiere + 5 * H), false);
     const noEnd = { ...film, availableUntil: undefined };
     assert.equal(isJustPremiered(noEnd, 'ended', premiere + 6 * 24 * H), true);
     assert.equal(isJustPremiered(noEnd, 'ended', premiere + 8 * 24 * H), false);

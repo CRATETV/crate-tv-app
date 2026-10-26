@@ -75,59 +75,14 @@ const Header: React.FC<HeaderProps> = ({
     ];
     if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });
     
-    // ── Watch party pill (Oct 26 2026) ─────────────────────────────────
-    // Replaces the big live-party takeover of the home page hero: one small
-    // pill in the header, live ("LIVE · title · Join") or upcoming within a
-    // week ("Watch party · title · 2h 14m").
-    const partyPillMovie = livePartyMovie;
-    const partyIsLive = !!partyPillMovie && activeParties[partyPillMovie.key]?.status === 'live';
-    const partyStartMs = partyPillMovie?.watchPartyStartTime ? Date.parse(partyPillMovie.watchPartyStartTime) : NaN;
-    const [pillNow, setPillNow] = useState(() => Date.now());
-    const partyIsUpcoming = !!partyPillMovie && !partyIsLive && Number.isFinite(partyStartMs)
-        && partyStartMs > pillNow - 30 * 60_000 && partyStartMs - pillNow < 7 * 24 * 3600_000;
-    useEffect(() => {
-        if (!partyIsUpcoming) return;
-        const t = setInterval(() => setPillNow(Date.now()), 1000);
-        return () => clearInterval(t);
-    }, [partyIsUpcoming]);
-    const partyCountdown = (() => {
-        const left = partyStartMs - pillNow;
-        if (!Number.isFinite(left) || left <= 0) return 'Starting';
-        const s = Math.floor(left / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-        if (d > 0) return `${d}d ${h}h`;
-        if (h > 0) return `${h}h ${m}m`;
-        return `${m}m ${String(s % 60).padStart(2, '0')}s`;
-    })();
-    const onPartyPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/watchparty');
-    const showPartyPill = !hideLiveSpotlight && !onPartyPage && (partyIsLive || partyIsUpcoming);
 
     return (
         <header className={headerClasses} style={{ top: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
             <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-4">
-                        {/* Watch party pill: live now, or coming up with a countdown.
-                            Tapping it opens the party page (waiting room with the
-                            countdown, film info and tickets, or the live film). */}
-                        {showPartyPill && partyPillMovie && (
-                            <button
-                                onClick={(e) => handleNavigate(e, `/watchparty/${partyPillMovie.key}`)}
-                                aria-label={partyIsLive ? `Live now: ${partyPillMovie.title}. Join the watch party` : `Watch party: ${partyPillMovie.title}, starts in ${partyCountdown}`}
-                                className={`group flex items-center gap-2 rounded-full pl-3 pr-1.5 py-1.5 max-w-[64vw] sm:max-w-none transition-all ${partyIsLive
-                                    ? 'bg-red-600 hover:bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.35)]'
-                                    : 'bg-black/60 hover:bg-black/80 border border-white/15 backdrop-blur-md'}`}
-                            >
-                                <span className="relative flex h-2 w-2 flex-shrink-0">
-                                    {partyIsLive && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />}
-                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${partyIsLive ? 'bg-white' : 'bg-red-500'}`} />
-                                </span>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/90 flex-shrink-0">{partyIsLive ? 'Live' : <><span className="hidden sm:inline">Watch party</span><span className="sm:hidden">Party</span></>}</span>
-                                <span className="text-xs font-bold text-white truncate max-w-[26vw] sm:max-w-[16rem]">{partyPillMovie.title}</span>
-                                <span className={`flex-shrink-0 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5 py-1 tabular-nums ${partyIsLive ? 'bg-white text-red-600' : 'bg-white/10 text-amber-300'}`}>
-                                    {partyIsLive ? 'Join' : partyCountdown}
-                                </span>
-                            </button>
-                        )}
+                        {/* No watch party chip here: parties are announced by the
+                            "Watch parties" cards at the top of the home page (Oct 26 2026). */}
 
                         {/* No logo in the top menu (Oct 2026, by choice). */}
 

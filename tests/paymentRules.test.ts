@@ -35,3 +35,14 @@ test('pay what you want: $3 minimum, sensible maximum, real numbers only', () =>
     assert.equal(payWhatYouWantCents(undefined), null);
     assert.equal(payWhatYouWantCents(100000), null, 'typo guard');
 });
+
+import { PREMIERE_PRICES_CENTS, isPremierePayment } from '../api/_lib/paymentRules';
+
+test('premiere payments: fixed server prices ($25 booking, $50 free-premiere balance)', () => {
+    assert.equal(PREMIERE_PRICES_CENTS.premiereBooking, 2500);
+    assert.equal(PREMIERE_PRICES_CENTS.premiereBalance, 5000);
+    assert.equal(PREMIERE_PRICES_CENTS.premiereBooking + PREMIERE_PRICES_CENTS.premiereBalance, 7500);
+    assert.equal(isPremierePayment('premiereBooking'), true);
+    assert.equal(isPremierePayment('donation'), false);
+    assert.equal(isPremierePayment('toString'), false);
+});

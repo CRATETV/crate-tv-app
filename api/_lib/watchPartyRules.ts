@@ -61,7 +61,9 @@ export function shouldAutoStart(params: {
 }): boolean {
     const { scheduledStartMs, nowMs, partyState, blockFestivalEndTime } = params;
     if (scheduledStartMs == null || scheduledStartMs > nowMs) return false;
-    if (partyState?.status === 'live') return false;
+    // A party left "live" from an earlier run (a test that was never ended)
+    // must not block the new scheduled run (Oct 26 2026).
+    if (partyState?.status === 'live' && !isStaleLive(partyState, scheduledStartMs)) return false;
 
     const blockEndedMs = toMillis(blockFestivalEndTime);
     if (blockEndedMs != null && blockEndedMs >= scheduledStartMs) return false;
@@ -131,5 +133,30 @@ export function blockAccessExpiry(params: {
  */
 export function resetForNewSchedule(partyState: any, newStartMs: number | null, nowMs: number): boolean {
     if (newStartMs == null || !Number.isFinite(newStartMs) || newStartMs <= nowMs) return false;
-    return partyState?.status === 'ended';
+    return partyState?.status === 'ended' || isStaleLive(partyState, newStartMs);
+}
+
+/** How long before its scheduled start a party can be started by hand and still count as that run. */
+export const EARLY_START_ALLOWANCE_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * "live", but left over from an EARLIER run: it went live more than 3 hours
+ * before the scheduled start (e.g. a test started days ago and never ended).
+ * A party started a little early by hand is not stale.
+ */
+export function isStaleLive(partyState: any, scheduledStartMs: number | null): boolean {
+    if (partyState?.status !== 'live' || scheduledStartMs == null) return false;
+    const wentLive = toMillis(partyState.actualStartTime) ?? toMillis(partyState.lastStartedAt);
+    return wentLive != null && wentLive < scheduledStartMs - EARLY_START_ALLOWANCE_MS;
+}
+
+/**
+ * What viewers should see for this run: a leftover "ended" or "live" from an
+ * earlier run counts as "waiting" (lobby + countdown) for the new scheduled time.
+ */
+export function effectiveStatus(partyState: any, scheduledStartMs: number | null): 'waiting' | 'live' | 'ended' | undefined {
+    const st = partyState?.status;
+    if (st === 'ended' && scheduledStartMs != null && !isEndedForThisRun(partyState, scheduledStartMs)) return 'waiting';
+    if (st === 'live' && isStaleLive(partyState, scheduledStartMs)) return 'waiting';
+    return st;
 }

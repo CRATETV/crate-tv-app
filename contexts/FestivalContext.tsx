@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition, useRef } from 'react';
-import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
-import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
+import { isPastAvailableUntil, isWatchPartyListable } from '../api/_lib/filmAvailability';
+import { isEndedForThisRun, isStaleLive } from '../api/_lib/watchPartyRules';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import type { PublicPartnerFestival } from '../api/_lib/partnerRules';
@@ -176,9 +176,13 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         const liveKey = liveKeys.find(key => {
             const m = movies[key];
+            // Left "live" from an earlier run (never ended) → not live now.
+            if (m?.watchPartyStartTime && isStaleLive(activeParties[key], Date.parse(m.watchPartyStartTime))) return false;
             // Only trigger banner if the movie actually exists in the catalog
             // Stale watch_parties documents for deleted/missing movies should be ignored
-            if (m) return !m.isUnlisted;
+            // Premiere films are often hidden from the catalog until their
+            // premiere: their party still counts.
+            if (m) return !m.isUnlisted || isWatchPartyListable(m, Date.now());
             return blockById.has(key);
         });
 
@@ -191,7 +195,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         // 2. Fallback: any enabled watch party that is not ended
         // Show banner if isWatchPartyEnabled=true, regardless of whether a start time is set
         const upcomingParties = movieArray
-            .filter(m => m.isWatchPartyEnabled && !m.isUnlisted)
+            .filter(m => isWatchPartyListable(m, now.getTime()))
             .filter(m => {
                 // Don't show if party was explicitly ended AND no future start time
                 const partyState = allPartyStates[m.key];
@@ -199,8 +203,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 // (a test, or the last screening) doesn't count.
                 const startMs = m.watchPartyStartTime ? Date.parse(m.watchPartyStartTime) : null;
                 if (isEndedForThisRun(partyState, Number.isFinite(startMs as number) ? startMs : null)) return false;
-                // Don't show if already live (handled above)
-                if (activeParties[m.key]?.status === 'live') return false;
+                // Don't show if already live (handled above) — unless that "live" is a leftover
+                if (activeParties[m.key]?.status === 'live' && !isStaleLive(activeParties[m.key], startMs)) return false;
 
                 // If no start time set — don't show banner (nothing to count down to)
                 if (!m.watchPartyStartTime) return false;

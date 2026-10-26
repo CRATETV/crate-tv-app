@@ -11,7 +11,8 @@ import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 import { isFestivalPassActive, laterExpiry, festivalPassOnSale, festivalPassExpiryFor, blockSaleClosed, partnerPassIsCurrent } from './_lib/festivalPass.js';
 import { getPwffBlocks } from './_lib/festivalTiming.js';
 import { escapeHtml } from './_lib/validation.js';
-import { promoProblem, priceAfterPromo, payWhatYouWantCents, PWYW_MIN_DOLLARS } from './_lib/paymentRules.js';
+import { promoProblem, priceAfterPromo, payWhatYouWantCents, PWYW_MIN_DOLLARS, PREMIERE_PRICES_CENTS, PREMIERE_LABELS, isPremierePayment } from './_lib/paymentRules.js';
+import { cleanLine } from './_lib/validation.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
 import { getPartner, getPublishedBlocks, grantBlocksToUser } from './_lib/partners.js';
@@ -370,7 +371,15 @@ export async function POST(request: Request) {
     let note: string = "Crate TV Purchase";
 
     // --- PRICING LOGIC ---
-    if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
+    // Premiere night payments (cratetv.net/book-premiere): fixed prices, no promo codes.
+    const premiereFilm = isPremierePayment(paymentType) ? cleanLine(movieTitle, 150) : '';
+    if (isPremierePayment(paymentType)) {
+        if (promo) return new Response(JSON.stringify({ error: 'Promo codes can\'t be used for premiere bookings.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        if (!premiereFilm) return new Response(JSON.stringify({ error: 'Please add your film\'s title.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        amountInCents = PREMIERE_PRICES_CENTS[paymentType];
+        note = `${PREMIERE_LABELS[paymentType]}: ${premiereFilm}`.slice(0, 200);
+    }
+    else if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
         // User-defined amounts
         amountInCents = Math.round(Number(amount) * 100);
         // A non-number amount ("abc") used to become NaN, slip past the $1
@@ -523,7 +532,7 @@ export async function POST(request: Request) {
             note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
         }
     }
-    else if (staticPriceMap[paymentType]) {
+    else if (Object.prototype.hasOwnProperty.call(staticPriceMap, paymentType)) {
         amountInCents = staticPriceMap[paymentType];
         note = `Platform ${paymentType.replace(/([A-Z])/g, ' $1')}`;
     }
@@ -617,8 +626,46 @@ export async function POST(request: Request) {
     // Charged (or free): from here on nothing may undo the promo/seat claim.
     releaseCapacityReservation = null;
 
+    // Premiere payment: keep a record, thank the filmmaker, tell the studio.
+    if (isPremierePayment(paymentType)) {
+        const amountFormatted = (amountInCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        if (db) {
+            await db.collection('premiere_payments').add({
+                kind: paymentType, film: premiereFilm, amountPaid: amountInCents / 100, email: email || null,
+                uid: uid || null, squarePaymentId, paidAt: FieldValue.serverTimestamp(),
+            }).catch(e => console.error('[Payment API] Failed to record premiere payment:', e));
+        }
+        if (process.env.RESEND_API_KEY) {
+            const label = PREMIERE_LABELS[paymentType];
+            const sends: Promise<any>[] = [];
+            if (email) sends.push(resend.emails.send({
+                from: `Crate TV <${fromEmail}>`,
+                to: email,
+                subject: `Payment received: ${label} for ${premiereFilm}`.replace(/[\r\n]/g, ' ').slice(0, 150),
+                html: renderBrandedEmail({
+                    title: 'Payment received',
+                    bodyHtml: `<h1 style="margin:0 0 16px;font-size:24px;font-weight:900;">Thank you!</h1>
+<p style="margin:0 0 12px;">We received your <strong>${escapeHtml(label.toLowerCase())}</strong> of <strong>${amountFormatted}</strong> for <strong>${escapeHtml(premiereFilm)}</strong>.</p>
+<p style="margin:0 0 12px;">${paymentType === 'premiereBooking' ? 'Your date is held. We\'ll be in touch to set up your premiere page, countdown and tickets.' : 'Your free premiere is fully paid. See you on premiere night!'}</p>
+<p style="margin:0;font-size:13px;color:#666;">Questions? Just reply to this email.</p>`,
+                }),
+            }));
+            sends.push(resend.emails.send({
+                from: `Crate TV <${fromEmail}>`,
+                to: 'studio@cratetv.net',
+                ...(email ? { reply_to: email } : {}),
+                subject: `💰 ${label} paid: ${premiereFilm}`.replace(/[\r\n]/g, ' ').slice(0, 150),
+                html: renderBrandedEmail({
+                    title: `${label} paid`,
+                    bodyHtml: `<p style="margin:0 0 8px;"><strong>${escapeHtml(premiereFilm)}</strong></p><p style="margin:0 0 8px;">${amountFormatted} · ${escapeHtml(email || 'no email')}</p><p style="margin:0;font-size:12px;color:#888;">Also listed in Admin → Payments & refunds.</p>`,
+                }),
+            }));
+            await Promise.allSettled(sends);
+        }
+    }
+
     // Receipt / confirmation email
-    if (email && process.env.RESEND_API_KEY) {
+    if (email && process.env.RESEND_API_KEY && !isPremierePayment(paymentType)) {
         try {
             const amountFormatted = (amountInCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
             const isWatchParty = paymentType === 'watchPartyTicket';

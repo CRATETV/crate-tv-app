@@ -281,6 +281,7 @@ export const HostFestivalPage: React.FC = () => (
         faqs={[
             ['Does our team need technical skills?', 'No. You send the films and the schedule; we do the setup and run the screenings.'],
             ['What do we need to send?', 'The film files, a poster and short description for each film, and your schedule (which films play in which block, and when).'],
+            ['How does the money work?', 'You don\'t pay CRATE anything. Your audience buys tickets and passes on CRATE; after the festival we send you your share of the sales, with a report of every ticket.'],
             ['Can people watch from anywhere?', 'Yes, on a computer, phone or tablet. Ticket holders can watch from wherever they are.'],
             ['Can we still hold an in-person festival?', 'Yes. Lots of festivals do both: in-person screenings, plus an online version for people who can\'t make it.'],
         ]}
@@ -319,6 +320,7 @@ export const PremierePage: React.FC = () => (
             ['Can people watch from anywhere?', 'Yes, on a computer, phone or tablet, wherever they are.'],
             ['Is my film safe?', 'Each viewer\'s ticket is checked before the film plays, film links expire within hours, and there\'s no download button.'],
             ['Can I make it free?', 'Yes. Free, paid, or pay what you want: you choose.'],
+            ['How do I pay?', 'Once we\'ve agreed your date, we send you a link to pay securely by card on CRATE (cratetv.net/book-premiere).'],
         ]}
         crossLink={{ text: 'Running a whole festival?', path: '/host' }}
     />

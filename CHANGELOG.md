@@ -1,9 +1,18 @@
 # Changelog
 
+## 2026-10 — Watch parties announce themselves; premiere payments
+
+- **Watch party cards at the very top of the home page** (above the hero, for signed-in and signed-out visitors): every party in the next 30 days with its countdown, price and "Get ticket", and "Live now · Join now" once it starts. Nothing shows when there are none. The landing page now reads the live site data, so a party appears the moment it's saved.
+- **Premiere films hidden from the catalog still get their party shown** (Upcoming cards, live notice, Just Premiered, Roku party row). Premieres are usually kept hidden until the night; that used to keep the party off the home page entirely. To take a party off the home page, switch its watch party off (or use "Hide automatically after"). `isWatchPartyListable` in `api/_lib/filmAvailability.ts`.
+- **A test left "live" no longer blocks the real party.** A party that went live more than 3 hours before the scheduled start (e.g. a test never ended) counts as waiting: the lobby and countdown show, the cron and the lobby's auto-start start the real run on time, and saving a new time resets it (`isStaleLive`, `effectiveStatus`, tested). Viewers never get the "Rewatch" end screen from an old run's clock: only a live run can end by the clock.
+- **Premiere payments: cratetv.net/book-premiere.** Film title + two cards: "Hold my date" $25 (every premiere) and "Free premiere balance" $50 (rest of the $75). Card payment through Square (sign-in required), prices fixed on the server (`PREMIERE_PRICES_CENTS`), no promo codes, receipt to the filmmaker, email to studio@cratetv.net, saved in `premiere_payments`, listed in Payments & refunds. Link it as cratetv.net/book-premiere?film=Title to pre-fill.
+- /host and /premiere FAQs now say how money works (festivals pay nothing up front; premieres pay by link).
+- Hardening: a payment type like "toString" can no longer match the price list.
+
 ## 2026-10 — Calmer home page, tidy Control Room, parties show without a restart
 
 - **Parties show on the home page as soon as you schedule them.** Saving a new future start time (Watch Parties schedule or Movie Editor) used to leave the film's old "ended" status from a test or an earlier screening, so the home page treated the new party as over until you pressed Restart. Saving now puts it back to "waiting" (`resetForNewSchedule`, tested; never touches a party that's live), and the home page, header and context use `isEndedForThisRun` everywhere.
-- **No more live-party takeover of the home page.** The big hero with the film's whole synopsis (and the "Live Watch Party Now Active" line clashing with the header) is gone. Instead, a small pill in the header: "● LIVE · title · Join", or "Watch party · title · 2h 14m" for one coming up in the next week. Tapping it opens the waiting room (countdown, film info, tickets) or the live film. Shows for signed-in and signed-out visitors.
+- **No more live-party takeover of the home page.** The big hero with the film's whole synopsis (and the "Live Watch Party Now Active" line clashing with the header) is gone, and so is the header's "Live Hub Active" chip.
 - **Control Room layout fixed.** The new panels had landed inside the button row and were squashed side by side. Now: title and buttons, then Viewership full width, then Tickets + Pinned, then Stopped watching + Reactions (stacked on smaller screens). Schedule section restyled to match.
 
 ## 2026-10 — "Want this for your festival?" on festival pages

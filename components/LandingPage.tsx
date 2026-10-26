@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useFestival } from '../contexts/FestivalContext';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
 import MovieCarousel from './MovieCarousel';
@@ -103,6 +104,7 @@ const FaqItem: React.FC<{ question: string; answer: React.ReactNode }> = ({ ques
 const LandingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const { movies: liveMovies, festivalData: liveFestivalData, allPartyStates: liveAllPartyStates } = useFestival();
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
     const [festivalData, setFestivalData] = useState<any[]>([]);
@@ -184,6 +186,10 @@ const LandingPage: React.FC = () => {
             />
             
             <main className="flex-grow">
+                {/* Watch parties come FIRST: upcoming ones with a countdown and
+                    ticket button, live ones with "Join now" (Oct 26 2026). Uses
+                    the live site data so a party shows the moment it's saved. */}
+                <UpcomingWatchParties movies={liveMovies} festivalData={liveFestivalData} allPartyStates={liveAllPartyStates} className="px-4 md:px-12 pt-24 md:pt-28 pb-4 bg-black max-w-[1800px] mx-auto" />
                 {/* SECTION 1: HERO — Oct 2026 redesign: moving poster wall, brand-gradient
                     headline, top-3 film stack, one-bar email signup. Words still come from
                     Admin → Homepage (hero settings). */}
@@ -300,9 +306,6 @@ const LandingPage: React.FC = () => {
                         <span className="w-px h-8 bg-gradient-to-b from-white/60 to-transparent" />
                     </a>
                 </section>
-
-                {/* Upcoming watch parties: visible before they start, with a countdown. */}
-                <UpcomingWatchParties movies={movies} festivalData={festivalData} allPartyStates={{}} className="px-4 md:px-12 pt-14 bg-black max-w-[1800px] mx-auto" />
 
                 {/* SECTION 1.5: TITLE MARQUEE */}
                 <Marquee items={marqueeTitles} />

@@ -3,7 +3,8 @@ import { Movie, FestivalDay, FilmBlock, WatchPartyState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
-import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
+import { isEndedForThisRun, effectiveStatus } from '../api/_lib/watchPartyRules';
+import { isWatchPartyListable } from '../api/_lib/filmAvailability';
 
 // "Upcoming watch parties" on the home page.
 //
@@ -62,7 +63,8 @@ const UpcomingWatchParties: React.FC<{
         };
         const out: Item[] = [];
         for (const m of Object.values(movies)) {
-            if (!m || !m.isWatchPartyEnabled || m.isUnlisted || !m.watchPartyStartTime) continue;
+            // Shown even when the film is hidden from the catalog until its premiere.
+            if (!m || !isWatchPartyListable(m, t) || !m.watchPartyStartTime) continue;
             const startMs = Date.parse(m.watchPartyStartTime);
             if (!inWindow(startMs, m.key)) continue;
             const paid = m.isWatchPartyPaid === true;
@@ -89,6 +91,7 @@ const UpcomingWatchParties: React.FC<{
     }, [movies, festivalData, allPartyStates, minute]);
 
     if (!items.length) return null;
+    const anyLive = items.some(it => effectiveStatus(allPartyStates[it.key], it.startMs) === 'live' || it.startMs <= now);
 
     const hasTicket = (it: Item) => {
         if (it.isFree) return false;
@@ -110,14 +113,14 @@ const UpcomingWatchParties: React.FC<{
         <section aria-label="Upcoming watch parties" className={className}>
             <div className="flex items-end justify-between mb-4 border-l-4 border-red-600 pl-4">
                 <div>
-                    <h2 className="text-xl md:text-3xl font-black uppercase tracking-tighter text-white">Upcoming watch parties</h2>
-                    <p className="text-xs md:text-sm text-gray-400 mt-1">Get your ticket early. When the countdown hits zero, the film starts for everyone.</p>
+                    <h2 className="text-xl md:text-3xl font-black uppercase tracking-tighter text-white">{anyLive ? 'Watch party live now' : 'Upcoming watch parties'}</h2>
+                    <p className="text-xs md:text-sm text-gray-400 mt-1">{anyLive ? 'Jump in: the film is playing for everyone right now.' : 'Get your ticket early. When the countdown hits zero, the film starts for everyone.'}</p>
                 </div>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none]">
                 {items.map(it => {
                     const left = it.startMs - now;
-                    const live = allPartyStates[it.key]?.status === 'live' || left <= 0;
+                    const live = effectiveStatus(allPartyStates[it.key], it.startMs) === 'live' || left <= 0;
                     const ticket = hasTicket(it);
                     const cta = live
                         ? (ticket || it.isFree ? 'Join now' : 'Get ticket & join')

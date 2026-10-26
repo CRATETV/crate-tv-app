@@ -1,6 +1,6 @@
 import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
-import { isPastAvailableUntil } from './_lib/filmAvailability.js';
+import { isPastAvailableUntil, isWatchPartyListable } from './_lib/filmAvailability.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -460,7 +460,8 @@ export async function GET(request: Request) {
                 const start = Date.parse(m.watchPartyStartTime);
                 const live = !!(config as any).activeParties?.[m.key];
                 if (!live && !(Number.isFinite(start) && start > nowMs - 6 * 3600_000 && start < nowMs + 30 * 86400_000)) return false;
-                return isValidForRoku(m, true);
+                // A premiere film kept hidden from the catalog still gets its party row.
+                return isWatchPartyListable(m, nowMs) && isValidForRoku({ ...m, isUnlisted: false } as Movie, true);
             })
             .sort((a, b) => Date.parse(a.watchPartyStartTime!) - Date.parse(b.watchPartyStartTime!));
         const children = await Promise.all(partyFilms.map(async m => {

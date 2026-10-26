@@ -31,6 +31,7 @@ import MoviePage from './components/MoviePage';
 import MerchPage from './components/MerchPage';
 import ContactPage from './components/ContactPage';
 import { HostFestivalPage, PremierePage } from './components/PitchPage';
+import BookPremierePage from './components/BookPremierePage';
 import AboutPage from './components/AboutPage';
 import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
@@ -299,6 +300,8 @@ const AppRouter: React.FC = () => {
       return <HostFestivalPage />;
     case '/premiere':
       return <PremierePage />;
+    case '/book-premiere':
+      return <BookPremierePage />;
     case '/about':
       return <AboutPage />;
     case '/roku-guide':

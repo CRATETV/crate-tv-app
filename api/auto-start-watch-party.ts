@@ -3,6 +3,7 @@ import { getBackstageKey, setBackstageKey } from './_lib/backstage.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
 import { findBlock, purgePartyMessages, newBackstageKey, shouldAutoStart, toMillis } from './_lib/watchPartyLifecycle.js';
+import { isStaleLive } from './_lib/watchPartyRules.js';
 
 export async function POST(request: Request) {
   try {
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
       const partyDoc = await tx.get(partyRef);
       const partyState = partyDoc.data();
 
-      if (partyState?.status === 'live') {
+      // Live from an earlier run that was never ended doesn't count (Oct 26 2026).
+      if (partyState?.status === 'live' && !isStaleLive(partyState, scheduledMs)) {
         return { outcome: 'already-live' as const };
       }
       // Ended parties only restart if this is a NEW scheduled run (the

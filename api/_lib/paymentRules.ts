@@ -38,3 +38,21 @@ export function payWhatYouWantCents(amount: unknown): number | null {
     if (cents < PWYW_MIN_DOLLARS * 100 || cents > PWYW_MAX_DOLLARS * 100) return null;
     return cents;
 }
+
+// ── Premiere night payments (Oct 2026) ─────────────────────────────────────
+// Filmmakers pay through cratetv.net/book-premiere. Prices are set here, on
+// the server: the browser never decides them.
+//   premiereBooking  $25  holds the date (both kinds of premiere)
+//   premiereBalance  $50  the rest of a free premiere's $75 hosting fee
+// A ticketed premiere pays nothing more: CRATE keeps 30% of ticket sales,
+// minus the $25 already paid, after the premiere.
+export const PREMIERE_PRICES_CENTS: Record<string, number> = {
+    premiereBooking: 2500,
+    premiereBalance: 5000,
+};
+export const PREMIERE_LABELS: Record<string, string> = {
+    premiereBooking: 'Premiere booking fee',
+    premiereBalance: 'Free premiere hosting balance',
+};
+export const isPremierePayment = (paymentType: unknown): boolean =>
+    typeof paymentType === 'string' && Object.prototype.hasOwnProperty.call(PREMIERE_PRICES_CENTS, paymentType);

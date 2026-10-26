@@ -29,6 +29,20 @@ export function isPastAvailableUntil(movie: { availableUntil?: string | null } |
 }
 
 /**
+ * Can this film's watch party be shown on the home page (Upcoming row, live
+ * notice, Just Premiered)? Yes even if the film is hidden from the catalog:
+ * premiere films are usually kept hidden until their premiere (Oct 26 2026).
+ * Not partner/PWFF committee films (their festival page shows them), and not
+ * once the "Hide automatically after" time has passed. To take a party off
+ * the home page, switch its watch party off.
+ */
+export function isWatchPartyListable(movie: { isWatchPartyEnabled?: boolean; availableUntil?: string | null; partnerId?: string | null } | null | undefined, nowMs: number): boolean {
+    if (!movie || !movie.isWatchPartyEnabled) return false;
+    if ((movie as any).partnerId) return false;
+    return !isPastAvailableUntil(movie, nowMs);
+}
+
+/**
  * Films for the "Just premiered" row: the watch party started in the last
  * 7 days, is over (ended, or long enough ago), and the film is still on CRATE.
  */
@@ -37,8 +51,7 @@ export function isJustPremiered(
     partyStatus: string | undefined,
     nowMs: number,
 ): boolean {
-    if (!movie || !movie.isWatchPartyEnabled || movie.isUnlisted) return false;
-    if (isPastAvailableUntil(movie, nowMs)) return false;
+    if (!movie || !isWatchPartyListable(movie as any, nowMs)) return false;
     const start = toMs(movie.watchPartyStartTime);
     if (start == null || start > nowMs || nowMs - start > JUST_PREMIERED_WINDOW_MS) return false;
     if (partyStatus === 'live') return false;

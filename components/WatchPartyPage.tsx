@@ -15,7 +15,7 @@ import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
 import { useWatchHeartbeat } from '../hooks/useWatchHeartbeat';
-import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
+import { effectiveStatus } from '../api/_lib/watchPartyRules';
 import { activePin } from '../api/_lib/controlRoom';
 import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
 import FilmNoLongerAvailable from './FilmNoLongerAvailable';
@@ -84,6 +84,17 @@ const processLiveEmbed = (input: string, startTimeOffset: number = 0): string =>
 
     return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}</div>`;
 };
+
+// A leftover "live" or "ended" from an earlier run (a test that was never
+// ended, or the last screening) counts as "waiting" for the new scheduled
+// time, without the old run's clock, so viewers get the lobby and countdown
+// and the film starts by itself (Oct 26 2026).
+function viewerPartyState(raw: WatchPartyState | undefined, scheduledStartMs: number | null): WatchPartyState | undefined {
+    if (!raw) return raw;
+    const st = effectiveStatus(raw, scheduledStartMs);
+    if (st === raw.status) return raw;
+    return { ...raw, status: st as any, actualStartTime: null, filmStartTime: null, isPlaying: false };
+}
 
 const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>(({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
@@ -337,12 +348,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const t = raw ? Date.parse(raw) : NaN;
         return Number.isFinite(t) ? t : null;
     }, [allMovies, movieKey, parentBlock]);
-    const partyState = useMemo<WatchPartyState | undefined>(() => {
-        if (rawPartyState?.status === 'ended' && scheduledStartMs != null && !isEndedForThisRun(rawPartyState, scheduledStartMs)) {
-            return { ...rawPartyState, status: 'waiting' };
-        }
-        return rawPartyState;
-    }, [rawPartyState, scheduledStartMs]);
+    const partyState = useMemo<WatchPartyState | undefined>(() => viewerPartyState(rawPartyState, scheduledStartMs), [rawPartyState, scheduledStartMs]);
+    // The live listener below reads this (it's set up once per film).
+    const scheduledStartRef = useRef<number | null>(scheduledStartMs);
+    scheduledStartRef.current = scheduledStartMs;
 
     // ── NEXT BLOCK LOOKUP — for the "thank you" screen at the end of a block ──
     // Finds the next chronologically-scheduled block so we can tell full-pass
@@ -1377,7 +1386,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // viewer regardless of sync phase — it's read-only against the
             // server clock and never resumes playback, so it's safe to run
             // even mid-seek or post-give-up.
-            if (target.targetPosition >= target.movieDuration) {
+            // Only a LIVE run can end by the clock (a waiting/stale state
+            // must never jump to the end screen; Oct 26 2026).
+            if (target.status === 'live' && target.targetPosition >= target.movieDuration) {
                 if (!isEndedRef.current) {
                     setIsEnded(true);
                     video.pause();
@@ -1693,8 +1704,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (!doc.exists) return;
             const state = doc.data() as WatchPartyState;
             setPartyState(state);
-            partyStateRef.current = state; // keep stable ref in sync
-            if (state.status === 'live') setShowLobby(false);
+            // What viewers act on: a leftover "live"/"ended" from an earlier
+            // run counts as waiting for the new scheduled time.
+            const viewState = viewerPartyState(state, scheduledStartRef.current)!;
+            partyStateRef.current = viewState; // keep stable ref in sync
+            if (viewState.status === 'live') setShowLobby(false);
         };
 
         const setup = () => {

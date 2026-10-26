@@ -20,7 +20,7 @@ import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import UpcomingWatchParties from './components/UpcomingWatchParties';
-import { isJustPremiered } from './api/_lib/filmAvailability';
+import { isJustPremiered, isWatchPartyListable } from './api/_lib/filmAvailability';
 import { isEndedForThisRun } from './api/_lib/watchPartyRules';
 import WatchPartyLobby from './components/WatchPartyLobby';
 import SquarePaymentModal from './components/SquarePaymentModal';
@@ -371,7 +371,7 @@ const App: React.FC = () => {
 
         // Check regular movies first — show even if no start time set
         const movieResult = (Object.values(movies) as Movie[])
-            .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted)
+            .filter(m => !!m && isWatchPartyListable(m, now.getTime()))
             .filter(m => {
                 if (!m.watchPartyStartTime) return false; // no start time = don't show banner
                 return isEligible(m.watchPartyStartTime, m.key, m.isWatchPartyPaid);
@@ -687,6 +687,12 @@ const App: React.FC = () => {
             />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: mainPaddingTop }}>
+                {/* Watch parties come FIRST, above the hero: upcoming ones with
+                    a countdown and ticket button, live ones with "Join now"
+                    (Oct 26 2026). Nothing shows when there are none. */}
+                {!searchQuery && (
+                    <UpcomingWatchParties movies={movies} festivalData={festivalData} allPartyStates={allPartyStates} className="px-4 md:px-12 pt-24 md:pt-28 pb-6 relative z-30" />
+                )}
                 {currentLiveHeroConfig ? (
                     <FestivalHero config={currentLiveHeroConfig} />
                 ) : (
@@ -699,7 +705,6 @@ const App: React.FC = () => {
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
-                        <UpcomingWatchParties movies={movies} festivalData={festivalData} allPartyStates={allPartyStates} />
                         {justPremieredMovies.length > 0 && (
                                 <MovieCarousel
                                     title={
