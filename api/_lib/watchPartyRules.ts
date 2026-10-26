@@ -89,6 +89,18 @@ export function intermissionSecondsFor(nextIndex: number, totalFilms: number): {
 }
 
 /**
+ * Has the party ended for THIS scheduled run? A party keeps status 'ended'
+ * from its previous run (or a test) until the next run starts; if it's been
+ * rescheduled for later than it ended, that's a new run that hasn't started.
+ */
+export function isEndedForThisRun(partyState: any, scheduledStartMs: number | null): boolean {
+    if (partyState?.status !== 'ended') return false;
+    if (scheduledStartMs == null) return true;
+    const endedMs = toMillis(partyState.endedAt) ?? toMillis(partyState.lastUpdated);
+    return endedMs == null || endedMs >= scheduledStartMs;
+}
+
+/**
  * Festival block access window: tickets stay valid through the block's
  * screening plus the rewatch week (+1 day). Only a block with no start time
  * yet falls back to `minDays` from purchase.

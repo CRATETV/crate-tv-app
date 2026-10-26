@@ -30,6 +30,7 @@ import SubmitPage from './components/SubmitPage';
 import MoviePage from './components/MoviePage';
 import MerchPage from './components/MerchPage';
 import ContactPage from './components/ContactPage';
+import { HostFestivalPage, PremierePage } from './components/PitchPage';
 import AboutPage from './components/AboutPage';
 import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
@@ -292,6 +293,12 @@ const AppRouter: React.FC = () => {
       return <ThankYouPage />;
     case '/contact':
       return <ContactPage />;
+    case '/host':
+    case '/host-your-festival':
+    case '/festivals':
+      return <HostFestivalPage />;
+    case '/premiere':
+      return <PremierePage />;
     case '/about':
       return <AboutPage />;
     case '/roku-guide':

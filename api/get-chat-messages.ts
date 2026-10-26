@@ -37,7 +37,9 @@ export async function GET(request: Request) {
         userAvatar: data.userAvatar,
         text: data.text,
         timestamp: data.timestamp,
-        isVerifiedDirector: data.isVerifiedDirector || false
+        isVerifiedDirector: data.isVerifiedDirector || false,
+        isAdmin: data.isAdmin === true,
+        isSystemMessage: data.isSystemMessage === true
       };
     });
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10 — "Host your festival" and "Premiere your film" pages
+
+- **/host** (also /host-your-festival and /festivals): what CRATE does for a film festival, how it works, no setup fee / revenue share, and a request form.
+- **/premiere**: a premiere night for one film (countdown, tickets your way, watching together, live Q&A) and a request form.
+- Both forms go to `/api/send-inquiry`: emailed to the studio inbox (Reply answers the sender) and saved in `inquiries`. Rate limited, hidden bot trap, everything cleaned (`api/_lib/inquiry.ts`, tested in `tests/inquiry.test.ts`). Linked from both footers and added to the sitemap.
+- The pages only promise what CRATE does today: ticket-checked, expiring links, no download button, one device per ticket. They don't claim DRM or a location lock.
+
+## 2026-10 — Control Room: tickets, drop-offs, pinned announcement
+
+- **Tickets for this party:** how many sold, money made (before Square fees), average paid, sales in the last 15 minutes and the latest buyers, refreshed every 30s. Main admin password only (staff keys don't see money). Free seats and festival all-access passes aren't counted.
+- **Stopped watching (last 15 min):** who stopped and whether they closed the page ("left") or stopped checking in ("went quiet": switched away, lost connection, or the video got stuck). If 3 or more go quiet together it warns you to check playback. Names only, no emails.
+- **Pinned announcement:** type a message in the Control Room and it stays at the top of everyone's chat and in the waiting room, marked CRATE, until you remove it (or 12 hours pass, so an old pin never shows at the next party). Not on Roku yet (needs a channel update).
+- All three go through `/api/admin-watch-party-stats` (new `action` field) with the admin sign-in; logic in `api/_lib/controlRoom.ts`, tested in `tests/controlRoom.test.ts`. No rules change.
+
+## 2026-10 — Watch party fixes: start on time, quieter home page, reactions, Roku
+
+- **Film starts at the countdown.** A party that had run before (or been tested) kept the status "ended" until the new run began, so viewers arriving for the new time saw the "ended / rewatch" screen instead of the lobby and countdown, and had to click "Rewatch party". A party rescheduled for after it last ended is now treated as not started (`isEndedForThisRun`, tested). Same rule in the Upcoming row.
+- **Lobby shows the film's synopsis**, so people can decide and buy before it starts.
+- **Fewer alerts on the home page:** the watch party ribbon is off and the header "Featured Stream" chip only shows while a party is live. Upcoming parties live in the "Upcoming watch parties" row; a live party also gets the big hero slide.
+- **Reactions in the Control Room:** every emoji with who sent it and a tally. New reactions carry the viewer's name and account id (`firestore.rules` updated: deploy the rules).
+- **Switching away goes silent:** when a viewer leaves the page (another tab or app, or a call on their phone) the film pauses and mutes; when they come back it jumps to the live point with sound.
+- **Control Room chat works again:** sending needed a signed-in viewer account, which the admin panel doesn't have, so the box was greyed out. It now only needs your admin sign-in; messages show as **CRATE Admin** with a gold CRATE badge for viewers. Errors are shown instead of failing silently.
+- **Roku:** a "Watch Parties" row (upcoming and live film parties, with date/time) so the TV app can find the party; `get-watch-party-status` with no film now answers "is anything live?" instead of an error; `check-roku-link-status?movieKey=` now tells the TV whether the linked account has a ticket (ticket holders used to see "buy a ticket").
+
+
 ## 2026-10 — Watch parties: upcoming list, real viewer count
 
 - **Upcoming watch parties** on the home page and the landing page: every film watch party and festival block in the next 30 days, with a live countdown, date/time (Philadelphia), price and a ticket button (`components/UpcomingWatchParties.tsx`). People can buy early and go straight into the film at start time instead of finding out once it's live.

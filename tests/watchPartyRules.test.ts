@@ -88,3 +88,12 @@ test('toMillis handles every timestamp shape the database returns', () => {
     assert.equal(toMillis('not a date'), null);
     assert.equal(toMillis(null), null);
 });
+
+test('REGRESSION: a party ended earlier but rescheduled later is a NEW run (lobby, not "ended")', async () => {
+    const { isEndedForThisRun } = await import('../api/_lib/watchPartyRules.js');
+    const endedAt = '2026-10-25T20:00:00Z';
+    assert.equal(isEndedForThisRun({ status: 'ended', endedAt }, Date.parse('2026-10-26T20:00:00Z')), false);
+    assert.equal(isEndedForThisRun({ status: 'ended', endedAt }, Date.parse('2026-10-25T19:00:00Z')), true);
+    assert.equal(isEndedForThisRun({ status: 'ended' }, Date.parse('2026-10-26T20:00:00Z')), true, 'no end time: stay ended (safe)');
+    assert.equal(isEndedForThisRun({ status: 'live' }, null), false);
+});

@@ -165,7 +165,11 @@ const App: React.FC = () => {
     // its own GPU layer (transform: translateZ(0) + will-change). If it
     // still misbehaves on a real device after that, flip this back to true
     // as an instant kill switch while we dig further. ──
-    const SUPPRESS_WATCH_PARTY_RIBBON = false;
+    // Oct 2026: watch parties now have one home on the page: the "Upcoming
+    // watch parties" row (countdown, price, ticket) plus the big hero slide
+    // while one is live. The extra ribbon on top repeated the same thing, so
+    // it's switched off (the user found the stacked alerts cluttered).
+    const SUPPRESS_WATCH_PARTY_RIBBON = true;
 
     const activeBannerType = useMemo(() => {
         // ── KILL SWITCH: admin can suppress all banners instantly ──

@@ -89,6 +89,8 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                     <ul className="space-y-2">
                         <li><a href="https://filmfreeway.com/CrateFest" target="_blank" rel="noopener noreferrer" className="hover:text-red-500 transition font-black text-red-600 uppercase tracking-widest text-[10px]">Festival Submissions</a></li>
                         <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">For Filmmakers</a></li>
+                        <li><a href="/premiere" onClick={(e) => handleNavigate(e, '/premiere')} className="hover:text-white transition">Premiere Your Film</a></li>
+                        <li><a href="/host" onClick={(e) => handleNavigate(e, '/host')} className="hover:text-white transition">Host Your Festival</a></li>
                     </ul>
                 </div>
                 <div>

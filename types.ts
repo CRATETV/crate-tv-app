@@ -369,6 +369,7 @@ export interface WatchPartyState {
   directorWelcome?: string;
   directorThankYou?: string;
   applauseCount?: number;
+  pinnedMessage?: { text: string; at: number }; // Control Room announcement shown at the top of the chat
 }
 
 export interface Poll {

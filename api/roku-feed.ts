@@ -442,6 +442,38 @@ export async function GET(request: Request) {
         }
     }
 
+    // 1b. WATCH PARTIES (Oct 2026). Upcoming and live film watch parties get
+    // their own row near the top. The Roku app finds the party to join by
+    // scanning the rows for a watch-party film, so before this a party only
+    // showed up on the TV if its film happened to be in another row (and
+    // not if it wasn't "released" yet, e.g. a premiere).
+    {
+        const nowMs = Date.now();
+        const tzFmt = (ms: number) => new Date(ms).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York', timeZoneName: 'short' });
+        const partyFilms = (Object.values(moviesObj) as Movie[])
+            .filter(m => {
+                if (!m || m.isWatchPartyEnabled !== true || !m.watchPartyStartTime) return false;
+                const start = Date.parse(m.watchPartyStartTime);
+                const live = !!(config as any).activeParties?.[m.key];
+                if (!live && !(Number.isFinite(start) && start > nowMs - 6 * 3600_000 && start < nowMs + 30 * 86400_000)) return false;
+                return isValidForRoku(m, true);
+            })
+            .sort((a, b) => Date.parse(a.watchPartyStartTime!) - Date.parse(b.watchPartyStartTime!));
+        const children = await Promise.all(partyFilms.map(async m => {
+            const isMovieFree = isFreeForEveryone(m, paidKeys);
+            const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
+            const item: any = await formatMovieForRoku(m, assets[m.key], isUnlocked, true);
+            const live = !!(config as any).activeParties?.[m.key];
+            const when = live ? 'LIVE NOW' : `Watch party · ${tzFmt(Date.parse(m.watchPartyStartTime!))}`;
+            item.description = `${when}. ${item.description || ''}`.trim();
+            return item;
+        }));
+        if (children.length > 0) {
+            const at = (config as any).crateFest && categories.length > 0 ? 1 : 0;
+            categories.splice(at, 0, { title: 'Watch Parties', type: 'standard', categoryType: 'watchParty', children });
+        }
+    }
+
     // 2. PREMIER ACCESS (Paid Content)
     const premierMovies = await Promise.all((Object.values(moviesObj) as Movie[])
         .filter(m => isValidForRoku(m) && (m.isForSale || m.isWatchPartyPaid))

@@ -15,6 +15,8 @@ import IntermissionScreen from './IntermissionScreen';
 import SessionKickedScreen from './SessionKickedScreen';
 import { useSessionGuard } from '../hooks/useSessionGuard';
 import { useWatchHeartbeat } from '../hooks/useWatchHeartbeat';
+import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
+import { activePin } from '../api/_lib/controlRoom';
 import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
 import { reportClientError } from '../services/errorLogger';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
@@ -93,7 +95,7 @@ const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>((
     );
 });
 
-const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; verifiedBackstageKey?: string; onBackstageVerify?: (key: string) => void; watchingNow?: number }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, verifiedBackstageKey, onBackstageVerify, watchingNow }) => {
+const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; verifiedBackstageKey?: string; onBackstageVerify?: (key: string) => void; watchingNow?: number; pinnedText?: string }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, verifiedBackstageKey, onBackstageVerify, watchingNow, pinnedText }) => {
     const { getUserIdToken } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -196,6 +198,13 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                     <span className="text-[11px] font-black uppercase tracking-widest text-gray-300">{watchingNow} watching now</span>
                 </div>
             )}
+            {/* Announcement pinned from the Control Room. */}
+            {pinnedText && (
+                <div className="flex items-start gap-2 px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/30 flex-shrink-0">
+                    <span className="text-sm leading-5">📌</span>
+                    <p className="text-[13px] leading-5 text-amber-50 break-words"><span className="font-black text-amber-400 mr-1.5">CRATE</span>{pinnedText}</p>
+                </div>
+            )}
             {/* Q&A Live Banner */}
             {isQALive && (
                 <div className={`bg-gradient-to-r from-amber-600 via-red-600 to-purple-600 px-4 py-2 flex items-center justify-center gap-2 animate-pulse flex-shrink-0 ${showQABanner ? 'animate-[pulse_0.5s_ease-in-out_3]' : ''}`}>
@@ -248,19 +257,22 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                     ) : (
                         <div 
                             key={msg.id} 
-                            className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${msg.isVerifiedDirector ? 'bg-gradient-to-r from-red-600/10 to-purple-600/10 -mx-4 px-4 py-3 border-l-2 border-red-500' : ''}`}
+                            className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${msg.isAdmin ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/5 -mx-4 px-4 py-3 border-l-2 border-amber-400' : msg.isVerifiedDirector ? 'bg-gradient-to-r from-red-600/10 to-purple-600/10 -mx-4 px-4 py-3 border-l-2 border-red-500' : ''}`}
                         >
                             <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 ${msg.isVerifiedDirector ? 'border-2 border-red-500 bg-red-900/50' : 'border border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                             <div className="min-w-0 flex-grow">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <p className={`font-black text-[11px] uppercase tracking-tighter ${msg.isVerifiedDirector ? 'text-red-400' : 'text-red-500'}`}>{msg.userName}</p>
+                                    {msg.isAdmin && (
+                                        <span className="bg-amber-400 text-black text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">CRATE</span>
+                                    )}
                                     {msg.isVerifiedDirector && (
                                         <span className="bg-gradient-to-r from-red-600 to-purple-600 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
                                             <span>🎬</span> Director
                                         </span>
                                     )}
                                 </div>
-                                <p className={`text-sm break-words leading-snug ${msg.isVerifiedDirector ? 'text-white font-medium' : 'text-gray-300'}`}>{msg.text}</p>
+                                <p className={`text-sm break-words leading-snug ${msg.isAdmin || msg.isVerifiedDirector ? 'text-white font-medium' : 'text-gray-300'}`}>{msg.text}</p>
                             </div>
                             {adminPassword && (
                                 <button
@@ -297,7 +309,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, authInitialized, claimActiveSession, unlockedWatchPartyKeys, unlockWatchParty, unlockFestivalBlock, grantFestivalAllAccess, rentals, likedMovies: likedMoviesArray, toggleLikeMovie, hasFestivalAllAccess, unlockedFestivalBlockIds, getUserIdToken } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
-    const [partyState, setPartyState] = useState<WatchPartyState>();
+    const [rawPartyState, setPartyState] = useState<WatchPartyState>();
     // True once we've received a real Firestore snapshot for this party. Used to
     // avoid mounting the block's <video> at the wrong film (index 0) for the brief
     // window after a remount — e.g. iOS reloading the tab after backgrounding —
@@ -311,6 +323,24 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         festivalData.flatMap((d: any) => d.blocks || []).find((b: any) => b.id === movieKey) || null,
         [festivalData, movieKey]
     );
+
+    // FIX (Oct 2026): a party that was run (or tested) before keeps
+    // status 'ended' until its next run actually starts. Viewers arriving for
+    // the NEW scheduled time were shown the "ended / rewatch" screen instead of
+    // the lobby and countdown, and had to click "Rewatch party" to get in.
+    // If the scheduled start is later than when it last ended, it's a new run:
+    // treat it as not started yet.
+    const scheduledStartMs = useMemo(() => {
+        const raw = allMovies[movieKey]?.watchPartyStartTime || (parentBlock as any)?.screeningStartTime || (parentBlock as any)?.watchPartyStartTime;
+        const t = raw ? Date.parse(raw) : NaN;
+        return Number.isFinite(t) ? t : null;
+    }, [allMovies, movieKey, parentBlock]);
+    const partyState = useMemo<WatchPartyState | undefined>(() => {
+        if (rawPartyState?.status === 'ended' && scheduledStartMs != null && !isEndedForThisRun(rawPartyState, scheduledStartMs)) {
+            return { ...rawPartyState, status: 'waiting' };
+        }
+        return rawPartyState;
+    }, [rawPartyState, scheduledStartMs]);
 
     // ── NEXT BLOCK LOOKUP — for the "thank you" screen at the end of a block ──
     // Finds the next chronologically-scheduled block so we can tell full-pass
@@ -576,6 +606,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return () => { cancelled = true; clearInterval(t); };
     }, [movieKey]);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    // ── SWITCHED AWAY → SILENT (Oct 2026) ──────────────────────────────────
+    // Leaving the page (another tab or app, or a call coming in on a phone)
+    // used to keep the film playing, so people heard it over their call.
+    // Now it pauses and goes quiet the moment the page is hidden, and when
+    // they come back it jumps to where the live party is (the foreground
+    // handler in the sync engine below re-syncs) with the sound back on.
+    useEffect(() => {
+        let silencedByUs = false;
+        const onVisibility = () => {
+            const v = videoRef.current;
+            if (!v) return;
+            if (document.hidden) {
+                if (!v.muted) { v.muted = true; silencedByUs = true; }
+                if (!v.paused) v.pause();
+            } else if (silencedByUs) {
+                v.muted = false;
+                silencedByUs = false;
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('pagehide', onVisibility);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('pagehide', onVisibility);
+        };
+    }, []);
     const introVideoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<any>(null);
     // Stable refs so the sync interval never needs to be torn down on Firestore updates
@@ -1328,6 +1385,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
             if (syncPhaseRef.current !== 'idle') return; // never fight an in-progress seek
             if (target.status !== 'live') { video.pause(); return; }
+            // Viewer has switched away (another tab, app or a phone call): stay
+            // paused and silent; they catch up to the live point when back.
+            if (document.hidden) return;
 
             const drift = target.targetPosition - video.currentTime;
             const absDrift = Math.abs(drift);
@@ -2014,7 +2074,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
-        if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({ emoji, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        // Name + account id so the Control Room can show who reacted.
+        if (db) db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({
+            emoji,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            ...(user?.uid ? { uid: user.uid, name: String(user.name || 'Film Lover').slice(0, 40) } : {}),
+        }).catch(() => {});
     };
 
     if (isFestivalLoading) return <LoadingSpinner />;
@@ -2076,7 +2141,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <button onClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} className="text-[10px] font-bold">EXIT</button>
                 </div>
                 <div className="flex-grow flex flex-col overflow-hidden">
-                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
+                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} pinnedText={activePin(partyState?.pinnedMessage, Date.now())?.text} />
                 </div>
                 <div className="p-4 bg-white/5 grid grid-cols-5 gap-2 border-t border-white/10">
                     {REACTION_TYPES.map(emoji => (
@@ -2823,6 +2888,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             isQALive={partyState?.isQALive}
                             user={user}
                             watchingNow={viewerCount}
+                            pinnedText={activePin(partyState?.pinnedMessage, Date.now())?.text}
                             isBackstageVerified={isBackstageVerified}
                             verifiedBackstageKey={verifiedBackstageKey}
                             onBackstageVerify={(key) => {
@@ -2842,6 +2908,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         isQALive={partyState?.isQALive}
                         user={user}
                         watchingNow={viewerCount}
+                            pinnedText={activePin(partyState?.pinnedMessage, Date.now())?.text}
                         isBackstageVerified={isBackstageVerified}
                         verifiedBackstageKey={verifiedBackstageKey}
                         onBackstageVerify={(key) => {

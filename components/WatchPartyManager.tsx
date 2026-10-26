@@ -6,6 +6,7 @@ import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
+import { activePin, PIN_MAX_LENGTH } from '../api/_lib/controlRoom';
 
 // --- TYPES ---
 
@@ -58,6 +59,7 @@ const EmbeddedChat: React.FC<{
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [sendError, setSendError] = useState('');
     const [isClearing, setIsClearing] = useState(false);
     const [isTogglingQA, setIsTogglingQA] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -88,24 +90,33 @@ const EmbeddedChat: React.FC<{
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !user) return;
+        // FIX (Oct 2026): this needed a signed-in CRATE viewer account, which the
+        // admin panel doesn't have (you sign in with the admin password), so the
+        // box was greyed out. Your admin sign-in is all it needs.
+        if (!newMessage.trim()) return;
         setIsSending(true);
+        setSendError('');
         try {
-            await fetch('/api/send-chat-message', {
+            const res = await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     movieKey,
-                    userName: 'CRATETV',
+                    userName: 'CRATE Admin',
                     userAvatar: 'crate',
                     text: newMessage,
                     isAdmin: true,
                     adminPassword: sessionStorage.getItem('adminPassword') || '',
                 }),
             });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(res.status === 401 ? 'Your admin sign-in expired. Sign out and back in, then try again.' : (d.error || 'Message not sent.'));
+            }
             setNewMessage('');
         } catch (error) {
             console.error("Failed to send message:", error);
+            setSendError((error as Error).message);
         } finally {
             setIsSending(false);
         }
@@ -302,9 +313,10 @@ const EmbeddedChat: React.FC<{
             </div>
             <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                    <input type="text" name="chat-message" autoComplete="off" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
-                    <button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button>
+                    <input type="text" name="chat-message" autoComplete="off" maxLength={500} value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Message everyone as CRATE Admin…" className="form-input flex-grow" disabled={isSending} />
+                    <button type="submit" className="submit-btn !px-4" disabled={isSending || !newMessage.trim()}>Send</button>
                 </div>
+                {sendError && <p className="text-xs text-red-400 mt-2">{sendError}</p>}
             </form>
         </div>
     );
@@ -377,6 +389,223 @@ const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
 // (from the viewer-facing player in WatchPartyPage) into the numbers shown
 // here. Refreshes on an interval while the party is live so the admin
 // doesn't have to reload the page to see updated counts.
+// Live reactions in the Control Room: every emoji viewers send, with who
+// sent it (reactions from before Oct 2026 have no name), newest first, plus
+// a running tally for this party.
+// ── CONTROL ROOM EXTRAS (Oct 2026) ──────────────────────────────────────
+// Tickets sold for this party, viewers who just stopped watching, and a
+// pinned announcement. All go through /api/admin-watch-party-stats with the
+// admin sign-in (the admin panel can't read these from the database itself).
+async function controlRoomPost<T>(blockId: string, action: string, extra: Record<string, unknown> = {}): Promise<T> {
+    let password = '';
+    try { password = sessionStorage.getItem('adminPassword') || ''; } catch { /* no storage */ }
+    if (!password) throw new Error('Sign in to the admin panel again.');
+    const res = await fetch('/api/admin-watch-party-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockId, password, action, ...extra }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) throw new Error('Your admin sign-in expired. Sign in again.');
+    if (!res.ok) throw new Error(data.error || 'That didn\'t work. Try again in a minute.');
+    return data as T;
+}
+
+const agoLabel = (msAgo: number) => {
+    const m = Math.floor(msAgo / 60000);
+    return m < 1 ? 'just now' : `${m} min ago`;
+};
+
+interface SalesSummaryView {
+    tickets: number; revenue: number; averagePaid: number; withPromo: number; last15Min: number;
+    recent: { email: string; amount: number; atMs: number | null; type: string }[];
+}
+
+const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId, isLive }) => {
+    const [sales, setSales] = useState<SalesSummaryView | null>(null);
+    const [error, setError] = useState('');
+    const [hidden, setHidden] = useState(false);
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const r = await controlRoomPost<SalesSummaryView>(itemId, 'sales');
+                if (!cancelled) { setSales(r); setError(''); }
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : '';
+                // Staff keys can't see money: just don't show the card.
+                if (!cancelled) { if (/main admin/i.test(msg)) setHidden(true); else setError(msg); }
+            }
+        };
+        load();
+        const t = setInterval(load, isLive ? 30000 : 60000);
+        return () => { cancelled = true; clearInterval(t); };
+    }, [itemId, isLive]);
+    if (hidden) return null;
+    return (
+        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Tickets for this party</p>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            {sales && (
+                <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div><div className="text-2xl font-black text-white tabular-nums">{sales.tickets}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Sold</div></div>
+                        <div><div className="text-2xl font-black text-green-400 tabular-nums">${sales.revenue.toFixed(2)}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Made (before fees)</div></div>
+                        <div><div className="text-2xl font-black text-white tabular-nums">${sales.averagePaid.toFixed(2)}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Average paid</div></div>
+                        <div><div className="text-2xl font-black text-white tabular-nums">{sales.last15Min}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Last 15 min</div></div>
+                    </div>
+                    {sales.recent.length > 0 && (
+                        <ul className="mt-4 space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                            {sales.recent.map((r, i) => (
+                                <li key={i} className="flex items-center gap-3 text-sm">
+                                    <span className="text-white truncate flex-1">{r.email || 'No email'}</span>
+                                    <span className="text-green-400 font-bold tabular-nums">${r.amount.toFixed(2)}</span>
+                                    <span className="text-[11px] text-gray-500 shrink-0 w-16 text-right">{r.atMs ? new Date(r.atMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <p className="text-[11px] text-gray-500 mt-3">
+                        Paid tickets only. Free seats and festival all-access passes aren't counted here.{sales.withPromo > 0 ? ` ${sales.withPromo} used a promo code.` : ''}
+                    </p>
+                </>
+            )}
+        </div>
+    );
+};
+
+interface DroppedView { name: string; device: string; watchedMinutes: number; stoppedMsAgo: number; how: 'left' | 'quiet' }
+
+const DroppedViewersCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId, isLive }) => {
+    const [list, setList] = useState<DroppedView[] | null>(null);
+    const [error, setError] = useState('');
+    useEffect(() => {
+        if (!isLive) { setList(null); return; }
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const r = await controlRoomPost<{ dropped: DroppedView[] }>(itemId, 'dropped');
+                if (!cancelled) { setList(r.dropped || []); setError(''); }
+            } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load.'); }
+        };
+        load();
+        const t = setInterval(load, 30000);
+        return () => { cancelled = true; clearInterval(t); };
+    }, [itemId, isLive]);
+    if (!isLive) return null;
+    const quietCount = (list || []).filter(d => d.how === 'quiet').length;
+    return (
+        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+            <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-black uppercase tracking-widest text-gray-400">Stopped watching (last 15 min)</p>
+                {list && <span className="text-xs font-bold text-gray-400">{list.length}</span>}
+            </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            {list && list.length === 0 && <p className="text-sm text-gray-500">Nobody has dropped off. 👍</p>}
+            {list && list.length > 0 && (
+                <>
+                    {quietCount >= 3 && (
+                        <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-500/30 rounded-lg p-2 mb-3">
+                            {quietCount} people went quiet at about the same time. If that keeps happening, check that the film is playing properly.
+                        </p>
+                    )}
+                    <ul className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        {list.map((d, i) => (
+                            <li key={i} className="flex items-center gap-3 text-sm">
+                                <span className="text-white font-semibold truncate flex-1">{d.name}</span>
+                                <span className="text-[11px] text-gray-400 shrink-0">{d.device} · watched {d.watchedMinutes}m</span>
+                                <span className={`text-[11px] shrink-0 ${d.how === 'quiet' ? 'text-amber-400' : 'text-gray-500'}`} title={d.how === 'quiet' ? 'Switched away, lost connection, or the video got stuck' : 'Closed the page or went back'}>
+                                    {d.how === 'quiet' ? 'went quiet' : 'left'} {agoLabel(d.stoppedMsAgo)}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="text-[11px] text-gray-500 mt-3">"Left" = closed the page. "Went quiet" = switched away, lost connection, or the video got stuck.</p>
+                </>
+            )}
+        </div>
+    );
+};
+
+const PinnedAnnouncementControl: React.FC<{ itemId: string; type: 'movie' | 'block'; pin?: { text: string; at: number } }> = ({ itemId, type, pin }) => {
+    const [text, setText] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const current = activePin(pin, Date.now());
+    const run = async (action: 'pin' | 'unpin') => {
+        setBusy(true); setError('');
+        try {
+            await controlRoomPost(itemId, action, action === 'pin' ? { text, type } : {});
+            if (action === 'pin') setText('');
+        } catch (e) { setError(e instanceof Error ? e.message : 'That didn\'t work.'); }
+        finally { setBusy(false); }
+    };
+    return (
+        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Pinned announcement</p>
+            {current ? (
+                <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-3">
+                    <span className="text-lg leading-none">📌</span>
+                    <p className="text-sm text-white flex-1 break-words">{current.text}</p>
+                    <button onClick={() => run('unpin')} disabled={busy} className="text-xs font-bold text-red-400 hover:text-red-300 shrink-0 disabled:opacity-40">Remove</button>
+                </div>
+            ) : (
+                <p className="text-sm text-gray-500 mb-3">Nothing pinned. A pinned message stays at the top of everyone's chat (and the waiting room) until you remove it.</p>
+            )}
+            <form onSubmit={e => { e.preventDefault(); if (text.trim()) run('pin'); }} className="flex gap-2">
+                <input value={text} onChange={e => setText(e.target.value)} maxLength={PIN_MAX_LENGTH}
+                    placeholder={current ? 'Replace with a new message…' : 'e.g. Q&A with the director right after the film!'}
+                    className="flex-1 min-w-0 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50" />
+                <button type="submit" disabled={busy || !text.trim()} className="bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider px-4 rounded-lg disabled:opacity-40">{busy ? '…' : 'Pin'}</button>
+            </form>
+            {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        </div>
+    );
+};
+
+const LiveReactionsFeed: React.FC<{ itemId: string }> = ({ itemId }) => {
+    const [items, setItems] = useState<{ id: string; emoji: string; name: string; at: Date | null }[]>([]);
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+        const unsub = db.collection('watch_parties').doc(itemId).collection('live_reactions')
+            .orderBy('timestamp', 'desc').limit(200)
+            .onSnapshot(snap => setItems(snap.docs.map(d => {
+                const x = d.data();
+                return { id: d.id, emoji: String(x.emoji || ''), name: String(x.name || 'Someone'), at: x.timestamp?.toDate ? x.timestamp.toDate() : null };
+            })), () => {});
+        return () => unsub();
+    }, [itemId]);
+    const tally = useMemo(() => {
+        const m = new Map<string, number>();
+        items.forEach(r => m.set(r.emoji, (m.get(r.emoji) || 0) + 1));
+        return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    }, [items]);
+    return (
+        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+            <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-black uppercase tracking-widest text-gray-400">Reactions</p>
+                <div className="flex gap-2 flex-wrap justify-end">
+                    {tally.map(([e, n]) => <span key={e} className="text-sm bg-white/5 rounded-full px-2 py-0.5"><span>{e}</span> <span className="text-gray-400 text-xs font-bold">{n}</span></span>)}
+                </div>
+            </div>
+            {items.length === 0 ? (
+                <p className="text-sm text-gray-500">No reactions yet. They'll appear here the moment viewers tap them.</p>
+            ) : (
+                <ul className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                    {items.slice(0, 60).map(r => (
+                        <li key={r.id} className="flex items-center gap-3 text-sm">
+                            <span className="text-xl w-7 text-center">{r.emoji}</span>
+                            <span className="text-white font-semibold truncate flex-1">{r.name}</span>
+                            <span className="text-[11px] text-gray-500 shrink-0">{r.at ? r.at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : ''}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+};
+
 const WatchPartyViewershipStats: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId, isLive }) => {
     const [stats, setStats] = useState<BlockViewershipStats | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -1176,6 +1405,10 @@ const WatchPartyControlRoom: React.FC<{
                                 </div>
 
                                 <WatchPartyViewershipStats itemId={item.id} isLive={isLive} />
+                                <PinnedAnnouncementControl itemId={item.id} type={item.type} pin={partyState?.pinnedMessage} />
+                                <PartySalesCard itemId={item.id} isLive={isLive} />
+                                <DroppedViewersCard itemId={item.id} isLive={isLive} />
+                                <LiveReactionsFeed itemId={item.id} />
                             </div>
                         </div>
                     </div>

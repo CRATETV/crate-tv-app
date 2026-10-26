@@ -36,6 +36,8 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
               <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-amber-400 transition font-black text-amber-500 uppercase tracking-widest text-[10px]">Submit Your Film</a></li>
               <li><a href="https://filmfreeway.com/CrateFest" target="_blank" rel="noopener noreferrer" className="hover:text-red-500 transition font-black text-red-600 uppercase tracking-widest text-[10px]">Festival Submissions</a></li>
               <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
+              <li><a href="/premiere" onClick={(e) => handleNavigate(e, '/premiere')} className="hover:text-white transition">Premiere Your Film</a></li>
+              <li><a href="/host" onClick={(e) => handleNavigate(e, '/host')} className="hover:text-white transition">Host Your Festival</a></li>
             </ul>
           </div>
           <div>

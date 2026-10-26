@@ -3,6 +3,7 @@ import { Movie, FestivalDay, FilmBlock, WatchPartyState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
+import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
 
 // "Upcoming watch parties" on the home page.
 //
@@ -56,7 +57,7 @@ const UpcomingWatchParties: React.FC<{
         const t = minute * 60000;
         const inWindow = (startMs: number, key: string) => {
             if (!Number.isFinite(startMs)) return false;
-            if (allPartyStates[key]?.status === 'ended') return false;
+            if (isEndedForThisRun(allPartyStates[key], startMs)) return false;
             return startMs > t - GRACE_MS && startMs < t + WINDOW_MS;
         };
         const out: Item[] = [];

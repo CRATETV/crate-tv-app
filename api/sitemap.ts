@@ -30,6 +30,8 @@ export async function GET(request: Request) {
             '/zine',
             '/about',
             '/submit',
+            '/host',
+            '/premiere',
             '/top-ten'
         ];
 

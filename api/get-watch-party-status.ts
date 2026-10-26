@@ -12,8 +12,35 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const movieKey = searchParams.get('movieKey');
 
+    // No movieKey: "is ANY party live right now?" (the Roku asks this every
+    // 30s). This used to be an error, which the Roku read as "nothing live"
+    // and which could switch its LIVE badge back off.
     if (!movieKey) {
-      return new Response(JSON.stringify({ error: 'Movie identification required.' }), { status: 400 });
+      const hit = cache.get('__any__');
+      if (hit && Date.now() - hit.timestamp < CACHE_TTL) return new Response(JSON.stringify(hit.response), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      const initErr = getInitializationError();
+      const anyDb = initErr ? null : getAdminDb();
+      if (!anyDb) return new Response(JSON.stringify({ status: 'waiting', isPlaying: false }), { status: 200 });
+      const live = await anyDb.collection('watch_parties').where('status', '==', 'live').limit(20).get();
+      // Only film watch parties (what the Roku's Watch Parties row offers),
+      // started in the last 6 hours (ignores parties nobody ended).
+      const candidates = live.docs
+        .filter(d => (d.data().actualStartTime?.toMillis?.() || 0) > Date.now() - 6 * 3600_000)
+        .sort((a, b) => (b.data().actualStartTime?.toMillis?.() || 0) - (a.data().actualStartTime?.toMillis?.() || 0));
+      let latest: (typeof candidates)[number] | undefined;
+      for (const d of candidates) {
+        const film = await anyDb.collection('movies').doc(d.id).get();
+        if (film.exists && film.data()?.isWatchPartyEnabled === true) { latest = d; break; }
+      }
+      const secs = (v: any) => (v && typeof v.toDate === 'function') ? Math.floor(v.toDate().getTime() / 1000) : 0;
+      const response = latest ? {
+        status: 'live', isPlaying: !!latest.data().isPlaying, movieKey: latest.id,
+        actualStartTimeSeconds: secs(latest.data().actualStartTime),
+        filmStartTimeSeconds: secs(latest.data().filmStartTime) || secs(latest.data().actualStartTime),
+        activeMovieIndex: latest.data().activeMovieIndex ?? 0,
+      } : { status: 'waiting', isPlaying: false };
+      cache.set('__any__', { response, timestamp: Date.now() });
+      return new Response(JSON.stringify(response), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
     const nowTime = Date.now();

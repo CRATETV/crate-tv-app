@@ -97,11 +97,14 @@ service cloud.firestore {
 
       match /live_reactions/{reactionId} {
         allow read: if true;
-        // Only a short emoji + timestamp — nothing else can be smuggled in.
+        // A short emoji + time, plus (Oct 2026) the reactor's own account id
+        // and display name so the Control Room can show who reacted.
         allow create: if isSignedIn()
-          && request.resource.data.keys().hasOnly(['emoji', 'timestamp'])
+          && request.resource.data.keys().hasOnly(['emoji', 'timestamp', 'uid', 'name'])
           && request.resource.data.emoji is string
-          && request.resource.data.emoji.size() <= 16;
+          && request.resource.data.emoji.size() <= 16
+          && (!('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid)
+          && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 40));
         allow update, delete: if false;
       }
 

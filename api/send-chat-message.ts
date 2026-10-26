@@ -4,6 +4,7 @@ import { checkBackstageKey } from './_lib/backstage.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { verifyAdminPassword } from './_lib/adminAuth.js';
 
 // This endpoint used to trust `isVerifiedDirector`, `isAdmin`, and
 // `isSystemMessage` straight from the request body with no verification at
@@ -59,8 +60,9 @@ export async function POST(request: Request) {
     let senderUid: string | null = null;
 
     if (wantsAdmin) {
-      const validPwd = !!adminPassword &&
-        (adminPassword === process.env.ADMIN_PASSWORD || adminPassword === process.env.ADMIN_MASTER_PASSWORD);
+      // Any admin sign-in (you or staff) can post as CRATE Admin, same as
+      // who can delete chat messages.
+      const validPwd = !!adminPassword && await verifyAdminPassword(adminPassword);
       if (!validPwd) {
         return new Response(JSON.stringify({ error: 'Unauthorized admin message.' }), { status: 401 });
       }

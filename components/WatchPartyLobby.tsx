@@ -3,6 +3,7 @@ import { Movie, WatchPartyState } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
+import { activePin } from '../api/_lib/controlRoom';
 
 // Auto-transitions into the party after 1.5s — fixes "Starting Now" getting stuck on slow devices
 const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onPartyStart }) => {
@@ -595,8 +596,25 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                     {/* Title */}
                     <div className="space-y-3">
                         <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight leading-none">{movie.title}</h1>
-                        <p className="text-red-500 font-black uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>
+                        {movie.director && <p className="text-red-500 font-black uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>}
+                        {/* What the film is about, so people can decide before it starts. */}
+                        {movie.synopsis && (
+                            <p className="text-gray-400 text-sm md:text-base leading-relaxed max-w-xl mx-auto line-clamp-4">
+                                {movie.synopsis.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '')}
+                            </p>
+                        )}
                     </div>
+
+                    {/* Announcement pinned from the Control Room. */}
+                    {(() => {
+                        const pin = activePin(partyState?.pinnedMessage, Date.now());
+                        return pin ? (
+                            <div className="max-w-xl mx-auto flex items-start gap-2 text-left bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+                                <span className="leading-5">📌</span>
+                                <p className="text-sm leading-5 text-amber-50 break-words"><span className="font-black text-amber-400 mr-1.5">CRATE</span>{pin.text}</p>
+                            </div>
+                        ) : null;
+                    })()}
 
                     {/* Countdown — always shows something here so the page never goes quiet.
                         If a start time is scheduled, show the live countdown. If not, show
