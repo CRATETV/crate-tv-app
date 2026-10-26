@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10 — Pay what you want for watch parties
+
+- Admin → Watch parties: a paid film watch party can be switched to **Pay what you want (from $3)** (checkbox under the price). Viewers see "Pay what you want" on the ticket button and pick $3, $5, $10 or their own amount at checkout.
+- The server checks the amount (`payWhatYouWantCents`, tested): a real number from $3 to $500, never below the minimum, no promo codes on top. Festival blocks keep their fixed prices.
+
+
 ## 2026-10 — Security audit: loopholes closed
 
 **Getting in free / paying less**

@@ -282,6 +282,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 watchPartyStartTime: m.watchPartyStartTime ?? updated[key].watchPartyStartTime,
                 isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
                 watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
+                watchPartyPayWhatYouWant: m.watchPartyPayWhatYouWant ?? updated[key].watchPartyPayWhatYouWant,
             };
         });
         return updated;

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
+import { PWYW_MIN_DOLLARS, PWYW_SUGGESTED, payWhatYouWantCents } from '../api/_lib/paymentRules';
 
 declare const Square: any;
 
@@ -76,6 +77,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const [customAmount, setCustomAmount] = useState('5.00');
     const [promoCode, setPromoCode] = useState('');
     const [appliedPromo, setAppliedPromo] = useState<any>(null);
+    // Pay what you want (watch parties the admin switched to it): the viewer
+    // picks the amount, from the minimum up. The server checks it again.
+    const isPwyw = paymentType === 'watchPartyTicket' && movie?.isWatchPartyPaid === true && movie?.watchPartyPayWhatYouWant === true;
+    const [pwywAmount, setPwywAmount] = useState<string>(String(PWYW_SUGGESTED[1] ?? PWYW_MIN_DOLLARS));
+    const [pwywOther, setPwywOther] = useState(false);
+    const pwywValid = !isPwyw || payWhatYouWantCents(pwywAmount) != null;
     
     const cardRef = useRef<any>(null);
     // Generated once when this checkout attempt opens, not per request — if
@@ -109,11 +116,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
             return parseFloat(customAmount) || 0;
         }
+        if (isPwyw) return parseFloat(pwywAmount) || 0;
         if (appliedPromo) {
             return appliedPromo.finalPriceInCents / 100;
         }
         return basePrice;
-    }, [paymentType, customAmount, basePrice, appliedPromo]);
+    }, [paymentType, customAmount, basePrice, appliedPromo, isPwyw, pwywAmount]);
 
     const itemTitle = useMemo(() => {
         if (movie) return movie.title;
@@ -374,6 +382,37 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
+                            {isPwyw && (
+                                <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Pay what you want</label>
+                                    <p className="text-sm text-gray-400">Choose any amount from ${PWYW_MIN_DOLLARS}. Every bit supports the filmmakers.</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {PWYW_SUGGESTED.map(v => {
+                                            const on = !pwywOther && parseFloat(pwywAmount) === v;
+                                            return (
+                                                <button key={v} type="button" onClick={() => { setPwywOther(false); setPwywAmount(String(v)); }}
+                                                    className={`py-3 rounded-xl font-black text-lg border-2 transition-all ${on ? 'bg-red-600 border-red-600 text-white' : 'bg-white/5 border-white/10 text-white hover:border-white/30'}`}>
+                                                    ${v}
+                                                </button>
+                                            );
+                                        })}
+                                        <button type="button" onClick={() => { setPwywOther(true); setPwywAmount(''); }}
+                                            className={`py-3 rounded-xl font-black text-sm border-2 transition-all ${pwywOther ? 'bg-red-600 border-red-600 text-white' : 'bg-white/5 border-white/10 text-white hover:border-white/30'}`}>
+                                            Other
+                                        </button>
+                                    </div>
+                                    {pwywOther && (
+                                        <div className="relative">
+                                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-black text-gray-600">$</span>
+                                            <input type="number" inputMode="decimal" autoFocus min={PWYW_MIN_DOLLARS} step="1" value={pwywAmount}
+                                                onChange={e => setPwywAmount(e.target.value)} placeholder={String(PWYW_MIN_DOLLARS)}
+                                                className="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-4 pl-10 text-2xl font-black text-white focus:border-red-600 outline-none" />
+                                        </div>
+                                    )}
+                                    {!pwywValid && pwywAmount !== '' && <p className="text-xs text-amber-400">The minimum is ${PWYW_MIN_DOLLARS}.</p>}
+                                </div>
+                            )}
+
                             {!isFree && (
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
@@ -397,7 +436,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {!['donation', 'billSavingsDeposit'].includes(paymentType) && (
+                            {!['donation', 'billSavingsDeposit'].includes(paymentType) && !isPwyw && (
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Promotion Logic</p>
                                     <div className="flex gap-2">
@@ -429,7 +468,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
                             <button 
                                 type="submit" 
-                                disabled={isLoading || isProcessing}
+                                disabled={isLoading || isProcessing || !pwywValid}
                                 className={`w-full ${isFree ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3`}
                             >
                                 {isProcessing ? (

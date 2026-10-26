@@ -10,7 +10,7 @@ import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 import { isFestivalPassActive, laterExpiry, festivalPassOnSale, festivalPassExpiryFor, blockSaleClosed, partnerPassIsCurrent } from './_lib/festivalPass.js';
 import { getPwffBlocks } from './_lib/festivalTiming.js';
 import { escapeHtml } from './_lib/validation.js';
-import { promoProblem, priceAfterPromo } from './_lib/paymentRules.js';
+import { promoProblem, priceAfterPromo, payWhatYouWantCents, PWYW_MIN_DOLLARS } from './_lib/paymentRules.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
 import { getPartner, getPublishedBlocks, grantBlocksToUser } from './_lib/partners.js';
@@ -434,6 +434,19 @@ export async function POST(request: Request) {
             const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
+            // Pay what you want: the viewer's amount, checked here (never trusted
+            // as-is): a real number from the minimum up. No promo codes on top.
+            if (paymentType === 'watchPartyTicket' && movieData?.isWatchPartyPaid === true && movieData?.watchPartyPayWhatYouWant === true) {
+                const chosen = payWhatYouWantCents(amount);
+                if (chosen == null) {
+                    return new Response(JSON.stringify({ error: `Please choose an amount of at least $${PWYW_MIN_DOLLARS}.` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                }
+                if (promo) {
+                    return new Response(JSON.stringify({ error: "Promo codes can't be used on pay-what-you-want tickets." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                }
+                amountInCents = chosen;
+                note = `Watch Party Ticket (pay what you want): ${movieData?.title || itemId}`;
+            }
         }
     }
     else if (paymentType === 'block') {

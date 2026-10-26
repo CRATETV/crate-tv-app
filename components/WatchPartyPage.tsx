@@ -2459,7 +2459,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                             used to render literally "$undefined" for anyone who skipped the
                                             lobby (which already has this same fallback) and landed here
                                             directly. Match the lobby's fallback so it's never blank/broken. */}
-                                        Get Ticket — ${(parentBlock?.price ?? movie.watchPartyPrice ?? 10).toFixed(2)}
+                                        Get Ticket — {parentBlock == null && movie.watchPartyPayWhatYouWant ? `Pay what you want (from $3)` : `$${(parentBlock?.price ?? movie.watchPartyPrice ?? 10).toFixed(2)}`}
                                     </button>
                                     
                                     <div className="pt-10 border-t border-white/10">

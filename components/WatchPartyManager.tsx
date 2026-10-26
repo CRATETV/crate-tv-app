@@ -5,6 +5,7 @@ import { getBlockViewershipStats, BlockViewershipStats } from '../services/watch
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
+import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
 
 // --- TYPES ---
 
@@ -16,6 +17,7 @@ interface WatchableItem {
     watchPartyStartTime?: string;
     isWatchPartyPaid?: boolean;
     watchPartyPrice?: number;
+    watchPartyPayWhatYouWant?: boolean; // Only for movies
     fullMovie?: string; // Only for movies
     movieKeys?: string[]; // Only for blocks
 }
@@ -1282,11 +1284,24 @@ const MovieRow: React.FC<{
                         step="0.01"
                         value={item.watchPartyPrice ?? 0}
                         onChange={e => onChange({ watchPartyPrice: parseFloat(e.target.value) || 0 })}
-                        disabled={!item.isWatchPartyPaid}
+                        disabled={!item.isWatchPartyPaid || !!item.watchPartyPayWhatYouWant}
                         className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white w-20 outline-none focus:border-amber-500 disabled:opacity-30"
                         placeholder="0.00"
                     />
                 </div>
+                {item.type === 'movie' && (
+                    <label className={`mt-2 flex items-center gap-2 text-[11px] font-bold ${item.isWatchPartyPaid ? 'text-gray-300 cursor-pointer' : 'text-gray-600'}`}
+                        title={`Viewers choose what to pay, from $${PWYW_MIN_DOLLARS} up.`}>
+                        <input
+                            type="checkbox"
+                            className="w-3.5 h-3.5 accent-amber-500"
+                            checked={!!item.watchPartyPayWhatYouWant}
+                            disabled={!item.isWatchPartyPaid}
+                            onChange={e => onChange({ watchPartyPayWhatYouWant: e.target.checked })}
+                        />
+                        Pay what you want (from ${PWYW_MIN_DOLLARS})
+                    </label>
+                )}
             </td>
             <td className="p-3">
                 <button 
@@ -1379,6 +1394,7 @@ const WatchPartyManager: React.FC<{
                 watchPartyStartTime: m.watchPartyStartTime,
                 isWatchPartyPaid: m.isWatchPartyPaid,
                 watchPartyPrice: m.watchPartyPrice,
+                watchPartyPayWhatYouWant: m.watchPartyPayWhatYouWant,
                 fullMovie: m.fullMovie
             });
         });

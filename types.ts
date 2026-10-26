@@ -183,6 +183,8 @@ export interface Movie {
   watchPartyIntroVideoUrl?: string;  // Plays before the film — opening night use
   isWatchPartyPaid?: boolean;
   watchPartyPrice?: number;
+  /** Viewers choose their price (minimum $3, see api/_lib/paymentRules.ts). */
+  watchPartyPayWhatYouWant?: boolean;
   isForSale?: boolean;
   salePrice?: number;
   customLaurelUrl?: string;

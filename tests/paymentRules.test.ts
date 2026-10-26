@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { promoProblem, priceAfterPromo } from '../api/_lib/paymentRules.js';
+import { promoProblem, priceAfterPromo, payWhatYouWantCents } from '../api/_lib/paymentRules.js';
 
 const now = Date.parse('2027-03-01T00:00:00Z');
 
@@ -22,4 +22,16 @@ test('a discount can never make the price negative or larger', () => {
     assert.equal(priceAfterPromo(1000, { type: 'discount', discountValue: -50 }), 1000);
     assert.equal(priceAfterPromo(1000, { type: 'one_time_access' }), 0);
     assert.equal(priceAfterPromo(1000, { type: 'mystery' }), 1000);
+});
+
+test('pay what you want: $3 minimum, sensible maximum, real numbers only', () => {
+    assert.equal(payWhatYouWantCents(3), 300);
+    assert.equal(payWhatYouWantCents('7.50'), 750);
+    assert.equal(payWhatYouWantCents(25), 2500);
+    assert.equal(payWhatYouWantCents(2.99), null, 'under the minimum');
+    assert.equal(payWhatYouWantCents(0), null);
+    assert.equal(payWhatYouWantCents(-5), null);
+    assert.equal(payWhatYouWantCents('abc'), null, 'LOOPHOLE: not a number must never skip the charge');
+    assert.equal(payWhatYouWantCents(undefined), null);
+    assert.equal(payWhatYouWantCents(100000), null, 'typo guard');
 });

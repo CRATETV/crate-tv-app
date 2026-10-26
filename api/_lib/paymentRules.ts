@@ -21,3 +21,20 @@ export function priceAfterPromo(amountInCents: number, promo: any): number {
     }
     return amountInCents;
 }
+
+// ── Pay what you want (watch parties) ──────────────────────────────────────
+// An admin can switch a watch party to "pay what you want": the viewer picks
+// any amount from the minimum up. The minimum covers card fees (Square takes
+// about 2.9% + 30¢ of every payment).
+export const PWYW_MIN_DOLLARS = 3;
+export const PWYW_MAX_DOLLARS = 500;
+export const PWYW_SUGGESTED = [3, 5, 10];
+
+/** The amount in cents if it's allowed, otherwise null. Pure, tested. */
+export function payWhatYouWantCents(amount: unknown): number | null {
+    const dollars = typeof amount === 'string' ? Number(amount.trim()) : Number(amount);
+    if (!Number.isFinite(dollars)) return null;
+    const cents = Math.round(dollars * 100);
+    if (cents < PWYW_MIN_DOLLARS * 100 || cents > PWYW_MAX_DOLLARS * 100) return null;
+    return cents;
+}
