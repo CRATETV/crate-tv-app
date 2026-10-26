@@ -35,6 +35,7 @@ export const TAB_META: Record<string, TabMeta> = {
 
     analytics:    { label: 'Stats', icon: '📊', desc: 'Views, growth and where your audience comes from.', keywords: 'analytics stats views growth' },
     roku:         { label: 'Roku', icon: '📺', desc: 'The Roku channel: rows, hero, announcements and stats.', keywords: 'roku tv channel' },
+    storage:      { label: 'Storage clean-up', icon: '🧹', desc: 'Video files CRATE no longer uses: keep or delete them.', keywords: 's3 bucket storage cleanup clean up delete videos files aws cost' },
     system:       { label: 'Logs & security', icon: '🛡️', desc: 'Activity log, errors and security checks.', keywords: 'audit logs errors security' },
     permissions:  { label: 'Team & permissions', icon: '🔑', desc: 'Who on your team can open which tabs.', keywords: 'permissions team staff access roles' },
 };
@@ -45,10 +46,10 @@ export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] 
     { title: 'Live & festivals', accent: 'violet', ids: ['watchParty', 'pwff', 'partners', 'crateFestHub', 'ticketCodes'] },
     { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email', 'outreach'] },
     { title: 'Money & legal', accent: 'green', ids: ['money', 'refunds', 'contracts', 'vouchers', 'shop'] },
-    { title: 'Platform', accent: 'sky', ids: ['analytics', 'roku', 'system', 'permissions'] },
+    { title: 'Platform', accent: 'sky', ids: ['analytics', 'roku', 'storage', 'system', 'permissions'] },
 ];
 
 export const groupOf = (id: string) => TAB_GROUPS.find(g => g.ids.includes(id));
 
 /** Tabs that draw their own page header. */
-export const SELF_HEADED = new Set(['pulse', 'money', 'refunds', 'contracts', 'actors']);
+export const SELF_HEADED = new Set(['pulse', 'money', 'refunds', 'contracts', 'actors', 'storage']);

@@ -45,6 +45,7 @@ import EarningsPayoutsTab from './admin/EarningsPayoutsTab';
 import ContractsCenterTab from './admin/ContractsCenterTab';
 import ActorApprovalsTab from './admin/ActorApprovalsTab';
 import PaymentsRefundsTab from './admin/PaymentsRefundsTab';
+import StorageCleanupTab from './admin/StorageCleanupTab';
 import { TAB_META, SELF_HEADED, groupOf } from './admin/tabMeta';
 import { ACCENT } from './admin/ui';
 
@@ -72,7 +73,7 @@ const normalizeTabIds = (ids: string[]): string[] =>
 
 // Hard-coded security boundary: never visible to non-master admins no matter
 // what is stored in Firestore.
-const MASTER_ONLY = ['permissions', 'system', 'money', 'refunds', 'contracts', 'roku', 'outreach', 'partners'];
+const MASTER_ONLY = ['permissions', 'system', 'money', 'refunds', 'contracts', 'roku', 'outreach', 'partners', 'storage'];
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4">{children}</h3>
@@ -684,6 +685,7 @@ const AdminPage: React.FC = () => {
                         />
                     )}
                     {activeTab === 'refunds' && <PaymentsRefundsTab />}
+                    {activeTab === 'storage' && <StorageCleanupTab />}
                     {activeTab === 'contracts' && <ContractsCenterTab movies={movies} pipeline={pipeline} categories={categories} />}
                     {activeTab === 'partners' && <PartnersAdminTab allMovies={movies} />}
                     {activeTab === 'money' && (

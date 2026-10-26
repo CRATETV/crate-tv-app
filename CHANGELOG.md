@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10 — Admin → Storage clean-up
+
+- New admin tab **Storage clean-up** (Platform group, top admin only): "Check storage" lists the video files in the S3 bucket that CRATE doesn't use, one row per film file (an HLS folder is one row), biggest first, with the reason (hidden film / not used by any film). Each row is **Keep** (default) or **Delete**; "Delete marked" asks you to type DELETE. The server works the list out again before deleting and only deletes rows still unused (`api/admin-storage-cleanup.ts`, audit-logged). Same rules as the Terminal tool, now shared in `api/_lib/storageCleanup.ts`.
+
+## 2026-10 — Bucket clean-up tool
+
+- `ops/storage/clean-bucket.ts`: deletes video files in the S3 bucket that CRATE no longer uses, in two steps. Plan first (`npx tsx ops/storage/clean-bucket.ts`, deletes nothing, list on the Desktop), then `--delete` (type DELETE to confirm; only files on that list that are still unused). Counts hidden films and unused submission uploads as not in use (Salome's choice). Always keeps: non-video files, visible films, hidden films with an upcoming/live party or a future "hide after" date or premiered in the last week, festival blocks still in their rewatch week, partner films, anything else the site data points to, and whole HLS folders in use. Rules in `api/_lib/storageCleanup.ts`, tested in `tests/bucketCleanup.test.ts`. Admin password is typed in and never saved.
+
 ## 2026-10 — One set of controls, blocks play film after film, sign in before paying
 
 - **Control Room player is a preview only.** Its play / pause / seek used to be sent to every viewer, so it fought the real controls (the party clock, and a second admin window). Viewers now always follow the party clock; control the party with Start, Next Film and End Party.
