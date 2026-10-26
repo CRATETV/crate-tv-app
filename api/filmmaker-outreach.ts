@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { LOGO_URL } from './_lib/emailBranding.js';
+import { isMasterAdmin } from './_lib/adminAuth.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,7 +18,13 @@ export async function POST(req: Request) {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
 
-    const { action, query, mode, filmmaker, emailData } = await req.json();
+    const { action, query, mode, filmmaker, emailData, password } = await req.json();
+    // SECURITY (Oct 2026 audit): this had no login check at all, so anyone
+    // could send any email from studio@cratetv.net to anyone, and run up the
+    // AI search bill. Master admin only now (it's a master-only tab).
+    if (!(await isMasterAdmin(password))) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
 
     // ── ACTION: SEARCH — find filmmakers or CC films via Claude + web search ──
     if (action === 'search') {

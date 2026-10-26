@@ -41,6 +41,8 @@ export async function POST(request: Request) {
         const userRecord = await auth.getUserByEmail(email);
         userExists = true;
         await auth.setCustomUserClaims(userRecord.uid, { ...userRecord.customClaims, isActor: true });
+        // The actor this account may edit (see update-actor-profile.ts).
+        await db.collection('users').doc(userRecord.uid).set({ verifiedActorName: actorName }, { merge: true });
     } catch (e) {}
     
     const batch = db.batch();

@@ -1,7 +1,8 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
-import { festivalPassExpiryFor, laterExpiry } from './_lib/festivalPass.js';
+import { festivalPassExpiryFor, festivalPassOnSale, laterExpiry, blockSaleClosed } from './_lib/festivalPass.js';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { selectPwffDays } from './_lib/partnerRules.js';
 
 // Redeems a festival ticket code (full festival pass, single-day pass, or a
@@ -49,6 +50,14 @@ export async function POST(request: Request) {
             });
         }
 
+        // Codes are short enough that unlimited guessing could eventually hit
+        // a real one, so attempts are limited per person and per connection.
+        if (!rateLimit(`redeem-code:uid:${uid}`, 10, 10 * 60_000) || !rateLimit(`redeem-code:ip:${getIP(request)}`, 20, 10 * 60_000)) {
+            return new Response(JSON.stringify({ error: 'Too many tries. Please wait 10 minutes and try again.' }), {
+                status: 429, headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const normalizedCode = String(code).toUpperCase().trim();
         const codesSnap = await db.collection('ticket_codes').where('code', '==', normalizedCode).limit(1).get();
 
@@ -75,7 +84,9 @@ export async function POST(request: Request) {
         }).toISOString();
 
         // A full-pass code is good for this festival only (see festivalPass.ts).
-        const passExpiry = festivalPassExpiryFor(selectPwffDays(scheduleDays as any[]).flatMap((d: any) => d.blocks || []), FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+        const pwffBlocks = selectPwffDays(scheduleDays as any[]).flatMap((d: any) => d.blocks || []);
+        const passSale = festivalPassOnSale(pwffBlocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+        const passExpiry = festivalPassExpiryFor(pwffBlocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
 
         type RedeemResult =
             | { ok: false; error: string }
@@ -95,6 +106,11 @@ export async function POST(request: Request) {
             const userData = userDoc.data() || {};
 
             if (codeData.type === 'full_pass') {
+                // Same rule as buying a pass: only while a festival is coming up
+                // or running. The code stays unused so it works later.
+                if (!passSale.onSale || !passExpiry) {
+                    return { ok: false, error: `This pass code can't be used yet. ${passSale.reason || ''}`.trim() };
+                }
                 tx.set(userRef, {
                     hasFestivalAllAccess: true,
                     festivalPassExpiry: laterExpiry(userData.festivalPassExpiry, passExpiry),
@@ -108,6 +124,10 @@ export async function POST(request: Request) {
                 // every block scheduled that day, exactly like buying each one.
                 const currentDays: number[] = userData.unlockedFestivalDays || [];
                 const dayBlocks = selectPwffDays(scheduleDays as any[]).find((d: any) => d.day === codeData.dayNumber)?.blocks || [];
+                // Don't use up a code on a day that's already over.
+                if (!dayBlocks.length || dayBlocks.every((b: any) => blockSaleClosed(b, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS))) {
+                    return { ok: false, error: "This day's screenings have ended, so this code can't be used." };
+                }
                 const currentBlocks = userData.unlockedBlocks || {};
                 const addedBlocks: Record<string, string> = {};
                 for (const b of dayBlocks) if (b?.id) addedBlocks[b.id] = expiryFor(b);
@@ -118,16 +138,16 @@ export async function POST(request: Request) {
             } else if (codeData.type === 'block') {
                 // Valid through the screening + rewatch week (not 14 days
                 // from redemption — early redeemers used to be locked out).
-                const currentBlocks = userData.unlockedBlocks || {};
-                const updates: Record<string, any> = {
-                    unlockedBlocks: { ...currentBlocks, [codeData.blockId]: expiryFor(findBlockById(codeData.blockId)) },
-                };
-                if (Array.isArray(codeData.movieKeys) && codeData.movieKeys.length > 0) {
-                    const currentKeys: string[] = userData.unlockedWatchPartyKeys || [];
-                    const merged = Array.from(new Set([...currentKeys, ...codeData.movieKeys]));
-                    updates.unlockedWatchPartyKeys = merged;
+                const block = findBlockById(codeData.blockId);
+                if (block && blockSaleClosed(block, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS)) {
+                    return { ok: false, error: "This screening has ended, so this code can't be used." };
                 }
-                tx.set(userRef, updates, { merge: true });
+                const currentBlocks = userData.unlockedBlocks || {};
+                // Only the dated block ticket. (The films used to be added as
+                // permanent watch-party tickets too, which never expired.)
+                tx.set(userRef, {
+                    unlockedBlocks: { ...currentBlocks, [codeData.blockId]: expiryFor(block) },
+                }, { merge: true });
             } else {
                 return { ok: false, error: 'Unrecognized code type.' };
             }

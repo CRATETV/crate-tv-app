@@ -28,11 +28,37 @@ export async function POST(request: Request) {
     const decodedToken = await auth.verifyIdToken(token);
     const uid = decodedToken.uid;
 
+    // SECURITY (Oct 2026 audit): any signed-in account could call this, and
+    // the actor was picked by the account's display NAME, which anyone can
+    // change. So anyone could rename themselves "Famous Actor" and replace
+    // that actor's public photo and bio on every film. Now only approved
+    // actors may edit, and the name is locked in the first time they do.
+    if (decodedToken.isActor !== true) {
+        return new Response(JSON.stringify({ error: 'Only approved actors can edit an actor profile.' }), { status: 403, headers: { 'Content-Type': 'application/json' }});
+    }
     const userDoc = await db.collection('users').doc(uid).get();
-    if (!userDoc.exists || !userDoc.data()?.name) {
+    const userData = userDoc.data() || {};
+    if (!userDoc.exists) {
         return new Response(JSON.stringify({ error: "Your user profile could not be found to apply updates." }), { status: 404, headers: { 'Content-Type': 'application/json' }});
     }
-    const actorName = userDoc.data()!.name;
+    // The actor this account may edit: locked at approval. Older accounts
+    // get it from their approved actor sign-up (matched by email), never
+    // from the editable display name.
+    let actorName: string | undefined = userData.verifiedActorName;
+    if (!actorName && decodedToken.email) {
+        const approved = await db.collection('actorSubmissions')
+            .where('email', '==', decodedToken.email).where('status', '==', 'approved').limit(1).get();
+        actorName = approved.empty ? undefined : approved.docs[0].data().actorName;
+        if (actorName) await db.collection('users').doc(uid).set({ verifiedActorName: actorName }, { merge: true });
+    }
+    if (!actorName) {
+        return new Response(JSON.stringify({ error: "We couldn't match this account to an approved actor profile. Please contact CRATE." }), { status: 403, headers: { 'Content-Type': 'application/json' }});
+    }
+    // Links must be web links or site paths (no "javascript:" and the like).
+    const isUrl = (v: unknown) => typeof v === 'string' && v.length < 1000 && /^(https?:\/\/|\/)[^\s"'<>]*$/.test(v);
+    if (!isUrl(photoUrl) || (highResPhotoUrl && !isUrl(highResPhotoUrl)) || (imdbUrl && !isUrl(imdbUrl)) || typeof bio !== 'string' || bio.length > 5000) {
+        return new Response(JSON.stringify({ error: 'Please check your photos, IMDb link and bio.' }), { status: 400, headers: { 'Content-Type': 'application/json' }});
+    }
 
     const batch = db.batch();
 

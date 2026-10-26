@@ -5,8 +5,10 @@
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const awardName = searchParams.get('award') || 'Official Selection';
-    const year      = searchParams.get('year')  || new Date().getFullYear().toString();
+    // Text goes into the SVG, so only plain characters are allowed (Oct 2026 audit).
+    const plain = (v: string, max: number) => v.replace(/[^A-Za-z0-9 '&.,:!\-]/g, '').replace(/&/g, '&amp;').replace(/'/g, '&#39;').slice(0, max);
+    const awardName = plain(searchParams.get('award') || 'Official Selection', 60) || 'Official Selection';
+    const year      = (searchParams.get('year') || '').replace(/[^0-9]/g, '').slice(0, 4) || new Date().getFullYear().toString();
     const colorKey  = (searchParams.get('color') || 'gold').toLowerCase();
 
     const colors: Record<string, string> = {

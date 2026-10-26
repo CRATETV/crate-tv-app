@@ -35,8 +35,9 @@ export async function GET(request: Request) {
         data.name.toLowerCase().includes(query) || 
         (data.bio && data.bio.toLowerCase().includes(query))
       ) {
+        const { email: _email, ...pub } = data; // never expose actors' emails
         results.push({
-          ...data,
+          ...pub,
           slug: doc.id // Ensure the slug is present for navigation
         });
       }

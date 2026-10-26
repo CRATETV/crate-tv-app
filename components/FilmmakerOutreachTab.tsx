@@ -87,7 +87,7 @@ const FilmmakerOutreachTab: React.FC = () => {
             const res = await fetch('/api/filmmaker-outreach', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'search', query, mode }),
+                body: JSON.stringify({ password: sessionStorage.getItem('adminPassword'), action: 'search', query, mode }),
             });
             const data = await res.json();
             if (data.success) {
@@ -109,7 +109,7 @@ const FilmmakerOutreachTab: React.FC = () => {
             const res = await fetch('/api/filmmaker-outreach', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'draft', filmmaker }),
+                body: JSON.stringify({ password: sessionStorage.getItem('adminPassword'), action: 'draft', filmmaker }),
             });
             const data = await res.json();
             if (data.success) {
@@ -131,6 +131,7 @@ const FilmmakerOutreachTab: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    password: sessionStorage.getItem('adminPassword'),
                     action: 'send',
                     emailData: {
                         to: filmmaker.email,

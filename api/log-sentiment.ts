@@ -1,8 +1,12 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 export async function POST(request: Request) {
   try {
+    if (!rateLimit(`log-sentiment:${getIP(request)}`, 120, 10 * 60_000)) {
+        return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+    }
     const { movieKey, type, timestamp } = await request.json();
 
     if (!movieKey || !type || timestamp === undefined) {

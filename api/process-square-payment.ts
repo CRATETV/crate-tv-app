@@ -7,8 +7,10 @@ import { logServerError } from './_lib/logError.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { LOGO_URL_ON_DARK, renderBrandedEmail } from './_lib/emailBranding.js';
 import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
-import { isFestivalPassActive, laterExpiry } from './_lib/festivalPass.js';
-import { computeFestivalPassExpiry } from './_lib/festivalTiming.js';
+import { isFestivalPassActive, laterExpiry, festivalPassOnSale, festivalPassExpiryFor, blockSaleClosed, partnerPassIsCurrent } from './_lib/festivalPass.js';
+import { getPwffBlocks } from './_lib/festivalTiming.js';
+import { escapeHtml } from './_lib/validation.js';
+import { promoProblem, priceAfterPromo } from './_lib/paymentRules.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
 import { getPartner, getPublishedBlocks, grantBlocksToUser } from './_lib/partners.js';
@@ -19,9 +21,12 @@ const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 // Server-side price map in cents for strictly static platform fees.
 const staticPriceMap: Record<string, number> = {
   subscription: 499,
-  pass: 5000,
   crateFestPass: 1500,
 };
+
+const FULL_PASS_ITEM = 'full-festival-pass';
+const MAX_DONATION_CENTS = 1_000_000; // $10,000
+
 
 // A regular standalone catalog rental (e.g. LUNA once detached from its
 // festival block) is a short 2-day window from purchase, not a full
@@ -185,7 +190,29 @@ export async function POST(request: Request) {
       });
     }
 
-    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, promoCode, idempotencyKey: clientIdempotencyKey } = await request.json();
+    const body = await request.json();
+    const { sourceId, amount, movieTitle, directorName, itemId, blockTitle, idempotencyKey: clientIdempotencyKey } = body;
+    let paymentType: string = body.paymentType;
+    const email: string | null = typeof body.email === 'string' && body.email.includes('@') ? body.email.trim().slice(0, 200) : null;
+    const promoCode: string | null = typeof body.promoCode === 'string' && body.promoCode.trim() ? body.promoCode.toUpperCase().trim().slice(0, 60) : null;
+
+    // LOOPHOLE (Oct 2026 audit): the full pass used to be granted for ANY
+    // payment type that carried itemId "full-festival-pass", so a $4.99
+    // "subscription" or a $1 "donation" with that id unlocked the whole
+    // festival. The full pass is now only ever sold as itself.
+    if (paymentType === 'pass') {
+        if (itemId !== FULL_PASS_ITEM) {
+            return new Response(JSON.stringify({ error: 'Invalid pass.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        paymentType = 'block';
+    }
+    if (itemId === FULL_PASS_ITEM && paymentType !== 'block') {
+        return new Response(JSON.stringify({ error: 'Invalid pass.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    // Donations and deposits never take promo codes.
+    if (promoCode && ['donation', 'billSavingsDeposit'].includes(paymentType)) {
+        return new Response(JSON.stringify({ error: "Promo codes can't be used here." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
 
     const isProduction = process.env.VERCEL_ENV === 'production';
     const accessToken = isProduction
@@ -242,6 +269,14 @@ export async function POST(request: Request) {
         });
     }
 
+    // A "watch party ticket" for a festival BLOCK is a block ticket. It used
+    // to be saved as a permanent party ticket instead, so it never expired
+    // like every other block ticket (Oct 2026 audit).
+    if (paymentType === 'watchPartyTicket' && db && itemId && typeof itemId === 'string') {
+        const isFilm = (await db.collection('movies').doc(itemId).get()).exists;
+        if (!isFilm) paymentType = 'block';
+    }
+
     // --- DUPLICATE PURCHASE GUARD ---
     // FIX (real customer overcharge — Bret Sperry was charged 3x for one
     // "Tino" rental): a client-side bug let the checkout modal be dismissed
@@ -260,7 +295,7 @@ export async function POST(request: Request) {
             const userDoc = await db.collection('users').doc(uid).get();
             const userData = userDoc.data();
 
-            const alreadyHasAccess = (() => {
+            const alreadyHasAccess = await (async () => {
                 if (paymentType === 'movie' && itemId) {
                     const expiry = userData?.rentals?.[itemId];
                     return !!expiry && new Date(expiry) > new Date();
@@ -269,13 +304,20 @@ export async function POST(request: Request) {
                     return (userData?.unlockedWatchPartyKeys || []).includes(itemId);
                 }
                 if (paymentType === 'block' && itemId) {
-                    if (itemId === 'full-festival-pass') return isFestivalPassActive(userData);
+                    if (itemId === FULL_PASS_ITEM) return isFestivalPassActive(userData);
                     const passPartner = partnerIdFromPassItem(itemId);
-                    if (passPartner) return !!userData?.partnerPasses?.[passPartner];
+                    if (passPartner) {
+                        // Only THIS year's partner pass counts (last year's mustn't block a new purchase).
+                        const granted = userData?.partnerPasses?.[passPartner];
+                        if (!granted) return false;
+                        const partner = await getPartner(db, passPartner);
+                        const cleanedAt = Date.parse(String(partner?.cleanup?.deletedAt || '')) || null;
+                        return partnerPassIsCurrent(Date.parse(String(granted)) || null, cleanedAt);
+                    }
                     const expiry = userData?.unlockedBlocks?.[itemId];
+                    if ((userData?.unlockedWatchPartyKeys || []).includes(itemId)) return true; // older ticket for this block
                     return !!expiry && new Date(expiry) > new Date();
                 }
-                if (paymentType === 'pass') return isFestivalPassActive(userData);
                 if (paymentType === 'crateFestPass') {
                     const expiry = userData?.crateFestPassExpiry;
                     return !!userData?.hasCrateFestPass && (!expiry || new Date(expiry) > new Date());
@@ -299,23 +341,18 @@ export async function POST(request: Request) {
         }
     }
 
-    // --- PROMO CODE INTEGRITY CHECK ---
-    if (promoCode && db) {
-        const promoRef = db.collection('promo_codes').doc(promoCode.toUpperCase().trim());
-        const promoDoc = await promoRef.get();
-        if (promoDoc.exists) {
-            const promoData = promoDoc.data();
-            if (promoData && promoData.usedCount >= promoData.maxUses) {
-                return new Response(JSON.stringify({ error: "This promo code has reached its maximum usage limit." }), { status: 403 });
-            }
-            // A code made for one item only works on that item. Checkout used to
-            // apply any code to anything (only the "check code" button looked),
-            // so a 100%-off code for one film could unlock a festival pass by
-            // calling this endpoint directly (Oct 23 2026).
-            if (promoData?.itemId && promoData.itemId !== itemId) {
-                return new Response(JSON.stringify({ error: "This promo code doesn't apply to this item." }), { status: 403 });
-            }
-        }
+    // --- PROMO CODE CHECK ---
+    // Every rule is checked here, before any charge: the code exists, isn't
+    // used up or expired, and fits this item. (An unknown code used to be
+    // charged at full price and THEN crash while counting its use, so the
+    // buyer paid and got nothing; expiry was only checked by the "apply"
+    // button, never at checkout.)
+    let promo: any = null;
+    if (promoCode) {
+        if (!db) throw new Error('Database offline.');
+        promo = (await db.collection('promo_codes').doc(promoCode).get()).data() || null;
+        const problem = promoProblem(promo, itemId);
+        if (problem) return new Response(JSON.stringify({ error: problem }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Reuses the client's own idempotency key for this checkout attempt
@@ -335,10 +372,12 @@ export async function POST(request: Request) {
     if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
         // User-defined amounts
         amountInCents = Math.round(Number(amount) * 100);
-        if (amountInCents < 100 && sourceId !== 'PROMO_VOUCHER') { 
-            throw new Error("Amount must be at least $1.00.");
+        // A non-number amount ("abc") used to become NaN, slip past the $1
+        // check and skip the charge entirely.
+        if (!Number.isFinite(amountInCents) || amountInCents < 100 || amountInCents > MAX_DONATION_CENTS) {
+            return new Response(JSON.stringify({ error: 'Please enter an amount between $1 and $10,000.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
-        note = paymentType === 'donation' ? `Support for film: "${movieTitle}"` : 'Bill Savings Deposit';
+        note = paymentType === 'donation' ? `Support for film: "${String(movieTitle || '').slice(0, 120)}"` : 'Bill Savings Deposit';
     } 
     else if (paymentType === 'movie' || paymentType === 'watchPartyTicket') {
         // Fetch source of truth from DB to prevent tampering
@@ -384,6 +423,14 @@ export async function POST(request: Request) {
                     return new Response(JSON.stringify({ error: 'This film is shown as a paid watch party. Please buy a watch party ticket instead.' }), { status: 400 });
                 }
             }
+            // A festival film whose festival window is already over would get a
+            // rental that ends immediately: never charge for that.
+            if (paymentType === 'movie') {
+                const exp = await computeRentalExpiry(db, itemId);
+                if (exp.getTime() < Date.now() + 60 * 60_000) {
+                    return new Response(JSON.stringify({ error: 'This film is no longer available to rent.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                }
+            }
             const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
@@ -408,7 +455,14 @@ export async function POST(request: Request) {
             amountInCents = Math.round(passPrice * 100);
             note = `Festival Pass: ${partner.published?.details?.title || partner.name}`;
             purchasePartnerId = partner.id;
-        } else if (itemId === 'full-festival-pass') {
+        } else if (itemId === FULL_PASS_ITEM) {
+            // Only while a festival with real screening times is coming up or
+            // running (see festivalPass.ts) — never "early" with no end date.
+            const pwffBlocks = await getPwffBlocks(db);
+            const sale = festivalPassOnSale(pwffBlocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+            if (!sale.onSale) {
+                return new Response(JSON.stringify({ error: sale.reason }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
             // The "Buy Full Festival Pass" button (PwffPage.tsx) builds a
             // synthetic block-shaped object client-side purely to reuse the
             // existing ticket-purchase UI — it was never written to
@@ -441,6 +495,10 @@ export async function POST(request: Request) {
             purchasedBlockData = blockData;
             purchasePartnerId = blockData?.partnerId || null;
             releaseCapacityReservation = reservation.release;
+            // A screening whose rewatch week is over can't be bought any more.
+            if (blockSaleClosed({ screeningStartTime: blockData?.screeningStartTime || blockData?.watchPartyStartTime, festivalEndTime: blockData?.festivalEndTime }, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS)) {
+                throw new Error('This screening has ended and its tickets are no longer on sale.');
+            }
 
             amountInCents = Math.round((blockData?.price ?? 10.00) * 100);
             note = `Unlock Block: ${blockData?.title || blockTitle || itemId}`;
@@ -455,15 +513,7 @@ export async function POST(request: Request) {
     }
 
     // --- APPLY VOUCHER DISCOUNT (If any) ---
-    if (promoCode && db) {
-        const promoRef = db.collection('promo_codes').doc(promoCode.toUpperCase().trim());
-        const promoDoc = await promoRef.get();
-        if (promoDoc.exists) {
-            const promo = promoDoc.data();
-            if (promo?.type === 'one_time_access') amountInCents = 0;
-            else if (promo?.type === 'discount') amountInCents = Math.round(amountInCents * ((100 - promo.discountValue) / 100));
-        }
-    }
+    if (promo) amountInCents = priceAfterPromo(amountInCents, promo);
 
     // --- PROMO VOUCHER SOURCE INTEGRITY CHECK ---
     // sourceId 'PROMO_VOUCHER' means "skip Square, this is free" (see
@@ -475,9 +525,35 @@ export async function POST(request: Request) {
     // exactly $0 above — otherwise this is rejected outright rather than
     // silently skipping the charge.
     if (sourceId === 'PROMO_VOUCHER' && amountInCents > 0) {
+        if (releaseCapacityReservation) await releaseCapacityReservation();
+        releaseCapacityReservation = null;
         return new Response(JSON.stringify({ error: "A valid promo code reducing the price to $0 is required to use this payment method." }), {
             status: 400, headers: { 'Content-Type': 'application/json' },
         });
+    }
+
+    // --- RESERVE ONE USE OF THE PROMO CODE (atomic, before charging) ---
+    // Checking "used < max" and counting the use much later let many
+    // simultaneous checkouts all use a single-use 100%-off code. The use is
+    // now claimed in one transaction first, and given back if the charge fails.
+    if (promo && promoCode && db) {
+        const promoRef = db.collection('promo_codes').doc(promoCode);
+        const claimed = await db.runTransaction(async tx => {
+            const fresh = (await tx.get(promoRef)).data();
+            if (promoProblem(fresh, itemId)) return false;
+            tx.update(promoRef, { usedCount: FieldValue.increment(1) });
+            return true;
+        });
+        if (!claimed) {
+            if (releaseCapacityReservation) await releaseCapacityReservation();
+            releaseCapacityReservation = null;
+            return new Response(JSON.stringify({ error: 'This promo code has just been used up.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        }
+        const releaseCapacity = releaseCapacityReservation;
+        releaseCapacityReservation = async () => {
+            try { await promoRef.update({ usedCount: FieldValue.increment(-1) }); } catch (e) { console.error('[Payment API] Failed to give back promo use:', e); }
+            if (releaseCapacity) await releaseCapacity();
+        };
     }
 
     // --- PROCESS TRANSACTION ---
@@ -519,13 +595,9 @@ export async function POST(request: Request) {
         squarePaymentId = data.payment?.id || null;
     }
 
-    // --- FINALIZE PROMO CODE USAGE ---
-    if (promoCode && db) {
-        await db.collection('promo_codes').doc(promoCode.toUpperCase().trim()).update({
-            usedCount: FieldValue.increment(1)
-        });
-    }
-    
+    // Charged (or free): from here on nothing may undo the promo/seat claim.
+    releaseCapacityReservation = null;
+
     // Receipt / confirmation email
     if (email && process.env.RESEND_API_KEY) {
         try {
@@ -569,7 +641,7 @@ export async function POST(request: Request) {
                     </div>
                     <div style="padding: 36px 32px;">
                         <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: #666; margin: 0 0 8px;">Watch Party Ticket Confirmed</p>
-                        <h2 style="font-size: 24px; font-weight: 900; color: white; margin: 0 0 24px; text-transform: uppercase;">${movieTitle}</h2>
+                        <h2 style="font-size: 24px; font-weight: 900; color: white; margin: 0 0 24px; text-transform: uppercase;">${escapeHtml(movieTitle)}</h2>
                         ${watchPartyTime ? `
                         <div style="background: #1a1a1a; border-left: 3px solid #E50914; padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
                             <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #666;">Screening Time</p>
@@ -581,7 +653,7 @@ export async function POST(request: Request) {
                             <p style="margin: 12px 0 0; font-size: 11px; color: #555;">${watchPartyUrl}</p>
                         </div>` : ''}
                         <hr style="border: none; border-top: 1px solid #1a1a1a; margin: 24px 0;" />
-                        <p style="font-size: 12px; color: #555; margin: 0;">Amount paid: ${amountFormatted} ${promoCode ? `· Voucher applied: ${promoCode}` : ''}</p>
+                        <p style="font-size: 12px; color: #555; margin: 0;">Amount paid: ${amountFormatted} ${promoCode ? `· Voucher applied: ${escapeHtml(promoCode)}` : ''}</p>
                         <p style="font-size: 11px; color: #444; margin: 8px 0 0;">Your ticket is linked to your Crate TV account and will be available on all your devices.</p>
                     </div>
                 </div>
@@ -589,9 +661,9 @@ export async function POST(request: Request) {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; border-radius: 12px; overflow: hidden; padding: 32px;">
                     <img src="${LOGO_URL_ON_DARK}" alt="Crate TV" width="100" style="display: block; border: 0; margin-bottom: 20px;" />
                     <h1 style="font-size: 22px; font-weight: 900; color: white; margin: 0 0 24px; text-transform: uppercase;">Access Confirmed</h1>
-                    <p style="color: #888; margin: 0 0 16px;"><strong style="color: white;">Resource:</strong> ${note}</p>
+                    <p style="color: #888; margin: 0 0 16px;"><strong style="color: white;">Resource:</strong> ${escapeHtml(note)}</p>
                     <p style="color: #888; margin: 0 0 24px;"><strong style="color: white;">Amount:</strong> ${amountFormatted}</p>
-                    ${promoCode ? `<p style="font-size: 11px; color: #555;">Voucher applied: ${promoCode}</p>` : ''}
+                    ${promoCode ? `<p style="font-size: 11px; color: #555;">Voucher applied: ${escapeHtml(promoCode)}</p>` : ''}
                     <p style="font-size: 11px; color: #555; margin: 0;">This resource is now unlocked on your Crate TV account.</p>
                 </div>
             `;
@@ -601,7 +673,7 @@ export async function POST(request: Request) {
                 to: email,
                 subject: isWatchParty
                     ? `Your ticket for ${movieTitle} — Crate TV Watch Party`
-                    : `Access confirmed: ${note}`,
+                    : `Access confirmed: ${note.replace(/[\r\n]/g, ' ')}`,
                 html: emailHtml,
             });
         } catch (emailError) {
@@ -671,10 +743,10 @@ export async function POST(request: Request) {
                         bodyHtml: `
                             <p style="margin:0 0 16px;font-size:14px;">Someone just bought a ticket.</p>
                             <div style="padding:16px;background:rgba(255,255,255,0.03);border-left:3px solid #22c55e;">
-                                <p style="margin:0 0 4px;"><strong>Item:</strong> ${note}</p>
+                                <p style="margin:0 0 4px;"><strong>Item:</strong> ${escapeHtml(note)}</p>
                                 <p style="margin:0 0 4px;"><strong>Amount:</strong> $${(amountInCents / 100).toFixed(2)}</p>
-                                <p style="margin:0 0 4px;"><strong>Buyer email:</strong> ${email || '(not provided)'}</p>
-                                ${promoCode ? `<p style="margin:0;"><strong>Promo code used:</strong> ${promoCode}</p>` : ''}
+                                <p style="margin:0 0 4px;"><strong>Buyer email:</strong> ${escapeHtml(email || '(not provided)')}</p>
+                                ${promoCode ? `<p style="margin:0;"><strong>Promo code used:</strong> ${escapeHtml(promoCode)}</p>` : ''}
                             </div>
                         `,
                     }),
@@ -698,7 +770,7 @@ export async function POST(request: Request) {
             console.error('[Payment API] Failed to grant partner festival pass:', e);
             logServerError('api/process-square-payment:partner-pass-grant', e, { uid, itemId });
         }
-    } else if (db && uid && paymentType === 'block' && itemId) {
+    } else if (db && uid && paymentType === 'block' && itemId && itemId !== FULL_PASS_ITEM) {
         try {
             // FIX (Oct 2026 audit): this was "14 days from purchase", so anyone
             // who bought more than two weeks before the festival was locked
@@ -722,10 +794,11 @@ export async function POST(request: Request) {
     }
 
     // All-access pass — unlock all blocks
-    if (db && uid && itemId === 'full-festival-pass') {
+    if (db && uid && paymentType === 'block' && itemId === FULL_PASS_ITEM) {
         try {
             // Good for THIS festival only: ends a week (+1 day) after the last block.
-            const passExpiry = await computeFestivalPassExpiry(db);
+            const passExpiry = festivalPassExpiryFor(await getPwffBlocks(db), FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+            if (!passExpiry) throw new Error('No festival schedule to attach the pass to.');
             const current = (await db.collection('users').doc(uid).get()).data()?.festivalPassExpiry;
             await db.collection('users').doc(uid).set({
                 hasFestivalAllAccess: true,

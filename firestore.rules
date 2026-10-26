@@ -61,6 +61,8 @@ service cloud.firestore {
           || !protectedFieldUnchanged('festivalPassExpiry', null)
           || !protectedFieldUnchanged('crateFestPassExpiry', null)
           || !protectedFieldUnchanged('verifiedFilmmakerName', null)
+          || !protectedFieldUnchanged('verifiedActorName', null)
+          || !protectedFieldUnchanged('filmmakerVerifiedVia', null)
           || !protectedFieldUnchanged('isIndustryPro', false)
           || !roleMatchesClaim('isFilmmaker')
           || !roleMatchesClaim('isActor');
@@ -88,11 +90,9 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if true;
-        allow create: if isSignedIn()
-          && request.resource.data.userId == request.auth.uid
-          && request.resource.data.text is string
-          && request.resource.data.text.size() <= 500;
-        allow update, delete: if false;
+        // Server only (api/send-chat-message.ts). A browser could otherwise
+        // post a message marked "verified director" or "admin" with any name.
+        allow create, update, delete: if false;
       }
 
       match /live_reactions/{reactionId} {
@@ -105,15 +105,16 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Lobby viewers tracking — who is in the lobby waiting. Doc id is the
-      // viewer's own email (see WatchPartyLobby.tsx), so ownership is
-      // checked against that instead of just "any signed-in user" — that
-      // used to let any signed-in visitor overwrite or delete someone
-      // else's presence doc.
+      // Lobby viewers — who is waiting. Doc id is the viewer's account id
+      // (Oct 2026: it used to be their EMAIL, which every signed-in viewer
+      // could read, so everyone in a lobby could collect everyone's email).
       match /lobby_viewers/{viewerId} {
         allow read: if isSignedIn();
-        allow create, update: if isSignedIn() && request.auth.token.email == viewerId;
-        allow delete: if isSignedIn() && request.auth.token.email == viewerId;
+        allow create, update: if isSignedIn() && request.auth.uid == viewerId
+          && request.resource.data.keys().hasOnly(['name', 'avatar', 'joinedAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60
+          && request.resource.data.avatar is string && request.resource.data.avatar.size() <= 200;
+        allow delete: if isSignedIn() && request.auth.uid == viewerId;
       }
     }
 
@@ -196,8 +197,9 @@ service cloud.firestore {
     // ── View counts ────────────────────────────────────────────────────
     match /view_counts/{docId} {
       allow read: if true;
-      allow create, update: if isSignedIn();
-      allow delete: if false;
+      // Server only (api/track-view.ts). Any signed-in visitor used to be
+      // able to set a film's view count to anything.
+      allow write: if false;
     }
 
     // ── Watch party schedule (public) ──────────────────────────────────
@@ -249,14 +251,9 @@ service cloud.firestore {
       // signed in) must use a guest_ id, so nobody can overwrite a real
       // account's votes. (Guest voting itself is still unauthenticated —
       // see the audit's suggestion to require sign-in for juries.)
-      allow create, update: if request.resource.data.userId is string
-        && request.resource.data.filmId is string
-        && docId == request.resource.data.userId + '_' + request.resource.data.filmId
-        && (
-          (isSignedIn() && request.resource.data.userId == request.auth.uid)
-          || (!isSignedIn() && request.resource.data.userId.matches('guest_.*'))
-        );
-      allow delete: if false;
+      // The Grand Jury was removed in Oct 2026: nothing writes here any more,
+      // and the old rule let anyone (even signed out) add entries.
+      allow write: if false;
     }
 
     // ── Watch party comments ────────────────────────────────────────────

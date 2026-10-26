@@ -97,6 +97,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);
                         }
                         setUser(userProfile);
+                        // Unlock a festival invite on every visit too, not just at
+                        // sign-in (e.g. right after confirming their email).
+                        grantInviteAccessIfEligible(firebaseUser);
                         
                         const idTokenResult = await firebaseUser.getIdTokenResult(true); 
                         const claims = idTokenResult.claims;
@@ -165,14 +168,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // console) — moved server-side into api/grant-invite-access.ts, same
     // pattern as every other access grant. Best-effort: if it fails, login
     // itself still succeeds, it just doesn't unlock the invite that time.
-    const grantInviteAccessIfEligible = async (firebaseUser: { getIdToken: (forceRefresh?: boolean) => Promise<string> }) => {
+    const grantInviteAccessIfEligible = async (firebaseUser: { uid?: string; getIdToken: (forceRefresh?: boolean) => Promise<string> }) => {
         try {
-            const idToken = await firebaseUser.getIdToken();
-            await fetch('/api/grant-invite-access', {
+            // Fresh token, so a just-confirmed email counts straight away.
+            const idToken = await firebaseUser.getIdToken(true);
+            const res = await fetch('/api/grant-invite-access', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ idToken }),
             });
+            const data = await res.json().catch(() => ({}));
+            if (data.needsEmailConfirmation) {
+                toast.info('You have a festival invitation. Check your email and tap the link to confirm your address, then come back here.');
+            } else if (data.granted && firebaseUser.uid) {
+                const fresh = await getUserProfile(firebaseUser.uid);
+                if (fresh) setUser(fresh);
+            }
         } catch (e) {
             console.error('Failed to check/grant invite access:', e);
         }
@@ -353,13 +364,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
         });
 
-        // Background sync
-        fetch('/api/update-playback-progress', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ movieKey, seconds, userId: user.uid }),
+        // Background sync (signed in: the server only writes to your own account)
+        getUserIdToken().then(idToken => {
+            if (!idToken) return;
+            return fetch('/api/update-playback-progress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, seconds, idToken }),
+            });
         }).catch(err => console.error("Progress sync failed:", err));
-    }, [user]);
+    }, [user, getUserIdToken]);
 
     // A full festival pass is good for one festival — only its end date counts
     // (old passes with no end date were from 2026 and have ended).

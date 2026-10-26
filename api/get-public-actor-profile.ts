@@ -26,7 +26,8 @@ export async function GET(request: Request) {
     if (!actorProfileDoc.exists) {
       return new Response(JSON.stringify({ error: 'Actor not found.' }), { status: 404 });
     }
-    const profile = actorProfileDoc.data() as ActorProfile;
+    // Never expose the actor's email on the public profile (Oct 2026 audit).
+    const { email: _email, ...profile } = actorProfileDoc.data() as ActorProfile;
 
     // 2. Fetch all movies the actor has appeared in
     const moviesSnapshot = await db.collection('movies').get();

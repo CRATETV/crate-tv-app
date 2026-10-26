@@ -58,10 +58,10 @@ test('REGRESSION: early ticket buyers keep access through the screening + rewatc
     assert.ok(exp.getTime() > start + 7 * DAY, 'must outlast the rewatch week');
 });
 
-test('ticket access is never shorter than 14 days', () => {
+test('LOOPHOLE: a ticket bought late in the rewatch week still ends with the festival', () => {
     const now = start + 6 * DAY; // bought on the last day of the rewatch week
     const exp = blockAccessExpiry({ nowMs: now, screeningStartTime: new Date(start).toISOString(), rewatchWindowMs: 7 * DAY });
-    assert.equal(exp.getTime(), now + 14 * DAY);
+    assert.equal(exp.getTime(), start + 8 * DAY);
 });
 
 test('ticket expiry falls back to 14 days when the block has no start time', () => {

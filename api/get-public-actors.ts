@@ -122,7 +122,11 @@ export async function GET(request: Request) {
         await batch.commit();
     }
 
-    const allProfiles = Object.values(existingProfiles).sort((a, b) => a.name.localeCompare(b.name));
+    // Public list: never include actors' email addresses (Oct 2026 audit).
+    // People reach actors through the talent inquiry form instead.
+    const allProfiles = Object.values(existingProfiles)
+        .map(({ email: _email, ...pub }) => pub)
+        .sort((a, b) => a.name.localeCompare(b.name));
     const response = { actors: allProfiles };
 
     cache.data = response;

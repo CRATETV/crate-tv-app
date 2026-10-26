@@ -4,6 +4,7 @@ import {
     adminPost, copyText, inputClass, money, shortDate,
 } from './ui';
 import { PAYOUT_METHOD_LABELS, PayoutMethod, payoutLink } from '../../api/_lib/revenueSplit';
+import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Earnings & Payouts — every dollar, who it belongs to, and who CRATE owes.
@@ -392,6 +393,8 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                 <SectionTitle title="Month by month" hint="The last 12 months. Hover a month for the numbers." />
                 <MonthChart months={data.months} />
             </Card>
+
+            <FilmmakerClaimsPanel />
 
             <section>
                 <SectionTitle title="Who you owe" hint={`Anyone with money waiting. Filmmakers can request a payout once they pass ${money(data.minimumPayoutCents)}, but you can pay any time.`} />

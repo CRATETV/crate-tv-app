@@ -1885,7 +1885,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (shouldShowLobby || !hasAccess || !user) return;
         const db = getDbInstance();
         if (!db) return;
-        const viewerRef = db.collection('watch_parties').doc(movieKey).collection('lobby_viewers').doc(user.email || 'anon');
+        const viewerRef = db.collection('watch_parties').doc(movieKey).collection('lobby_viewers').doc(user.uid);
         viewerRef.set({
             name: user.name || 'Film Lover',
             avatar: user.avatar || 'fox',

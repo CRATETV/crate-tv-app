@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { logServerError } from './_lib/logError.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -14,9 +15,12 @@ import { resolveAdminCredential } from './_lib/adminSession.js';
 function generateCodeString(type: string): string {
     const prefix = type === 'full_pass' ? 'PASS' : type === 'day_pass' ? 'DAY' : 'BLK';
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars (0/O, 1/I/L)
+    // 10 characters from a secure random source (was 6 from Math.random,
+    // which made guessing a real code feasible).
+    const bytes = randomBytes(10);
     let random = '';
-    for (let i = 0; i < 6; i++) {
-        random += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < 10; i++) {
+        random += chars.charAt(bytes[i] % chars.length);
     }
     return `CRATE-${prefix}-${random}`;
 }

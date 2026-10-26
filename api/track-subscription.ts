@@ -3,9 +3,13 @@
 import { getDb } from './_lib/firebase.js';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 export async function POST(request: Request) {
   try {
+    if (!rateLimit(`track-sub:${getIP(request)}`, 10, 60 * 60_000)) {
+        return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+    }
     const { email } = await request.json();
     if (!email || typeof email !== 'string') {
       return new Response(JSON.stringify({ error: "A valid email is required." }), { status: 400, headers: { 'Content-Type': 'application/json' } });

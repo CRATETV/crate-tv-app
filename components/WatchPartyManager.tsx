@@ -356,7 +356,7 @@ const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
         const db = getDbInstance();
         if (!db) return;
         const unsub = db.collection('watch_parties').doc(itemId).collection('lobby_viewers')
-            .onSnapshot(snap => setEmails(snap.docs.map(d => d.id)));
+            .onSnapshot(snap => setEmails(snap.docs.map(d => String(d.data().name || 'Viewer'))));
         return () => unsub();
     }, [itemId]);
     if (emails === null) return null;

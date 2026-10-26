@@ -57,6 +57,27 @@ test('non-S3 addresses are still refused', async () => {
     assert.equal(res.status, 400);
 });
 
+test('LOOPHOLE: links that merely MENTION S3 are refused (attacker SVG served from cratetv.net)', async () => {
+    for (const url of [
+        'https://evil.example/x.svg?a=.s3.',
+        'https://evil.example/.amazonaws.com/x.svg',
+        'https://attacker-bucket.s3.amazonaws.com/x.svg',
+        'http://cratetelevision.s3.us-east-1.amazonaws.com/x.png',
+        'https://cratetelevision.s3.us-east-1.amazonaws.com.evil.example/x.png',
+    ]) {
+        const res = await GET(new Request(`https://x/api/proxy-image?url=${encodeURIComponent(url)}`));
+        assert.equal(res.status, 400, url);
+    }
+});
+
+test('proxied images can never run script if opened directly', async () => {
+    const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+    await withFakeS3(svg, 'image/svg+xml', async () => {
+        const res = await GET(new Request(`https://x/api/proxy-image?url=${encodeURIComponent(S3 + 'x.svg')}`));
+        assert.match(res.headers.get('Content-Security-Policy') || '', /sandbox/);
+    });
+});
+
 test('width is kept within limits', () => {
     assert.equal(clampWidth(null), 1000);
     assert.equal(clampWidth('5'), 100);

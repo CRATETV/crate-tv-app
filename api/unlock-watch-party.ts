@@ -24,6 +24,7 @@
 import admin from 'firebase-admin';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveMovieAccess } from './_lib/entitlements.js';
+import { findBlock } from './_lib/watchPartyLifecycle.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -85,6 +86,26 @@ export default async function handler(req: any, res: any) {
     const access = await resolveMovieAccess(db, { uid, movieKey, mode: 'live' });
     if (!access.granted) {
       return res.status(403).json({ error: 'No valid access found for this watch party' });
+    }
+
+    // Only a FREE party is saved as a permanent ticket. Access that comes
+    // from a festival pass or a block ticket already has an end date, and
+    // turning it into a permanent ticket let it outlive the festival
+    // (Oct 2026 audit). Those viewers are let in without saving anything.
+    const block = await findBlock(db, movieKey);
+    let isFreeParty: boolean;
+    if (block) {
+      isFreeParty = block.block?.price === 0;
+    } else {
+      // A festival film opened by its own key follows its block's price.
+      const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+      const parent = daysSnap.docs.flatMap(d => (d.data().blocks || []) as any[]).find(b => Array.isArray(b?.movieKeys) && b.movieKeys.includes(movieKey));
+      isFreeParty = parent
+        ? parent.price === 0
+        : (await db.collection('movies').doc(movieKey).get()).data()?.isWatchPartyPaid !== true;
+    }
+    if (!isFreeParty) {
+      return res.status(200).json({ ok: true, viaTimedAccess: true });
     }
 
     const newUnlocked = [...alreadyUnlocked, movieKey];

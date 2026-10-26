@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-10 — Security audit: loopholes closed
+
+**Getting in free / paying less**
+- Full festival pass: only sold (or given by code or invite) while a festival with screening times is coming up or running (`festivalPassOnSale`). No more "pass bought early lasts 4 months".
+- Full pass could be unlocked by ANY payment carrying `itemId: full-festival-pass` (a $1 donation, a $4.99 subscription). Now only a real pass purchase grants it; `paymentType: 'pass'` is priced like the pass.
+- A donation amount that wasn't a number skipped the charge. Amounts must be $1–$10,000.
+- Promo codes: every rule (exists, uses left, expiry, item) is checked at checkout, a use is claimed atomically before charging and given back if the charge fails, and discounts are capped at 0–100% (`api/_lib/paymentRules.ts`, tested). An unknown code no longer charges full price and then fails.
+- Block tickets end with the screening + rewatch week (the 14-day minimum now only applies when a block has no time). Ended screenings can't be bought, and festival films whose window is over can't be rented.
+- A "watch party ticket" for a block is now a normal (expiring) block ticket, and `unlock-watch-party` only saves permanent tickets for free parties.
+- Ticket codes: 10 characters from a secure random source, and redeeming is rate-limited.
+
+**Someone else's money or account**
+- Filmmaker dashboards: knowing a credited name is no longer enough. Auto-approved only when a confirmed email matches one CRATE has on file (agreement sent, film submitted, admin-entered payout email); otherwise it waits in Admin → Earnings & payouts → Filmmaker dashboards, which also lists every existing account so old ones can be checked and switched off. Payout-detail changes email the admin.
+- Email-based grants (festival invites, help-desk ticket matching, filmmaker on-file emails) require a confirmed email; a confirmation link is emailed (`api/_lib/emailVerify.ts`).
+- Actor profiles: only approved actors can edit, and the name is locked (anyone could rename themselves and replace an actor's photo and bio on every film).
+- `update-playback-progress` took the account from the request; now from the sign-in.
+
+**Abuse and data exposure**
+- `filmmaker-outreach` had no login check: anyone could email anyone from studio@cratetv.net. Master admin only now.
+- Image proxy: only CRATE's own S3 bucket/CDN over https, no redirects, and a sandbox CSP (an attacker's SVG could run script on cratetv.net).
+- Public photo uploads: photos only (no SVG/video), max 15 MB, size signed into the upload link.
+- Actors' email addresses removed from the public actor directory, search and profile.
+- Firestore rules: chat messages server-only (fake "director/admin" messages), view counts server-only, old jury collection closed, lobby presence keyed by account id instead of email (emails were readable by every viewer); `verifiedActorName` protected.
+- Chat names and messages capped, reserved names (CRATE, Admin…) blocked; laurel SVG text escaped; public email forms escaped and rate-limited; rate limits on likes, view tracking, promo checks, newsletter (no repeat welcome emails).
+- Removed unused endpoints that were still live: `actor-post`, `toggle-post-like`, `get-actor-feed` (hard-coded password), `submit-film` (unlimited upload links), `vote-poll`.
+
+
 ## 2026-10 — Festival passes are good for one festival
 
 - **Full festival pass now ends.** It used to be a forever `hasFestivalAllAccess: true`, so a 2026 pass would have opened every future festival free. A pass now carries `festivalPassExpiry` = the last PWFF block + the rewatch week + 1 day (`api/_lib/festivalPass.ts`, tested), and only that date is checked: website, watch parties, Roku, help button, reminder emails. Purchases, full-pass codes, PWFF invites and help-button repairs all set it. Old passes with no end date (all from the 2026 festival) count as ended; nothing to migrate.

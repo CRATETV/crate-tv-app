@@ -52,7 +52,9 @@ export async function POST(request: Request) {
         if (!userData?.isFilmmaker) {
             return json({ error: 'This account is not a verified filmmaker.' }, 403);
         }
+        // Locked the first time it's used (the display name can be changed).
         const directorName: string | undefined = userData.verifiedFilmmakerName || userData.name;
+        if (!userData.verifiedFilmmakerName && directorName) await db.collection('users').doc(uid).set({ verifiedFilmmakerName: directorName }, { merge: true });
         const email: string | undefined = tokenEmail || userData.email;
         if (!directorName || !email) {
             return json({ error: 'No verified filmmaker name or email on this account.' }, 403);

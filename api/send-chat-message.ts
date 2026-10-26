@@ -124,10 +124,20 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ success: true }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Caps and reserved names (Oct 2026 audit): the text had no length limit,
+    // and anyone could post as "CRATE" or "Admin".
+    const cleanName = String(userName).replace(/[\r\n]/g, ' ').trim().slice(0, 40);
+    const cleanText = String(text || '').trim().slice(0, 500);
+    if (!cleanText) {
+      return new Response(JSON.stringify({ error: 'Message is empty.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (!grantedAdmin && /^(crate( ?tv)?|admin|administrator|system|moderator|host)$/i.test(cleanName)) {
+      return new Response(JSON.stringify({ error: 'Please choose a different display name.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     const newMessage = {
-      userName,
-      userAvatar,
-      text,
+      userName: cleanName,
+      userAvatar: String(userAvatar).slice(0, 300),
+      text: cleanText,
       isVerifiedDirector: grantedDirector,
       isAdmin: grantedAdmin && isAdmin === true,
       isSystemMessage: grantedAdmin && isSystemMessage === true,

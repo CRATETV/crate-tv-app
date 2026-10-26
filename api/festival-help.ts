@@ -41,13 +41,15 @@ class HelpError extends Error { constructor(public status: number, message: stri
 
 const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
-async function signedInUser(idToken: unknown): Promise<{ uid: string; email: string }> {
+async function signedInUser(idToken: unknown): Promise<{ uid: string; email: string; matchEmail: string }> {
     if (typeof idToken !== 'string' || !idToken) throw new HelpError(401, 'Please sign in first.');
     const auth = getAdminAuth();
     if (!auth) throw new HelpError(503, 'Service unavailable.');
     try {
         const d = await auth.verifyIdToken(idToken);
-        return { uid: d.uid, email: String(d.email || '').toLowerCase() };
+        // Tickets bought under an email only count once that email is
+        // confirmed: anyone can sign up with someone else's address (Oct 2026).
+        return { uid: d.uid, email: String(d.email || '').toLowerCase(), matchEmail: d.email_verified === true ? String(d.email || '').toLowerCase() : '' };
     } catch { throw new HelpError(401, 'Your sign-in expired. Refresh the page and try again.'); }
 }
 
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
             case 'check': {
                 const who = await signedInUser(body.idToken);
                 if (!(await allow(db, `check_${who.uid}`, 15, 60 * 60 * 1000))) throw new HelpError(429, 'You’ve checked a lot in the last hour. Use “Send to Crate TV” below and we’ll look at it.');
-                const { mine, results, catalog } = await diagnose(db, who.uid, who.email);
+                const { mine, results, catalog } = await diagnose(db, who.uid, who.matchEmail);
                 const fixed = await applyRepairs(db, who.uid, mine, results);
 
                 let otherAccount: { email: string; tickets: number } | null = null;
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
                 const who = await signedInUser(body.idToken);
                 if (!who.email) throw new HelpError(400, 'Your account has no email address.');
                 if (!(await allow(db, `resend_${who.uid}`, 3, 24 * 60 * 60 * 1000))) throw new HelpError(429, 'We’ve already re-sent your tickets 3 times today. Check your spam folder, or use “Send to Crate TV”.');
-                const { results, catalog } = await diagnose(db, who.uid, who.email);
+                const { results, catalog } = await diagnose(db, who.uid, who.matchEmail);
                 const usable = results.filter(r => r.action.kind !== 'refunded');
                 if (!usable.length) return json({ sent: false, message: 'We couldn’t find any tickets on this account.' });
                 const rows = usable.map(r => {
@@ -163,7 +165,7 @@ export async function POST(request: Request) {
 
             case 'report': {
                 if (!(await allow(db, `report_${ip}`, 6, 60 * 60 * 1000))) throw new HelpError(429, 'Too many messages from this connection. Please try again in an hour.');
-                let who: { uid: string; email: string } | null = null;
+                let who: { uid: string; email: string; matchEmail: string } | null = null;
                 if (body.idToken) { try { who = await signedInUser(body.idToken); } catch { who = null; } }
                 const contactEmail = String(body.contactEmail || who?.email || '').trim().toLowerCase();
                 if (!EMAIL.test(contactEmail)) throw new HelpError(400, 'Add an email address so Crate TV can reply.');
@@ -176,7 +178,7 @@ export async function POST(request: Request) {
                 let tickets: { label: string; status: string }[] = [];
                 if (who) {
                     try {
-                        const { results } = await diagnose(db, who.uid, who.email);
+                        const { results } = await diagnose(db, who.uid, who.matchEmail);
                         tickets = results.map(r => ({ label: r.label, status: statusOf(r, new Set()) }));
                     } catch (e) { console.error('[festival-help] diagnose for report failed:', e); }
                 }

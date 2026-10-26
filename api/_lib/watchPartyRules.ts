@@ -90,8 +90,11 @@ export function intermissionSecondsFor(nextIndex: number, totalFilms: number): {
 
 /**
  * Festival block access window: tickets stay valid through the block's
- * screening plus the post-festival rewatch window — never less than
- * `minDays` from purchase (covers blocks with no start time yet).
+ * screening plus the rewatch week (+1 day). Only a block with no start time
+ * yet falls back to `minDays` from purchase.
+ *
+ * (Before Oct 2026 the 14-day minimum applied to every ticket, so one bought
+ * on the last rewatch day kept the films two more weeks after the festival.)
  */
 export function blockAccessExpiry(params: {
     nowMs: number;
@@ -102,7 +105,7 @@ export function blockAccessExpiry(params: {
     const { nowMs, screeningStartTime, rewatchWindowMs, minDays = 14 } = params;
     const floor = nowMs + minDays * 24 * 60 * 60 * 1000;
     const start = toMillis(screeningStartTime);
-    const fromScreening = start != null ? start + rewatchWindowMs + 24 * 60 * 60 * 1000 : 0;
-    return new Date(Math.max(floor, fromScreening));
+    if (start == null) return new Date(floor);
+    return new Date(start + rewatchWindowMs + 24 * 60 * 60 * 1000);
 }
 

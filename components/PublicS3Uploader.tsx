@@ -36,6 +36,7 @@ const PublicS3Uploader: React.FC<PublicS3UploaderProps> = ({ onUploadSuccess, la
         body: JSON.stringify({
           fileName: file.name,
           fileType: file.type,
+          fileSize: file.size,
         }),
       });
 

@@ -4,6 +4,9 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { rateLimit, getIP } from "./_lib/rateLimit.js";
 
+const MAX_PHOTO_BYTES = 15 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 export async function POST(request: Request) {
     try {
         // This endpoint is intentionally public (no sign-in — used from the
@@ -16,7 +19,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const { fileName, fileType } = await request.json();
+        const { fileName, fileType, fileSize } = await request.json();
 
         // 1. AWS Configuration Check
         const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -46,8 +49,19 @@ export async function POST(request: Request) {
         // arbitrarily large file masquerading as anything), turning it into
         // free, attacker-controlled file hosting on our S3 bucket. Every
         // real caller only ever uploads an actor photo or video.
-        if (!/^(image|video)\//i.test(String(fileType))) {
-            return new Response(JSON.stringify({ error: 'Only image and video uploads are allowed.' }), {
+        // SECURITY (Oct 2026 audit): anyone can call this (actor sign-up has no
+        // account), so uploads are limited to ordinary photos of a capped size.
+        // It used to accept any image OR video of any size (storage bills) and
+        // SVG files (which can carry script).
+        const size = Number(fileSize);
+        if (!Number.isFinite(size) || size <= 0 || size > MAX_PHOTO_BYTES) {
+            return new Response(JSON.stringify({ error: 'Photos must be under 15 MB.' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+        if (!ALLOWED_PHOTO_TYPES.includes(String(fileType).toLowerCase())) {
+            return new Response(JSON.stringify({ error: 'Please upload a JPG, PNG, WebP or GIF photo.' }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -59,11 +73,14 @@ export async function POST(request: Request) {
         });
 
         // 3. Create Presigned URL for a specific "submissions" folder
-        const key = `uploads/actor-submissions/${Date.now()}-${fileName.replace(/\s/g, '_')}`;
+        const safeName = String(fileName).replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.{2,}/g, '.').slice(-80);
+        const key = `uploads/actor-submissions/${Date.now()}-${safeName}`;
         const command = new PutObjectCommand({
             Bucket: bucketName,
             Key: key,
-            ContentType: fileType,
+            ContentType: String(fileType).toLowerCase(),
+            // Signed into the link: the upload must be exactly this size.
+            ContentLength: Math.round(size),
         });
 
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 }); // URL expires in 5 minutes

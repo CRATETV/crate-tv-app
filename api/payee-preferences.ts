@@ -7,7 +7,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { normalize } from './_lib/creditMatch.js';
 import { PAYOUT_METHOD_LABELS, PayoutMethod } from './_lib/revenueSplit.js';
-import { cleanLine, isValidEmail } from './_lib/validation.js';
+import { cleanLine, isValidEmail, escapeHtml } from './_lib/validation.js';
+import { Resend } from 'resend';
+import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 const json = (body: unknown, status = 200) =>
@@ -25,6 +27,8 @@ async function resolveFilmmaker(request: Request) {
     const user = (await db.collection('users').doc(uid).get()).data();
     if (!user?.isFilmmaker) return { error: json({ error: 'This account is not a verified filmmaker.' }, 403) };
     const name: string = (user.verifiedFilmmakerName || user.name || '').trim();
+    // Locked the first time it's used (the display name can be changed).
+    if (!user.verifiedFilmmakerName && name) await db.collection('users').doc(uid).set({ verifiedFilmmakerName: name }, { merge: true });
     if (!normalize(name)) return { error: json({ error: 'No verified filmmaker name on this account.' }, 403) };
     return { db, name, key: normalize(name), accountEmail: user.email as string | undefined };
 }
@@ -55,10 +59,30 @@ export async function POST(request: Request) {
         const email = cleanLine(body.email, 200);
         if (!handle && method !== 'check') return json({ error: 'Add your username, $cashtag, email or phone for that method.' }, 400);
         if (email && !isValidEmail(email)) return json({ error: 'That email address looks wrong.' }, 400);
+        const before = (await db.collection('payee_profiles').doc(key).get()).data() || {};
         await db.collection('payee_profiles').doc(key).set({
             displayName: name, method, handle, email,
             updatedAt: FieldValue.serverTimestamp(), updatedBy: 'filmmaker',
+            ...(before.method || before.handle ? { previous: { method: before.method || '', handle: before.handle || '', changedAt: new Date().toISOString() } } : {}),
         }, { merge: true });
+        // Where a filmmaker's money goes is worth a heads-up whenever it changes.
+        if ((before.method || before.handle) && (before.method !== method || before.handle !== handle) && process.env.RESEND_API_KEY) {
+            try {
+                const settings = (await db.collection('content').doc('settings').get()).data();
+                await new Resend(process.env.RESEND_API_KEY).emails.send({
+                    from: `Crate TV Alerts <${process.env.FROM_EMAIL || 'noreply@cratetv.net'}>`,
+                    to: [settings?.technicalEmail || 'cratetiv@gmail.com'],
+                    subject: `Payout details changed: ${name.replace(/[\r\n]/g, ' ')}`,
+                    html: renderBrandedEmail({
+                        title: 'Payout details changed',
+                        bodyHtml: `<p style="margin:0 0 12px;"><strong>${escapeHtml(name)}</strong> changed how they get paid.</p>
+<p style="margin:0 0 6px;">Before: ${escapeHtml(PAYOUT_METHOD_LABELS[before.method as PayoutMethod] || before.method || '—')} ${escapeHtml(before.handle || '')}</p>
+<p style="margin:0 0 12px;">Now: ${escapeHtml(PAYOUT_METHOD_LABELS[method as PayoutMethod] || method)} ${escapeHtml(handle)}</p>
+<p style="margin:0;">If this wasn't them, switch off their dashboard in Admin → Earnings &amp; payouts before paying.</p>`,
+                    }),
+                });
+            } catch (e) { console.error('[payee-preferences] alert failed', e); }
+        }
         return json({ success: true });
     } catch (e) {
         return json({ error: (e as Error).message }, 500);

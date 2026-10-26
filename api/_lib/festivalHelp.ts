@@ -118,7 +118,7 @@ export async function applyRepairs(db: Firestore, uid: string, mine: HelpTicket[
                 for (const [id, exp] of Object.entries(blockGrants)) if (!next[id] || next[id] < exp) next[id] = exp;
                 patch.unlockedBlocks = next;
             }
-            if (allAccess) {
+            if (allAccess && passExpiry) {
                 patch.hasFestivalAllAccess = true;
                 patch.festivalAllAccessGrantedAt = new Date().toISOString();
                 patch.festivalPassExpiry = laterExpiry(data.festivalPassExpiry, passExpiry);

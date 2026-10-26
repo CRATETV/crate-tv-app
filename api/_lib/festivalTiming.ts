@@ -54,13 +54,18 @@ export async function getFestivalConclusionTime(db: Firestore): Promise<Date | n
     return new Date(latestMs + FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
 }
 
+/** Every PWFF block in the schedule (partner festivals left out). */
+export async function getPwffBlocks(db: Firestore): Promise<any[]> {
+    const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+    return selectPwffDays(daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] }))
+        .flatMap(d => d.blocks || []);
+}
+
 /**
  * End date for a full festival pass granted right now: the last PWFF block,
- * plus the rewatch week, plus a grace day (see festivalPass.ts).
+ * plus the rewatch week, plus a grace day (see festivalPass.ts). Null when
+ * no block has a screening time.
  */
-export async function computeFestivalPassExpiry(db: Firestore): Promise<string> {
-    const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
-    const blocks = selectPwffDays(daysSnap.docs.map(d => d.data() as { partnerId?: string; blocks?: any[] }))
-        .flatMap(d => d.blocks || []);
-    return festivalPassExpiryFor(blocks, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
+export async function computeFestivalPassExpiry(db: Firestore): Promise<string | null> {
+    return festivalPassExpiryFor(await getPwffBlocks(db), FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS);
 }

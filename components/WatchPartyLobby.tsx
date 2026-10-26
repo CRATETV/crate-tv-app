@@ -17,7 +17,7 @@ interface WatchPartyLobbyProps {
     movie: Movie;
     partyState?: WatchPartyState;
     onPartyStart: () => void;
-    user: { name?: string; email: string | null; avatar?: string; } | null;
+    user: { uid?: string; name?: string; email: string | null; avatar?: string; } | null;
     movieKey?: string;
     blockPrice?: number;
     blockFilms?: any[];
@@ -130,7 +130,8 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         const db = getDbInstance();
         if (!db) return;
 
-        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.email || 'anon');
+        if (!user.uid) return;
+        const viewerRef = db.collection('watch_parties').doc(movie.key).collection('lobby_viewers').doc(user.uid);
         
         // Set viewer presence (temporary — deleted on disconnect)
         viewerRef.set({

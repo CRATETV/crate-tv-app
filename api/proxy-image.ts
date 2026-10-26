@@ -29,6 +29,22 @@ export function detectImageType(bytes: Uint8Array, url: string, headerType: stri
   return (ext && byExt[ext]) || 'image/jpeg';
 }
 
+/** CRATE's own image hosts only: its S3 bucket and its image CDN. */
+export function isAllowedImageUrl(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw.replace(/\s/g, '%20')); } catch { return false; }
+  if (u.protocol !== 'https:' || u.username || u.password || u.port) return false;
+  const bucket = (process.env.AWS_S3_BUCKET_NAME || 'cratetelevision').toLowerCase();
+  const region = (process.env.AWS_S3_REGION && process.env.AWS_S3_REGION !== 'global' ? process.env.AWS_S3_REGION : 'us-east-1').toLowerCase();
+  const allowed = new Set([
+    `${bucket}.s3.${region}.amazonaws.com`, `${bucket}.s3.amazonaws.com`,
+    'cratetelevision.s3.us-east-1.amazonaws.com', 'cratetelevision.s3.amazonaws.com',
+    'd3jhtrl1gnrh4b.cloudfront.net',
+    ...(process.env.CLOUDFRONT_IMAGE_DOMAIN ? [process.env.CLOUDFRONT_IMAGE_DOMAIN.toLowerCase()] : []),
+  ]);
+  return allowed.has(u.hostname.toLowerCase());
+}
+
 export function clampWidth(raw: string | null): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return DEFAULT_WIDTH;
@@ -40,8 +56,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let imageUrl = searchParams.get('url');
 
-    // SECURITY CHECK: Allow any valid Amazon S3 image URL within our infrastructure
-    if (!imageUrl || (!imageUrl.includes('.s3.') && !imageUrl.includes('.amazonaws.com'))) {
+    // SECURITY (Oct 2026 audit): this only checked that ".s3." or
+    // ".amazonaws.com" appeared ANYWHERE in the link, so
+    // https://evil.site/page.svg?x=.s3. passed. CRATE then served the
+    // attacker's file from cratetv.net itself, where a script inside an SVG
+    // could read a signed-in visitor's (or the admin's) session. Only CRATE's
+    // own image hosts are allowed now, over https.
+    if (!imageUrl || !isAllowedImageUrl(imageUrl.trim())) {
       return new Response('A valid S3 image URL is required.', { status: 400 });
     }
 
@@ -56,7 +77,8 @@ export async function GET(request: Request) {
         .replace(/\s/g, '%20')
         .replace(/'/g, '%27');
 
-    const imageResponse = await fetch(correctedImageUrl);
+    // No redirects: a redirect could lead off CRATE's hosts.
+    const imageResponse = await fetch(correctedImageUrl, { redirect: 'error' });
 
     if (!imageResponse.ok) {
       console.error(`Proxy failed to fetch: ${correctedImageUrl}, Status: ${imageResponse.status}`);
@@ -96,6 +118,10 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=604800, s-maxage=2592000, immutable',
         'Vary': 'Accept',
         'Access-Control-Allow-Origin': '*',
+        // Even CRATE's own bucket takes public photo uploads, so never let an
+        // image (an SVG can carry script) run anything if opened directly.
+        'Content-Security-Policy': "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
       },
     });
 

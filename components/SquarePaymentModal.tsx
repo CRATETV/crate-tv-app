@@ -202,7 +202,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     code: promoCode, 
-                    itemId: movie?.key || block?.id || paymentType,
+                    itemId: movie?.key || block?.id || (paymentType === 'pass' ? 'full-festival-pass' : paymentType),
                     originalPriceInCents: Math.round(basePrice * 100)
                 }),
             });
@@ -253,7 +253,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                     sourceId,
                     amount: displayAmount,
                     paymentType,
-                    itemId: movie?.key || block?.id || paymentType,
+                    itemId: movie?.key || block?.id || (paymentType === 'pass' ? 'full-festival-pass' : paymentType),
                     movieTitle: movie?.title,
                     directorName: movie?.director,
                     blockTitle: block?.title,

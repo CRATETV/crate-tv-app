@@ -15,7 +15,6 @@ import { POST as trackView } from './api/track-view.js';
 import { POST as trackVisit } from './api/track-visit.js';
 import { POST as getRecommendations } from './api/get-recommendations.js';
 import { POST as createPoll } from './api/create-poll.js';
-import { POST as votePoll } from './api/vote-poll.js';
 import { POST as endPoll } from './api/end-poll.js';
 import { POST as claimTicketStub } from './api/claim-ticket-stub.js';
 import { GET as generateHighlights } from './api/generate-highlights.js';
@@ -77,7 +76,6 @@ async function startServer() {
   app.post('/api/track-visit', wrapHandler(trackVisit));
   app.post('/api/get-recommendations', wrapHandler(getRecommendations));
   app.post('/api/create-poll', wrapHandler(createPoll));
-  app.post('/api/vote-poll', wrapHandler(votePoll));
   app.post('/api/end-poll', wrapHandler(endPoll));
   app.post('/api/claim-ticket-stub', wrapHandler(claimTicketStub));
   app.get('/api/generate-highlights', wrapHandler(generateHighlights));

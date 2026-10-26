@@ -92,14 +92,20 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
         setIsSaving(true);
         try {
             const token = await getUserIdToken();
-            await fetch('/api/update-actor-profile', {
+            const res = await fetch('/api/update-actor-profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ ...profile, photoUrl: profile.photo, highResPhotoUrl: profile.highResPhoto }),
+                body: JSON.stringify({ ...profile, photoUrl: profile.photo, highResPhotoUrl: profile.highResPhoto || profile.photo }),
             });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || 'Update failed.');
+            }
+            setError('');
             setSuccess('Profile manifest synchronized.');
         } catch (err) {
-            setError('Update failed.');
+            setSuccess('');
+            setError(err instanceof Error ? err.message : 'Update failed.');
         } finally {
             setIsSaving(false);
         }

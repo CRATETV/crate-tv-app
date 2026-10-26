@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
+import { useAuth } from '../contexts/AuthContext';
 
 const FilmmakerSignupPage: React.FC = () => {
     const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [pending, setPending] = useState(false);
+    const { user, getUserIdToken } = useAuth();
+    const signedIn = !!user;
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -18,9 +22,12 @@ const FilmmakerSignupPage: React.FC = () => {
         const data = Object.fromEntries(formData.entries());
 
         try {
+            // Signed in: the dashboard is set up on THIS account (no email or
+            // password needed). Otherwise a new account is created.
+            const token = signedIn ? await getUserIdToken() : null;
             const response = await fetch('/api/filmmaker-signup', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
                 body: JSON.stringify(data),
             });
             
@@ -29,6 +36,7 @@ const FilmmakerSignupPage: React.FC = () => {
                 throw new Error(resultData.error || 'An unknown error occurred.');
             }
             
+            setPending(resultData.pending === true);
             setSuccessMessage(resultData.message || 'Success! Your dashboard is active.');
             setStatus('success');
         } catch (err) {
@@ -43,9 +51,9 @@ const FilmmakerSignupPage: React.FC = () => {
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
                 <main className="flex-grow flex items-center justify-center text-center p-4">
                     <div className="max-w-2xl bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
-                        <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Success!</h1>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">{pending ? 'Request received' : 'Success!'}</h1>
                         <p className="text-gray-300 mb-6">
-                           {successMessage} You can now log in to access your Filmmaker Dashboard.
+                           {successMessage}{pending ? '' : ' You can now log in to access your Filmmaker Dashboard.'}
                         </p>
                         <a 
                             href="/login?redirect=/portal" 
@@ -88,13 +96,15 @@ const FilmmakerSignupPage: React.FC = () => {
                         <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-8">
                             <div className="bg-blue-900/30 border border-blue-700 text-blue-200 text-sm rounded-lg p-4 mb-6">
                                 <h3 className="font-bold mb-2">How It Works:</h3>
-                                <p>To verify your identity, our system automatically checks if your name matches a director or producer in our film credits. If it's a match, you can create your account.</p>
+                                <p>Enter your name exactly as it appears in your film's credits. If you use the email CRATE already has for you (the one we sent your agreement to, or that you submitted your film with), your dashboard opens right away. Otherwise we'll check it's you first.</p>
+                                {signedIn && <p className="mt-2">You're signed in as {user?.email}, so the dashboard will be set up on this account.</p>}
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
                                     <input type="text" id="name" name="name" className="form-input" required placeholder="Enter name exactly as it appears in credits" />
                                 </div>
+                                {!signedIn && (<>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
                                     <input type="email" id="email" name="email" className="form-input" required placeholder="you@example.com" />
@@ -125,6 +135,7 @@ const FilmmakerSignupPage: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
+                                </>)}
                                 
                                 <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
                                     {status === 'submitting' ? 'Verifying...' : 'Verify Identity & Get Access'}

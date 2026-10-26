@@ -1,22 +1,33 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { rateLimit, getIP } from './_lib/rateLimit.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = 'studio@cratetv.net';
 
 export async function POST(request: Request) {
     try {
+    if (!rateLimit(`newsletter:${getIP(request)}`, 5, 60 * 60_000)) {
+        return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+    }
         const { email } = await request.json();
 
-        if (!email) {
-            return new Response(JSON.stringify({ error: 'Email required.' }), { status: 400 });
+        if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || email.length > 200) {
+            return new Response(JSON.stringify({ error: 'Please enter a valid email.' }), { status: 400 });
         }
 
         const initError = getInitializationError();
         if (initError) throw new Error(initError);
         const db = getAdminDb();
         if (!db) throw new Error("Database offline.");
+
+        // Already subscribed: don't send the welcome again (stops anyone using
+        // this form to flood someone's inbox).
+        const existing = await db.collection('zine_subscriptions').doc(email.toLowerCase().trim()).get();
+        if (existing.exists && existing.data()?.status === 'active') {
+            return new Response(JSON.stringify({ success: true }), { status: 200 });
+        }
 
         // 1. Store in Firestore
         await db.collection('zine_subscriptions').doc(email.toLowerCase().trim()).set({
