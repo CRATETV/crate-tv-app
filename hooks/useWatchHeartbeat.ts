@@ -9,64 +9,82 @@ interface UseWatchHeartbeatParams {
   heartbeatIntervalMs?: number; // default 20s
 }
 
+// Records who is ACTUALLY watching a watch party (video playing, tab
+// visible), for the "watching now" counts and the post-party report.
+//
+// FIX (Oct 2026): this only looked for the video player once, when the page
+// first opened. Anyone who arrived early sat in the lobby (no player yet),
+// so when the film started their viewing was never recorded and the
+// "watching" count stayed near zero. It now checks the player on every tick,
+// and only starts counting someone once their video is really playing.
 export function useWatchHeartbeat({
   blockId,
   userId,
   videoRef,
   heartbeatIntervalMs = 20000,
 }: UseWatchHeartbeatParams) {
-  const sessionIdRef = useRef<string>(`${userId}_${blockId}_${Date.now()}`);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchSecondsRef = useRef(0);
 
   useEffect(() => {
-    const videoEl = videoRef.current;
     const db = getDbInstance();
-    if (!videoEl || !blockId || !userId || !db) return;
+    if (!blockId || !userId || !db) return;
 
-    const sessionDocRef = db.collection('watchSessions').doc(sessionIdRef.current);
+    const sessionDocRef = db.collection('watchSessions').doc(`${userId}_${blockId}_${Date.now()}`);
+    let started = false;
+    let busy = false;
+    watchSecondsRef.current = 0;
 
-    const initSession = async () => {
-      await sessionDocRef.set({
-        userId,
-        blockId,
-        startedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastHeartbeat: firebase.firestore.FieldValue.serverTimestamp(),
-        watchSeconds: 0,
-        device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-      });
-    };
-    initSession();
-
-    const sendHeartbeat = async () => {
-      // Only count time if the video is actually playing and tab is visible
-      if (videoEl.paused || document.hidden) return;
-
-      watchSecondsRef.current += heartbeatIntervalMs / 1000;
-
-      await sessionDocRef.set(
-        {
-          lastHeartbeat: firebase.firestore.FieldValue.serverTimestamp(),
-          watchSeconds: watchSecondsRef.current,
-        },
-        { merge: true }
-      );
+    const isWatching = () => {
+      const el = videoRef.current;
+      return !!el && !el.paused && !el.ended && !document.hidden;
     };
 
-    intervalRef.current = setInterval(sendHeartbeat, heartbeatIntervalMs);
+    const tick = async () => {
+      if (busy || !isWatching()) return;
+      busy = true;
+      try {
+        if (!started) {
+          started = true;
+          await sessionDocRef.set({
+            userId,
+            blockId,
+            startedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastHeartbeat: firebase.firestore.FieldValue.serverTimestamp(),
+            watchSeconds: 0,
+            device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+          });
+          return;
+        }
+        watchSecondsRef.current += heartbeatIntervalMs / 1000;
+        await sessionDocRef.set(
+          { lastHeartbeat: firebase.firestore.FieldValue.serverTimestamp(), watchSeconds: watchSecondsRef.current },
+          { merge: true },
+        );
+      } catch {
+        // Counting must never interrupt the film.
+      } finally {
+        busy = false;
+      }
+    };
 
-    // Clean stop on unmount (user navigates away, closes tab, etc.)
+    // Check quickly at first (so a viewer is counted within seconds of the
+    // film starting), then every heartbeat.
+    const fastCheck = setInterval(() => { if (!started) tick(); }, 3000);
+    const interval = setInterval(tick, heartbeatIntervalMs);
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      // Fire a final heartbeat so the last watched moment is captured
-      sessionDocRef.set(
-        {
-          lastHeartbeat: firebase.firestore.FieldValue.serverTimestamp(),
-          watchSeconds: watchSecondsRef.current,
-          endedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+      clearInterval(fastCheck);
+      clearInterval(interval);
+      if (started) {
+        sessionDocRef.set(
+          {
+            lastHeartbeat: firebase.firestore.FieldValue.serverTimestamp(),
+            watchSeconds: watchSecondsRef.current,
+            endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        ).catch(() => {});
+      }
     };
   }, [blockId, userId, videoRef, heartbeatIntervalMs]);
 }

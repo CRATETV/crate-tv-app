@@ -8,6 +8,7 @@ import AuthModal from './AuthModal';
 import Footer from './Footer';
 import SEO from './SEO';
 import { HERO_DEFAULTS } from './HeroEditor';
+import UpcomingWatchParties from './UpcomingWatchParties';
 
 const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ title, desc, icon }) => (
     <div className="relative p-[1px] bg-gradient-to-br from-red-600 via-purple-600 to-indigo-600 rounded-[2.5rem] shadow-2xl group transition-all duration-700 hover:shadow-[0_20px_80px_rgba(239,68,68,0.2)] hover:-translate-y-2">
@@ -104,6 +105,7 @@ const LandingPage: React.FC = () => {
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+    const [festivalData, setFestivalData] = useState<any[]>([]);
     const [hero, setHero] = useState<Required<HeroConfig>>(HERO_DEFAULTS);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [initialAuthView, setInitialAuthView] = useState<'login' | 'signup'>('login');
@@ -115,6 +117,7 @@ const LandingPage: React.FC = () => {
                 const { data } = await fetchAndCacheLiveData();
                 setMovies(data.movies || {});
                 setCategories(data.categories || {});
+                setFestivalData((data as any).festivalData || []);
                 if ((data as any).viewCounts) setViewCounts((data as any).viewCounts);
                 const heroConfig = (data as any).settings?.heroConfig;
                 if (heroConfig) setHero({ ...HERO_DEFAULTS, ...heroConfig });
@@ -297,6 +300,9 @@ const LandingPage: React.FC = () => {
                         <span className="w-px h-8 bg-gradient-to-b from-white/60 to-transparent" />
                     </a>
                 </section>
+
+                {/* Upcoming watch parties: visible before they start, with a countdown. */}
+                <UpcomingWatchParties movies={movies} festivalData={festivalData} allPartyStates={{}} className="px-4 md:px-12 pt-14 bg-black max-w-[1800px] mx-auto" />
 
                 {/* SECTION 1.5: TITLE MARQUEE */}
                 <Marquee items={marqueeTitles} />

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10 — Watch parties: upcoming list, real viewer count
+
+- **Upcoming watch parties** on the home page and the landing page: every film watch party and festival block in the next 30 days, with a live countdown, date/time (Philadelphia), price and a ticket button (`components/UpcomingWatchParties.tsx`). People can buy early and go straight into the film at start time instead of finding out once it's live.
+- **"Watching now" counts real viewers.** The heartbeat that records viewing only looked for the video player once, when the page opened, so everyone who arrived early (in the lobby) was never counted. It now checks every few seconds and only counts people whose video is actually playing (`hooks/useWatchHeartbeat.ts`). Viewers see "N watching now" above the chat (`/api/watching-now`, cached 15s); the end screen shows how many watched together.
+- **Festival schedule editor** now warns before deleting a block or a day: tickets are tied to a block, so deleting and re-adding one locks out everyone who already bought it.
+
+
 ## 2026-10 — Pay what you want for watch parties
 
 - Admin → Watch parties: a paid film watch party can be switched to **Pay what you want (from $3)** (checkbox under the price). Viewers see "Pay what you want" on the ticket button and pick $3, $5, $10 or their own amount at checkout.

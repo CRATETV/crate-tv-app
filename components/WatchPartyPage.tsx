@@ -93,7 +93,7 @@ const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>((
     );
 });
 
-const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; verifiedBackstageKey?: string; onBackstageVerify?: (key: string) => void }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, verifiedBackstageKey, onBackstageVerify }) => {
+const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; verifiedBackstageKey?: string; onBackstageVerify?: (key: string) => void; watchingNow?: number }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, verifiedBackstageKey, onBackstageVerify, watchingNow }) => {
     const { getUserIdToken } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -189,6 +189,13 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
             className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900'} overflow-hidden min-h-0`}
             onClick={(e) => e.stopPropagation()}
         >
+            {/* How many people are watching right now (video playing, not the lobby). */}
+            {typeof watchingNow === 'number' && watchingNow > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 flex-shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-gray-300">{watchingNow} watching now</span>
+                </div>
+            )}
             {/* Q&A Live Banner */}
             {isQALive && (
                 <div className={`bg-gradient-to-r from-amber-600 via-red-600 to-purple-600 px-4 py-2 flex items-center justify-center gap-2 animate-pulse flex-shrink-0 ${showQABanner ? 'animate-[pulse_0.5s_ease-in-out_3]' : ''}`}>
@@ -552,6 +559,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // video already uses fixes it for the common case.
     const [introNeedsUnmute, setIntroNeedsUnmute] = useState(() => !hasUserGestured());
     const [viewerCount, setViewerCount] = useState(0);
+    const [watchedTogether, setWatchedTogether] = useState(0);
+    // People actually watching right now (video playing), refreshed every 20s.
+    useEffect(() => {
+        if (!movieKey) return;
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const r = await fetch(`/api/watching-now?id=${encodeURIComponent(movieKey)}`);
+                const d = await r.json();
+                if (!cancelled && typeof d.watchingNow === 'number') { setViewerCount(d.watchingNow); setWatchedTogether(d.watchedTogether || 0); }
+            } catch { /* the count is a nice-to-have */ }
+        };
+        load();
+        const t = setInterval(load, 20000);
+        return () => { cancelled = true; clearInterval(t); };
+    }, [movieKey]);
     const videoRef = useRef<HTMLVideoElement>(null);
     const introVideoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<any>(null);
@@ -1601,7 +1624,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         // Retry until Firebase is ready — it initializes async so first call may return null
         let unsubscribe: (() => void) | null = null;
         let reactionsUnsub: (() => void) | null = null;
-        let viewerUnsub: (() => void) | null = null;
         let retryTimer: ReturnType<typeof setTimeout> | null = null;
         let partyRefForVisibility: any = null;
 
@@ -1633,9 +1655,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         if (change.type === 'added') setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
                     });
                 });
-            viewerUnsub = partyRef.collection('lobby_viewers').onSnapshot(snapshot => {
-                setViewerCount(snapshot.size);
-            });
+            // (The viewer count now comes from /api/watching-now below: people
+            // actually watching, not people sitting in the lobby.)
         };
 
         setup();
@@ -1697,7 +1718,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (retryTimer) clearTimeout(retryTimer);
             if (unsubscribe) unsubscribe();
             if (reactionsUnsub) reactionsUnsub();
-            if (viewerUnsub) viewerUnsub();
             clearInterval(watchdog);
             clearInterval(hardPoll);
             document.removeEventListener('visibilitychange', handleVisible);
@@ -2299,7 +2319,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 <WatchPartyCredits
                     movie={movie}
                     partyState={partyState}
-                    viewerCount={viewerCount}
+                    viewerCount={Math.max(watchedTogether, viewerCount)}
                     onClose={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }}
                     onRewatch={() => {
                         setShowCredits(false);
@@ -2802,6 +2822,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             directors={[]}
                             isQALive={partyState?.isQALive}
                             user={user}
+                            watchingNow={viewerCount}
                             isBackstageVerified={isBackstageVerified}
                             verifiedBackstageKey={verifiedBackstageKey}
                             onBackstageVerify={(key) => {
@@ -2820,6 +2841,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         directors={[]}
                         isQALive={partyState?.isQALive}
                         user={user}
+                        watchingNow={viewerCount}
                         isBackstageVerified={isBackstageVerified}
                         verifiedBackstageKey={verifiedBackstageKey}
                         onBackstageVerify={(key) => {

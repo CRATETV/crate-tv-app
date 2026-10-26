@@ -19,6 +19,7 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+import UpcomingWatchParties from './components/UpcomingWatchParties';
 import WatchPartyLobby from './components/WatchPartyLobby';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import CrateFestBanner from './components/CrateFestBanner';
@@ -689,6 +690,7 @@ const App: React.FC = () => {
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
+                        <UpcomingWatchParties movies={movies} festivalData={festivalData} allPartyStates={allPartyStates} />
                         {continueWatchingMovies.length > 0 && (
                                 <MovieCarousel 
                                     title={

@@ -198,7 +198,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
 
   const removeDay = (index: number) => {
-      if (!window.confirm("Remove this session day?")) return;
+      if (!window.confirm("Remove this whole day and all its blocks?\n\nAnyone who bought tickets for these blocks will LOSE access. Only remove a day nobody has bought tickets for.")) return;
       setIsDirty(true);
       const filtered = data.filter((_, i) => i !== index);
       const reindexed = filtered.map((d, i) => ({ ...d, day: i + 1 }));
@@ -235,6 +235,10 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
 
   const removeBlock = (dayIndex: number, blockIndex: number) => {
+     // Tickets are tied to a block's id. Deleting a block (even to re-add it)
+     // means everyone who already bought a ticket for it loses access, which
+     // is how early buyers can get locked out. Edit a block instead.
+     if (!window.confirm("Delete this block?\n\nAnyone who already bought a ticket for it will LOSE access, even if you add it again. To change the films, time or price, edit the block instead.\n\nOnly delete a block nobody has bought a ticket for.")) return;
      setIsDirty(true);
      const newData = [...data];
      if (!newData[dayIndex].blocks) newData[dayIndex].blocks = [];
