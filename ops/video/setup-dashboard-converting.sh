@@ -40,11 +40,33 @@ bold "Step 1 of 3: permission for the key CRATE uses on Vercel"
 echo "In Vercel → crate-tv-app → Settings → Environment Variables, copy the value of AWS_ACCESS_KEY_ID"
 echo "(it starts with AKIA). Paste it here:"
 read -r KEY_ID
-USER_NAME=$(aws iam get-access-key-last-used --access-key-id "$KEY_ID" --query 'UserName' --output text 2>/dev/null || true)
+# Drop spaces, quotes and invisible characters that come along when pasting.
+KEY_ID=$(printf '%s' "$KEY_ID" | tr -cd 'A-Z0-9')
+LAST_USED=$(aws iam get-access-key-last-used --access-key-id "$KEY_ID" --output json 2>/tmp/crate-aws-err.txt || true)
+USER_NAME=$(printf '%s' "$LAST_USED" | jq -r '.UserName // empty' 2>/dev/null || true)
+if [ -n "$LAST_USED" ] && [ -z "$USER_NAME" ]; then
+  # AWS knows the key but it belongs to no user: it's the main (root) account key,
+  # which can already do everything. Nothing to add.
+  green "✓ That's your main account key, so it already has permission. Nothing to add."
+  USER_NAME="(root)"
+fi
+if [ -z "$USER_NAME" ] || [ "$USER_NAME" = "None" ]; then
+  # Second way: look through each AWS user's keys.
+  echo "Looking through your AWS users for that key…"
+  USER_NAME=""
+  for U in $(aws iam list-users --query 'Users[].UserName' --output text 2>>/tmp/crate-aws-err.txt); do
+    if aws iam list-access-keys --user-name "$U" --query 'AccessKeyMetadata[].AccessKeyId' --output text 2>/dev/null | tr '\t' '\n' | grep -qx "$KEY_ID"; then
+      USER_NAME="$U"; break
+    fi
+  done
+fi
 if [ -z "$USER_NAME" ] || [ "$USER_NAME" = "None" ]; then
   red "Couldn't find that key in your AWS account. Stopped; nothing changed."
+  echo "What AWS said:"; cat /tmp/crate-aws-err.txt; rm -f /tmp/crate-aws-err.txt
   exit 1
 fi
+rm -f /tmp/crate-aws-err.txt
+if [ "$USER_NAME" != "(root)" ]; then
 echo "That key belongs to the AWS user: $USER_NAME"
 
 POLICY=$(jq -n --arg role "$ROLE_ARN" --arg bucket "$BUCKET" '{
@@ -62,6 +84,7 @@ if [ "$OK1" = "y" ]; then
   green "✓ Permission added"
 else
   echo "Skipped."
+fi
 fi
 
 echo

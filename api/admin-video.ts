@@ -13,6 +13,7 @@
 //   { action:'abort-upload', key, uploadId }
 //   { action:'convert', key, movieKey, title }             → { jobId }
 //   { action:'status', jobId }                             → { status, percent, masterUrl?, minutes? }
+//   { action:'statuses', jobIds }                          → { jobs: { [jobId]: same as status } }  (Bulk upload)
 //
 // Admin passwords only. Needs on Vercel: the same AWS keys as uploads, plus
 // MEDIACONVERT_ROLE_ARN (the role MediaConvert uses to read/write the bucket,
@@ -121,6 +122,18 @@ export async function POST(request: Request) {
             const jobId = typeof body.jobId === 'string' ? body.jobId.slice(0, 100) : '';
             if (!jobId) return json({ error: 'Missing job.' }, 400);
             return json(await refreshJob(getAdminDb(), cfg, jobId));
+        }
+
+        if (action === 'statuses') {
+            // Bulk upload: many conversions in one check.
+            const ids: string[] = (Array.isArray(body.jobIds) ? body.jobIds : []).filter((j: unknown) => typeof j === 'string' && j).map((j: string) => j.slice(0, 100)).slice(0, 60);
+            const db = getAdminDb();
+            const out: Record<string, unknown> = {};
+            await Promise.all(ids.map(async id => {
+                try { out[id] = await refreshJob(db, cfg, id); }
+                catch (e) { out[id] = { status: 'UNKNOWN', error: plainAwsError(e) }; }
+            }));
+            return json({ jobs: out });
         }
 
         return json({ error: 'Unknown action.' }, 400);

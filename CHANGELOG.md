@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10 — Bulk upload films (no Terminal needed)
+
+- New admin tab **Bulk upload films** (Films & content group). Drop many film files at once (a whole festival); CRATE guesses which film each file is from its name (`api/_lib/filmFileMatch.ts`, tested: ignores words like FINAL / ProRes / v2, a missing "The", and picks the longer title when one sits inside another; no guess when unsure). Check each guess, then **Upload & convert**: files upload one after the other, each starts its conversion as soon as it's up, and the server fills in each film's video and runtime when AWS is done (the page can be closed once uploads finish; conversions in progress come back after a refresh). Warns when two files point at the same film or a film already has a streaming version. Staff who can edit Films get this tab too.
+- The upload code is now shared by the single-film box and the bulk tab (`services/videoUpload.ts`); `api/admin-video.ts` has a `statuses` action that checks many conversions in one call.
+- `ops/video/setup-dashboard-converting.sh`: works when Vercel uses the main (root) account key (nothing to add), finds the key's user another way, and shows AWS's own error if it still can't.
+
 ## 2026-10 — Upload & convert films from the admin panel; clearer storage clean-up
 
 - **Film editor → "Upload & convert film".** Choose the film file (any size): it uploads straight to S3 in 64 MB pieces (`originals/`), then AWS MediaConvert makes the streaming version (HLS 1080p / 720p / 360p, same settings as `ops/video/convert-film.sh`) in `hsl/<name>/`. When it's done, the film's video address and runtime fill in by themselves (saved films are updated and republished on the server; the open editor fills in too). The conversion carries on if you close the page; the upload needs the page open. `api/admin-video.ts`, `components/admin/FilmUploadConvert.tsx`, helpers in `api/_lib/videoPipeline.ts` (tested). New package: `@aws-sdk/client-mediaconvert` (run `npm install`).

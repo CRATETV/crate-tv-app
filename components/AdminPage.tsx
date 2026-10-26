@@ -46,6 +46,7 @@ import ContractsCenterTab from './admin/ContractsCenterTab';
 import ActorApprovalsTab from './admin/ActorApprovalsTab';
 import PaymentsRefundsTab from './admin/PaymentsRefundsTab';
 import StorageCleanupTab from './admin/StorageCleanupTab';
+import BulkFilmUploadTab from './admin/BulkFilmUploadTab';
 import { TAB_META, SELF_HEADED, groupOf } from './admin/tabMeta';
 import { ACCENT } from './admin/ui';
 
@@ -133,7 +134,9 @@ const AdminPage: React.FC = () => {
         if (isMaster) return Object.keys(ALL_TABS);
         const granted = normalizeTabIds(permissions[role] || []);
         // Actor approvals used to live inside Submissions — keep that access.
-        const specificTabs = granted.includes('submissions') ? [...granted, 'actors'] : granted;
+        const specificTabs = granted.includes('submissions') ? [...granted, 'actors'] : [...granted];
+        // Whoever can edit Films can also bulk-upload them (Oct 2026).
+        if (granted.includes('movies')) specificTabs.push('bulkUpload');
         // Only the dashboard is always visible — everything else must be granted
         return [...new Set(['pulse', ...specificTabs])].filter(tab => !MASTER_ONLY.includes(tab));
     }, [role, permissions, isMaster]);
@@ -686,6 +689,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'refunds' && <PaymentsRefundsTab />}
                     {activeTab === 'storage' && <StorageCleanupTab />}
+                    {activeTab === 'bulkUpload' && <BulkFilmUploadTab movies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!, true)} />}
                     {activeTab === 'contracts' && <ContractsCenterTab movies={movies} pipeline={pipeline} categories={categories} />}
                     {activeTab === 'partners' && <PartnersAdminTab allMovies={movies} />}
                     {activeTab === 'money' && (

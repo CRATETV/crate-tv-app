@@ -9,6 +9,7 @@ export const TAB_META: Record<string, TabMeta> = {
     pulse:        { label: 'Overview', icon: '✨', desc: 'What needs you today, and how CRATE is doing.', keywords: 'home dashboard today pulse' },
 
     movies:       { label: 'Films', icon: '🎞️', desc: 'Add, edit and publish films in the catalog.', keywords: 'catalog movies add film upload edit' },
+    bulkUpload:   { label: 'Bulk upload films', icon: '📤', desc: 'Upload many films at once (a whole festival); each is converted for streaming.', keywords: 'bulk upload many films festival convert video s3 mediaconvert hls' },
     submissions:  { label: 'Submissions', icon: '📥', desc: 'Films submitted to CRATE, waiting for review.', keywords: 'pipeline new films review' },
     homepage:     { label: 'Homepage', icon: '🏠', desc: 'The hero banner and featured films on the home screen.', keywords: 'hero featured banner' },
     categories:   { label: 'Rows & categories', icon: '🗂️', desc: 'The rows of films people browse.', keywords: 'rows categories carousel order' },
@@ -42,7 +43,7 @@ export const TAB_META: Record<string, TabMeta> = {
 
 export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] = [
     { title: 'Home', accent: 'coral', ids: ['pulse'] },
-    { title: 'Films & content', accent: 'orange', ids: ['movies', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels'] },
+    { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels'] },
     { title: 'Live & festivals', accent: 'violet', ids: ['watchParty', 'pwff', 'partners', 'crateFestHub', 'ticketCodes'] },
     { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email', 'outreach'] },
     { title: 'Money & legal', accent: 'green', ids: ['money', 'refunds', 'contracts', 'vouchers', 'shop'] },
@@ -52,4 +53,4 @@ export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] 
 export const groupOf = (id: string) => TAB_GROUPS.find(g => g.ids.includes(id));
 
 /** Tabs that draw their own page header. */
-export const SELF_HEADED = new Set(['pulse', 'money', 'refunds', 'contracts', 'actors', 'storage']);
+export const SELF_HEADED = new Set(['pulse', 'money', 'refunds', 'contracts', 'actors', 'storage', 'bulkUpload']);

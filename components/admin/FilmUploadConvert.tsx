@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { uploadAndConvert, videoApi, type JobStatus } from '../../services/videoUpload';
 
 // "Upload & convert film" in the Film editor (Oct 2026). Uploads the original
 // film to S3 in pieces (big films are many GB), then AWS MediaConvert makes
@@ -14,20 +15,8 @@ interface Props {
 }
 
 type Stage = 'idle' | 'uploading' | 'converting' | 'done' | 'error';
-const PARALLEL = 4;
 const jobStoreKey = (movieKey: string) => `crate-video-job:${movieKey}`;
-
-async function api<T = any>(body: Record<string, unknown>): Promise<T> {
-    let password = '';
-    try { password = sessionStorage.getItem('adminPassword') || ''; } catch { /* no storage */ }
-    const res = await fetch('/api/admin-video', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, ...body }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-    return data as T;
-}
+const api = videoApi;
 
 const FilmUploadConvert: React.FC<Props> = ({ movieKey, title, onReady }) => {
     const [stage, setStage] = useState<Stage>('idle');
@@ -60,7 +49,7 @@ const FilmUploadConvert: React.FC<Props> = ({ movieKey, title, onReady }) => {
         let stopped = false;
         const check = async () => {
             try {
-                const r = await api<{ status: string; percent: number | null; masterUrl: string | null; minutes: number | null; error: string | null }>({ action: 'status', jobId: jobRef.current });
+                const r = await api<JobStatus>({ action: 'status', jobId: jobRef.current });
                 if (stopped) return;
                 if (r.status === 'COMPLETE' && r.masterUrl) {
                     try { localStorage.removeItem(jobStoreKey(movieKey)); } catch { /* none */ }
@@ -92,62 +81,16 @@ const FilmUploadConvert: React.FC<Props> = ({ movieKey, title, onReady }) => {
     const start = async () => {
         if (!file) return;
         setStage('uploading'); setProgress(0); setMessage('Starting upload…');
-        let key = '', uploadId = '';
         try {
-            const s = await api<{ key: string; uploadId: string; partSize: number; parts: number }>({ action: 'start-upload', fileName: file.name, contentType: file.type, size: file.size });
-            key = s.key; uploadId = s.uploadId;
-            const total = s.parts;
-            const done: { PartNumber: number; ETag: string }[] = [];
-            const loaded = new Array(total + 1).fill(0);
-            const report = () => {
-                const sum = loaded.reduce((a, b) => a + b, 0);
-                const pct = Math.min(99, Math.floor((sum / file.size) * 100));
+            const jobId = await uploadAndConvert(file, movieKey, title, (pct, sent) => {
                 setProgress(pct);
-                setMessage(`Uploading… ${pct}% (${(sum / 1024 ** 3).toFixed(2)} of ${(file.size / 1024 ** 3).toFixed(2)} GB). Keep this page open.`);
-            };
-            const putPart = (url: string, blob: Blob, n: number) => new Promise<string>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('PUT', url, true);
-                xhr.upload.onprogress = ev => { loaded[n] = ev.loaded; report(); };
-                xhr.onload = () => {
-                    if (xhr.status < 200 || xhr.status >= 300) return reject(new Error(`piece ${n} failed (${xhr.status})`));
-                    const etag = xhr.getResponseHeader('ETag');
-                    if (!etag) return reject(new Error('S3 needs one setting first: in the bucket\'s CORS, add "ETag" to ExposeHeaders (see setup steps).'));
-                    resolve(etag);
-                };
-                xhr.onerror = () => reject(new Error(`piece ${n}: connection problem`));
-                xhr.send(blob);
+                setMessage(pct >= 100 ? 'Starting the conversion…' : `Uploading… ${pct}% (${(sent / 1024 ** 3).toFixed(2)} of ${(file.size / 1024 ** 3).toFixed(2)} GB). Keep this page open.`);
             });
-
-            for (let first = 1; first <= total; first += 40) {
-                const nums = Array.from({ length: Math.min(40, total - first + 1) }, (_, i) => first + i);
-                const { urls } = await api<{ urls: Record<number, string> }>({ action: 'sign-parts', key, uploadId, partNumbers: nums });
-                let idx = 0;
-                const worker = async () => {
-                    while (idx < nums.length) {
-                        const n = nums[idx++];
-                        const blob = file.slice((n - 1) * s.partSize, Math.min(file.size, n * s.partSize));
-                        let lastErr: unknown;
-                        for (let attempt = 0; attempt < 3; attempt++) {
-                            try { const etag = await putPart(urls[n], blob, n); done.push({ PartNumber: n, ETag: etag }); lastErr = null; break; }
-                            catch (e) { lastErr = e; loaded[n] = 0; if (/ETag/.test((e as Error).message)) break; await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); }
-                        }
-                        if (lastErr) throw lastErr;
-                        loaded[n] = blob.size; report();
-                    }
-                };
-                await Promise.all(Array.from({ length: Math.min(PARALLEL, nums.length) }, worker));
-            }
-            setMessage('Finishing upload…');
-            await api({ action: 'complete-upload', key, uploadId, parts: done });
-            setMessage('Starting the conversion…');
-            const c = await api<{ jobId: string }>({ action: 'convert', key, movieKey, title });
-            jobRef.current = c.jobId;
-            try { localStorage.setItem(jobStoreKey(movieKey), c.jobId); } catch { /* none */ }
+            jobRef.current = jobId;
+            try { localStorage.setItem(jobStoreKey(movieKey), jobId); } catch { /* none */ }
             setProgress(0);
             setStage('converting');
         } catch (e) {
-            if (key && uploadId) api({ action: 'abort-upload', key, uploadId }).catch(() => {});
             setStage('error');
             setMessage((e as Error).message || 'Upload failed.');
         }
