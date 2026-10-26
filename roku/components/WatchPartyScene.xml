@@ -50,7 +50,7 @@
             </Label>
 
             <Group id="loadingState" visible="true">
-                <Label text="Checking the watch party..." color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 520]">
+                <Label id="loadingLabel" text="Checking the watch party..." color="#8C8C8C" width="1920" horizAlign="center" translation="[0, 520]">
                     <Font role="font" uri="pkg:/fonts/Inter-Medium.ttf" size="26" />
                 </Label>
             </Group>

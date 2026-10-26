@@ -852,8 +852,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // rental/pass — has no Firestore-backed entitlement to check, so it keeps
     // using the raw URL rather than 403ing a trusted host out of their own event.
     const [signedUrl, setSignedUrl] = useState<string | null>(null);
+    // Why there's no video link yet, so the viewer sees a message instead of
+    // an endless spinner (Oct 26 2026: a signed-out visitor to a FREE party
+    // used to spin forever, because the video link needs an account).
+    const [streamProblem, setStreamProblem] = useState<null | 'signin' | 'unavailable' | 'error'>(null);
+    const [streamRetry, setStreamRetry] = useState(0);
     useEffect(() => {
         setSignedUrl(null);
+        setStreamProblem(null);
         if (!hasAccess || !movie || movie.isLiveStream) return;
         let cancelled = false;
         (async () => {
@@ -864,21 +870,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 const body = isBackstageVerified && verifiedBackstageKey
                     ? { movieKey, mode: 'live', backstageKey: verifiedBackstageKey }
                     : { movieKey, mode: 'live', idToken: await getUserIdToken() };
-                if (!('backstageKey' in body) && !body.idToken) return;
+                if (!('backstageKey' in body) && !body.idToken) { if (!cancelled) setStreamProblem('signin'); return; }
                 const res = await fetch('/api/get-stream-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
                 });
-                if (!res.ok) { console.error('[WatchPartyPage] get-stream-url failed:', res.status); return; }
+                if (!res.ok) {
+                    console.error('[WatchPartyPage] get-stream-url failed:', res.status);
+                    if (!cancelled) setStreamProblem(res.status === 401 ? 'signin' : res.status === 410 ? 'unavailable' : 'error');
+                    return;
+                }
                 const data = await res.json();
                 if (!cancelled) setSignedUrl(data.url);
             } catch (e) {
                 console.error('[WatchPartyPage] failed to fetch signed stream URL:', e);
+                if (!cancelled) setStreamProblem('error');
             }
         })();
         return () => { cancelled = true; };
-    }, [hasAccess, movie, movieKey, isBackstageVerified, verifiedBackstageKey, getUserIdToken]);
+    }, [hasAccess, movie, movieKey, isBackstageVerified, verifiedBackstageKey, getUserIdToken, streamRetry, user?.uid]);
 
     const playableUrl = signedUrl || undefined;
 
@@ -2391,6 +2402,41 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <span className="text-[10px] font-black uppercase tracking-widest">Tap to Unmute</span>
                     </button>
                 )}
+            </div>
+        );
+    }
+
+    // No video link: say why instead of spinning forever.
+    if (!shouldShowLobby && streamProblem && movie && !showCredits) {
+        if (streamProblem === 'unavailable') return <FilmNoLongerAvailable title={movie.title} poster={movie.poster} />;
+        const goSignIn = () => {
+            const back = window.location.pathname;
+            window.history.pushState({}, '', `/login?redirect=${encodeURIComponent(back)}&view=signup`);
+            window.dispatchEvent(new Event('pushstate'));
+        };
+        return (
+            <div className="fixed inset-0 bg-black flex items-center justify-center p-8 z-[50]">
+                {movie.poster && (
+                    <div className="absolute inset-0">
+                        <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-[0.12] blur-2xl scale-110" />
+                        <div className="absolute inset-0 bg-black/80" />
+                    </div>
+                )}
+                <div className="relative z-10 text-center space-y-5 max-w-sm w-full">
+                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">{streamProblem === 'signin' ? (partyState?.status === 'live' ? 'Watch party live now' : 'Watch party') : 'Connection problem'}</p>
+                    <h2 className="text-3xl font-black uppercase tracking-tight text-white">{movie.title}</h2>
+                    {streamProblem === 'signin' ? (
+                        <>
+                            <p className="text-gray-400 text-sm leading-relaxed">Sign in or create a free CRATE account to join. It takes a few seconds, and you'll come straight back here.</p>
+                            <button onClick={goSignIn} className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all">Join free</button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-gray-400 text-sm leading-relaxed">We couldn't load the film. Check your connection and try again.</p>
+                            <button onClick={() => setStreamRetry(n => n + 1)} className="w-full bg-white text-black font-black uppercase tracking-widest text-sm py-4 rounded-xl">Try again</button>
+                        </>
+                    )}
+                </div>
             </div>
         );
     }

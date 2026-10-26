@@ -185,15 +185,29 @@ Sub OnFeedLoaded()
         topTenRow = BuildTopTenFromFeed(allRows)
     End If
 
+    ' --- Watch Parties row goes FIRST, above Top 10 (Oct 2026), like the
+    '     cards at the top of the website: no scrolling to find a party. ---
+    partyRow = Invalid
+    partyIndex = -1
+    For ri = 0 To allRows.Count() - 1
+        r = allRows[ri]
+        If r <> Invalid And r.HasField("categoryType") And LCase(r.categoryType) = "watchparty" And r.GetChildCount() > 0
+            partyRow = r
+            partyIndex = ri
+            Exit For
+        End If
+    End For
+
     ' --- Assemble the rows shown on Home ---
     m.rowListContent = CreateObject("roSGNode", "ContentNode")
     m.heroItems = Invalid
+    If partyRow <> Invalid Then m.rowListContent.AppendChild(partyRow)
     If topTenRow <> Invalid And topTenRow.GetChildCount() > 0
         m.rowListContent.AppendChild(topTenRow)
     End If
 
     For ri = 0 To allRows.Count() - 1
-        If ri = topTenIndex Then Continue For
+        If ri = topTenIndex Or ri = partyIndex Then Continue For
         row = allRows[ri]
         rowTitle = RowTitleOf(row)
         titleLower = LCase(rowTitle)
@@ -249,8 +263,11 @@ Sub OnFeedLoaded()
     m.rowList.visible = true
     m.rowList.SetFocus(true)
 
-    ' Billboard starts on the first featured film (or the first film on Home).
-    If m.heroItems <> Invalid And m.heroItems.GetChildCount() > 0
+    ' Billboard starts on the watch party when there is one, else the first
+    ' featured film (or the first film on Home).
+    If partyRow <> Invalid
+        ShowOnBillboard(partyRow.GetChild(0), "WATCH PARTY", true)
+    Else If m.heroItems <> Invalid And m.heroItems.GetChildCount() > 0
         ShowOnBillboard(m.heroItems.GetChild(0), "FEATURED", true)
     Else
         firstRow = m.rowListContent.GetChild(0)

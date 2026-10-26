@@ -1,6 +1,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { findBlock } from './_lib/watchPartyLifecycle.js';
+import { effectiveStatus, isStaleLive } from './_lib/watchPartyRules.js';
 
 const cache = new Map<string, { response: any, timestamp: number }>();
 // 10 seconds. Was 5 minutes, which meant a Roku could take up to 5 minutes
@@ -30,6 +31,8 @@ export async function GET(request: Request) {
       let latest: (typeof candidates)[number] | undefined;
       for (const d of candidates) {
         const film = await anyDb.collection('movies').doc(d.id).get();
+        const sched = Date.parse(String(film.data()?.watchPartyStartTime || ''));
+        if (Number.isFinite(sched) && isStaleLive(d.data(), sched)) continue; // left live from an old test
         if (film.exists && film.data()?.isWatchPartyEnabled === true) { latest = d; break; }
       }
       const secs = (v: any) => (v && typeof v.toDate === 'function') ? Math.floor(v.toDate().getTime() / 1000) : 0;
@@ -69,7 +72,16 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify(response), { status: 200 });
     }
 
-    const data = partyDoc.data();
+    const raw = partyDoc.data();
+    // A leftover "live"/"ended" from an earlier run (a test never ended, the
+    // last screening) counts as waiting for the new scheduled time, same as
+    // the website (api/_lib/watchPartyRules.ts).
+    const block = await findBlock(db, movieKey);
+    const filmDoc = block ? null : await db.collection('movies').doc(movieKey).get();
+    const schedStr = filmDoc?.data()?.watchPartyStartTime || (block as any)?.block?.screeningStartTime || (block as any)?.block?.watchPartyStartTime || '';
+    const schedMs = Date.parse(String(schedStr));
+    const effective = effectiveStatus(raw, Number.isFinite(schedMs) ? schedMs : null);
+    const data = effective === raw?.status ? raw : { ...raw, status: effective, isPlaying: false, actualStartTime: null, filmStartTime: null };
     
     // Convert Firestore Timestamp to ISO string for the client
     let actualStartTime = null;
@@ -91,7 +103,7 @@ export async function GET(request: Request) {
       isQALive: !!data?.isQALive,
       currentTime: data?.currentTime || 0,
       // Not every start path records `type`, so check the schedule itself.
-      type: (await findBlock(db, movieKey)) ? 'block' : (data?.type || 'movie')
+      type: block ? 'block' : (data?.type || 'movie')
     };
 
     cache.set(movieKey, { response, timestamp: nowTime });

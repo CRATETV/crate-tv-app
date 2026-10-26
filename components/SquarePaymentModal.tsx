@@ -296,6 +296,29 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         }
     };
 
+    // Not signed in (Oct 26 2026): tickets, rentals and passes belong to an
+    // account, and the server refuses payment without one. Say so up front,
+    // with a button to sign in or create a free account that brings them
+    // straight back here, instead of a card form that fails at the end.
+    if (!user && !['donation', 'billSavingsDeposit'].includes(paymentType)) {
+        const goSignIn = () => {
+            const back = window.location.pathname + window.location.search;
+            window.history.pushState({}, '', `/login?redirect=${encodeURIComponent(back)}&view=signup`);
+            window.dispatchEvent(new Event('pushstate'));
+        };
+        return (
+            <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[600] p-4" onClick={onClose}>
+                <div className="w-full max-w-sm bg-[#111114] border border-white/10 rounded-3xl p-8 text-center space-y-5" onClick={e => e.stopPropagation()}>
+                    <p className="text-red-500 font-black uppercase tracking-[0.3em] text-[10px]">{itemTitle}</p>
+                    <h2 className="text-2xl font-black text-white">Sign in to continue</h2>
+                    <p className="text-sm text-gray-400 leading-relaxed">Your ticket is saved to your CRATE account so you can watch on any device. Creating one is free and takes a few seconds; you'll come straight back here to pay.</p>
+                    <button onClick={goSignIn} className="w-full bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl">Sign in or join free</button>
+                    <button onClick={onClose} className="text-xs text-gray-500 hover:text-white">Not now</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         // z-[600] — a payment modal has to sit above every other overlay it can
         // be opened from underneath (the festival lobby overlay is z-[200],

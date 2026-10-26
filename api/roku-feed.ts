@@ -1,6 +1,7 @@
 import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { isPastAvailableUntil, isWatchPartyListable } from './_lib/filmAvailability.js';
+import { isStaleLive } from './_lib/watchPartyRules.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -458,7 +459,7 @@ export async function GET(request: Request) {
             .filter(m => {
                 if (!m || m.isWatchPartyEnabled !== true || !m.watchPartyStartTime) return false;
                 const start = Date.parse(m.watchPartyStartTime);
-                const live = !!(config as any).activeParties?.[m.key];
+                const live = !!(config as any).activeParties?.[m.key] && !isStaleLive((config as any).activeParties[m.key], Date.parse(m.watchPartyStartTime || ''));
                 if (!live && !(Number.isFinite(start) && start > nowMs - 6 * 3600_000 && start < nowMs + 30 * 86400_000)) return false;
                 // A premiere film kept hidden from the catalog still gets its party row.
                 return isWatchPartyListable(m, nowMs) && isValidForRoku({ ...m, isUnlisted: false } as Movie, true);
@@ -468,7 +469,7 @@ export async function GET(request: Request) {
             const isMovieFree = isFreeForEveryone(m, paidKeys);
             const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
             const item: any = await formatMovieForRoku(m, assets[m.key], isUnlocked, true);
-            const live = !!(config as any).activeParties?.[m.key];
+            const live = !!(config as any).activeParties?.[m.key] && !isStaleLive((config as any).activeParties[m.key], Date.parse(m.watchPartyStartTime || ''));
             const when = live ? 'LIVE NOW' : `Watch party · ${tzFmt(Date.parse(m.watchPartyStartTime!))}`;
             item.description = `${when}. ${item.description || ''}`.trim();
             return item;

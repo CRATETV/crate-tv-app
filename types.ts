@@ -187,6 +187,8 @@ export interface Movie {
   watchPartyPrice?: number;
   /** Viewers choose their price (minimum $3, see api/_lib/paymentRules.ts). */
   watchPartyPayWhatYouWant?: boolean;
+  /** When its last watch party premiered (kept after the party ends; drives "Just Premiered"). */
+  lastPremiereAt?: string;
   isForSale?: boolean;
   salePrice?: number;
   customLaurelUrl?: string;

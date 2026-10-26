@@ -57,6 +57,15 @@ Sub Init()
     m.pollTimer.duration = 30
     m.pollTimer.repeat   = true
     m.pollTimer.ObserveField("fire", "PollPartyStatus")
+
+    ' Retry timer (Oct 2026): if CRATE can't be reached, try again in a few
+    ' seconds instead of sitting on "Checking the watch party..." forever.
+    m.failCount = 0
+    m.loadingLabel = m.top.FindNode("loadingLabel")
+    m.retryTimer = CreateObject("roSGNode", "Timer")
+    m.retryTimer.duration = 5
+    m.retryTimer.repeat   = false
+    m.retryTimer.ObserveField("fire", "FetchPartyStatus")
 End Sub
 
 ' =============================================================================
@@ -134,7 +143,17 @@ End Sub
 Sub OnPartyStatusReady()
     task = m.pollTask
     If task = Invalid Then Return
-    If task.taskStatus <> "success" Then Return
+    If task.taskStatus <> "success"
+        ' Couldn't reach CRATE: keep trying every few seconds.
+        m.failCount = m.failCount + 1
+        If m.failCount >= 2 And m.loadingLabel <> Invalid
+            m.loadingLabel.text = "Still connecting to the watch party..."
+        End If
+        If m.partyStatus = "loading" Or m.partyStatus = "" Then ShowState("loading")
+        m.retryTimer.control = "start"
+        Return
+    End If
+    m.failCount = 0
 
     partyStatus    = task.partyStatus
     isPlaying      = task.isPlaying
@@ -160,7 +179,9 @@ Sub OnPartyStatusReady()
     End If
     If task.partyType = "block" And partyStatus = "ended" Then StartTally()
 
-    If partyStatus = "live" And isPlaying
+    ' Live = join, even if "paused" was last recorded (the admin's preview
+    ' player can record a pause; viewers' films keep going by the clock).
+    If partyStatus = "live"
         If m.isPaid And Not isUnlocked
             ' Paid party -- user doesn't have access -- show QR
             ShowPaidScreen()
@@ -195,7 +216,15 @@ End Sub
 Sub JoinLiveParty()
     StopTimers()
     If m.currentFilm = Invalid Then Return
-    If m.actualStartTime = 0 Then Return
+    ' No start time from the server yet: use the scheduled time, or start now.
+    If m.actualStartTime = 0
+        If m.scheduledStartTime > 0
+            m.actualStartTime = m.scheduledStartTime
+        Else
+            nowDt = CreateObject("roDateTime")
+            m.actualStartTime = nowDt.AsSeconds()
+        End If
+    End If
 
     ' Calculate current offset: how many seconds into the film we should be
     now = CreateObject("roDateTime")
@@ -216,6 +245,12 @@ Sub JoinLiveParty()
         film.AddField("watchPartyOffset", "integer", false)
     End If
     film.watchPartyOffset = offset
+    ' Tells MainScene to go straight to the player even at offset 0 (joining
+    ' right at the start used to bounce back to this screen).
+    If Not film.HasField("fromWatchParty")
+        film.AddField("fromWatchParty", "boolean", false)
+    End If
+    film.fromWatchParty = true
 
     Print "CrateTV [WatchParty]: Joining live party at offset " + Str(offset).Trim() + "s"
 
@@ -379,6 +414,7 @@ End Function
 Sub StopTimers()
     If m.countdownTimer <> Invalid Then m.countdownTimer.control = "stop"
     If m.pollTimer      <> Invalid Then m.pollTimer.control      = "stop"
+    If m.retryTimer     <> Invalid Then m.retryTimer.control     = "stop"
 End Sub
 
 ' =============================================================================

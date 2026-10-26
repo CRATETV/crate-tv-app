@@ -47,12 +47,18 @@ export function isWatchPartyListable(movie: { isWatchPartyEnabled?: boolean; ava
  * 7 days, is over (ended, or long enough ago), and the film is still on CRATE.
  */
 export function isJustPremiered(
-    movie: { isWatchPartyEnabled?: boolean; watchPartyStartTime?: string; isUnlisted?: boolean; availableUntil?: string | null; durationInMinutes?: number } | null | undefined,
+    movie: { isWatchPartyEnabled?: boolean; watchPartyStartTime?: string | null; lastPremiereAt?: string | null; isUnlisted?: boolean; availableUntil?: string | null; durationInMinutes?: number } | null | undefined,
     partyStatus: string | undefined,
     nowMs: number,
 ): boolean {
-    if (!movie || !isWatchPartyListable(movie as any, nowMs)) return false;
-    const start = toMs(movie.watchPartyStartTime);
+    if (!movie) return false;
+    // When a party ends, CRATE switches it off and keeps the time in
+    // lastPremiereAt, so that counts too.
+    const ended = !movie.isWatchPartyEnabled && !!movie.lastPremiereAt;
+    if (!ended && !isWatchPartyListable(movie as any, nowMs)) return false;
+    if (ended && ((movie as any).partnerId || isPastAvailableUntil(movie, nowMs))) return false;
+    if (ended) partyStatus = 'ended';
+    const start = toMs(ended ? movie.lastPremiereAt : movie.watchPartyStartTime);
     if (start == null || start > nowMs || nowMs - start > JUST_PREMIERED_WINDOW_MS) return false;
     if (partyStatus === 'live') return false;
     if (partyStatus === 'ended') return true;

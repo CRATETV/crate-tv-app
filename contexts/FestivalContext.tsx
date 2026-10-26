@@ -88,43 +88,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days
         const twoHoursInMs = 24 * 60 * 60 * 1000; // 24 hours post-start window
 
-        // ── PRIORITY 0: Check dedicated real-time schedule (instant, no S3 delay) ──
-        // This fires the moment admin saves a watch party time
-        const scheduleEntries = Object.values(scheduledParties)
-            .filter((s: any) => {
-                if (!s.isWatchPartyEnabled) return false;
-                if (activeParties[s.movieKey]?.status === 'live') return false;
-                if (!s.watchPartyStartTime) return false;
-                if (isEndedForThisRun(allPartyStates[s.movieKey], Date.parse(s.watchPartyStartTime))) return false;
-                const start = new Date(s.watchPartyStartTime).getTime();
-                if (start > now.getTime() && start < now.getTime() + sevenDaysInMs) return true;
-                if (start <= now.getTime() && now.getTime() - start < twoHoursInMs) return true;
-                return false;
-            })
-            .sort((a: any, b: any) => new Date(a.watchPartyStartTime).getTime() - new Date(b.watchPartyStartTime).getTime());
-
-        if (scheduleEntries.length > 0) {
-            const s = scheduleEntries[0] as any;
-            // Merge with full movie data if available
-            const fullMovie = movies[s.movieKey];
-            return {
-                ...(fullMovie || {}),
-                key: s.movieKey,
-                title: s.movieTitle || fullMovie?.title || 'Upcoming Event',
-                watchPartyStartTime: s.watchPartyStartTime,
-                isWatchPartyEnabled: true,
-                isWatchPartyPaid: s.isWatchPartyPaid || false,
-                watchPartyPrice: s.watchPartyPrice || 0,
-                poster: s.poster || fullMovie?.poster || '',
-                director: fullMovie?.director || 'Festival Event',
-                synopsis: fullMovie?.synopsis || '',
-                cast: fullMovie?.cast || [],
-                trailer: fullMovie?.trailer || '',
-                fullMovie: fullMovie?.fullMovie || '',
-                tvPoster: fullMovie?.tvPoster || '',
-                likes: fullMovie?.likes || 0,
-            } as Movie;
-        }
+        // (PRIORITY 0 used to read a second copy of the schedule,
+        // watch_party_schedule, that only the Film editor updated. Scheduling
+        // from Watch parties left it with the OLD time, which then overrode
+        // the new one. The film's own fields arrive just as fast through
+        // data/movies, so they're the only source now. Oct 26 2026.)
 
         const movieArray = Object.values(movies) as Movie[];
 
@@ -280,6 +248,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 isWatchPartyPaid: m.isWatchPartyPaid ?? updated[key].isWatchPartyPaid,
                 watchPartyPrice: m.watchPartyPrice ?? updated[key].watchPartyPrice,
                 watchPartyPayWhatYouWant: m.watchPartyPayWhatYouWant ?? updated[key].watchPartyPayWhatYouWant,
+                lastPremiereAt: m.lastPremiereAt ?? updated[key].lastPremiereAt,
             };
         });
         // "Hide automatically after" has passed: treat as unlisted right away

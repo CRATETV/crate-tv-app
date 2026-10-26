@@ -630,6 +630,9 @@ Sub OnPlayContent()
     If content.HasField("watchPartyOffset") And content.watchPartyOffset > 0
         hasOffset = true
     End If
+    If content.HasField("fromWatchParty") And content.fromWatchParty = true
+        hasOffset = true
+    End If
 
     If isWatchParty And Not hasOffset
         LoadWatchPartyScene(content)

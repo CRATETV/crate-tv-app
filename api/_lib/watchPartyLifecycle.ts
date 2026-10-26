@@ -152,10 +152,15 @@ export async function finalizeEndedParty(db: Firestore, partyId: string, lookup?
 
     // Homepage banner + standalone-movie schedule fields.
     await db.collection('watch_party_schedule').doc(partyId).update({ isWatchPartyEnabled: false }).catch(() => {});
-    await db.collection('movies').doc(partyId).update({ watchPartyStartTime: null, isWatchPartyEnabled: false }).catch(() => {});
+    // Remember when it premiered (Oct 26 2026): the "Just Premiered" row
+    // uses it after the party is switched off here.
+    const filmBefore = (await db.collection('movies').doc(partyId).get().catch(() => null))?.data();
+    const premiereAt = filmBefore?.watchPartyStartTime || filmBefore?.lastPremiereAt || null;
+    await db.collection('movies').doc(partyId).update({ watchPartyStartTime: null, isWatchPartyEnabled: false, ...(premiereAt ? { lastPremiereAt: premiereAt } : {}) }).catch(() => {});
     await db.collection('data').doc('movies').update({
         [`${partyId}.watchPartyStartTime`]: null,
         [`${partyId}.isWatchPartyEnabled`]: false,
+        ...(premiereAt ? { [`${partyId}.lastPremiereAt`]: premiereAt } : {}),
     }).catch(() => {});
 
     if (!block || block.source !== 'festival') return;

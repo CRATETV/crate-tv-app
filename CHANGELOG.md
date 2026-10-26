@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10 — One set of controls, blocks play film after film, sign in before paying
+
+- **Control Room player is a preview only.** Its play / pause / seek used to be sent to every viewer, so it fought the real controls (the party clock, and a second admin window). Viewers now always follow the party clock; control the party with Start, Next Film and End Party.
+- **One schedule.** The home page also read a second copy of the schedule (`watch_party_schedule`) that only the Film editor updated, so scheduling from Watch parties could be overridden by an old time. It now reads only the film's own fields.
+- **Festival blocks play their films one after the other by themselves.** A block moves on when the current film's runtime has passed; a film with no runtime used to hold the block up for 3 hours. Opening Admin → Watch parties now measures any block film that's missing its runtime from its video (MP4 or HLS from MediaConvert) and saves it (`services/measureRuntime.ts`, tested). A note says which ones were filled in, or which couldn't be read.
+- **"Just Premiered" keeps working after the party ends.** Ending a film party switches it off; the premiere time is now kept (`lastPremiereAt`) so the film still shows for its weekend.
+- **Sign in before paying.** Opening checkout while signed out now shows "Sign in to continue" with a "Sign in or join free" button that brings people straight back, instead of a card form. (The server already refused to take payment without an account.)
+
+## 2026-10 — Roku watch parties (channel 2.3.5)
+
+- **Watch Parties row first on the Roku home screen** (above Top 10), and the big billboard opens on the party, so nobody scrolls to find it. Channel update needed (roku/, version 2.3.5).
+- **No more "Checking the watch party..." forever.** If the TV can't reach CRATE it says "Still connecting..." and retries every 5 seconds. A live party is joined even if a pause was last recorded (the admin's preview player can record one), and even if the start time hasn't arrived yet from the server. Joining right at the start no longer bounces back to the waiting screen.
+- **Server (works on any channel version):** `get-watch-party-status` and the Roku feed treat a leftover "live"/"ended" from an earlier run as waiting, same as the website.
+
+## 2026-10 — No more endless spinner in a watch party
+
+- A visitor who isn't signed in, at a **free** watch party, used to get a spinning wheel forever: the film's video link needs an account, and the page quietly gave up. They now see "Sign in or create a free CRATE account to join" with a **Join free** button that brings them straight back (and makes them a CRATE member).
+- If the video link can't be loaded (a connection problem), viewers see "Try again" instead of spinning; a film past its hide date shows "has left CRATE".
+
 ## 2026-10 — Watch parties announce themselves; premiere payments
 
 - **Watch party cards at the very top of the home page** (above the hero, for signed-in and signed-out visitors): every party in the next 30 days with its countdown, price and "Get ticket", and "Live now · Join now" once it starts. Nothing shows when there are none. The landing page now reads the live site data, so a party appears the moment it's saved.

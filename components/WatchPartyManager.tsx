@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
 import { activePin, PIN_MAX_LENGTH } from '../api/_lib/controlRoom';
+import { measureRuntimeMinutes } from '../services/measureRuntime';
 
 // --- TYPES ---
 
@@ -765,24 +766,18 @@ const WatchPartyControlRoom: React.FC<{
     // local/inert until "Start Watch Party" has actually been pressed — after that, these
     // controls correctly become the live sync surface, same as before.
     const isPartyLive = partyState?.status === 'live';
-    const handlePlay = () => { if (isPartyLive) onSyncState({ isPlaying: true }); };
-    const handlePause = () => { if (isPartyLive && videoRef.current) onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime }); };
+    // The Control Room player is a PREVIEW only (Oct 26 2026). It used to
+    // send its play / pause / seek to every viewer, so it fought the real
+    // controls: viewers follow the party clock (it starts at the scheduled
+    // time and blocks move film to film by themselves), and a pause or seek
+    // here, or a second admin window open, could override that. Use the
+    // buttons (Start, Next Film, End Party) to control the party.
+    const handlePlay = () => {};
+    const handlePause = () => {};
     const handleSeeked = () => {
-        if (isProgrammaticSeekRef.current) {
-            isProgrammaticSeekRef.current = false;
-            return; // don't write back — this was our own seek, not the admin's
-        }
-        if (isPartyLive && videoRef.current) onSyncState({ currentTime: videoRef.current.currentTime });
+        if (isProgrammaticSeekRef.current) isProgrammaticSeekRef.current = false;
     };
-
-    // Periodically sync time while playing to keep viewers in check
-    const handleTimeUpdate = () => {
-        const video = videoRef.current;
-        if (isPartyLive && video && !video.paused && (Date.now() - lastSyncTime.current > 5000)) {
-            lastSyncTime.current = Date.now();
-            onSyncState({ currentTime: video.currentTime });
-        }
-    };
+    const handleTimeUpdate = () => {};
 
     const currentMovie = useMemo(() => {
         if (item.type === 'movie') return allMovies[item.id];
@@ -1213,11 +1208,9 @@ const WatchPartyControlRoom: React.FC<{
                                 </div>
                             ) : currentMovie ? (
                                 <>
-                                    {!isPartyLive && (
-                                        <div className="absolute top-3 left-3 z-10 bg-black/70 border border-white/20 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-300">
-                                            Preview only — not synced to viewers yet
-                                        </div>
-                                    )}
+                                    <div className="absolute top-3 left-3 z-10 bg-black/70 border border-white/20 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                        {isPartyLive ? 'Your preview · pausing here doesn\'t affect viewers' : 'Preview only · viewers start at the scheduled time'}
+                                    </div>
                                     <video
                                         ref={videoRef}
                                         src={currentMovie.fullMovie}
@@ -1596,6 +1589,53 @@ const WatchPartyManager: React.FC<{
         return () => unsub();
     }, []);
 
+    // ── FILL IN MISSING RUNTIMES FOR FESTIVAL BLOCKS (Oct 26 2026) ─────────
+    // A block moves to its next film once the current film's runtime has
+    // passed. A film with no runtime held the whole block up (only "Next
+    // Film" got past it). Any film in a festival block that's missing its
+    // runtime is measured from its video file here and saved, so films play
+    // one after the other by themselves.
+    const measuredRef = useRef<Set<string>>(new Set());
+    const [runtimeNotice, setRuntimeNotice] = useState<string>('');
+    const mountedRef = useRef(true);
+    useEffect(() => () => { mountedRef.current = false; }, []);
+    useEffect(() => {
+        const blocks = [
+            ...(localFestivalData || []).flatMap(d => d.blocks || []),
+            ...(localCrateFestConfig?.movieBlocks || []),
+        ];
+        const keys = Array.from(new Set(blocks.flatMap(b => b.movieKeys || [])))
+            .filter(k => !measuredRef.current.has(k))
+            .filter(k => {
+                const m = allMovies[k];
+                return !!m && !(typeof m.durationInMinutes === 'number' && m.durationInMinutes > 0) && !!(m.fullMovie || (m as any).rokuStreamUrl);
+            });
+        if (keys.length === 0) return;
+        keys.forEach(k => measuredRef.current.add(k));
+        // Keeps going when the film list refreshes after each save; stops only
+        // if you leave this page.
+        const isCancelled = () => !mountedRef.current;
+        (async () => {
+            const fixed: string[] = [];
+            const failed: string[] = [];
+            for (const k of keys) {
+                if (isCancelled()) return;
+                const m = allMovies[k];
+                setRuntimeNotice(`Measuring runtime: ${m.title}…`);
+                const minutes = await measureRuntimeMinutes(m.fullMovie || (m as any).rokuStreamUrl);
+                if (minutes) {
+                    try { await onSaveMovie({ key: k, durationInMinutes: minutes } as Movie); fixed.push(`${m.title} (${minutes} min)`); }
+                    catch { failed.push(m.title); }
+                } else failed.push(m.title);
+            }
+            if (isCancelled()) return;
+            setRuntimeNotice([
+                fixed.length ? `Runtimes filled in automatically: ${fixed.join(', ')}.` : '',
+                failed.length ? `Couldn't read the length of: ${failed.join(', ')}. Set the runtime in the Film editor, or those blocks will wait for "Next Film".` : '',
+            ].filter(Boolean).join(' '));
+        })();
+    }, [localFestivalData, localCrateFestConfig, allMovies, onSaveMovie]);
+
     useEffect(() => {
         const password = sessionStorage.getItem('adminPassword');
         if (!password) return;
@@ -1853,6 +1893,11 @@ const WatchPartyManager: React.FC<{
 
     return (
         <>
+            {runtimeNotice && (
+                <div className={`mb-6 rounded-2xl border p-4 text-sm ${/Couldn't/.test(runtimeNotice) ? 'border-amber-500/30 bg-amber-900/10 text-amber-200' : 'border-green-500/30 bg-green-900/10 text-green-200'}`}>
+                    {runtimeNotice}
+                </div>
+            )}
             <FestivalLiveStatus items={watchableItems} partyStates={partyStates} onSelect={setSelectedItemKey} />
 
             {currentSelectedItem && (

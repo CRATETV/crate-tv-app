@@ -46,3 +46,10 @@ test('just premiered: needs a watch party with a start time', () => {
     assert.equal(isJustPremiered({ ...film, isWatchPartyEnabled: false }, 'ended', premiere + 5 * H), false);
     assert.equal(isJustPremiered({ ...film, watchPartyStartTime: '' }, 'ended', premiere + 5 * H), false);
 });
+
+test('just premiered: still shows after the party ended and was switched off', () => {
+    const after = { ...film, isWatchPartyEnabled: false, watchPartyStartTime: null as any, lastPremiereAt: film.watchPartyStartTime };
+    assert.equal(isJustPremiered(after, undefined, premiere + 5 * H), true);
+    assert.equal(isJustPremiered(after, undefined, Date.parse(film.availableUntil)), false);
+    assert.equal(isJustPremiered({ ...after, lastPremiereAt: undefined }, undefined, premiere + 5 * H), false);
+});
