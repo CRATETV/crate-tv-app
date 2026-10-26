@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10 — Upload & convert films from the admin panel; clearer storage clean-up
+
+- **Film editor → "Upload & convert film".** Choose the film file (any size): it uploads straight to S3 in 64 MB pieces (`originals/`), then AWS MediaConvert makes the streaming version (HLS 1080p / 720p / 360p, same settings as `ops/video/convert-film.sh`) in `hsl/<name>/`. When it's done, the film's video address and runtime fill in by themselves (saved films are updated and republished on the server; the open editor fills in too). The conversion carries on if you close the page; the upload needs the page open. `api/admin-video.ts`, `components/admin/FilmUploadConvert.tsx`, helpers in `api/_lib/videoPipeline.ts` (tested). New package: `@aws-sdk/client-mediaconvert` (run `npm install`).
+- **Runs by itself:** `api/video-jobs-cron.ts` (every 10 minutes) finishes conversions nobody is watching (fills in the film's video and runtime), and **deletes the original upload 7 days after a successful conversion** (Salome's choice): only `originals/` files from the panel, never after a failed conversion, never while a film still plays it; logged in Logs & security.
+- **One-time AWS setup:** `bash ops/video/setup-dashboard-converting.sh` (adds MediaConvert permission to the Vercel key's user, adds "ETag" to the bucket's CORS ExposeHeaders, prints the role for the new Vercel setting `MEDIACONVERT_ROLE_ARN`). "Check setup" in the editor says what's missing.
+- **Storage clean-up explains itself.** A file whose name contains a visible film's title now says *extra copy of "Title": CRATE plays a different file (…)*, usually the original before converting, or an older upload. Extra safety: a file with the same name as one a visible film plays (or an HLS folder with the same name) is always kept.
+
 ## 2026-10 — Admin → Storage clean-up
 
 - New admin tab **Storage clean-up** (Platform group, top admin only): "Check storage" lists the video files in the S3 bucket that CRATE doesn't use, one row per film file (an HLS folder is one row), biggest first, with the reason (hidden film / not used by any film). Each row is **Keep** (default) or **Delete**; "Delete marked" asks you to type DELETE. The server works the list out again before deleting and only deletes rows still unused (`api/admin-storage-cleanup.ts`, audit-logged). Same rules as the Terminal tool, now shared in `api/_lib/storageCleanup.ts`.

@@ -3,6 +3,7 @@ import { toast } from './Toast';
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
+import FilmUploadConvert from './admin/FilmUploadConvert';
 import AdminFilmDeepDive from './AdminFilmDeepDive';
 
 interface MovieEditorProps {
@@ -632,6 +633,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 {isProbing ? '...' : 'Probe'}
                                             </button>
                                         </div>
+                                        <FilmUploadConvert
+                                            movieKey={formData.key}
+                                            title={formData.title || formData.key}
+                                            onReady={(url, minutes) => setFormData(prev => prev ? { ...prev, fullMovie: url, ...(minutes ? { durationInMinutes: minutes } : {}) } : prev)}
+                                        />
                                     </div>
 
                                     <div className="space-y-4 pt-4 border-t border-white/5">

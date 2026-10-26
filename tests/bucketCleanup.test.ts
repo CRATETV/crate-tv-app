@@ -64,3 +64,21 @@ test('an HLS folder becomes one row; single files stay their own rows', () => {
     assert.ok(groups.find(g => g.id === 'films/Old Hidden.mov' && !g.isFolder));
     assert.equal(groups.reduce((n, g) => n + g.keys.length, 0), plan.length);
 });
+
+test('a copy with the same file name as a film in use is kept; a renamed original says which film it belongs to', () => {
+    const d = { movies: { ...data.movies, mirror: { title: 'The Mirror Dance', fullMovie: 'https://d9.cloudfront.net/videos/hsl/mirror/The Mirror Dance.m3u8' } }, festivalData: [] };
+    const objs = [
+        { Key: 'films/Visible Film.mp4', Size: 1 },            // same name, other folder → kept
+        { Key: 'backup/Visible Film.mp4', Size: 1 },           // same name → kept
+        { Key: 'hsl/mirror/The Mirror Dance_1080p00001.ts', Size: 1 }, // folder named like an in-use HLS folder → kept
+        { Key: 'Friday/The_Mirror_Dance_FINAL.mov', Size: 5 }, // original → listed, explained
+    ];
+    const { plan: p } = buildPlan(objs, d, NOW);
+    assert.deepEqual(p.map(x => x.key), ['Friday/The_Mirror_Dance_FINAL.mov']);
+    assert.match(p[0].reason, /^extra copy of "The Mirror Dance": CRATE plays a different file/);
+});
+
+test('files uploaded in the last 2 days are kept (they may still be converting)', () => {
+    const { plan: p } = buildPlan([{ Key: 'originals/1-New.mov', Size: 9, LastModified: new Date(NOW - 3600_000).toISOString() }, { Key: 'originals/0-Old.mov', Size: 9, LastModified: new Date(NOW - 5 * DAY).toISOString() }], data, NOW);
+    assert.deepEqual(p.map(x => x.key), ['originals/0-Old.mov']);
+});

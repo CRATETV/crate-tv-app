@@ -68,7 +68,7 @@ const StorageCleanupTab: React.FC = () => {
                 <Card>
                     <p className="text-sm text-[#A1A1AD] leading-relaxed">
                         Press <strong className="text-white">Check storage</strong> to list the video files nothing on CRATE uses: hidden films, old copies, unused submission uploads, and original files that were converted for streaming.
-                        Always kept, and never listed: posters and photos, every visible film, hidden films with an upcoming watch party or a "Hide automatically after" date still to come, films premiered in the last week, festival blocks still in their rewatch week, and partner festival films.
+                        Always kept, and never listed: posters and photos, anything uploaded in the last 2 days, every visible film, hidden films with an upcoming watch party or a "Hide automatically after" date still to come, films premiered in the last week, festival blocks still in their rewatch week, and partner festival films.
                     </p>
                 </Card>
             )}
@@ -88,6 +88,7 @@ const StorageCleanupTab: React.FC = () => {
                         <Card padded={false}>
                             <div className="flex flex-wrap items-center gap-3 p-4 border-b border-white/[0.06]">
                                 <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Search by name…" className={`${inputClass} max-w-xs`} />
+                                <Button size="sm" variant="ghost" onClick={() => setMarked(prev => { const n = new Set(prev); (scan?.groups || []).filter(r => r.reason.startsWith('not used')).forEach(r => n.add(r.id)); return n; })}>Mark all "not used": delete</Button>
                                 <Button size="sm" variant="ghost" onClick={() => markShown(true)}>Mark shown: delete</Button>
                                 <Button size="sm" variant="ghost" onClick={() => markShown(false)}>Mark shown: keep</Button>
                                 <div className="flex-1" />

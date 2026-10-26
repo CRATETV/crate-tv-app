@@ -21,6 +21,10 @@
       "schedule": "0 */2 * * *"
     },
     {
+      "path": "/api/video-jobs-cron",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/auto-unlist-expired-festival-films",
       "schedule": "5 * * * *"
     },

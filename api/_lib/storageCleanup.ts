@@ -19,6 +19,7 @@
 //   - partner festival films (the partner tool cleans those up itself)
 //   - anything else the site data points at (rows, settings, festival pages)
 //   - a whole HLS folder (hsl/<name>/) when its playlist is in use
+//   - anything uploaded in the last 2 days (it may still be converting)
 
 export const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.mkv', '.avi', '.webm', '.mpg', '.mpeg', '.wmv', '.mxf', '.ts', '.m3u8', '.m4s'];
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -116,12 +117,16 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
 
     // Everything in the site data EXCEPT films not in use.
     const notInUse: Record<string, string> = {}; // key -> film title, for the report
+    const inUseFilms: { title: string; norm: string; plays: string }[] = [];
     let filmsInUse = 0, filmsNotInUse = 0;
     for (const [key, m] of Object.entries(movies)) {
         const film = { key, ...(m as any) };
         if (isFilmInUse(film, liveBlockFilms, nowMs)) {
             filmsInUse++;
             collectUrls(m).forEach(protect);
+            const plays = typeof film.fullMovie === 'string' ? (keysFromUrl(film.fullMovie)[0] || '') : '';
+            const norm = normName(film.title || '');
+            if (norm.length >= 4) inUseFilms.push({ title: film.title, norm, plays });
         } else {
             filmsNotInUse++;
             for (const u of collectUrls(m)) for (const k of keysFromUrl(u)) notInUse[k] = film.title || key;
@@ -130,21 +135,44 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
     const { movies: _omit, ...rest } = data || {};
     collectUrls(rest).forEach(protect);
 
+    // Extra safety: a file with the SAME NAME as one an in-use film plays (or
+    // inside an HLS folder with the same folder name) is kept, in case the
+    // film reaches it through a different web address.
+    const protectedNames = new Set([...protectedKeys].filter(isVideoKey).map(k => baseName(k)));
+    const protectedFolderNames = new Set([...protectedFolders].map(f => f.replace(/\/$/, '').split('/').pop()!.toLowerCase()));
+
     const plan: PlanItem[] = [];
     let keptVideos = 0;
     for (const o of objects) {
         if (!o?.Key || !isVideoKey(o.Key)) continue;
         const inProtectedFolder = [...protectedFolders].some(f => o.Key.startsWith(f));
-        if (protectedKeys.has(o.Key) || inProtectedFolder) { keptVideos++; continue; }
+        const folderName = o.Key.includes('/') ? o.Key.slice(0, o.Key.lastIndexOf('/')).split('/').pop()!.toLowerCase() : '';
+        const isHlsPiece = /\.(ts|m3u8|m4s)$/i.test(o.Key);
+        const sameName = protectedNames.has(baseName(o.Key)) && !isHlsPiece;
+        const sameFolder = isHlsPiece && folderName !== '' && protectedFolderNames.has(folderName);
+        // Uploaded in the last 2 days: may still be converting or not set on a film yet.
+        const lm = o.LastModified ? Date.parse(o.LastModified) : NaN;
+        const justUploaded = Number.isFinite(lm) && nowMs - lm < 2 * 24 * 60 * 60 * 1000;
+        if (protectedKeys.has(o.Key) || inProtectedFolder || sameName || sameFolder || justUploaded) { keptVideos++; continue; }
         const folderFilm = Object.entries(notInUse).find(([k]) => k.toLowerCase().endsWith('.m3u8') && o.Key.startsWith(k.slice(0, k.lastIndexOf('/') + 1)));
+        // A visible film whose title is in this file's name: it's an old
+        // copy, or the original before it was converted for streaming.
+        const fileNorm = normName(o.Key);
+        const lookalike = inUseFilms.find(f => fileNorm.includes(f.norm));
         const reason = notInUse[o.Key]
             ? `hidden film: ${notInUse[o.Key]}`
-            : folderFilm ? `hidden film: ${folderFilm[1]}` : 'not used by any film on CRATE';
+            : folderFilm ? `hidden film: ${folderFilm[1]}`
+            : lookalike ? `extra copy of "${lookalike.title}": CRATE plays a different file${lookalike.plays ? ` (${lookalike.plays})` : ''}`
+            : 'not used by any film on CRATE';
         plan.push({ key: o.Key, size: o.Size || 0, reason });
     }
     plan.sort((a, b) => b.size - a.size);
     return { plan, keptVideos, filmsInUse, filmsNotInUse };
 }
+
+const baseName = (key: string) => key.split('/').pop()!.toLowerCase();
+/** Lower case, letters and numbers only (so "The Mirror_Dance.mov" contains "themirrordance"). */
+export const normName = (s: string) => s.toLowerCase().replace(/\.[a-z0-9]{2,4}$/, '').replace(/[^a-z0-9]/g, '');
 
 export const gb = (bytes: number) => bytes / 1024 ** 3;
 /** S3 Standard is about $0.023 per GB per month. */
