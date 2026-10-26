@@ -20,6 +20,7 @@ import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import UpcomingWatchParties from './components/UpcomingWatchParties';
+import { isJustPremiered } from './api/_lib/filmAvailability';
 import WatchPartyLobby from './components/WatchPartyLobby';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import CrateFestBanner from './components/CrateFestBanner';
@@ -331,6 +332,18 @@ const App: React.FC = () => {
             .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted)
             .sort((a: Movie, b: Movie) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
+
+    // "Just premiered": a film whose watch party premiere ended in the last
+    // 7 days (and isn't past its "Hide automatically after" time) shows here
+    // by itself, so people who missed it can still buy it.
+    const minuteTick = Math.floor(Date.now() / 60000);
+    const justPremieredMovies = useMemo(() => {
+        const now = Date.now();
+        return (Object.values(movies) as (Movie | undefined)[])
+            .filter((m): m is Movie => !!m && !!m.poster && isJustPremiered(m, allPartyStates[m.key]?.status, now))
+            .sort((a, b) => Date.parse(b.watchPartyStartTime || '') - Date.parse(a.watchPartyStartTime || ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [movies, allPartyStates, minuteTick]);
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
@@ -695,6 +708,28 @@ const App: React.FC = () => {
                         ) : (
                           <>
                         <UpcomingWatchParties movies={movies} festivalData={festivalData} allPartyStates={allPartyStates} />
+                        {justPremieredMovies.length > 0 && (
+                                <MovieCarousel
+                                    title={
+                                        <div className="flex items-center gap-3 mb-4 px-2 border-l-4 border-red-600 pl-4">
+                                            <h2 className="text-lg md:text-2xl font-bold text-white uppercase italic tracking-tighter">
+                                                Just Premiered
+                                            </h2>
+                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Missed the premiere? Watch it now</span>
+                                        </div>
+                                    }
+                                    movies={justPremieredMovies}
+                                    onSelectMovie={handleSelectMovie}
+                                    onShowDetails={handleSelectMovie}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={() => {}}
+                                    categoryKey="justPremiered"
+                                />
+                            )}
                         {continueWatchingMovies.length > 0 && (
                                 <MovieCarousel 
                                     title={

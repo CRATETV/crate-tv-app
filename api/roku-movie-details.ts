@@ -2,6 +2,7 @@
 // It will be accessible at the path /api/roku-movie-details
 
 import { getApiData } from './_lib/data.js';
+import { isPastAvailableUntil } from './_lib/filmAvailability.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { Movie, Category } from '../types.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
@@ -35,6 +36,8 @@ const formatMovieForRoku = async (movie: Movie, categoriesData: Record<string, C
     // to the raw URL if signing fails, since entitlement (isUnlocked) is the real gate here,
     // not the signature — availability over the marginal expiry improvement.
     let streamUrl = movie.trailer || '';
+    // Past its "Hide automatically after" time: off CRATE for everyone.
+    if (isPastAvailableUntil(movie, Date.now())) isUnlocked = false;
     if (isUnlocked && movie.fullMovie) {
         const signed = await signStreamUrl(movie.fullMovie);
         streamUrl = signed ? signed.url : movie.fullMovie;

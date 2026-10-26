@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10 — "Hide automatically after" and a "Just Premiered" row
+
+- **Hide automatically after** (Movie Editor → Access & Monetization): set a date and time and, from that moment, the film is hidden everywhere (home rows, library, search) and can't be bought (rentals or tickets refused by the server). The website hides it right away; the hourly job (`auto-unlist-expired-festival-films`, now every hour at :05) unlists it for good and updates Roku. To bring it back: clear the date and switch visibility back on.
+- **After that time nobody can watch it, including people who paid before.** The server refuses the video link (`get-stream-url` answers 410), Roku gets no stream, and the film and watch party pages show "This film has left CRATE" (`components/FilmNoLongerAvailable.tsx`). Someone already mid-film at that moment can finish (their video link was issued before).
+- **Just Premiered row** on the home page: a film whose watch party premiere ended in the last 7 days shows there by itself (until its hide date), so people who missed the premiere can still buy it. Sits right under "Upcoming watch parties".
+- Rules in `api/_lib/filmAvailability.ts`, tested in `tests/filmAvailability.test.ts`.
+
 ## 2026-10 — "Host your festival" and "Premiere your film" pages
 
 - **/host** (also /host-your-festival and /festivals): what CRATE does for a film festival, how it works, no setup fee / revenue share, and a request form.

@@ -17,6 +17,8 @@ import { useSessionGuard } from '../hooks/useSessionGuard';
 import { useWatchHeartbeat } from '../hooks/useWatchHeartbeat';
 import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
 import { activePin } from '../api/_lib/controlRoom';
+import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
+import FilmNoLongerAvailable from './FilmNoLongerAvailable';
 import { hasUserGestured, onFirstUserGesture } from '../services/userGesture';
 import { reportClientError } from '../services/errorLogger';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
@@ -2132,6 +2134,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // every return path — controller, lobby, live view, credits — waits
     // on the real answer before rendering anything access-gated.
     if (!authInitialized) return <LoadingSpinner />;
+    if (movie && !parentBlock && isPastAvailableUntil(movie, Date.now())) return <FilmNoLongerAvailable title={movie.title} poster={movie.poster} />;
 
     if (isControllerMode) {
         return (

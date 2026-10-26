@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/auto-unlist-expired-festival-films",
-      "schedule": "0 */6 * * *"
+      "schedule": "5 * * * *"
     },
     {
       "path": "/api/cleanup-partner-festivals",

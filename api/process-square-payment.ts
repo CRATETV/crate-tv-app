@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
+import { isPastAvailableUntil } from './_lib/filmAvailability.js';
 import { Firestore } from 'firebase-admin/firestore';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -412,6 +413,11 @@ export async function POST(request: Request) {
         } else {
             const movieData = movieDoc.data();
             purchasePartnerId = movieData?.partnerId || null;
+            // "Hide automatically after" has passed: the film is off CRATE, so
+            // never sell it (api/_lib/filmAvailability.ts).
+            if (isPastAvailableUntil(movieData as any, Date.now())) {
+                return new Response(JSON.stringify({ error: 'This film is no longer available on CRATE.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
             // A paid watch party film that isn't for sale on its own is sold
             // only as a party ticket. A $5 "rental" of it used to be possible by
             // calling this endpoint directly (Oct 23 2026). Festival films stay

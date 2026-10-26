@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition, useRef } from 'react';
+import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import type { PublicPartnerFestival } from '../api/_lib/partnerRules';
@@ -285,6 +286,12 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 watchPartyPayWhatYouWant: m.watchPartyPayWhatYouWant ?? updated[key].watchPartyPayWhatYouWant,
             };
         });
+        // "Hide automatically after" has passed: treat as unlisted right away
+        // (the hourly server job makes it permanent and updates Roku).
+        const now = Date.now();
+        for (const [key, m] of Object.entries(updated)) {
+            if (m && !m.isUnlisted && isPastAvailableUntil(m, now)) updated[key] = { ...m, isUnlisted: true };
+        }
         return updated;
     };
 

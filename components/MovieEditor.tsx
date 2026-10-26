@@ -35,6 +35,7 @@ const emptyMovie: Movie = {
     autoReleaseDate: '',
     mainPageExpiry: '',
     isUnlisted: false,
+    availableUntil: '',
     isSeries: false,
     isEpisode: false,
     episodes: [],
@@ -779,6 +780,34 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <input type="checkbox" name="isUnlisted" checked={!!formData.isUnlisted} onChange={handleChange} className="sr-only peer" />
                                             <div className="w-11 h-6 bg-green-600 rounded-full peer peer-checked:bg-gray-700 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                         </label>
+                                    </div>
+                                    {/* Hide automatically after a date (premiere weekends etc.) */}
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-300 block">Hide automatically after</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="datetime-local"
+                                                name="availableUntil"
+                                                value={formData.availableUntil ? (() => {
+                                                    const d = new Date(formData.availableUntil);
+                                                    if (isNaN(d.getTime())) return '';
+                                                    const offset = d.getTimezoneOffset() * 60000;
+                                                    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                                                })() : ''}
+                                                onChange={handleChange}
+                                                className="form-input bg-black/40 flex-1"
+                                            />
+                                            {formData.availableUntil && (
+                                                <button type="button" onClick={() => setFormData({ ...formData, availableUntil: '' })} className="text-[10px] font-black uppercase text-gray-400 hover:text-white px-3 rounded-xl border border-white/10">Clear</button>
+                                            )}
+                                        </div>
+                                        <p className="text-[9px] text-gray-500 uppercase font-bold">
+                                            {formData.availableUntil
+                                                ? (new Date(formData.availableUntil).getTime() <= Date.now()
+                                                    ? 'This time has passed: the film is hidden and not for sale. To bring it back, clear the date and switch visibility back on.'
+                                                    : 'At this time CRATE hides the film everywhere (site and Roku) and stops new sales. Leave empty to keep it up.')
+                                                : 'Empty = stays up. Set a time (your local time) and CRATE hides it by itself, e.g. Sunday night after a premiere weekend.'}
+                                        </p>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-4">

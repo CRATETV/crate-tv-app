@@ -163,6 +163,8 @@ export interface Movie {
   mainPageExpiry?: string;
   autoReleaseDate?: string;
   isUnlisted?: boolean;
+  /** Hide automatically after this time (ISO): hidden everywhere and no new sales. See api/_lib/filmAvailability.ts. */
+  availableUntil?: string;
   /** Marks this as a festival film — gates individual VOD rental revenue
    * behind the whole-festival-concluded rule in computeRevenueByFilm
    * (api/_lib/filmmakerBalance.ts) until cleared (e.g. LUNA, once detached

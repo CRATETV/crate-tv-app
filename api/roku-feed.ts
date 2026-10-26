@@ -1,5 +1,6 @@
 import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
+import { isPastAvailableUntil } from './_lib/filmAvailability.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -39,6 +40,7 @@ function isRokuPlayable(url: string | undefined | null): boolean {
 // Episode video addresses are only included when the viewer has access, and
 // are signed (short-lived) like full films.
 async function rokuEpisodes(movie: Movie, isUnlocked: boolean) {
+    if (isPastAvailableUntil(movie, Date.now())) isUnlocked = false;
     // Any title with episodes counts, even if "series" wasn't switched on in the admin.
     if (!Array.isArray(movie.episodes) || movie.episodes.length === 0) return undefined;
     const playable = movie.episodes.filter(ep => ep && isRokuPlayable(ep.url));
@@ -67,6 +69,8 @@ function isReleased(movie: Movie | undefined | null): boolean {
 }
 
 async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = false, isLiveOverride: boolean = false, isFestivalOverride: boolean = false): Promise<RokuMovie> {
+    // Past its "Hide automatically after" time: nobody gets the film anymore.
+    if (isPastAvailableUntil(movie, Date.now())) isUnlocked = false;
     const fullStreamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const trailerUrl = sanitizeUrl(movie.trailer || '');
 
@@ -389,7 +393,7 @@ export async function GET(request: Request) {
         if (!m) return false;
         const hasTitle = !!m.title;
         const hasPoster = !!m.poster || !!m.tvPoster || !!m.rokuHeroImage;
-        const isNotUnlisted = !m.isUnlisted;
+        const isNotUnlisted = !m.isUnlisted && !isPastAvailableUntil(m, Date.now());
         const released = isReleased(m) || isLiveOverride;
         // Something the Roku can actually play: a video file (not a YouTube/Vimeo
         // link), a live stream, or, for a series, at least one playable episode.

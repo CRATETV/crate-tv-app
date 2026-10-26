@@ -21,6 +21,8 @@ import CastButton from './CastButton';
 import SendToTvButton from './SendToTvButton';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
 import { useWatchMilestone } from './WatchStreaks';
+import FilmNoLongerAvailable from './FilmNoLongerAvailable';
+import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
 
 interface MoviePageProps {
   movieKey: string;
@@ -686,6 +688,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   if (isDataLoading || !authInitialized) return <LoadingSpinner />;
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
+  if (isPastAvailableUntil(movie, Date.now())) return <FilmNoLongerAvailable title={movie.title} poster={movie.poster} />;
   // useSessionGuard was being called but its result was never rendered here,
   // so the multi-device kick never actually surfaced on plain movie/festival
   // pages — only on WatchPartyPage, which does render this. Wiring it up so

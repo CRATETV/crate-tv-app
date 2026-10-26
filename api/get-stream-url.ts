@@ -1,4 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebaseAdmin.js';
+import { isPastAvailableUntil } from './_lib/filmAvailability.js';
 import { resolveMovieAccess, AccessMode } from './_lib/entitlements.js';
 import { signStreamUrl } from './_lib/signStreamUrl.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
@@ -54,6 +55,11 @@ export async function POST(request: Request) {
         // actually "active" right now, resolved server-side by resolveMovieAccess.
         const { getApiData } = await import('./_lib/data.js');
         const data = await getApiData({ noCache: false });
+        // Past its "Hide automatically after" time: off CRATE for everyone,
+        // including people who paid before (api/_lib/filmAvailability.ts).
+        if (isPastAvailableUntil(data.movies?.[filmKey], Date.now())) {
+            return new Response(JSON.stringify({ error: 'This film is no longer available on CRATE.', unavailable: true }), { status: 410, headers: { 'Content-Type': 'application/json' } });
+        }
         const rawUrl: string | undefined = data.movies?.[filmKey]?.fullMovie;
         if (!rawUrl) return new Response(JSON.stringify({ error: 'Film not found.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 

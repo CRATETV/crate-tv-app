@@ -34,6 +34,27 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
 import { FilmBlock, Movie, FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
+import { isPastAvailableUntil } from './_lib/filmAvailability.js';
+import type { Firestore } from 'firebase-admin/firestore';
+
+// Also (Oct 2026): any film whose "Hide automatically after" time
+// (movies/{key}.availableUntil) has passed is unlisted here, so it disappears
+// from Roku and every cached copy too. Runs hourly (vercel.json); the website
+// already hides it the moment the time passes (contexts/FestivalContext.tsx).
+async function unlistPastAvailableUntil(db: Firestore): Promise<string[]> {
+    const nowIso = new Date().toISOString();
+    const snap = await db.collection('movies').where('availableUntil', '<=', nowIso).get();
+    const hidden: string[] = [];
+    const batch = db.batch();
+    snap.forEach(doc => {
+        const m = doc.data() as Movie;
+        if (m.isUnlisted || !isPastAvailableUntil(m, Date.now())) return;
+        batch.set(doc.ref, { isUnlisted: true }, { merge: true });
+        hidden.push(m.title || doc.id);
+    });
+    if (hidden.length) await batch.commit();
+    return hidden;
+}
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
@@ -50,6 +71,9 @@ export async function GET(request: Request) {
         if (initError) throw new Error(initError);
         const db = getAdminDb();
         if (!db) throw new Error('DB unavailable');
+
+        // Films past their "Hide automatically after" time.
+        const hiddenByDate = await unlistPastAvailableUntil(db).catch(e => { console.error('[auto-unlist] availableUntil pass failed', e); return [] as string[]; });
 
         const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
 
@@ -73,7 +97,8 @@ export async function GET(request: Request) {
         });
 
         if (expiredMovieKeys.size === 0) {
-            return new Response(JSON.stringify({ success: true, unlisted: [], detached: [], message: 'No expired blocks found.' }), { status: 200 });
+            if (hiddenByDate.length) await assembleAndSyncMasterData(db);
+            return new Response(JSON.stringify({ success: true, unlisted: [], detached: [], hiddenByDate, message: 'No expired blocks found.' }), { status: 200 });
         }
 
         const movieDocs = await Promise.all(
@@ -113,13 +138,14 @@ export async function GET(request: Request) {
         }
 
         if (unlisted.length === 0 && detached.length === 0) {
-            return new Response(JSON.stringify({ success: true, unlisted: [], detached: [], message: 'All expired films already handled.' }), { status: 200 });
+            if (hiddenByDate.length) await assembleAndSyncMasterData(db);
+            return new Response(JSON.stringify({ success: true, unlisted: [], detached: [], hiddenByDate, message: 'All expired films already handled.' }), { status: 200 });
         }
 
         await batch.commit();
         await assembleAndSyncMasterData(db);
 
-        return new Response(JSON.stringify({ success: true, unlisted, detached }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, unlisted, detached, hiddenByDate }), { status: 200 });
 
     } catch (error) {
         console.error('[auto-unlist-expired-festival-films] Error:', error);
