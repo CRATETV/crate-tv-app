@@ -21,6 +21,7 @@ import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import UpcomingWatchParties from './components/UpcomingWatchParties';
 import { isJustPremiered } from './api/_lib/filmAvailability';
+import { isEndedForThisRun } from './api/_lib/watchPartyRules';
 import WatchPartyLobby from './components/WatchPartyLobby';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import CrateFestBanner from './components/CrateFestBanner';
@@ -258,18 +259,10 @@ const App: React.FC = () => {
         // 2. Crate Fest (General event)
         // 3. General Festival (General event)
         
-        const isWatchPartyActuallyLive = livePartyMovie && activeParties[livePartyMovie.key]?.status === 'live';
-        if (isWatchPartyActuallyLive && !dismissedBannerKeys.has(`live-${livePartyMovie.key}`)) {
-            // Synthesize a config for FestivalHero to render the live movie
-            return {
-                title: livePartyMovie.title,
-                tagline: 'Live Watch Party Now Active',
-                description: livePartyMovie.synopsis || 'Join the global screening and chat live with the community.',
-                heroImage: livePartyMovie.rokuHeroImage || livePartyMovie.tvPoster || livePartyMovie.poster,
-                isWatchParty: true,
-                movieKey: livePartyMovie.key
-            } as any;
-        }
+        // A live watch party no longer takes over the whole top of the home
+        // page with its title and full synopsis (Oct 26 2026: too crowded,
+        // and it fought with the header). It's the compact pill in the header
+        // (components/Header.tsx) plus the "Upcoming watch parties" row.
 
         if (isCrateFestActive) return crateFestConfig;
         if (isFestivalLive) return festivalConfig;
@@ -365,8 +358,8 @@ const App: React.FC = () => {
         const isEligible = (startTimeStr: string, key: string, isPaid?: boolean) => {
             const start = new Date(startTimeStr);
             const diff = start.getTime() - now.getTime();
-            // Never show if explicitly ended
-            if (allPartyStates[key]?.status === 'ended') return false;
+            // Never show if it ended THIS run (a leftover from an earlier run doesn't count)
+            if (isEndedForThisRun(allPartyStates[key], start.getTime())) return false;
             // If live AND paid — still show so users can buy a ticket to join
             if (activeParties[key]?.status === 'live') return isPaid ? true : false;
             // Show if upcoming within 7 days
@@ -380,7 +373,6 @@ const App: React.FC = () => {
         const movieResult = (Object.values(movies) as Movie[])
             .filter(m => !!m && m.isWatchPartyEnabled && !m.isUnlisted)
             .filter(m => {
-                if (allPartyStates[m.key]?.status === 'ended') return false;
                 if (!m.watchPartyStartTime) return false; // no start time = don't show banner
                 return isEligible(m.watchPartyStartTime, m.key, m.isWatchPartyPaid);
             })

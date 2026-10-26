@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10 — Calmer home page, tidy Control Room, parties show without a restart
+
+- **Parties show on the home page as soon as you schedule them.** Saving a new future start time (Watch Parties schedule or Movie Editor) used to leave the film's old "ended" status from a test or an earlier screening, so the home page treated the new party as over until you pressed Restart. Saving now puts it back to "waiting" (`resetForNewSchedule`, tested; never touches a party that's live), and the home page, header and context use `isEndedForThisRun` everywhere.
+- **No more live-party takeover of the home page.** The big hero with the film's whole synopsis (and the "Live Watch Party Now Active" line clashing with the header) is gone. Instead, a small pill in the header: "● LIVE · title · Join", or "Watch party · title · 2h 14m" for one coming up in the next week. Tapping it opens the waiting room (countdown, film info, tickets) or the live film. Shows for signed-in and signed-out visitors.
+- **Control Room layout fixed.** The new panels had landed inside the button row and were squashed side by side. Now: title and buttons, then Viewership full width, then Tickets + Pinned, then Stopped watching + Reactions (stacked on smaller screens). Schedule section restyled to match.
+
 ## 2026-10 — "Want this for your festival?" on festival pages
 
 - A small box at the bottom of the PWFF page and every partner festival page: "Host your festival on CRATE" (→ /host) and "Premiere your film" (→ /premiere). People watching a festival include organizers and filmmakers, so each festival CRATE hosts advertises the next one. `components/HostWithCrateCta.tsx`.

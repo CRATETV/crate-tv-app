@@ -121,3 +121,15 @@ export function blockAccessExpiry(params: {
     return new Date(start + rewatchWindowMs + 24 * 60 * 60 * 1000);
 }
 
+
+/**
+ * Saving a watch party with a NEW future start time: a leftover "ended"
+ * (from a test run or the last screening) is put back to "waiting", so the
+ * home page, the lobby and Roku all show the new party straight away instead
+ * of treating it as over until someone presses Restart (Oct 26 2026).
+ * A party that is live right now is never touched.
+ */
+export function resetForNewSchedule(partyState: any, newStartMs: number | null, nowMs: number): boolean {
+    if (newStartMs == null || !Number.isFinite(newStartMs) || newStartMs <= nowMs) return false;
+    return partyState?.status === 'ended';
+}

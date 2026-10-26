@@ -443,12 +443,12 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
     }, [itemId, isLive]);
     if (hidden) return null;
     return (
-        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+        <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-5">
             <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Tickets for this party</p>
             {error && <p className="text-xs text-red-400">{error}</p>}
             {sales && (
                 <>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <div><div className="text-2xl font-black text-white tabular-nums">{sales.tickets}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Sold</div></div>
                         <div><div className="text-2xl font-black text-green-400 tabular-nums">${sales.revenue.toFixed(2)}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Made (before fees)</div></div>
                         <div><div className="text-2xl font-black text-white tabular-nums">${sales.averagePaid.toFixed(2)}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Average paid</div></div>
@@ -495,7 +495,7 @@ const DroppedViewersCard: React.FC<{ itemId: string; isLive: boolean }> = ({ ite
     if (!isLive) return null;
     const quietCount = (list || []).filter(d => d.how === 'quiet').length;
     return (
-        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+        <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-5">
             <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-black uppercase tracking-widest text-gray-400">Stopped watching (last 15 min)</p>
                 {list && <span className="text-xs font-bold text-gray-400">{list.length}</span>}
@@ -541,7 +541,7 @@ const PinnedAnnouncementControl: React.FC<{ itemId: string; type: 'movie' | 'blo
         finally { setBusy(false); }
     };
     return (
-        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+        <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-5">
             <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Pinned announcement</p>
             {current ? (
                 <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-3">
@@ -582,7 +582,7 @@ const LiveReactionsFeed: React.FC<{ itemId: string }> = ({ itemId }) => {
         return [...m.entries()].sort((a, b) => b[1] - a[1]);
     }, [items]);
     return (
-        <div className="mt-6 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+        <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-5">
             <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-black uppercase tracking-widest text-gray-400">Reactions</p>
                 <div className="flex gap-2 flex-wrap justify-end">
@@ -631,9 +631,9 @@ const WatchPartyViewershipStats: React.FC<{ itemId: string; isLive: boolean }> =
     if (!stats) return null;
 
     return (
-        <div className="mt-4 bg-black/40 rounded-2xl border border-white/10 p-5">
+        <div className="bg-black/40 rounded-2xl border border-white/10 p-5">
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Viewership</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div>
                     <div className="text-2xl font-black text-white tabular-nums flex items-center gap-2">
                         {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
@@ -1403,12 +1403,19 @@ const WatchPartyControlRoom: React.FC<{
                                         </>
                                     )}
                                 </div>
+                            </div>
+                        </div>
 
-                                <WatchPartyViewershipStats itemId={item.id} isLive={isLive} />
-                                <PinnedAnnouncementControl itemId={item.id} type={item.type} pin={partyState?.pinnedMessage} />
+                        {/* Live panels: numbers first, then what you act on. */}
+                        <div className="mt-6 space-y-4">
+                            <WatchPartyViewershipStats itemId={item.id} isLive={isLive} />
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                                 <PartySalesCard itemId={item.id} isLive={isLive} />
-                                <DroppedViewersCard itemId={item.id} isLive={isLive} />
-                                <LiveReactionsFeed itemId={item.id} />
+                                <PinnedAnnouncementControl itemId={item.id} type={item.type} pin={partyState?.pinnedMessage} />
+                            </div>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                                {isLive && <DroppedViewersCard itemId={item.id} isLive={isLive} />}
+                                <div className={isLive ? '' : 'xl:col-span-2'}><LiveReactionsFeed itemId={item.id} /></div>
                             </div>
                         </div>
                     </div>
@@ -1860,9 +1867,9 @@ const WatchPartyManager: React.FC<{
                 />
             )}
 
-            <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Schedule a Watch Party</h2>
-                <p className="text-sm text-gray-400 mb-6">Enable a party for a Single Film or a Stacked Block. Only one party can be active or upcoming at a time. Click "Save All Changes" to publish your schedule.</p>
+            <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border border-white/10 p-6 rounded-3xl text-gray-200">
+                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white mb-2 border-l-4 border-red-600 pl-3">Schedule a watch party</h2>
+                <p className="text-sm text-gray-400 mb-6">Switch a film or festival block on, pick the start time and price, then press <span className="text-white font-semibold">Save All Changes</span>. It shows on the home page straight away, with a countdown and tickets, even if that film had a party before.</p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
                     <input

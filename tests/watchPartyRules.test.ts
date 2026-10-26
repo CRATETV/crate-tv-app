@@ -97,3 +97,18 @@ test('REGRESSION: a party ended earlier but rescheduled later is a NEW run (lobb
     assert.equal(isEndedForThisRun({ status: 'ended' }, Date.parse('2026-10-26T20:00:00Z')), true, 'no end time: stay ended (safe)');
     assert.equal(isEndedForThisRun({ status: 'live' }, null), false);
 });
+
+import { resetForNewSchedule } from '../api/_lib/watchPartyRules';
+
+test('new future start time: a leftover "ended" goes back to waiting', () => {
+    const now = Date.parse('2026-10-26T16:00:00Z');
+    assert.equal(resetForNewSchedule({ status: 'ended' }, now + 3600_000, now), true);
+});
+
+test('new start time: never touches a live party, a past time, or no party', () => {
+    const now = Date.parse('2026-10-26T16:00:00Z');
+    assert.equal(resetForNewSchedule({ status: 'live' }, now + 3600_000, now), false);
+    assert.equal(resetForNewSchedule({ status: 'ended' }, now - 60_000, now), false);
+    assert.equal(resetForNewSchedule(undefined, now + 3600_000, now), false);
+    assert.equal(resetForNewSchedule({ status: 'ended' }, NaN, now), false);
+});

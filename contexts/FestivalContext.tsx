@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo, startTransition, useRef } from 'react';
 import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
+import { isEndedForThisRun } from '../api/_lib/watchPartyRules';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import type { PublicPartnerFestival } from '../api/_lib/partnerRules';
@@ -92,9 +93,9 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         const scheduleEntries = Object.values(scheduledParties)
             .filter((s: any) => {
                 if (!s.isWatchPartyEnabled) return false;
-                if (allPartyStates[s.movieKey]?.status === 'ended') return false;
                 if (activeParties[s.movieKey]?.status === 'live') return false;
                 if (!s.watchPartyStartTime) return false;
+                if (isEndedForThisRun(allPartyStates[s.movieKey], Date.parse(s.watchPartyStartTime))) return false;
                 const start = new Date(s.watchPartyStartTime).getTime();
                 if (start > now.getTime() && start < now.getTime() + sevenDaysInMs) return true;
                 if (start <= now.getTime() && now.getTime() - start < twoHoursInMs) return true;
@@ -194,19 +195,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             .filter(m => {
                 // Don't show if party was explicitly ended AND no future start time
                 const partyState = allPartyStates[m.key];
-                
-                // If ended but has a FUTURE start time set — ignore the ended status
-                // This handles the case where admin ended a test and scheduled a new one
-                if (partyState?.status === 'ended' && m.watchPartyStartTime) {
-                    const start = new Date(m.watchPartyStartTime);
-                    if (start.getTime() > now.getTime()) {
-                        // Has a future start time — stale ended doc should not block banner
-                    } else {
-                        return false;
-                    }
-                } else if (partyState?.status === 'ended') {
-                    return false;
-                }
+                // Ended THIS run → hide. A leftover "ended" from an earlier run
+                // (a test, or the last screening) doesn't count.
+                const startMs = m.watchPartyStartTime ? Date.parse(m.watchPartyStartTime) : null;
+                if (isEndedForThisRun(partyState, Number.isFinite(startMs as number) ? startMs : null)) return false;
                 // Don't show if already live (handled above)
                 if (activeParties[m.key]?.status === 'live') return false;
 

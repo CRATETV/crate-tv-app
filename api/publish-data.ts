@@ -6,6 +6,7 @@ import { publicSafeData } from './_lib/paidRules.js';
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { Movie, EditorialStory } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { resetForNewSchedule } from './_lib/watchPartyRules.js';
 
 const getRoleFromPassword = (password: string | null) => {
     if (!password) return 'unknown';
@@ -224,6 +225,15 @@ export async function POST(request: Request) {
                 // ONLY the watch-party fields browsers listen for — it used to get
                 // the whole movie record, including the raw video file link.
                 const d = (docData || {}) as Record<string, any>;
+                // A new future start time clears a leftover "ended" so the
+                // party shows everywhere right away (no Restart needed).
+                if (d.isWatchPartyEnabled !== false && typeof d.watchPartyStartTime === 'string' && d.watchPartyStartTime) {
+                    const partyRef = db.collection('watch_parties').doc(id);
+                    const party = (await partyRef.get()).data();
+                    if (resetForNewSchedule(party, Date.parse(d.watchPartyStartTime), Date.now())) {
+                        batch.set(partyRef, { status: 'waiting', isPlaying: false, currentTime: 0 }, { merge: true });
+                    }
+                }
                 const publicFields: Record<string, any> = {};
                 for (const f of PUBLIC_WATCH_PARTY_FIELDS) if (f in d) publicFields[f] = d[f];
                 if (Object.keys(publicFields).length > 0) {
@@ -261,7 +271,7 @@ export async function POST(request: Request) {
                     if (screeningTime > now) {
                         const partyRef = db.collection('watch_parties').doc(block.id);
                         const partyDoc = await partyRef.get();
-                        if (partyDoc.exists && partyDoc.data()?.status === 'live') {
+                        if (partyDoc.exists && (partyDoc.data()?.status === 'live' || resetForNewSchedule(partyDoc.data(), screeningTime.getTime(), now.getTime()))) {
                             batch.set(partyRef, { status: 'waiting' }, { merge: true });
                             console.log(`[PUBLISH] Reset stale live status for block ${block.id} (${block.title})`);
                         }
