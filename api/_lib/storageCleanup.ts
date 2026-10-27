@@ -25,7 +25,7 @@ export const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.mkv', '.avi', '.webm'
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface BucketObject { Key: string; Size: number; LastModified?: string }
-export interface PlanItem { key: string; size: number; reason: string }
+export interface PlanItem { key: string; size: number; reason: string; filmKey?: string }
 
 export const isVideoKey = (key: string) => {
     const k = key.toLowerCase();
@@ -117,6 +117,7 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
 
     // Everything in the site data EXCEPT films not in use.
     const notInUse: Record<string, string> = {}; // key -> film title, for the report
+    const notInUseFilm: Record<string, string> = {}; // key -> that film's catalog key
     const inUseFilms: { title: string; norm: string; plays: string }[] = [];
     let filmsInUse = 0, filmsNotInUse = 0;
     for (const [key, m] of Object.entries(movies)) {
@@ -129,7 +130,7 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
             if (norm.length >= 4) inUseFilms.push({ title: film.title, norm, plays });
         } else {
             filmsNotInUse++;
-            for (const u of collectUrls(m)) for (const k of keysFromUrl(u)) notInUse[k] = film.title || key;
+            for (const u of collectUrls(m)) for (const k of keysFromUrl(u)) { notInUse[k] = film.title || key; notInUseFilm[k] = key; }
         }
     }
     const { movies: _omit, ...rest } = data || {};
@@ -164,7 +165,8 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
             : folderFilm ? `hidden film: ${folderFilm[1]}`
             : lookalike ? `extra copy of "${lookalike.title}": CRATE plays a different file${lookalike.plays ? ` (${lookalike.plays})` : ''}`
             : 'not used by any film on CRATE';
-        plan.push({ key: o.Key, size: o.Size || 0, reason });
+        const filmKey = notInUse[o.Key] ? notInUseFilm[o.Key] : folderFilm ? notInUseFilm[folderFilm[0]] : undefined;
+        plan.push({ key: o.Key, size: o.Size || 0, reason, ...(filmKey ? { filmKey } : {}) });
     }
     plan.sort((a, b) => b.size - a.size);
     return { plan, keptVideos, filmsInUse, filmsNotInUse };
@@ -178,7 +180,7 @@ export const gb = (bytes: number) => bytes / 1024 ** 3;
 /** S3 Standard is about $0.023 per GB per month. */
 export const monthlyCost = (bytes: number) => gb(bytes) * 0.023;
 
-export interface PlanGroup { id: string; label: string; detail: string; reason: string; keys: string[]; size: number; isFolder: boolean }
+export interface PlanGroup { id: string; label: string; detail: string; reason: string; keys: string[]; size: number; isFolder: boolean; filmKey?: string }
 
 /**
  * One row per film file for the admin screen: an HLS folder (hundreds of
@@ -202,6 +204,7 @@ export function groupPlan(plan: PlanItem[]): PlanGroup[] {
         g.keys.push(p.key);
         g.size += p.size;
         if (g.reason.startsWith('not used') && p.reason.startsWith('hidden film')) g.reason = p.reason;
+        if (!g.filmKey && p.filmKey) g.filmKey = p.filmKey;
         groups.set(id, g);
     }
     return [...groups.values()].sort((a, b) => b.size - a.size);
@@ -211,4 +214,37 @@ export function groupPlan(plan: PlanItem[]): PlanGroup[] {
 export function looksLikeRealCatalog(data: any): boolean {
     const films = Object.values(data?.movies || {}) as any[];
     return !!data && !data.error && films.length >= 10 && films.some(m => typeof m?.fullMovie === 'string' && m.fullMovie);
+}
+
+/** Film keys in ANY festival block (PWFF days or Crate Fest), past or future. */
+export function filmsInAnyBlock(data: any): Set<string> {
+    const keys = new Set<string>();
+    const blocks: any[] = [
+        ...((data?.festivalData || []) as any[]).flatMap(d => d?.blocks || []),
+        ...((data?.settings?.crateFestConfig?.movieBlocks || data?.crateFestConfig?.movieBlocks || []) as any[]),
+    ];
+    for (const b of blocks) for (const k of b?.movieKeys || []) keys.add(k);
+    return keys;
+}
+
+/**
+ * When Storage clean-up deletes a hidden film's video, may the film itself be
+ * removed from the catalog too? (Salome, Oct 26 2026.) Only a hidden film that
+ * never earned money and isn't part of a festival schedule. A film that earned
+ * money stays (hidden): the Earnings page works out what each filmmaker earned,
+ * and is owed, from the films in the catalog, so removing it would hide that
+ * money and make it look like the filmmaker was overpaid.
+ * `earnedCents`: money each film earned, by title (lower case is fine). Null
+ * when the money check couldn't run: then nothing is removed.
+ */
+export function catalogRemoval(filmKey: string, data: any, earnedCents: Record<string, number> | null, nowMs: number): { ok: true } | { ok: false; why: string } {
+    const film = data?.movies?.[filmKey];
+    if (!film) return { ok: false, why: 'already removed' };
+    if (isFilmInUse({ key: filmKey, ...film }, filmsInLiveBlocks(data, nowMs), nowMs)) return { ok: false, why: 'still in use' };
+    if (film.partnerId) return { ok: false, why: 'a partner festival film' };
+    if (filmsInAnyBlock(data).has(filmKey)) return { ok: false, why: 'part of a festival schedule' };
+    if (earnedCents == null) return { ok: false, why: "couldn't check its earnings just now" };
+    const title = String(film.title || '').trim();
+    if ((earnedCents[title] || earnedCents[title.toLowerCase()] || 0) > 0) return { ok: false, why: 'it earned money, so it stays on your Earnings page' };
+    return { ok: true };
 }

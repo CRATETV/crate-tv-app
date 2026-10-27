@@ -7,7 +7,7 @@ import { Button, Card, EmptyState, Modal, Notice, PageHeader, StatTile, adminPos
 // lets you mark each one Keep or Delete. Everything starts as Keep.
 // The server re-checks before deleting: api/admin-storage-cleanup.ts.
 
-interface Row { id: string; label: string; detail: string; reason: string; size: number; files: number; isFolder: boolean }
+interface Row { id: string; label: string; detail: string; reason: string; size: number; files: number; isFolder: boolean; filmKey?: string; filmTitle?: string; canRemoveFilm?: boolean; keepFilmWhy?: string | null }
 interface ScanResult { groups: Row[]; keptVideos: number; filmsInUse: number; filmsNotInUse: number; totalObjects: number }
 
 const GB = 1024 ** 3;
@@ -24,9 +24,10 @@ const StorageCleanupTab: React.FC = () => {
     const [typed, setTyped] = useState('');
     const [deleting, setDeleting] = useState(false);
     const [doneMsg, setDoneMsg] = useState('');
+    const [removeFilms, setRemoveFilms] = useState(false);
 
-    const runScan = async () => {
-        setLoading(true); setError(''); setDoneMsg('');
+    const runScan = async (keepMessage = false) => {
+        setLoading(true); setError(''); if (!keepMessage) setDoneMsg('');
         try {
             const r = await adminPost<ScanResult>('/api/admin-storage-cleanup', { action: 'scan' });
             setScan(r); setMarked(new Set());
@@ -41,6 +42,10 @@ const StorageCleanupTab: React.FC = () => {
     const allBytes = (scan?.groups || []).reduce((s, r) => s + r.size, 0);
     const markedRows = (scan?.groups || []).filter(r => marked.has(r.id));
     const markedBytes = markedRows.reduce((s, r) => s + r.size, 0);
+    // Hidden films behind the marked rows (one entry per film).
+    const markedFilms = [...new Map(markedRows.filter(r => r.filmKey).map(r => [r.filmKey!, r])).values()];
+    const filmsToRemove = markedFilms.filter(r => r.canRemoveFilm);
+    const filmsToKeep = markedFilms.filter(r => !r.canRemoveFilm);
 
     const toggle = (id: string, del: boolean) => setMarked(prev => { const n = new Set(prev); if (del) n.add(id); else n.delete(id); return n; });
     const markShown = (del: boolean) => setMarked(prev => { const n = new Set(prev); rows.forEach(r => del ? n.add(r.id) : n.delete(r.id)); return n; });
@@ -48,10 +53,14 @@ const StorageCleanupTab: React.FC = () => {
     const doDelete = async () => {
         setDeleting(true); setError('');
         try {
-            const r = await adminPost<{ deleted: number; rows: number; skipped: number; bytes: number; errors: string[] }>('/api/admin-storage-cleanup', { action: 'delete', ids: [...marked] });
-            setConfirming(false); setTyped('');
-            setDoneMsg(`Deleted ${r.rows} item${r.rows === 1 ? '' : 's'} (${fmtSize(r.bytes)}).${r.skipped ? ` ${r.skipped} were kept because they're in use again or already gone.` : ''}${r.errors.length ? ` ${r.errors.length} file(s) couldn't be deleted.` : ''}`);
-            await runScan();
+            const r = await adminPost<{ deleted: number; rows: number; skipped: number; bytes: number; errors: string[]; filmsRemoved?: string[]; filmsKept?: { title: string; why: string }[] }>('/api/admin-storage-cleanup', { action: 'delete', ids: [...marked], removeFilms: removeFilms && filmsToRemove.length > 0 });
+            setConfirming(false); setTyped(''); setRemoveFilms(false);
+            const removed = r.filmsRemoved || [];
+            const kept = r.filmsKept || [];
+            setDoneMsg(`Deleted ${r.rows} item${r.rows === 1 ? '' : 's'} (${fmtSize(r.bytes)}).${r.skipped ? ` ${r.skipped} were kept because they're in use again or already gone.` : ''}${r.errors.length ? ` ${r.errors.length} file(s) couldn't be deleted.` : ''}`
+                + (removed.length ? ` Removed from CRATE: ${removed.join(', ')}.` : '')
+                + (kept.length ? ` Still on CRATE (hidden): ${kept.map(k => `${k.title} (${k.why})`).join(', ')}.` : ''));
+            await runScan(true);
         } catch (e) { setError(e instanceof Error ? e.message : 'Delete failed.'); }
         finally { setDeleting(false); }
     };
@@ -59,7 +68,7 @@ const StorageCleanupTab: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title="Storage clean-up" subtitle="Video files in your S3 bucket that CRATE doesn't use. Mark what to delete, keep the rest." accent="sky"
-                actions={<Button variant="primary" accent="sky" onClick={runScan} disabled={loading}>{loading ? 'Checking… (can take a minute)' : scan ? 'Check again' : 'Check storage'}</Button>} />
+                actions={<Button variant="primary" accent="sky" onClick={() => runScan()} disabled={loading}>{loading ? 'Checking… (can take a minute)' : scan ? 'Check again' : 'Check storage'}</Button>} />
 
             {error && <Notice tone="error">{error}</Notice>}
             {doneMsg && <Notice tone="success">{doneMsg}</Notice>}
@@ -121,16 +130,28 @@ const StorageCleanupTab: React.FC = () => {
             )}
 
             {confirming && (
-                <Modal title="Delete for good?" onClose={() => { if (!deleting) { setConfirming(false); setTyped(''); } }}>
+                <Modal title="Delete for good?" onClose={() => { if (!deleting) { setConfirming(false); setTyped(''); setRemoveFilms(false); } }}>
                     <div className="space-y-4">
                         <p className="text-sm text-[#A1A1AD]">This permanently deletes <strong className="text-white">{markedRows.length} item{markedRows.length === 1 ? '' : 's'} ({fmtSize(markedBytes)})</strong> from your S3 bucket. It can't be undone. Anything that's in use again by the time you press Delete is kept automatically.</p>
                         <ul className="max-h-40 overflow-y-auto text-xs text-[#8A8A96] space-y-1">
                             {markedRows.slice(0, 50).map(r => <li key={r.id} className="truncate">• {r.label} ({fmtSize(r.size)})</li>)}
                             {markedRows.length > 50 && <li>…and {markedRows.length - 50} more</li>}
                         </ul>
+                        {markedFilms.length > 0 && (
+                            <div className="rounded-xl border border-white/10 p-3 space-y-2">
+                                <label className={`flex items-start gap-2 text-sm ${filmsToRemove.length ? 'text-white cursor-pointer' : 'text-[#5A5A66]'}`}>
+                                    <input type="checkbox" className="mt-1" disabled={filmsToRemove.length === 0} checked={removeFilms && filmsToRemove.length > 0} onChange={e => setRemoveFilms(e.target.checked)} />
+                                    <span>Also remove {filmsToRemove.length === 1 ? 'this hidden film' : 'these hidden films'} from CRATE (can't be undone)</span>
+                                </label>
+                                {filmsToRemove.length > 0 && <p className="text-xs text-[#A1A1AD]">Removes: {filmsToRemove.map(r => r.filmTitle).join(', ')}</p>}
+                                {filmsToKeep.length > 0 && (
+                                    <p className="text-xs text-[#8A8A96]">Stays on CRATE, hidden, even though its video is deleted: {filmsToKeep.map(r => `${r.filmTitle} (${r.keepFilmWhy})`).join(', ')}</p>
+                                )}
+                            </div>
+                        )}
                         <input value={typed} onChange={e => setTyped(e.target.value)} placeholder="Type DELETE" className={inputClass} autoFocus />
                         <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" disabled={deleting} onClick={() => { setConfirming(false); setTyped(''); }}>Cancel</Button>
+                            <Button variant="ghost" disabled={deleting} onClick={() => { setConfirming(false); setTyped(''); setRemoveFilms(false); }}>Cancel</Button>
                             <Button variant="primary" accent="coral" disabled={typed !== 'DELETE' || deleting} onClick={doDelete}>{deleting ? 'Deleting…' : 'Delete for good'}</Button>
                         </div>
                     </div>

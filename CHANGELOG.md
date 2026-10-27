@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10 — Storage clean-up can remove hidden films from the catalog too
+
+- When the rows you delete include **hidden film: …** files, the confirm box offers **"Also remove these hidden films from CRATE"** (off unless you tick it). Removed films disappear from the catalog and from any rows, and the site data is republished.
+- Only films that are safe to remove are removed: hidden, never earned money, not in any festival schedule (past or future), not a partner film, and only if their video files really were deleted. A film that earned money stays (hidden): Earnings & payouts works out what each filmmaker earned and is owed from the films in the catalog, so removing it would hide that money and make it look like the filmmaker was overpaid. If Square can't be checked, nothing is removed. Rule: `catalogRemoval` in `api/_lib/storageCleanup.ts`, tested in `tests/catalogRemoval.test.ts`.
+- Fix: the "Deleted …" message after a clean-up was wiped by the automatic re-check; it now stays.
+
 ## 2026-10 — Bulk upload films (no Terminal needed)
 
 - New admin tab **Bulk upload films** (Films & content group). Drop many film files at once (a whole festival); CRATE guesses which film each file is from its name (`api/_lib/filmFileMatch.ts`, tested: ignores words like FINAL / ProRes / v2, a missing "The", and picks the longer title when one sits inside another; no guess when unsure). Check each guess, then **Upload & convert**: files upload one after the other, each starts its conversion as soon as it's up, and the server fills in each film's video and runtime when AWS is done (the page can be closed once uploads finish; conversions in progress come back after a refresh). Warns when two files point at the same film or a film already has a streaming version. Staff who can edit Films get this tab too.
