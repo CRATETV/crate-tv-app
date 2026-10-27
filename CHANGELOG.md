@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10 — Films start right away on phones
+
+- Opening a film from its poster on a phone used to stop on a play button: phones (iPhone especially) only allow a film to start WITH sound straight from a tap, and the film page loads the video address first. Now, when the phone blocks sound, the film starts muted with a big **🔊 Tap for sound** button; the first tap anywhere on the film turns the sound on (it doesn't pause). Computers and most Android phones still start with sound. `components/MoviePage.tsx` (playContent).
+
 ## 2026-10 — Films → "Remove selected"; clean-up never touches files the site code uses
 
 - **Films page → "Select to remove".** Tick films (or "Select all shown"), press **Remove selected**: CRATE checks them first and shows which can go (with how many files and how much space) and which stay and why. Type REMOVE to go ahead. Each removed film loses its catalog entry, its place in rows, and the bucket files only it uses: video, the whole streaming folder, poster, trailer, photos. Files another film or the site uses are kept. Never removed: films that earned money (they stay on Earnings & payouts), festival or partner films, films with a watch party coming up or held in the last week. Main admin only. `api/admin-remove-films.ts`, `components/admin/RemoveFilmsModal.tsx`; rules `filmRemovalCheck` / `filmOnlyFiles` in `api/_lib/storageCleanup.ts` (tested); shared server steps in `api/_lib/filmRemoval.ts` (also used by Storage clean-up).

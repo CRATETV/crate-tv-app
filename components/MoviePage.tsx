@@ -224,6 +224,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // session that outlives the signed URL's TTL is a known, accepted gap for
   // now, not silently handled.
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  // Phones (iPhone especially) won't start a film WITH sound unless the play
+  // comes straight from a tap. Opening a film from its poster loads the video
+  // address first, so by then the tap "doesn't count". Instead of stopping on
+  // a play button, the film starts muted and shows "Tap for sound" (Oct 2026).
+  const [needsSound, setNeedsSound] = useState(false);
+  useEffect(() => { setNeedsSound(false); }, [movieKey]);
+  const turnSoundOn = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      v.muted = false;
+      setNeedsSound(false);
+      if (v.paused) v.play().catch(() => {});
+  };
   useEffect(() => {
       setSignedUrl(null);
       if (!hasAccess || !movie || embedUrl || episodeStreamOverride) return;
@@ -498,11 +511,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         // manualLaunchRef); tracking is fire-and-forget afterward so it
         // can never delay or block it.
         if (!manualLaunchRef.current) {
+            const v = videoRef.current;
             try {
-                videoRef.current.currentTime = 0;
-                await videoRef.current.play();
+                v.currentTime = 0;
+                await v.play();
             } catch (e) {
-                setIsPaused(true);
+                // Blocked because of sound (phones): start muted instead.
+                if ((e as any)?.name === 'NotAllowedError') {
+                    try { v.muted = true; await v.play(); setNeedsSound(true); }
+                    catch { v.muted = false; setIsPaused(true); }
+                } else {
+                    setIsPaused(true);
+                }
             }
         }
         manualLaunchRef.current = false;
@@ -526,6 +546,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       if (isEnded) return;
       e.stopPropagation();
       if (!videoRef.current) return;
+      // Started muted: the first tap turns the sound on (doesn't pause).
+      if (needsSound) { turnSoundOn(); return; }
       if (videoRef.current.paused) {
           videoRef.current.play();
           setIsPaused(false);
@@ -778,7 +800,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
                                     {/* Video rendered above, this div is for overlays */}
                                     <CastButton videoElement={videoRef.current} />
-                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
+                                    {needsSound && !isPaused && !isEnded && (
+                                        <button
+                                            onClick={e => { e.stopPropagation(); turnSoundOn(); }}
+                                            className="absolute left-1/2 -translate-x-1/2 bottom-24 z-[120] flex items-center gap-2 bg-white text-black font-black text-sm px-6 py-3 rounded-full shadow-2xl animate-pulse"
+                                        >
+                                            <span aria-hidden>🔊</span> Tap for sound
+                                        </button>
+                                    )}
+                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { if (videoRef.current) videoRef.current.muted = false; setNeedsSound(false); videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                 </div>
                             )}
                             {/* Up Next / Transmission Complete — siblings of both the iframe and
