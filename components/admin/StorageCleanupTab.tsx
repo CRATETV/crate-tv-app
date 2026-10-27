@@ -8,7 +8,8 @@ import { Button, Card, EmptyState, Modal, Notice, PageHeader, StatTile, adminPos
 // The server re-checks before deleting: api/admin-storage-cleanup.ts.
 
 interface Row { id: string; label: string; detail: string; reason: string; size: number; files: number; isFolder: boolean; filmKey?: string; filmTitle?: string; canRemoveFilm?: boolean; keepFilmWhy?: string | null }
-interface ScanResult { groups: Row[]; keptVideos: number; filmsInUse: number; filmsNotInUse: number; totalObjects: number }
+interface FilmItem { key: string; title: string; why: string }
+interface ScanResult { groups: Row[]; keptVideos: number; filmsInUse: number; filmsNotInUse: number; totalObjects: number; inUseList?: FilmItem[]; notInUseList?: FilmItem[] }
 
 const GB = 1024 ** 3;
 const fmtSize = (b: number) => b >= GB ? `${(b / GB).toFixed(2)} GB` : `${Math.max(1, Math.round(b / 1024 ** 2))} MB`;
@@ -25,6 +26,7 @@ const StorageCleanupTab: React.FC = () => {
     const [deleting, setDeleting] = useState(false);
     const [doneMsg, setDoneMsg] = useState('');
     const [removeFilms, setRemoveFilms] = useState(false);
+    const [filmList, setFilmList] = useState<'inUse' | 'notInUse' | null>(null);
 
     const runScan = async (keepMessage = false) => {
         setLoading(true); setError(''); if (!keepMessage) setDoneMsg('');
@@ -87,8 +89,8 @@ const StorageCleanupTab: React.FC = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         <StatTile label="Could be deleted" value={fmtSize(allBytes)} hint={`${scan.groups.length} item${scan.groups.length === 1 ? "" : "s"} · ${perMonth(allBytes)}`} accent="orange" />
                         <StatTile label="Marked to delete" value={fmtSize(markedBytes)} hint={`${markedRows.length} item${markedRows.length === 1 ? "" : "s"} · saves ${perMonth(markedBytes)}`} accent="coral" />
-                        <StatTile label="Films in use" value={scan.filmsInUse} hint={`${scan.keptVideos} video files kept`} accent="green" />
-                        <StatTile label="Hidden / past films" value={scan.filmsNotInUse} accent="gray" />
+                        <StatTile label="Films in use" value={scan.filmsInUse} hint={`${scan.keptVideos} video files kept · tap to see them`} accent="green" onClick={() => setFilmList('inUse')} />
+                        <StatTile label="Hidden / past films" value={scan.filmsNotInUse} hint="tap to see them" accent="gray" onClick={() => setFilmList('notInUse')} />
                     </div>
 
                     {scan.groups.length === 0 ? (
@@ -127,6 +129,23 @@ const StorageCleanupTab: React.FC = () => {
                         </Card>
                     )}
                 </>
+            )}
+
+            {filmList && scan && (
+                <Modal title={filmList === 'inUse' ? `Films in use (${scan.filmsInUse})` : `Hidden / past films (${scan.filmsNotInUse})`} onClose={() => setFilmList(null)}>
+                    <p className="text-sm text-[#A1A1AD] mb-3">{filmList === 'inUse'
+                        ? 'Their video files are always kept. Each one says why it counts as in use.'
+                        : 'Hidden films nothing needs any more. Their video files show up in the list as "hidden film: …".'}</p>
+                    <ul className="max-h-[60vh] overflow-y-auto divide-y divide-white/[0.06]">
+                        {((filmList === 'inUse' ? scan.inUseList : scan.notInUseList) || []).map(f => (
+                            <li key={f.key} className="py-2 flex items-center justify-between gap-3">
+                                <span className="text-white text-sm truncate">{f.title}</span>
+                                <span className="text-xs text-[#8A8A96] text-right">{f.why}</span>
+                            </li>
+                        ))}
+                        {!(filmList === 'inUse' ? scan.inUseList : scan.notInUseList)?.length && <li className="py-2 text-sm text-[#8A8A96]">None. Press "Check again" if this looks wrong.</li>}
+                    </ul>
+                </Modal>
             )}
 
             {confirming && (

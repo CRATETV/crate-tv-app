@@ -12,67 +12,23 @@
 //          festival schedule (catalogRemoval in api/_lib/storageCleanup.ts).
 //
 // What counts as unused, and what is always kept: api/_lib/storageCleanup.ts.
-import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
-import type { Firestore } from 'firebase-admin/firestore';
-import { fetchAllRelevantPayments, getSquareCredentials, computeRevenueByFilm } from './_lib/filmmakerBalance.js';
-import { assembleAndSyncMasterData } from './publish-data.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { isMasterAdmin } from './_lib/adminAuth.js';
 import { getApiData } from './_lib/data.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
-import { buildPlan, groupPlan, looksLikeRealCatalog, catalogRemoval, type BucketObject } from './_lib/storageCleanup.js';
+import { buildPlan, groupPlan, looksLikeRealCatalog, catalogRemoval } from './_lib/storageCleanup.js';
+import { bucketStore, listAllObjects, deleteKeys, earnedByTitle, removeFilmRecords } from './_lib/filmRemoval.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
-function s3(): { client: S3Client; bucket: string } | null {
-    const bucket = process.env.AWS_S3_BUCKET_NAME;
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    let region = process.env.AWS_S3_REGION || 'us-east-1';
-    if (region === 'global') region = 'us-east-1';
-    if (!bucket || !accessKeyId || !secretAccessKey) return null;
-    return { client: new S3Client({ region, credentials: { accessKeyId, secretAccessKey } }), bucket };
-}
-
-async function listAll(client: S3Client, bucket: string): Promise<BucketObject[]> {
-    const out: BucketObject[] = [];
-    let token: string | undefined;
-    do {
-        const page = await client.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }));
-        for (const o of page.Contents || []) if (o.Key) out.push({ Key: o.Key, Size: Number(o.Size) || 0, LastModified: o.LastModified?.toISOString() });
-        token = page.IsTruncated ? page.NextContinuationToken : undefined;
-    } while (token);
-    return out;
-}
-
-/** Money each film has earned (cents), by lower-case title. Null if Square can't be checked. */
-async function earnedByTitle(db: Firestore | null, data: any): Promise<Record<string, number> | null> {
-    try {
-        const { accessToken, locationId } = getSquareCredentials();
-        if (!db || !accessToken) return null;
-        const payments = await fetchAllRelevantPayments(accessToken, locationId);
-        const movies = Object.entries(data?.movies || {}).map(([key, m]) => ({ key, ...(m as any) }));
-        const rev = await computeRevenueByFilm(db, payments, movies as any);
-        const out: Record<string, number> = {};
-        for (const [title, r] of Object.entries(rev)) {
-            const k = title.trim().toLowerCase();
-            out[k] = (out[k] || 0) + r.donations + r.tickets + r.vodRentals;
-        }
-        return out;
-    } catch (e) {
-        console.error('[admin-storage-cleanup] earnings check failed', e);
-        return null;
-    }
-}
-
 async function currentPlan() {
-    const store = s3();
+    const store = bucketStore();
     if (!store) throw new Error('Storage is not set up on the server.');
     const data = await getApiData({ noCache: true });
     // Never plan deletions from sample data or a half-loaded catalog.
     if (!looksLikeRealCatalog(data)) throw new Error('Could not load the real CRATE catalog right now. Nothing was planned. Try again in a few minutes.');
-    const objects = await listAll(store.client, store.bucket);
+    const objects = await listAllObjects(store.client, store.bucket);
     const result = buildPlan(objects, data, Date.now());
     return { ...result, groups: groupPlan(result.plan), store, totalObjects: objects.length, data };
 }
@@ -84,7 +40,7 @@ export async function POST(request: Request) {
         const action = String(body.action || 'scan');
 
         if (action === 'scan') {
-            const { groups, keptVideos, filmsInUse, filmsNotInUse, totalObjects, data } = await currentPlan();
+            const { groups, keptVideos, filmsInUse, filmsNotInUse, totalObjects, data, inUseList, notInUseList } = await currentPlan();
             const now = Date.now();
             const earned = groups.some(g => g.filmKey) ? await earnedByTitle(getAdminDb(), data) : {};
             return json({
@@ -95,7 +51,7 @@ export async function POST(request: Request) {
                         ...(g.filmKey ? { filmKey: g.filmKey, filmTitle: data.movies?.[g.filmKey]?.title || g.filmKey, canRemoveFilm: film!.ok, keepFilmWhy: film!.ok ? null : (film as any).why } : {}),
                     };
                 }),
-                keptVideos, filmsInUse, filmsNotInUse, totalObjects,
+                keptVideos, filmsInUse, filmsNotInUse, totalObjects, inUseList, notInUseList,
             });
         }
 
@@ -108,15 +64,7 @@ export async function POST(request: Request) {
             const keys = chosen.flatMap(g => g.keys);
             const skipped = ids.length - chosen.length; // now in use again, or already gone
 
-            let deleted = 0;
-            const errors: string[] = [];
-            const failedKeys = new Set<string>();
-            for (let i = 0; i < keys.length; i += 1000) {
-                const batch = keys.slice(i, i + 1000);
-                const res = await store.client.send(new DeleteObjectsCommand({ Bucket: store.bucket, Delete: { Objects: batch.map(Key => ({ Key })), Quiet: false } }));
-                deleted += (res.Deleted || []).length;
-                for (const e of res.Errors || []) { errors.push(`${e.Key}: ${e.Message}`); if (e.Key) failedKeys.add(e.Key); }
-            }
+            const { deleted, failed: failedKeys, errors } = await deleteKeys(store.client, store.bucket, keys);
             const bytes = chosen.reduce((s, g) => s + g.size, 0);
             const db = getAdminDb();
 
@@ -128,28 +76,17 @@ export async function POST(request: Request) {
                 const filmKeys = [...new Set(chosen.filter(g => g.filmKey && !g.keys.some(k => failedKeys.has(k))).map(g => g.filmKey!))];
                 const earned = filmKeys.length ? await earnedByTitle(db, data) : {};
                 const now = Date.now();
-                const cats = filmKeys.length ? await db.collection('categories').get() : null;
+                const titles: Record<string, string> = {};
+                const allowed: string[] = [];
                 for (const key of filmKeys) {
-                    const title = data.movies?.[key]?.title || key;
+                    titles[key] = data.movies?.[key]?.title || key;
                     const check = catalogRemoval(key, data, earned, now);
-                    if (!check.ok) { filmsKept.push({ title, why: check.why }); continue; }
-                    try {
-                        const batch = db.batch();
-                        batch.delete(db.collection('movies').doc(key));
-                        cats?.forEach(c => { if ((c.data()?.movieKeys || []).includes(key)) batch.update(c.ref, { movieKeys: FieldValue.arrayRemove(key) }); });
-                        await batch.commit();
-                        filmsRemoved.push(title);
-                    } catch (e) {
-                        console.error('[admin-storage-cleanup] could not remove film', key, e);
-                        filmsKept.push({ title, why: "couldn't be removed just now" });
-                    }
+                    if (check.ok) allowed.push(key); else filmsKept.push({ title: titles[key], why: check.why });
                 }
-                if (filmsRemoved.length) {
-                    await assembleAndSyncMasterData(db).catch(e => console.error('[admin-storage-cleanup] republish failed', e));
-                    await db.collection('audit_logs').add({
-                        action: 'STORAGE_CLEANUP_FILMS_REMOVED', type: 'CONTENT', operatorName: 'ADMIN', timestamp: FieldValue.serverTimestamp(),
-                        details: `Removed ${filmsRemoved.length} hidden film(s) from the catalog with their videos: ${filmsRemoved.join(', ').slice(0, 1800)}`,
-                    }).catch(() => {});
+                const removed = await removeFilmRecords(db, allowed, titles, 'Storage clean-up');
+                for (const key of allowed) {
+                    if (removed.includes(key)) filmsRemoved.push(titles[key]);
+                    else filmsKept.push({ title: titles[key], why: "couldn't be removed just now" });
                 }
             }
             await db?.collection('audit_logs').add({

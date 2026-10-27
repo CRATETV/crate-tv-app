@@ -1,10 +1,16 @@
 # Changelog
 
+## 2026-10 — Films → "Remove selected"; clean-up never touches files the site code uses
+
+- **Films page → "Select to remove".** Tick films (or "Select all shown"), press **Remove selected**: CRATE checks them first and shows which can go (with how many files and how much space) and which stay and why. Type REMOVE to go ahead. Each removed film loses its catalog entry, its place in rows, and the bucket files only it uses: video, the whole streaming folder, poster, trailer, photos. Files another film or the site uses are kept. Never removed: films that earned money (they stay on Earnings & payouts), festival or partner films, films with a watch party coming up or held in the last week. Main admin only. `api/admin-remove-films.ts`, `components/admin/RemoveFilmsModal.tsx`; rules `filmRemovalCheck` / `filmOnlyFiles` in `api/_lib/storageCleanup.ts` (tested); shared server steps in `api/_lib/filmRemoval.ts` (also used by Storage clean-up).
+- **Safety fix:** Storage clean-up (and film removal) now always keeps the bucket files the site's own code links to: the website intro video, the Roku channel's built-in videos, built-in posters and backgrounds (`api/_lib/codeLinkedFiles.ts`). A test fails if code ever links a new bucket file that isn't on that list.
+
 ## 2026-10 — Storage clean-up can remove hidden films from the catalog too
 
 - When the rows you delete include **hidden film: …** files, the confirm box offers **"Also remove these hidden films from CRATE"** (off unless you tick it). Removed films disappear from the catalog and from any rows, and the site data is republished.
 - Only films that are safe to remove are removed: hidden, never earned money, not in any festival schedule (past or future), not a partner film, and only if their video files really were deleted. A film that earned money stays (hidden): Earnings & payouts works out what each filmmaker earned and is owed from the films in the catalog, so removing it would hide that money and make it look like the filmmaker was overpaid. If Square can't be checked, nothing is removed. Rule: `catalogRemoval` in `api/_lib/storageCleanup.ts`, tested in `tests/catalogRemoval.test.ts`.
 - Fix: the "Deleted …" message after a clean-up was wiped by the automatic re-check; it now stays.
+- **Films in use** and **Hidden / past films** tiles can now be tapped: they open the list of films, and each film in use says why (showing on CRATE, watch party coming up, "Hide automatically after" date still to come, premiered in the last week, festival block, partner film). `whyInUse` in `api/_lib/storageCleanup.ts`.
 
 ## 2026-10 — Bulk upload films (no Terminal needed)
 

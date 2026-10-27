@@ -5,6 +5,7 @@ import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
 import FilmUploadConvert from './admin/FilmUploadConvert';
 import AdminFilmDeepDive from './AdminFilmDeepDive';
+import RemoveFilmsModal from './admin/RemoveFilmsModal';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
@@ -98,6 +99,7 @@ const ActorEditorModal: React.FC<{ actor: Actor, onSave: (updated: Actor) => voi
 
 const MovieEditor: React.FC<MovieEditorProps> = ({ 
     allMovies, 
+    onRefresh,
     onSave, 
     onDeleteMovie, 
     onSetNowStreaming,
@@ -116,6 +118,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<any>(null);
     const [deepDiveMovie, setDeepDiveMovie] = useState<Movie | null>(null);
+    // "Remove selected" (Oct 2026): tick films, then remove them together.
+    const [selectMode, setSelectMode] = useState(false);
+    const [picked, setPicked] = useState<Set<string>>(new Set());
+    const [removeKeys, setRemoveKeys] = useState<string[] | null>(null);
+    const togglePick = (key: string) => setPicked(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
     useEffect(() => {
         if (movieToCreate) {
@@ -295,18 +302,30 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <h3 className="text-xl font-black text-white uppercase tracking-widest">Catalog Records</h3>
                             <span className="bg-red-600/10 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{Object.keys(allMovies).length} Films Total</span>
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3 justify-end">
                             <input type="text" placeholder="Filter..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="form-input !py-3 text-xs bg-black/40 border-white/10" />
-                            <button onClick={() => setSelectedMovieKey(`movie_${Date.now()}`)} className="bg-red-600 text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest">+ New Entry</button>
+                            {selectMode ? (
+                                <>
+                                    <button onClick={() => setPicked(new Set([...picked, ...filteredMovies.map(m => m.key)]))} className="bg-white/5 text-white font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-widest border border-white/10">Select all shown</button>
+                                    <button disabled={picked.size === 0} onClick={() => setRemoveKeys([...picked])} className="bg-red-600 disabled:opacity-30 text-white font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-widest">Remove selected ({picked.size})</button>
+                                    <button onClick={() => { setSelectMode(false); setPicked(new Set()); }} className="bg-white/5 text-gray-400 font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-widest">Cancel</button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={() => setSelectMode(true)} className="bg-white/5 text-gray-300 hover:text-white font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-widest border border-white/10">Select to remove</button>
+                                    <button onClick={() => setSelectedMovieKey(`movie_${Date.now()}`)} className="bg-red-600 text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest">+ New Entry</button>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <tbody className="divide-y divide-white/5">
                                 {filteredMovies.map(movie => (
-                                    <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
+                                    <tr key={movie.key} onClick={selectMode ? () => togglePick(movie.key) : undefined} className={`hover:bg-white/[0.01] transition-colors group ${selectMode ? 'cursor-pointer' : ''} ${picked.has(movie.key) ? 'bg-red-600/[0.08]' : ''}`}>
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-6">
+                                                {selectMode && <input type="checkbox" aria-label={`Select ${movie.title}`} checked={picked.has(movie.key)} onChange={() => togglePick(movie.key)} onClick={e => e.stopPropagation()} className="w-5 h-5 accent-red-600 flex-shrink-0" />}
                                                 <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 shadow-2xl">
                                                     <img src={movie.poster || 'https://d3jhtrl1gnrh4b.cloudfront.net/photos+/Defaultpic.png'} className="w-full h-full object-cover" alt="" />
                                                 </div>
@@ -317,7 +336,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             </div>
                                         </td>
                                         <td className="px-8 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-3">
+                                            <div className={`flex items-center justify-end gap-3 ${selectMode ? 'invisible' : ''}`}>
                                                 <button 
                                                     onClick={() => setDeepDiveMovie(movie)}
                                                     className="text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-black text-[9px] uppercase px-6 py-3 rounded-xl border border-red-500/20 transition-all"
@@ -954,6 +973,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 />
             )}
 
+            {removeKeys && (
+                <RemoveFilmsModal keys={removeKeys} onClose={() => setRemoveKeys(null)} onRemoved={() => { setPicked(new Set()); setSelectMode(false); onRefresh(); }} />
+            )}
             {deepDiveMovie && (
                 <AdminFilmDeepDive 
                     movie={deepDiveMovie} 

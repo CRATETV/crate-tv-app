@@ -20,6 +20,10 @@
 //   - anything else the site data points at (rows, settings, festival pages)
 //   - a whole HLS folder (hsl/<name>/) when its playlist is in use
 //   - anything uploaded in the last 2 days (it may still be converting)
+//   - files the site's own code links to (website intro video, Roku's
+//     built-in videos, built-in posters): api/_lib/codeLinkedFiles.ts
+
+import { CODE_LINKED_URLS } from './codeLinkedFiles.js';
 
 export const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.mkv', '.avi', '.webm', '.mpg', '.mpeg', '.wmv', '.mxf', '.ts', '.m3u8', '.m4s'];
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -66,23 +70,30 @@ export function collectUrls(value: unknown, out: Set<string> = new Set(), depth 
     return out;
 }
 
-/** Is this film still in use on CRATE? (see the list at the top) */
-export function isFilmInUse(movie: any, keysInLiveBlocks: Set<string>, nowMs: number): boolean {
-    if (!movie) return false;
-    if (!movie.isUnlisted) return true;
-    if (movie.partnerId) return true;
-    if (movie.keepInCatalogAfterFestival) return true;
-    if (keysInLiveBlocks.has(movie.key)) return true;
+/** Why this film is still in use on CRATE (see the list at the top), or null if it isn't. */
+export function whyInUse(movie: any, keysInLiveBlocks: Set<string>, nowMs: number): string | null {
+    if (!movie) return null;
+    if (!movie.isUnlisted) return 'showing on CRATE';
+    if (movie.partnerId) return 'partner festival film';
+    if (movie.keepInCatalogAfterFestival) return 'kept after its festival';
+    if (keysInLiveBlocks.has(movie.key)) return 'in a festival block (rewatch week not over)';
     if (movie.isWatchPartyEnabled) {
         const start = toMs(movie.watchPartyStartTime);
-        if (start == null || start > nowMs - WEEK_MS) return true;
+        if (start == null || start > nowMs - WEEK_MS) return 'hidden, with a watch party coming up';
     }
     const until = toMs(movie.availableUntil);
-    if (until != null && until > nowMs) return true;
+    if (until != null && until > nowMs) return 'hidden, "Hide automatically after" date still to come';
     const premiered = toMs(movie.lastPremiereAt);
-    if (premiered != null && premiered > nowMs - WEEK_MS) return true;
-    return false;
+    if (premiered != null && premiered > nowMs - WEEK_MS) return 'premiered in the last week';
+    return null;
 }
+
+/** Is this film still in use on CRATE? (see the list at the top) */
+export function isFilmInUse(movie: any, keysInLiveBlocks: Set<string>, nowMs: number): boolean {
+    return whyInUse(movie, keysInLiveBlocks, nowMs) != null;
+}
+
+export interface FilmListItem { key: string; title: string; why: string }
 
 /** Film keys in festival blocks that haven't finished their rewatch week (or have no date). */
 export function filmsInLiveBlocks(data: any, nowMs: number): Set<string> {
@@ -102,7 +113,7 @@ export function filmsInLiveBlocks(data: any, nowMs: number): Set<string> {
  * The delete plan: video files nothing in use points at.
  * `data` is the admin copy of the site data (films with their real video links).
  */
-export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { plan: PlanItem[]; keptVideos: number; filmsInUse: number; filmsNotInUse: number } {
+export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { plan: PlanItem[]; keptVideos: number; filmsInUse: number; filmsNotInUse: number; inUseList: FilmListItem[]; notInUseList: FilmListItem[] } {
     const movies: Record<string, any> = data?.movies || {};
     const liveBlockFilms = filmsInLiveBlocks(data, nowMs);
 
@@ -120,21 +131,26 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
     const notInUseFilm: Record<string, string> = {}; // key -> that film's catalog key
     const inUseFilms: { title: string; norm: string; plays: string }[] = [];
     let filmsInUse = 0, filmsNotInUse = 0;
+    const inUseList: FilmListItem[] = [], notInUseList: FilmListItem[] = [];
     for (const [key, m] of Object.entries(movies)) {
         const film = { key, ...(m as any) };
-        if (isFilmInUse(film, liveBlockFilms, nowMs)) {
+        const why = whyInUse(film, liveBlockFilms, nowMs);
+        if (why) {
             filmsInUse++;
+            inUseList.push({ key, title: film.title || key, why });
             collectUrls(m).forEach(protect);
             const plays = typeof film.fullMovie === 'string' ? (keysFromUrl(film.fullMovie)[0] || '') : '';
             const norm = normName(film.title || '');
             if (norm.length >= 4) inUseFilms.push({ title: film.title, norm, plays });
         } else {
             filmsNotInUse++;
+            notInUseList.push({ key, title: film.title || key, why: 'hidden' });
             for (const u of collectUrls(m)) for (const k of keysFromUrl(u)) { notInUse[k] = film.title || key; notInUseFilm[k] = key; }
         }
     }
     const { movies: _omit, ...rest } = data || {};
     collectUrls(rest).forEach(protect);
+    CODE_LINKED_URLS.forEach(protect);
 
     // Extra safety: a file with the SAME NAME as one an in-use film plays (or
     // inside an HLS folder with the same folder name) is kept, in case the
@@ -169,7 +185,8 @@ export function buildPlan(objects: BucketObject[], data: any, nowMs: number): { 
         plan.push({ key: o.Key, size: o.Size || 0, reason, ...(filmKey ? { filmKey } : {}) });
     }
     plan.sort((a, b) => b.size - a.size);
-    return { plan, keptVideos, filmsInUse, filmsNotInUse };
+    const byTitle = (a: FilmListItem, b: FilmListItem) => a.title.localeCompare(b.title);
+    return { plan, keptVideos, filmsInUse, filmsNotInUse, inUseList: inUseList.sort(byTitle), notInUseList: notInUseList.sort(byTitle) };
 }
 
 const baseName = (key: string) => key.split('/').pop()!.toLowerCase();
@@ -228,23 +245,71 @@ export function filmsInAnyBlock(data: any): Set<string> {
 }
 
 /**
- * When Storage clean-up deletes a hidden film's video, may the film itself be
- * removed from the catalog too? (Salome, Oct 26 2026.) Only a hidden film that
- * never earned money and isn't part of a festival schedule. A film that earned
- * money stays (hidden): the Earnings page works out what each filmmaker earned,
- * and is owed, from the films in the catalog, so removing it would hide that
- * money and make it look like the filmmaker was overpaid.
+ * May this film be removed from the catalog? (Salome, Oct 26 2026.) Used by
+ * Films → "Remove selected" and by Storage clean-up. Never a film that earned
+ * money: the Earnings page works out what each filmmaker earned, and is owed,
+ * from the films in the catalog, so removing it would hide that money and make
+ * it look like the filmmaker was overpaid. Never a festival or partner film,
+ * or one with a watch party coming up or just held.
  * `earnedCents`: money each film earned, by title (lower case is fine). Null
  * when the money check couldn't run: then nothing is removed.
  */
-export function catalogRemoval(filmKey: string, data: any, earnedCents: Record<string, number> | null, nowMs: number): { ok: true } | { ok: false; why: string } {
+export function filmRemovalCheck(filmKey: string, data: any, earnedCents: Record<string, number> | null, nowMs: number): { ok: true } | { ok: false; why: string } {
     const film = data?.movies?.[filmKey];
     if (!film) return { ok: false, why: 'already removed' };
-    if (isFilmInUse({ key: filmKey, ...film }, filmsInLiveBlocks(data, nowMs), nowMs)) return { ok: false, why: 'still in use' };
     if (film.partnerId) return { ok: false, why: 'a partner festival film' };
     if (filmsInAnyBlock(data).has(filmKey)) return { ok: false, why: 'part of a festival schedule' };
+    if (film.isWatchPartyEnabled) {
+        const start = toMs(film.watchPartyStartTime);
+        if (start == null || start > nowMs - WEEK_MS) return { ok: false, why: 'it has a watch party coming up or just held' };
+    }
+    const premiered = toMs(film.lastPremiereAt);
+    if (premiered != null && premiered > nowMs - WEEK_MS) return { ok: false, why: 'it premiered in the last week' };
     if (earnedCents == null) return { ok: false, why: "couldn't check its earnings just now" };
     const title = String(film.title || '').trim();
     if ((earnedCents[title] || earnedCents[title.toLowerCase()] || 0) > 0) return { ok: false, why: 'it earned money, so it stays on your Earnings page' };
     return { ok: true };
+}
+
+/** Storage clean-up version: only hidden films nothing needs any more. */
+export function catalogRemoval(filmKey: string, data: any, earnedCents: Record<string, number> | null, nowMs: number): { ok: true } | { ok: false; why: string } {
+    const film = data?.movies?.[filmKey];
+    if (!film) return { ok: false, why: 'already removed' };
+    if (isFilmInUse({ key: filmKey, ...film }, filmsInLiveBlocks(data, nowMs), nowMs)) return { ok: false, why: 'still in use' };
+    return filmRemovalCheck(filmKey, data, earnedCents, nowMs);
+}
+
+/**
+ * The bucket files that belong ONLY to this film: its video (a whole HLS
+ * folder for a streaming version), poster, trailer, photos... Anything another
+ * film or the rest of the site also uses is left alone.
+ */
+export function filmOnlyFiles(filmKey: string, data: any, objects: BucketObject[]): { keys: string[]; size: number } {
+    const film = data?.movies?.[filmKey];
+    if (!film) return { keys: [], size: 0 };
+    const exists = new Map(objects.map(o => [o.Key, o]));
+
+    // What everything else uses.
+    const othersKeys = new Set<string>();
+    const othersFolders = new Set<string>();
+    const others: any = { ...(data || {}), movies: { ...(data?.movies || {}) } };
+    delete others.movies[filmKey];
+    for (const u of [...collectUrls(others), ...CODE_LINKED_URLS]) for (const k of keysFromUrl(u)) {
+        othersKeys.add(k);
+        if (k.toLowerCase().endsWith('.m3u8') && k.includes('/')) othersFolders.add(k.slice(0, k.lastIndexOf('/') + 1));
+    }
+
+    const mine = new Set<string>();
+    for (const u of collectUrls(film)) for (const k of keysFromUrl(u)) {
+        if (!exists.has(k)) continue;
+        if (k.toLowerCase().endsWith('.m3u8') && k.includes('/')) {
+            const folder = k.slice(0, k.lastIndexOf('/') + 1);
+            if (othersFolders.has(folder)) continue;
+            for (const o of objects) if (o.Key.startsWith(folder)) mine.add(o.Key);
+        } else {
+            mine.add(k);
+        }
+    }
+    const keys = [...mine].filter(k => !othersKeys.has(k) && ![...othersFolders].some(f => k.startsWith(f))).sort();
+    return { keys, size: keys.reduce((s, k) => s + (exists.get(k)?.Size || 0), 0) };
 }

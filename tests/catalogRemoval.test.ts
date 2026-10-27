@@ -47,3 +47,37 @@ test('clean-up rows know which hidden film they belong to', () => {
     assert.equal(byId['films/earner.mov'].filmKey, 'earner');
     assert.equal(byId['random/unused.mov'].filmKey, undefined);
 });
+
+test('the film lists say which films are in use and why', () => {
+    const { inUseList, notInUseList } = buildPlan([], data, NOW);
+    assert.deepEqual(inUseList.map(f => f.key).sort(), ['partner', 'visible']);
+    assert.equal(inUseList.find(f => f.key === 'visible')!.why, 'showing on CRATE');
+    assert.equal(inUseList.find(f => f.key === 'partner')!.why, 'partner festival film');
+    assert.deepEqual(notInUseList.map(f => f.title), ['Earner', 'Fest Film', 'Quiet Film']);
+});
+
+import { filmRemovalCheck, filmOnlyFiles } from '../api/_lib/storageCleanup';
+
+test('Films → Remove selected: visible films may go if they never earned money', () => {
+    assert.deepEqual(filmRemovalCheck('quiet', data, earned, NOW), { ok: true });
+    const visibleNoMoney = { ...data, movies: { ...data.movies, v2: { title: 'Brand New', fullMovie: B + 'films/v2.mp4' } } };
+    assert.deepEqual(filmRemovalCheck('v2', visibleNoMoney, earned, NOW), { ok: true });
+    assert.match((filmRemovalCheck('visible', data, earned, NOW) as any).why, /earned money/);
+    assert.match((filmRemovalCheck('fest', data, earned, NOW) as any).why, /festival/);
+    assert.match((filmRemovalCheck('partner', data, earned, NOW) as any).why, /partner/);
+    const party = { ...data, movies: { ...data.movies, p: { title: 'Party', isWatchPartyEnabled: true, watchPartyStartTime: '2026-11-13T23:00:00Z' } } };
+    assert.match((filmRemovalCheck('p', party, earned, NOW) as any).why, /watch party/);
+    assert.equal(filmRemovalCheck('quiet', data, null, NOW).ok, false);
+});
+
+test("a film's own files go with it (whole streaming folder, poster), shared ones stay", () => {
+    const d = { movies: {
+        x: { title: 'X', fullMovie: B + 'hsl/x/x.m3u8', poster: B + 'posters/x.jpg', trailer: B + 'shared/trailer.mp4' },
+        y: { title: 'Y', fullMovie: B + 'films/y.mp4', trailer: B + 'shared/trailer.mp4' },
+    }, settings: { heroImage: B + 'posters/hero.jpg' } };
+    const objects = ['hsl/x/x.m3u8', 'hsl/x/x_1080p.m3u8', 'hsl/x/x_1080p_00001.ts', 'posters/x.jpg', 'shared/trailer.mp4', 'films/y.mp4', 'posters/hero.jpg', 'hsl/xx/other.ts']
+        .map(Key => ({ Key, Size: 10 }));
+    const r = filmOnlyFiles('x', d, objects);
+    assert.deepEqual(r.keys, ['hsl/x/x.m3u8', 'hsl/x/x_1080p.m3u8', 'hsl/x/x_1080p_00001.ts', 'posters/x.jpg']);
+    assert.equal(r.size, 40);
+});
