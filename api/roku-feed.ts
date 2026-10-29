@@ -14,6 +14,7 @@ import { signStreamUrl } from './_lib/signStreamUrl.js';
 import { isOutsidePartner } from './_lib/partnerRules.js';
 import { streakSummary } from './_lib/streaks.js';
 import { isFestivalPassActive } from './_lib/festivalPass.js';
+import { introWindow } from './_lib/introSkip.js';
 
 function sanitizeUrl(url: string): string {
     if (!url) return '';
@@ -53,11 +54,14 @@ async function rokuEpisodes(movie: Movie, isUnlocked: boolean) {
             const signed = await signStreamUrl(raw);
             url = signed ? signed.url : raw;
         }
+        const intro = introWindow(movie, ep);
         return {
             id: ep.id || `${movie.key}-ep${i + 1}`,
             title: ep.title || `Episode ${i + 1}`,
             synopsis: (ep.synopsis || '').replace(/<[^>]+>/g, '').trim(),
             duration: ep.duration || 0,
+            introStart: intro ? intro.start : 0,
+            introEnd: intro ? intro.end : 0,
             url,
         };
     }));

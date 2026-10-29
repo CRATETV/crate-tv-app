@@ -22,6 +22,8 @@
 Sub Init()
     m.endTimer = Invalid
     m.endSecondsLeft = 0
+    m.upNextTimer = Invalid
+    m.upNextSeconds = 0
     ' Cache UI references
     m.videoNode = m.top.FindNode("videoNode")
     m.loadingOverlay = m.top.FindNode("loadingOverlay")
@@ -289,6 +291,31 @@ End Sub
 Sub OnPositionChange()
     m.top.currentPosition = Int(m.videoNode.position)
     If m.controls.visible Then UpdateControls()
+    CheckSkipIntro()
+End Sub
+
+' Skip intro: show the pill while the position is inside the episode's intro window
+' (introStart/introEnd on the content, set by TitleScene.PlayEpisode). Same rule as
+' api/_lib/introSkip.ts: start <= t < end-1.
+Sub CheckSkipIntro()
+    pill = m.top.FindNode("skipIntro")
+    content = m.top.content
+    show = false
+    If content <> Invalid And m.isPlaying
+        iEnd = Val(SafeContentField(content, "introEnd", "0"))
+        If iEnd > 0
+            iStart = Val(SafeContentField(content, "introStart", "0"))
+            p = m.videoNode.position
+            If p >= iStart And p < iEnd - 1 Then show = true
+        End If
+    End If
+    If pill.visible <> show Then pill.visible = show
+End Sub
+
+Sub DoSkipIntro()
+    iEnd = Val(SafeContentField(m.top.content, "introEnd", "0"))
+    If iEnd > 0 Then m.videoNode.seek = iEnd
+    m.top.FindNode("skipIntro").visible = false
 End Sub
 
 ' =============================================================================
@@ -434,12 +461,65 @@ Sub OnPlaybackFinished()
         ClearWatchPosition(m.contentId)
     End If
 
+    ' A series episode with another after it: "Up next" instead of the end card.
+    If ShowUpNext() Then Return
+
     ' A real film (not a trailer or watch party): show the end card first.
     If ShowEndCard() Then Return
 
     m.top.playbackComplete = true
     m.top.closeRequested = true
     Print "CrateTV: Playback finished"
+End Sub
+
+' =============================================================================
+' UP NEXT (after a series episode): the next episode starts by itself
+' =============================================================================
+' The Title page puts the next episode's name in "nextEpisodeTitle" on the
+' content (PlayEpisode in TitleScene.brs). Returns true if the card is showing.
+' When it ends, "autoPlayNext" is set on the content, the player closes, and the
+' Title page plays the next episode.
+Function ShowUpNext() as Boolean
+    content = m.top.content
+    If content = Invalid Or m.isLiveSync Or m.contentId = "" Then Return false
+    nextTitle = SafeContentField(content, "nextEpisodeTitle", "")
+    If nextTitle = "" Then Return false
+
+    m.top.FindNode("upNextTitle").text = nextTitle
+    HideControls()
+    m.controls.visible = false
+    m.top.FindNode("upNext").visible = true
+    m.upNextSeconds = 8
+    UpdateUpNextCountdown()
+    If m.upNextTimer = Invalid
+        m.upNextTimer = m.top.CreateChild("Timer")
+        m.upNextTimer.duration = 1
+        m.upNextTimer.repeat = true
+        m.upNextTimer.ObserveField("fire", "OnUpNextTick")
+    End If
+    m.upNextTimer.control = "start"
+    Return true
+End Function
+
+Sub OnUpNextTick()
+    m.upNextSeconds = m.upNextSeconds - 1
+    If m.upNextSeconds <= 0 Then FinishUpNext(true) Else UpdateUpNextCountdown()
+End Sub
+
+Sub UpdateUpNextCountdown()
+    m.top.FindNode("upNextCountdown").text = "Starting in " + Str(m.upNextSeconds).Trim() + " seconds"
+End Sub
+
+Sub FinishUpNext(playNext as Boolean)
+    If m.upNextTimer <> Invalid Then m.upNextTimer.control = "stop"
+    m.top.FindNode("upNext").visible = false
+    content = m.top.content
+    If playNext And content <> Invalid
+        If Not content.HasField("autoPlayNext") Then content.AddField("autoPlayNext", "boolean", false)
+        content.autoPlayNext = true
+    End If
+    m.top.playbackComplete = true
+    m.top.closeRequested = true
 End Sub
 
 ' =============================================================================
@@ -586,6 +666,13 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
         return false
     End If
     
+    ' Up next: OK plays the next episode now, Back stops; everything else is ignored
+    If m.top.FindNode("upNext").visible
+        If key = "OK" Or key = "play" Then FinishUpNext(true)
+        If key = "back" Then FinishUpNext(false)
+        return true
+    End If
+
     ' End card: OK or Back closes it; everything else is ignored
     If m.top.FindNode("endCard").visible
         If key = "OK" Or key = "back" Then CloseEndCard()
@@ -620,6 +707,12 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
         return true
     End If
     
+    ' Skip intro: while the pill is showing, OK skips. (Play/Pause still pauses.)
+    If key = "OK" And m.top.FindNode("skipIntro").visible
+        DoSkipIntro()
+        return true
+    End If
+
     If key = "OK" Or key = "play"
         If m.isPlaying
             m.videoNode.control = "pause"     ' OnVideoStateChange shows the controls

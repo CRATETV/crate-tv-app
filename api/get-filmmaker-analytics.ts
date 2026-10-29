@@ -1,3 +1,4 @@
+import { sumShards, summarizeWatch } from './_lib/watchStats.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
 import { fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE, computeRevenueByFilm, fetchFilmDeals } from './_lib/filmmakerBalance.js';
@@ -110,6 +111,14 @@ export async function POST(request: Request) {
             const sentimentSnap = await db.collection('movies').doc(film.key).collection('sentiment').orderBy('timestamp', 'asc').get();
             const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);
 
+            const watchIds = Array.isArray(film.episodes) && film.episodes.length > 0
+                ? film.episodes.map((ep, i) => ({ id: `${film.key}__e${i + 1}`, label: `Episode ${i + 1}${ep?.title ? `: ${ep.title}` : ''}` }))
+                : [{ id: film.key, label: film.title }];
+            const watch = await Promise.all(watchIds.map(async ({ id, label }) => {
+                const shards = await db.collection('film_watch').doc(id).collection('shards').get();
+                return { label, ...summarizeWatch(sumShards(shards.docs.map(d => d.data()))) };
+            }));
+
             return {
                 key: film.key,
                 title: film.title,
@@ -124,7 +133,8 @@ export async function POST(request: Request) {
                 netAdEarnings: mine(film, rev.tickets),
                 netRentalEarnings: mine(film, rev.vodRentals),
                 totalEarnings: mine(film, rev.donations + rev.tickets + rev.vodRentals),
-                sentimentData
+                sentimentData,
+                watch,
             };
         }));
 

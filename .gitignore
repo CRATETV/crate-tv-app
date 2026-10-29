@@ -27,3 +27,7 @@ __MACOSX/
 # Database backups (npm run backup) — contain customer data, never commit
 *.ndjson.gz
 crate-backups/
+
+.claude/
+CRATE-instagram.zip
+CRATE-Logo-Meaning.pdf

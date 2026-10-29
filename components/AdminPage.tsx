@@ -41,6 +41,7 @@ import { PWFF_PARTNER_ID } from '../api/_lib/partnerRules';
 import AudienceChoiceAdmin from './AudienceChoiceAdmin';
 import AdminSidebar from './admin/AdminSidebar';
 import AdminOverview from './admin/AdminOverview';
+import type { FilmGroup } from '../api/_lib/filmStatus';
 import EarningsPayoutsTab from './admin/EarningsPayoutsTab';
 import ContractsCenterTab from './admin/ContractsCenterTab';
 import ActorApprovalsTab from './admin/ActorApprovalsTab';
@@ -112,6 +113,8 @@ const AdminPage: React.FC = () => {
     const [permissions, setPermissions] = useState<Record<string, string[]>>({});
     
     const [activeTab, setActiveTab] = useState('pulse');
+    // Which filter chip the Films list opens on (set by the Overview tiles).
+    const [filmsFilter, setFilmsFilter] = useState<FilmGroup | 'all'>('all');
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [showMoneyTools, setShowMoneyTools] = useState(false);
     // Sidebar badges / Overview "needs attention".
@@ -648,6 +651,10 @@ const AdminPage: React.FC = () => {
                             counts={{ ...counts, submissions: newSubmissionCount }}
                             spotlightMissing={!spotlightReady}
                             filmCount={Object.keys(movies).length}
+                            movies={movies}
+                            categories={categories}
+                            festivalData={festivalData}
+                            onOpenFilms={(g) => { setFilmsFilter(g); navigateTo('movies'); }}
                             onNavigate={navigateTo}
                         >
                             <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />
@@ -677,7 +684,7 @@ const AdminPage: React.FC = () => {
                             onSaveCrateFest={async (c) => handleSaveData('settings', { crateFestConfig: c })}
                         />
                     )}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} categories={categories} festivalData={festivalData} initialFilter={filmsFilter} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'submissions' && (
                         <SubmissionsTab
                             pipeline={pipeline}

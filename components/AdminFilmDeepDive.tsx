@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, FilmmakerFilmPerformance, SentimentPoint } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import HypeMap from './HypeMap';
+import WatchFunnel from './admin/WatchFunnel';
 
 interface AdminFilmDeepDiveProps {
     movie: Movie;
@@ -236,6 +237,8 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
                                     </div>
                                 ))}
                             </div>
+
+                            <WatchFunnel watch={performance.watch} />
 
                             {/* Main Content */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

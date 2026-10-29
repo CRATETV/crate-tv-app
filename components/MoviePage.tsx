@@ -22,6 +22,9 @@ import SendToTvButton from './SendToTvButton';
 import { isOutsidePartner } from '../api/_lib/partnerRules';
 import { useWatchMilestone } from './WatchStreaks';
 import FilmNoLongerAvailable from './FilmNoLongerAvailable';
+import EpisodeCards from './EpisodeCards';
+import { useWatchReporter } from './useWatchReporter';
+import { introWindow, inIntro } from '../api/_lib/introSkip';
 import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
 
 interface MoviePageProps {
@@ -198,11 +201,35 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // NOTE: episode playback still uses the raw, unsigned URL below — it was
   // deliberately left out of the signed-URL migration (see SECURITY comment
   // on signedUrl below) as its own follow-up, not silently carried over.
+  // Oct 29 2026: episodes are now opened with ?ep=3 (the 3rd episode) instead
+  // of putting the episode's file link in the address. A paid series' episode
+  // links are never sent to the browser (only free ones and YouTube/Vimeo
+  // are), so a link in the address could not work for them; the number does,
+  // and the server signs that episode after checking the viewer's access.
+  // Older ?stream= links still work.
+  const episodeIndex = useMemo(() => {
+      const eps = movie?.episodes;
+      if (!movie?.isSeries || !eps || eps.length === 0) return -1;
+      const params = new URLSearchParams(currentSearch);
+      const n = parseInt(params.get('ep') || '', 10);
+      if (Number.isFinite(n) && n >= 1 && n <= eps.length) return n - 1;
+      const raw = params.get('stream');
+      if (raw && raw !== 'undefined') {
+          const url = decodeURIComponent(raw);
+          const i = eps.findIndex(e => e.url === url);
+          if (i >= 0) return i;
+      }
+      return -1;
+  }, [movie, currentSearch]);
+
   const episodeStreamOverride = useMemo(() => {
       const params = new URLSearchParams(currentSearch);
       const raw = params.get('stream');
-      return raw ? decodeURIComponent(raw) : null;
-  }, [currentSearch]);
+      if (raw && raw !== 'undefined') return decodeURIComponent(raw);
+      // ?ep=N with a link the browser was given (free / YouTube episodes).
+      if (episodeIndex >= 0) return movie?.episodes?.[episodeIndex]?.url || null;
+      return null;
+  }, [currentSearch, episodeIndex, movie]);
 
   // Checks the actively-playing URL first (an episode override, e.g. a
   // Caribbean Fix-style YouTube-hosted episode) and falls back to the
@@ -240,6 +267,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
       setSignedUrl(null);
       if (!hasAccess || !movie || embedUrl || episodeStreamOverride) return;
+      // A series always plays one of its episodes (see "start at an episode"
+      // below): wait for that instead of fetching the series' own file.
+      if (movie.isSeries && movie.episodes && movie.episodes.length > 0 && episodeIndex < 0) return;
       let cancelled = false;
       (async () => {
           try {
@@ -248,7 +278,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               const res = await fetch('/api/get-stream-url', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ movieKey, mode: 'ondemand', idToken }),
+                  body: JSON.stringify({ movieKey, mode: 'ondemand', idToken, ...(episodeIndex >= 0 ? { episode: episodeIndex } : {}) }),
               });
               if (!res.ok) { console.error('[MoviePage] get-stream-url failed:', res.status); return; }
               const data = await res.json();
@@ -258,7 +288,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
           }
       })();
       return () => { cancelled = true; };
-  }, [hasAccess, movie, movieKey, embedUrl, episodeStreamOverride, getUserIdToken]);
+  }, [hasAccess, movie, movieKey, embedUrl, episodeStreamOverride, episodeIndex, getUserIdToken]);
 
   const playableUrl = episodeStreamOverride || signedUrl || undefined;
 
@@ -267,12 +297,38 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // playing, so onEnded below knows whether to advance or show the
   // normal end-of-content screen.
   const nextEpisode = useMemo(() => {
-      if (!movie?.isSeries || !movie.episodes || movie.episodes.length === 0) return null;
-      if (!episodeStreamOverride) return null; // playing the main entry itself, not a listed episode
-      const idx = movie.episodes.findIndex(ep => ep.url === episodeStreamOverride);
-      if (idx === -1 || idx >= movie.episodes.length - 1) return null; // not found, or already the last one
-      return movie.episodes[idx + 1];
-  }, [movie, episodeStreamOverride]);
+      const eps = movie?.episodes;
+      if (episodeIndex < 0 || !eps || episodeIndex >= eps.length - 1) return null; // not an episode, or already the last one
+      return { title: eps[episodeIndex + 1].title, index: episodeIndex + 1 };
+  }, [movie, episodeIndex]);
+
+  // Where this viewer left off in a series (this browser only), so Play can say
+  // "Continue episode 3" like Netflix. Cleared once the last episode ends.
+  const lastEpisodeKey = `crate-last-ep:${movieKey}`;
+  const readLastEpisode = (): number => {
+      try {
+          const n = parseInt(localStorage.getItem(lastEpisodeKey) || '', 10);
+          return Number.isFinite(n) && n >= 0 && n < (movie?.episodes?.length || 0) ? n : 0;
+      } catch { return 0; }
+  };
+  useEffect(() => {
+      if (episodeIndex < 0 || playerMode !== 'full') return;
+      try { localStorage.setItem(lastEpisodeKey, String(episodeIndex)); } catch { /* private window */ }
+  }, [episodeIndex, playerMode, lastEpisodeKey]);
+
+  // Start at an episode: pressing Play on a series begins the episode you were
+  // on (or episode 1), so auto-play of the next episode works from the first
+  // one too. Before this, Play on the series itself played one file and then
+  // stopped, with nothing following it.
+  useEffect(() => {
+      if (playerMode !== 'full' || !hasAccess || !movie?.isSeries || !movie.episodes || movie.episodes.length === 0) return;
+      if (episodeIndex >= 0) return;
+      const params = new URLSearchParams(currentSearch);
+      if (params.get('ep') || (params.get('stream') && params.get('stream') !== 'undefined')) return;
+      window.history.replaceState({}, '', `/movie/${movie.key}?play=true&ep=${readLastEpisode() + 1}`);
+      setCurrentSearch(window.location.search);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerMode, hasAccess, movie, episodeIndex, currentSearch]);
 
   // FEATURE (user request — a visible countdown before auto-advancing,
   // not an instant jump): counts down from AUTO_ADVANCE_SECONDS once the
@@ -280,10 +336,59 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // to jump ahead immediately or cancel and stay on this screen instead.
   const AUTO_ADVANCE_SECONDS = 8;
   const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
+  // "Skip intro": shows while the current episode's intro plays (times set in
+  // the film editor), for both our own player and YouTube-hosted episodes.
+  const introWin = useMemo(() => (episodeIndex >= 0 && movie?.episodes ? introWindow(movie, movie.episodes[episodeIndex]) : null), [movie, episodeIndex]);
+  const [showSkipIntro, setShowSkipIntro] = useState(false);
+  useEffect(() => {
+      setShowSkipIntro(false);
+      if (!introWin || playerMode !== 'full' || !hasAccess) return;
+      const id = setInterval(() => {
+          let t: number | null = null;
+          if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
+              try { t = ytPlayerRef.current.getCurrentTime(); } catch { /* player not ready */ }
+          } else if (videoRef.current) t = videoRef.current.currentTime;
+          if (t != null) setShowSkipIntro(inIntro(introWin, t));
+      }, 500);
+      return () => clearInterval(id);
+  }, [introWin, playerMode, hasAccess, embedUrl]);
+  // Plays / finish rate / where people stop (admin film numbers). Counts only,
+  // nothing personal. Our own player and YouTube-hosted episodes both report.
+  useWatchReporter({
+      active: playerMode === 'full' && hasAccess,
+      movieKey: movie?.key,
+      episode: episodeIndex >= 0 ? episodeIndex + 1 : 0,
+      getPosition: () => {
+          const yt = ytPlayerRef.current;
+          if (yt && typeof yt.getCurrentTime === 'function' && typeof yt.getDuration === 'function') {
+              const d = yt.getDuration();
+              return d > 0 ? { t: yt.getCurrentTime(), d } : null;
+          }
+          const v = videoRef.current;
+          if (v && !v.paused && Number.isFinite(v.duration)) return { t: v.currentTime, d: v.duration };
+          return null;
+      },
+  });
+  const skipIntro = () => {
+      if (!introWin) return;
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+          try { ytPlayerRef.current.seekTo(introWin.end, true); } catch { /* not ready */ }
+      } else if (videoRef.current) videoRef.current.currentTime = introWin.end;
+      setShowSkipIntro(false);
+  };
+  // The Episodes tray at the bottom of the player (a row of episode cards).
+  const [episodesOpen, setEpisodesOpen] = useState(false);
+  useEffect(() => { setEpisodesOpen(false); }, [episodeIndex, movieKey]);
+  useEffect(() => {
+      if (!episodesOpen) return;
+      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setEpisodesOpen(false); };
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+  }, [episodesOpen]);
 
-  const advanceToEpisode = useCallback((url: string) => {
+  const advanceToEpisode = useCallback((index: number) => {
       if (!movie?.key) return;
-      window.history.pushState({}, '', `/movie/${movie.key}?play=true&stream=${encodeURIComponent(url)}`);
+      window.history.pushState({}, '', `/movie/${movie.key}?play=true&ep=${index + 1}`);
       setCurrentSearch(window.location.search);
       setAutoAdvanceCountdown(null);
       // isEnded is already false here and stays false — the effect above
@@ -294,7 +399,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
       if (autoAdvanceCountdown === null) return;
       if (autoAdvanceCountdown <= 0) {
-          if (nextEpisode) advanceToEpisode(nextEpisode.url);
+          if (nextEpisode) advanceToEpisode(nextEpisode.index);
           return;
       }
       const timer = setTimeout(() => setAutoAdvanceCountdown(c => (c ?? 0) - 1), 1000);
@@ -622,6 +727,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                       if (event.data === YT.PlayerState.ENDED) {
                           setIsEnded(true);
                           if (nextEpisode) setAutoAdvanceCountdown(AUTO_ADVANCE_SECONDS);
+                          else if (episodeIndex >= 0) { try { localStorage.removeItem(lastEpisodeKey); } catch { /* ignore */ } }
                       } else if (event.data === YT.PlayerState.PLAYING) {
                           setIsEnded(false);
                           setIsPaused(false);
@@ -659,7 +765,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               ytPlayerRef.current = null;
           }
       };
-  }, [playerMode, hasAccess, embedUrl, nextEpisode]);
+  }, [playerMode, hasAccess, embedUrl, nextEpisode, episodeIndex, lastEpisodeKey]);
 
   const handleRewatch = useCallback(() => {
       setIsEnded(false);
@@ -758,6 +864,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         onEnded={() => {
                             setIsEnded(true);
                             if (nextEpisode) setAutoAdvanceCountdown(AUTO_ADVANCE_SECONDS);
+                            else if (episodeIndex >= 0) { try { localStorage.removeItem(lastEpisodeKey); } catch { /* ignore */ } }
                         }}
                         onError={() => setVideoError(true)}
                         controlsList="nodownload" 
@@ -811,6 +918,46 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { if (videoRef.current) videoRef.current.muted = false; setNeedsSound(false); videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                 </div>
                             )}
+                            {showSkipIntro && !isEnded && !episodesOpen && (
+                                <button
+                                    onClick={skipIntro}
+                                    className="absolute right-4 bottom-20 z-[135] bg-white text-black font-black text-sm px-6 py-3 min-h-[44px] rounded-lg shadow-2xl hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500"
+                                >
+                                    Skip intro
+                                </button>
+                            )}
+                            {/* Episodes tray: a row of episode cards along the bottom of the player.
+                                Sits beside (not inside) the click-to-pause area, so tapping it never pauses. */}
+                            {movie.isSeries && movie.episodes && movie.episodes.length > 1 && !isEnded && (
+                                <>
+                                    {!episodesOpen && (
+                                        <button
+                                            onClick={() => setEpisodesOpen(true)}
+                                            aria-label="Show episodes"
+                                            className="absolute right-4 bottom-4 z-[130] flex items-center gap-2 bg-black/80 hover:bg-white hover:text-black text-white font-bold text-sm px-5 py-3 min-h-[44px] rounded-full border border-white/30 shadow-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                                        >
+                                            <span aria-hidden>▤</span> Episodes
+                                        </button>
+                                    )}
+                                    {episodesOpen && (
+                                        <div className="absolute inset-x-0 bottom-0 z-[140] pt-16 pb-4 bg-gradient-to-t from-black via-black/90 to-transparent" role="region" aria-label="Episodes">
+                                            <div className="flex items-center justify-between px-4 md:px-14 mb-1">
+                                                <h2 className="text-white font-black text-lg">Episodes <span className="text-white/60 font-bold text-sm">· {movie.episodes.length}</span></h2>
+                                                <button onClick={() => setEpisodesOpen(false)} aria-label="Close episodes" className="min-h-[44px] px-4 rounded-full bg-white/15 hover:bg-white hover:text-black text-white font-bold text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Close ✕</button>
+                                            </div>
+                                            <EpisodeCards
+                                                episodes={movie.episodes}
+                                                currentIndex={episodeIndex}
+                                                nextIndex={nextEpisode?.index ?? null}
+                                                onSelect={(i) => {
+                                                    window.history.pushState({}, '', `/movie/${movie.key}?play=true&ep=${i + 1}`);
+                                                    setCurrentSearch(window.location.search);
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            )}
                             {/* Up Next / Transmission Complete — siblings of both the iframe and
                                 the native <video> branch above (not nested inside it) so a
                                 YouTube-hosted episode ending via the YT.Player wiring above gets
@@ -834,7 +981,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         </div>
                                         <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Starts automatically in {autoAdvanceCountdown}s</p>
                                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                                            <button onClick={() => advanceToEpisode(nextEpisode.url)} className="px-8 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-xs tracking-widest transition-all">Play Now</button>
+                                            <button onClick={() => advanceToEpisode(nextEpisode.index)} className="px-8 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-xs tracking-widest transition-all">Play Now</button>
                                             <button onClick={() => setAutoAdvanceCountdown(null)} className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors">Cancel</button>
                                         </div>
                                     </div>
@@ -998,7 +1145,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                             </svg>
-                            Play
+                            {movie.isSeries && movie.episodes && movie.episodes.length > 0
+                                ? (readLastEpisode() > 0 ? `Continue episode ${readLastEpisode() + 1}` : 'Play episode 1')
+                                : 'Play'}
                         </button>
                     ) : isPaidPartyOnly ? (
                         <>
@@ -1059,28 +1208,37 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         the moment someone lands here — no extra click needed. */}
                     {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
                         <div className="mb-8">
-                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-3">Episodes</p>
-                            <div className="space-y-3">
+                            <div className="flex items-baseline justify-between mb-3">
+                                <h3 className="text-lg font-black text-white tracking-tight">Episodes</h3>
+                                <span className="text-xs font-bold text-gray-500">{movie.episodes.length} episode{movie.episodes.length === 1 ? '' : 's'} · plays one after another</span>
+                            </div>
+                            <div className="divide-y divide-white/10 rounded-2xl border border-white/10 overflow-hidden bg-white/[0.03]">
                                 {movie.episodes.map((ep, idx) => {
-                                    const isCurrentEpisode = episodeStreamOverride === ep.url;
+                                    const isCurrentEpisode = episodeIndex === idx;
+                                    const isResume = episodeIndex < 0 && readLastEpisode() === idx && idx > 0;
                                     return (
                                         <button
                                             key={ep.id}
+                                            disabled={!hasAccess}
                                             onClick={() => {
-                                                window.history.pushState({}, '', `/movie/${movie.key}?play=true&stream=${encodeURIComponent(ep.url)}`);
+                                                if (!isMovieReleased(movie)) { setIsDetailsModalOpen(true); return; }
+                                                window.history.pushState({}, '', `/movie/${movie.key}?play=true&ep=${idx + 1}`);
                                                 setCurrentSearch(window.location.search);
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
                                             }}
-                                            className={`w-full flex items-center gap-4 p-3 rounded-xl border text-left transition-all ${isCurrentEpisode ? 'bg-red-600/10 border-red-600/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                            className={`w-full flex items-start gap-4 p-4 text-left transition-all ${isCurrentEpisode ? 'bg-red-600/10' : 'hover:bg-white/[0.06]'} ${!hasAccess ? 'opacity-60 cursor-default' : ''}`}
                                         >
-                                            <span className={`flex-shrink-0 w-8 text-center font-black text-lg ${isCurrentEpisode ? 'text-red-500' : 'text-gray-600'}`}>{idx + 1}</span>
+                                            <span className={`flex-shrink-0 w-9 text-center font-black text-2xl leading-none pt-0.5 ${isCurrentEpisode ? 'text-red-500' : 'text-gray-600'}`}>{idx + 1}</span>
                                             <div className="flex-grow min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className={`text-sm font-bold uppercase tracking-tight truncate ${isCurrentEpisode ? 'text-white' : 'text-gray-300'}`}>{ep.title}</h4>
-                                                    {isCurrentEpisode && <span className="flex-shrink-0 text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded uppercase tracking-widest">Now Playing</span>}
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h4 className={`text-sm md:text-base font-bold tracking-tight ${isCurrentEpisode ? 'text-white' : 'text-gray-200'}`}>{ep.title}</h4>
+                                                    {isCurrentEpisode && <span className="flex-shrink-0 text-[9px] font-black bg-red-600 text-white px-2 py-0.5 rounded uppercase tracking-widest">Now playing</span>}
+                                                    {!isCurrentEpisode && isResume && <span className="flex-shrink-0 text-[9px] font-black bg-white/15 text-white px-2 py-0.5 rounded uppercase tracking-widest">Continue</span>}
+                                                    {nextEpisode?.index === idx && <span className="flex-shrink-0 text-[9px] font-black bg-white/15 text-white px-2 py-0.5 rounded uppercase tracking-widest">Up next</span>}
                                                 </div>
-                                                <p className="text-xs text-gray-500 line-clamp-1">{ep.synopsis}</p>
+                                                {ep.synopsis && <p className="text-xs md:text-sm text-gray-400 line-clamp-2 mt-1 leading-snug">{ep.synopsis}</p>}
                                             </div>
-                                            {ep.duration && <span className="flex-shrink-0 text-[10px] font-bold text-gray-600">{ep.duration}m</span>}
+                                            <span className="flex-shrink-0 text-xs font-bold text-gray-500 pt-1">{ep.duration ? `${ep.duration}m` : ''}</span>
                                         </button>
                                     );
                                 })}

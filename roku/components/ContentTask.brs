@@ -1009,11 +1009,15 @@ Function CreateMovieNode(data as Object) as Object
     If Type(data.episodes) = "roArray"
         For Each ep in data.episodes
             If Type(ep) = "roAssociativeArray"
-                e = { id: "", title: "", synopsis: "", duration: 0, url: "" }
+                e = { id: "", title: "", synopsis: "", duration: 0, url: "", introStart: 0, introEnd: 0 }
                 If ep.id <> Invalid Then e.id = Box(ep.id).ToStr()
                 If ep.title <> Invalid Then e.title = ep.title
                 If ep.synopsis <> Invalid Then e.synopsis = ep.synopsis
                 If ep.duration <> Invalid And (Type(ep.duration) = "roInt" Or Type(ep.duration) = "roFloat" Or Type(ep.duration) = "Integer" Or Type(ep.duration) = "Float" Or Type(ep.duration) = "Double" Or Type(ep.duration) = "roDouble") Then e.duration = Int(ep.duration)
+                If ep.introEnd <> Invalid And ep.introEnd > 0
+                    e.introEnd = ep.introEnd
+                    If ep.introStart <> Invalid And ep.introStart >= 0 Then e.introStart = ep.introStart
+                End If
                 If ep.url <> Invalid Then e.url = NormalizeUrl(ep.url)
                 eps.Push(e)
             End If

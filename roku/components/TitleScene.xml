@@ -66,6 +66,8 @@
     <children>
         <Timer id="previewTimer" duration="2.5" repeat="false" />
         <Timer id="unlockTimer"  duration="15"  repeat="true" />
+        <!-- After an episode ends and the player closes: starts the next one (Up next) -->
+        <Timer id="autoNextTimer" duration="0.4" repeat="false" />
 
         <Group id="canvas" translation="[0, -60]">
             <Rectangle width="1920" height="1080" color="#000000" />

@@ -177,6 +177,9 @@ export interface Movie {
   isSeries?: boolean;
   isEpisode?: boolean;
   episodes?: Episode[];
+  /** Series: the intro of every episode (seconds); an episode can set its own. See api/_lib/introSkip.ts. */
+  introStart?: number;
+  introEnd?: number;
   durationInMinutes?: number;
   hasCopyrightMusic?: boolean;
   isSupportEnabled?: boolean;
@@ -225,6 +228,9 @@ export interface Episode {
   synopsis: string;
   url: string;
   duration?: number;
+  /** "Skip intro" button: seconds into the episode where the intro starts (default 0) and ends. Empty = use the series' own. */
+  introStart?: number;
+  introEnd?: number;
 }
 
 export interface Category {
@@ -622,6 +628,16 @@ export interface FilmmakerFilmPerformance {
   netRentalEarnings: number;
   totalEarnings: number;
   sentimentData?: SentimentPoint[];
+  /** Plays, finish rate and where viewers stop: one entry per film, or per episode of a series. */
+  watch?: Array<{
+    label: string;
+    plays: number;
+    finished: number;
+    finishRate: number | null;
+    stillWatching: number[];
+    biggestDrop: { fromPct: number; toPct: number; lostShare: number } | null;
+    enough: boolean;
+  }>;
 }
 
 export interface FilmmakerAnalytics {

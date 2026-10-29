@@ -7,6 +7,9 @@ import { getBackstageKey, setBackstageKey } from './_lib/backstage.js';
 import { shouldAutoStart, tryAdvanceBlock, tryAutoEnd, newBackstageKey, SERVER_ADVANCE_GRACE_MS } from './_lib/watchPartyLifecycle.js';
 import { isOutsidePartner } from './_lib/partnerRules.js';
 import { isFestivalPassActive } from './_lib/festivalPass.js';
+import { dueReminders } from './_lib/premiereReminders.js';
+import { sendPremiereReminder, markReminderSent, movieTicketRecipients } from './_lib/sendPremiereReminders.js';
+import { isWatchPartyListable } from './_lib/filmAvailability.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'studio@cratetv.net';
@@ -152,6 +155,19 @@ export async function GET(request: Request) {
             }
         });
 
+        // Premiere reminders ("tomorrow" and "15 minutes"): who is due is decided by
+        // api/_lib/premiereReminders.ts. Sent after the start/stop work below.
+        const premieresToRemind: { id: string; title: string; startMs: number; stage: 'day' | 'soon'; isBlock: boolean; partnerId?: string }[] = [];
+        moviesSnapshot.forEach(doc => {
+            const movie = doc.data();
+            const state = partyStates.get(doc.id);
+            const startMs = movie.watchPartyStartTime ? Date.parse(movie.watchPartyStartTime) : NaN;
+            if (state?.status === 'live' || !isWatchPartyListable({ ...movie, key: doc.id } as any, now.getTime())) return;
+            for (const stage of dueReminders(startMs, now.getTime(), state?.remindersSent)) {
+                premieresToRemind.push({ id: doc.id, title: movie.title || 'Watch Party', startMs, stage, isBlock: false });
+            }
+        });
+
         // 3. AUTO-START: Festival Blocks (+ collect blocks due a "starts soon" reminder)
         const blocksNeedingReminders: { block: any; startTime: Date }[] = [];
         festivalDaysSnapshot.forEach(doc => {
@@ -200,6 +216,12 @@ export async function GET(request: Request) {
                             startedPartyIds.push(block.id);
                             mutationsCount++;
                             console.log(`[AUTO-START] Block ${block.id} (${block.title}) started at ${startTimeStr}`);
+                        }
+
+                        if (startTime && state?.status !== 'live') {
+                            for (const stage of dueReminders(startTime.getTime(), now.getTime(), state?.remindersSent, [{ id: 'day', beforeMs: 24 * 60 * 60_000, graceMs: 90 * 60_000 }])) {
+                                premieresToRemind.push({ id: block.id, title: block.title, startMs: startTime.getTime(), stage, isBlock: true, partnerId: block.partnerId || (day as any).partnerId });
+                            }
                         }
 
                         // "Starts in 30 minutes" reminder window — see collectReminderRecipients/
@@ -263,6 +285,16 @@ export async function GET(request: Request) {
             }
         }
 
+        for (const p of premieresToRemind) {
+            try {
+                await markReminderSent(db, p.id, p.stage);
+                const ticketEmails = p.isBlock ? await collectReminderRecipients(db, p.id, p.partnerId) : await movieTicketRecipients(db, p.id);
+                await sendPremiereReminder(db, { itemId: p.id, title: p.title, startMs: p.startMs, stage: p.stage, ticketEmails });
+            } catch (e) {
+                console.error(`[premiere-reminder] Failed for ${p.id} (${p.stage}):`, e);
+            }
+        }
+
         // ── SERVER-SIDE ADVANCE + AUTO-END (no browser needed) ──────────────
         // The server is the clock: every minute, each live party is moved to
         // its next film once the current one's runtime (+ a short grace) has
@@ -288,7 +320,7 @@ export async function GET(request: Request) {
             console.error('[lifecycle] Failed to query live parties:', e);
         }
 
-        return new Response(JSON.stringify({ success: true, mutationsCount, remindersSent: blocksNeedingReminders.length, advanced, ended }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, mutationsCount, remindersSent: blocksNeedingReminders.length + premieresToRemind.length, advanced, ended }), { status: 200 });
 
     } catch (error) {
         console.error("Error in update-watch-parties cron job:", error);

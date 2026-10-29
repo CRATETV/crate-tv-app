@@ -1,14 +1,22 @@
 
 import { toast } from './Toast';
-import React, { useState, useEffect } from 'react';
-import { Movie, Actor, MoviePipelineEntry } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Movie, Actor, MoviePipelineEntry, Category, FestivalDay } from '../types';
+import { Pill, type AccentName } from './admin/ui';
+import { filmStatus, groupCounts, GROUP_LABELS, type FilmGroup, type Tone } from '../api/_lib/filmStatus';
 import S3Uploader from './S3Uploader';
 import FilmUploadConvert from './admin/FilmUploadConvert';
 import AdminFilmDeepDive from './AdminFilmDeepDive';
 import RemoveFilmsModal from './admin/RemoveFilmsModal';
+import PremiereChecklist from './admin/PremiereChecklist';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
+    /** For the "is it live, and why not" status on each film. */
+    categories?: Record<string, Category>;
+    festivalData?: FestivalDay[];
+    /** Opens the list on this filter (the Overview tiles set it). */
+    initialFilter?: FilmGroup | 'all';
     onRefresh: () => void;
     onSave: (movieData: Record<string, Movie>) => Promise<void>;
     onDeleteMovie: (movieKey: string) => Promise<void>;
@@ -97,8 +105,13 @@ const ActorEditorModal: React.FC<{ actor: Actor, onSave: (updated: Actor) => voi
     );
 };
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ 
-    allMovies, 
+const TONE_ACCENT: Record<Tone, AccentName> = { green: 'green', amber: 'amber', sky: 'sky', gray: 'gray', violet: 'violet' };
+
+const MovieEditor: React.FC<MovieEditorProps> = ({
+    allMovies,
+    categories,
+    festivalData,
+    initialFilter = 'all',
     onRefresh,
     onSave, 
     onDeleteMovie, 
@@ -122,6 +135,19 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [selectMode, setSelectMode] = useState(false);
     const [picked, setPicked] = useState<Set<string>>(new Set());
     const [removeKeys, setRemoveKeys] = useState<string[] | null>(null);
+    // Status per film (live / hidden and why / premiere / festival) and the filter chips.
+    const [openCheck, setOpenCheck] = useState<string | null>(null);
+    const [filter, setFilter] = useState<FilmGroup | 'all'>(initialFilter);
+    useEffect(() => { setFilter(initialFilter); }, [initialFilter]);
+    const statuses = useMemo(() => {
+        const now = Date.now();
+        const out: Record<string, ReturnType<typeof filmStatus>> = {};
+        for (const m of Object.values(allMovies) as Movie[]) {
+            if (m?.key) out[m.key] = filmStatus(m.key, m as any, categories, festivalData as any, now);
+        }
+        return out;
+    }, [allMovies, categories, festivalData]);
+    const counts = useMemo(() => groupCounts(Object.values(statuses)), [statuses]);
     const togglePick = (key: string) => setPicked(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
     useEffect(() => {
@@ -289,6 +315,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(m => filter === 'all' || !statuses[m.key] || statuses[m.key].groups.includes(filter))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     const isSavedRecord = formData && allMovies[formData.key] !== undefined;
@@ -318,9 +345,24 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             )}
                         </div>
                     </div>
+                    {/* At a glance: tap a chip to see just those films. */}
+                    <div className="px-8 py-4 border-b border-white/5 flex flex-wrap gap-2">
+                        {([['all', 'All films', Object.keys(allMovies).length], ...(Object.keys(GROUP_LABELS) as FilmGroup[]).map(g => [g, GROUP_LABELS[g], counts[g]] as const)] as const).map(([id, label, n]) => (
+                            <button
+                                key={id}
+                                onClick={() => setFilter(id as FilmGroup | 'all')}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${filter === id ? 'bg-white text-black border-white' : 'bg-white/[0.04] text-[#C9C9D1] border-white/10 hover:bg-white/10'}`}
+                            >
+                                {label} <span className={filter === id ? 'text-black/60' : 'text-[#8A8A96]'}>{n}</span>
+                            </button>
+                        ))}
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <tbody className="divide-y divide-white/5">
+                                {filteredMovies.length === 0 && (
+                                    <tr><td className="px-8 py-10 text-center text-sm text-[#8A8A96]">No films here.</td></tr>
+                                )}
                                 {filteredMovies.map(movie => (
                                     <tr key={movie.key} onClick={selectMode ? () => togglePick(movie.key) : undefined} className={`hover:bg-white/[0.01] transition-colors group ${selectMode ? 'cursor-pointer' : ''} ${picked.has(movie.key) ? 'bg-red-600/[0.08]' : ''}`}>
                                         <td className="px-8 py-4">
@@ -332,6 +374,27 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <div>
                                                     <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
                                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tighter">Dir. {movie.director}</p>
+                                                    {statuses[movie.key] && (
+                                                        <div className="mt-2.5 space-y-1.5 max-w-xl">
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <Pill accent={TONE_ACCENT[statuses[movie.key].tone]} solid>{statuses[movie.key].headline}</Pill>
+                                                                {statuses[movie.key].tags.map(t => <Pill key={t.label} accent={TONE_ACCENT[t.tone]}>{t.label}</Pill>)}
+                                                            </div>
+                                                            <p className="text-xs text-[#8A8A96] leading-snug normal-case font-normal">{statuses[movie.key].detail}</p>
+                                                            {movie.isWatchPartyEnabled && !selectMode && (
+                                                                <div className="normal-case font-normal">
+                                                                    <button
+                                                                        onClick={e => { e.stopPropagation(); setOpenCheck(openCheck === movie.key ? null : movie.key); }}
+                                                                        aria-expanded={openCheck === movie.key}
+                                                                        className="text-xs font-bold text-sky-300 hover:text-white underline underline-offset-4"
+                                                                    >
+                                                                        {openCheck === movie.key ? 'Hide premiere checklist' : 'Premiere checklist'}
+                                                                    </button>
+                                                                    {openCheck === movie.key && <div className="mt-3 p-4 rounded-2xl bg-black/30 border border-white/10"><PremiereChecklist movie={movie} compact /></div>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -445,6 +508,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     + Add Episode
                                                 </button>
                                             </div>
+                                            <div className="bg-black/40 border border-white/5 rounded-2xl p-5 space-y-2">
+                                                <label className="form-label">Skip intro (every episode)</label>
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <span className="text-xs text-gray-400">Intro starts at</span>
+                                                    <input type="number" min="0" value={formData.introStart || ''} onChange={e => setFormData({ ...formData, introStart: parseInt(e.target.value) || 0 })} placeholder="0" className="form-input bg-black/40 w-24" aria-label="Intro starts at, seconds" />
+                                                    <span className="text-xs text-gray-400">and ends at</span>
+                                                    <input type="number" min="0" value={formData.introEnd || ''} onChange={e => setFormData({ ...formData, introEnd: parseInt(e.target.value) || 0 })} placeholder="e.g. 45" className="form-input bg-black/40 w-24" aria-label="Intro ends at, seconds" />
+                                                    <span className="text-xs text-gray-400">seconds</span>
+                                                </div>
+                                                <p className="text-[9px] text-gray-600 uppercase font-bold">Leave "ends at" empty for no Skip intro button. An episode below can set its own times if its intro is different.</p>
+                                            </div>
                                             {(formData.episodes || []).length === 0 && (
                                                 <p className="text-[10px] text-gray-600 italic text-center py-4 border border-dashed border-white/5 rounded-xl">No episodes yet — click Add Episode to get started.</p>
                                             )}
@@ -501,6 +575,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                             placeholder="Brief description of this episode..."
                                                             className="form-input bg-black/40"
                                                         />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="form-label">This episode's intro (seconds, optional)</label>
+                                                        <div className="flex flex-wrap items-center gap-3">
+                                                            <span className="text-xs text-gray-400">starts at</span>
+                                                            <input type="number" min="0" value={ep.introStart || ''} onChange={e => { const updated = [...(formData.episodes || [])]; updated[idx] = { ...updated[idx], introStart: parseInt(e.target.value) || 0 }; setFormData({ ...formData, episodes: updated }); }} placeholder="0" className="form-input bg-black/40 w-24" aria-label={`Episode ${idx + 1} intro starts at, seconds`} />
+                                                            <span className="text-xs text-gray-400">ends at</span>
+                                                            <input type="number" min="0" value={ep.introEnd || ''} onChange={e => { const updated = [...(formData.episodes || [])]; updated[idx] = { ...updated[idx], introEnd: parseInt(e.target.value) || 0 }; setFormData({ ...formData, episodes: updated }); }} placeholder="series default" className="form-input bg-black/40 w-32" aria-label={`Episode ${idx + 1} intro ends at, seconds`} />
+                                                        </div>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="form-label">Duration (minutes)</label>

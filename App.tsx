@@ -491,10 +491,20 @@ const App: React.FC = () => {
             .slice(0, 10);
     }, [user?.playbackProgress, movies, watchedMovies]);
 
+    // "My List" row on the home page: the films this viewer saved (newest first),
+    // skipping any that were taken down since. Same list as the My List page and Roku.
+    const myListMovies = useMemo(() => {
+        const seen = new Set<string>();
+        return [...(watchlistArray || [])].reverse()
+            .map(key => (seen.has(key) ? undefined : (seen.add(key), movies[key])))
+            .filter((m): m is Movie => !!m)
+            .slice(0, 20);
+    }, [watchlistArray, movies]);
+
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
     // Handle movie playback navigation with instant-on logic (v1.1 - optimized for immediate playback)
-    const handlePlayMovie = (movie: Movie, episodeUrl?: string) => {
+    const handlePlayMovie = (movie: Movie, episodeIndex?: number) => {
         const partyState = activeParties[movie.key];
         const isActuallyLive = !!partyState && partyState.status === 'live';
 
@@ -503,8 +513,8 @@ const App: React.FC = () => {
             window.dispatchEvent(new Event('pushstate'));
         } else {
             // Always go to movie page with play=true for instant playback
-            const streamParam = episodeUrl ? `&stream=${encodeURIComponent(episodeUrl)}` : '';
-            window.history.pushState({}, '', `/movie/${movie.key}?play=true${streamParam}`);
+            const episodeParam = typeof episodeIndex === 'number' ? `&ep=${episodeIndex + 1}` : '';
+            window.history.pushState({}, '', `/movie/${movie.key}?play=true${episodeParam}`);
             window.dispatchEvent(new Event('pushstate'));
         }
     };
@@ -746,6 +756,27 @@ const App: React.FC = () => {
                                     onToggleLike={toggleLikeMovie} 
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
+                                />
+                            )}
+
+                            {myListMovies.length > 0 && (
+                                <MovieCarousel
+                                    title={
+                                        <div className="flex items-center gap-3 mb-4 px-2 border-l-4 border-red-600 pl-4">
+                                            <h2 className="text-lg md:text-2xl font-bold text-white uppercase italic tracking-tighter">My List</h2>
+                                            <a href="/watchlist" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/watchlist'); window.dispatchEvent(new Event('pushstate')); }} className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white underline underline-offset-4">See all</a>
+                                        </div>
+                                    }
+                                    movies={myListMovies}
+                                    onSelectMovie={handlePlayMovie}
+                                    onShowDetails={handleSelectMovie}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={() => {}}
+                                    categoryKey="myList"
                                 />
                             )}
 

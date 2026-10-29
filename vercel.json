@@ -31,8 +31,16 @@
     {
       "path": "/api/cleanup-partner-festivals",
       "schedule": "20 8 * * *"
+    },
+    {
+      "path": "/api/backup-firestore",
+      "schedule": "40 7 * * 0"
     }
   ],
+  "functions": {
+    "api/backup-firestore.ts": { "maxDuration": 60 },
+    "api/admin-backup.ts": { "maxDuration": 60 }
+  },
   "rewrites": [
     {
       "source": "/sitemap.xml",

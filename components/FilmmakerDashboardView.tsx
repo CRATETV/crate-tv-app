@@ -4,6 +4,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import HypeMap from './HypeMap';
+import WatchFunnel from './admin/WatchFunnel';
 import PayoutPreferenceCard from './PayoutPreferenceCard';
 
 const formatCurrency = (amountInCents: number) => `$${((amountInCents || 0) / 100).toFixed(2)}`;
@@ -93,6 +94,8 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                             <p className="text-xl md:text-2xl font-black text-green-500">{formatCurrency(film.netAdEarnings)}</p>
                          </div>
                     </div>
+
+                    <WatchFunnel watch={film.watch} className="pt-4" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">

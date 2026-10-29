@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ACCENT, AccentName, Card, PageHeader, SectionTitle, StatTile, adminPost, money } from './ui';
 import { TAB_META } from './tabMeta';
+import PremiereChecklist from './PremiereChecklist';
+import BackupCard from './BackupCard';
+import { filmStatus, groupCounts, type FilmGroup } from '../../api/_lib/filmStatus';
 
 // Overview: what needs attention, quick actions, and a money snapshot.
 // The detailed live dashboard (DailyPulse) is passed in as children below it.
@@ -12,6 +15,12 @@ interface Props {
     counts: { submissions: number; actors: number; payouts: number; contracts: number };
     spotlightMissing: boolean;
     filmCount: number;
+    /** For "Your films at a glance". */
+    movies?: Record<string, any>;
+    categories?: Record<string, any>;
+    festivalData?: any[];
+    /** Opens Films on that filter. */
+    onOpenFilms?: (group: FilmGroup) => void;
     onNavigate: (id: string) => void;
     children?: React.ReactNode;
 }
@@ -21,7 +30,20 @@ const greeting = () => {
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 };
 
-const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, counts, spotlightMissing, filmCount, onNavigate, children }) => {
+const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, counts, spotlightMissing, filmCount, movies, categories, festivalData, onOpenFilms, onNavigate, children }) => {
+    // The soonest premiere that hasn't ended: a film with its watch party switched on and a time set.
+    const nextPremiere = React.useMemo(() => {
+        if (!movies) return null;
+        const now = Date.now();
+        const upcoming = Object.values(movies).filter((m: any) => m && m.isWatchPartyEnabled && !m.partnerId && Number.isFinite(Date.parse(m.watchPartyStartTime || '')) && Date.parse(m.watchPartyStartTime) > now - 6 * 3600_000);
+        upcoming.sort((a: any, b: any) => Date.parse(a.watchPartyStartTime) - Date.parse(b.watchPartyStartTime));
+        return (upcoming[0] as any) || null;
+    }, [movies]);
+    const filmCounts = React.useMemo(() => {
+        if (!movies) return null;
+        const now = Date.now();
+        return groupCounts(Object.values(movies).filter((m: any) => m?.key).map((m: any) => filmStatus(m.key, m, categories, festivalData, now)));
+    }, [movies, categories, festivalData]);
     const [snapshot, setSnapshot] = useState<{ month: number; monthCrate: number; owed: number; gross: number } | null>(null);
     const [snapError, setSnapError] = useState(false);
 
@@ -70,6 +92,31 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
                 )}
             </section>
 
+            {nextPremiere && (can('movies') || can('watchParty')) && (
+                <section>
+                    <SectionTitle title="Next premiere" hint="Everything that has to be right before the watch party."
+                        right={<div className="flex gap-4">
+                            {can('watchParty') && <button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('watchParty')}>Watch parties →</button>}
+                            {can('movies') && <button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>Films →</button>}
+                        </div>} />
+                    <PremiereChecklist movie={nextPremiere} title={nextPremiere.title || 'Untitled'} />
+                </section>
+            )}
+
+            {filmCounts && onOpenFilms && can('movies') && (
+                <section>
+                    <SectionTitle title="Your films at a glance" hint="Tap a tile to see those films and why each one is where it is." right={<button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>All films →</button>} />
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                        <StatTile label="Live on CRATE" icon="✅" accent="green" value={filmCounts.live} onClick={() => onOpenFilms('live')} />
+                        <StatTile label="Hidden" icon="🙈" accent="amber" value={filmCounts.hidden} hint="Unlisted or waiting" onClick={() => onOpenFilms('hidden')} />
+                        <StatTile label="Coming soon" icon="🗓️" accent="sky" value={filmCounts.soon} onClick={() => onOpenFilms('soon')} />
+                        <StatTile label="Premieres" icon="🍿" accent="coral" value={filmCounts.premiere} hint="Scheduled" onClick={() => onOpenFilms('premiere')} />
+                        <StatTile label="In a festival" icon="🎬" accent="violet" value={filmCounts.festival} onClick={() => onOpenFilms('festival')} />
+                        <StatTile label="Not in any row" icon="🧭" accent="orange" value={filmCounts.norow} hint="Not on the home page" onClick={() => onOpenFilms('norow')} />
+                    </div>
+                </section>
+            )}
+
             {isMaster && (
                 <section>
                     <SectionTitle title="Money" hint="Live from Square. Full detail in Earnings & payouts." right={<button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('money')}>Open →</button>} />
@@ -81,6 +128,8 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
                     </div>
                 </section>
             )}
+
+            {isMaster && <BackupCard />}
 
             {quick.length > 0 && (
                 <section>

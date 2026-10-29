@@ -60,6 +60,10 @@ Sub Init()
     m.epOffset = 0
     m.zone = "buttons"           ' "buttons" or "episodes"
     m.playingEpisode = -1
+    m.playingContent = Invalid   ' the copy of the series that is playing an episode
+    m.autoNextIndex = -1
+    m.autoNextTimer = m.top.FindNode("autoNextTimer")
+    m.autoNextTimer.ObserveField("fire", "OnAutoNextFire")
 
     ' Stop the trailer / unlock checks when the viewer leaves; resume on return.
     m.top.ObserveField("focusedChild", "OnFocusChange")
@@ -200,11 +204,18 @@ Sub OnFocusChange()
             m.zone = "episodes"
             m.epFocus = m.playingEpisode + 1
             RegistryWrite("lastEp_" + SeriesKey(film), Str(m.epFocus).Trim(), GetRegistryConfig().SECTION)
+            ' The player's "Up next" card ran out (or OK was pressed): carry on
+            ' with the next episode by itself, like Netflix.
+            If m.playingContent <> Invalid And m.playingContent.HasField("autoPlayNext") And m.playingContent.autoPlayNext
+                m.autoNextIndex = m.epFocus
+                m.autoNextTimer.control = "start"
+            End If
         Else
             m.zone = "episodes"
             m.epFocus = m.playingEpisode
         End If
         m.playingEpisode = -1
+        m.playingContent = Invalid
         UpdateButtonFocus()
         UpdateEpisodeFocus()
     End If
@@ -447,9 +458,29 @@ Sub PlayEpisode(index as Integer)
     SetText(copy, "movieKey", epKey)
     SetText(copy, "contentId", epKey)
     If copy.HasField("isWatchPartyEnabled") Then copy.isWatchPartyEnabled = false
+    ' Tells the player there is a next episode, so it can show "Up next" when this one ends.
+    nextTitle = ""
+    If index + 1 < m.episodes.Count()
+        nextEp = m.episodes[index + 1]
+        If nextEp.url <> "" Then nextTitle = "Episode " + Str(index + 2).Trim() + ": " + nextEp.title
+    End If
+    SetText(copy, "nextEpisodeTitle", nextTitle)
+    ' Skip intro: seconds, as text ("0" = none). The player shows the button in that window.
+    SetText(copy, "introStart", Str(ep.introStart).Trim())
+    SetText(copy, "introEnd", Str(ep.introEnd).Trim())
     RegistryWrite("lastEp_" + key, Str(index).Trim(), GetRegistryConfig().SECTION)
     m.playingEpisode = index
+    m.playingContent = copy
     m.top.playContent = copy
+End Sub
+
+' The close of the previous episode has finished: play the next one.
+Sub OnAutoNextFire()
+    i = m.autoNextIndex
+    m.autoNextIndex = -1
+    If i < 0 Then Return
+    If Not m.top.IsInFocusChain() Then Return     ' the viewer already went elsewhere
+    PlayEpisode(i)
 End Sub
 
 Function SeriesKey(film as Object) as String

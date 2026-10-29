@@ -5,6 +5,7 @@ import { isOutsidePartner } from '../api/_lib/partnerRules';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
 import { isEndedForThisRun, effectiveStatus } from '../api/_lib/watchPartyRules';
 import { isWatchPartyListable } from '../api/_lib/filmAvailability';
+import RemindMeButton from './RemindMeButton';
 
 // "Upcoming watch parties" on the home page.
 //
@@ -126,8 +127,9 @@ const UpcomingWatchParties: React.FC<{
                         ? (ticket || it.isFree ? 'Join now' : 'Get ticket & join')
                         : ticket ? "You're in ✓" : it.isFree ? 'Save my seat' : 'Get ticket';
                     return (
-                        <button key={it.key} onClick={() => open(it.key)}
-                            className="snap-start shrink-0 w-[78vw] sm:w-[340px] text-left rounded-2xl overflow-hidden border border-white/10 bg-[#121216] hover:border-white/30 transition-all group">
+                        <div key={it.key} className="snap-start shrink-0 w-[78vw] sm:w-[340px] flex flex-col gap-2">
+                        <button onClick={() => open(it.key)}
+                            className="w-full text-left rounded-2xl overflow-hidden border border-white/10 bg-[#121216] hover:border-white/30 transition-all group">
                             <div className="relative aspect-video bg-black">
                                 {it.poster && <img src={it.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" loading="lazy" />}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -152,6 +154,8 @@ const UpcomingWatchParties: React.FC<{
                                 <span className={`shrink-0 text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-lg ${ticket && !live ? 'bg-green-600/20 text-green-400' : 'bg-red-600 text-white'}`}>{cta}</span>
                             </div>
                         </button>
+                        {!live && <RemindMeButton itemId={it.key} hasTicket={ticket} />}
+                        </div>
                     );
                 })}
             </div>

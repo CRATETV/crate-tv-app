@@ -18,7 +18,7 @@ interface MovieDetailsModalProps {
   onSubscribe?: () => void;
   isPremiumMovie?: boolean;
   isPremiumSubscriber?: boolean;
-  onPlayMovie?: (movie: Movie, episodeUrl?: string) => void;
+  onPlayMovie?: (movie: Movie, episodeIndex?: number) => void;
 }
 
 const EpisodeRow: React.FC<{ episode: Episode; onPlay: () => void }> = ({ episode, onPlay }) => (
@@ -76,7 +76,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return () => clearInterval(interval);
   }, [movie, released]);
 
-  const handlePlayButtonClick = (url?: string) => {
+  // episodeIndex: which episode of a series (0 = the first); none = the film itself.
+  const handlePlayButtonClick = (episodeIndex?: number) => {
       if (!released) {
           if (movie.trailer) {
               window.history.pushState({}, '', `/movie/${movie.key}?play=true&teaser=true`);
@@ -88,11 +89,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           setShowPurchaseModal(true);
           return;
       }
-      if (onPlayMovie) onPlayMovie(movie, url);
+      if (onPlayMovie) onPlayMovie(movie, episodeIndex);
       else {
           onClose();
-          const targetUrl = url ? encodeURIComponent(url) : '';
-          window.history.pushState({}, '', `/movie/${movie.key}?play=true${targetUrl ? `&stream=${targetUrl}` : ''}`);
+          window.history.pushState({}, '', `/movie/${movie.key}?play=true${episodeIndex !== undefined ? `&ep=${episodeIndex + 1}` : ''}`);
           window.dispatchEvent(new Event('pushstate'));
       }
   };
@@ -212,8 +212,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                                 <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">Episodes</h3>
                             </div>
                             <div className="grid gap-4">
-                                {movie.episodes.map(ep => (
-                                    <EpisodeRow key={ep.id} episode={ep} onPlay={() => handlePlayButtonClick(ep.url)} />
+                                {movie.episodes.map((ep, i) => (
+                                    <EpisodeRow key={ep.id} episode={ep} onPlay={() => handlePlayButtonClick(i)} />
                                 ))}
                             </div>
                         </div>

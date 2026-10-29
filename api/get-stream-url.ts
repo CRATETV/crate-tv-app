@@ -5,6 +5,7 @@ import { signStreamUrl } from './_lib/signStreamUrl.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { findBlock } from './_lib/watchPartyLifecycle.js';
 import { checkBackstageKey } from './_lib/backstage.js';
+import { pickStreamSource } from './_lib/streamSource.js';
 
 export async function POST(request: Request) {
     try {
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ error: 'Too many requests.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
         }
 
-        const { movieKey, mode, idToken, backstageKey } = await request.json();
+        const { movieKey, mode, idToken, backstageKey, episode } = await request.json();
         if (!movieKey) return new Response(JSON.stringify({ error: 'movieKey is required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         const resolvedMode: AccessMode = mode === 'live' ? 'live' : 'ondemand';
 
@@ -60,7 +61,12 @@ export async function POST(request: Request) {
         if (isPastAvailableUntil(data.movies?.[filmKey], Date.now())) {
             return new Response(JSON.stringify({ error: 'This film is no longer available on CRATE.', unavailable: true }), { status: 410, headers: { 'Content-Type': 'application/json' } });
         }
-        const rawUrl: string | undefined = data.movies?.[filmKey]?.fullMovie;
+        // A series' episode is asked for by number (0 = the first) and signed
+        // after the same access check as the film; only the on-demand player
+        // asks for one.
+        const source = pickStreamSource(data.movies?.[filmKey], resolvedMode === 'ondemand' ? episode : undefined);
+        if (source.error) return new Response(JSON.stringify({ error: 'Episode not found.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        const rawUrl: string | undefined = source.url;
         if (!rawUrl) return new Response(JSON.stringify({ error: 'Film not found.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 
         const signed = await signStreamUrl(rawUrl);

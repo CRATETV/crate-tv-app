@@ -3,6 +3,7 @@ import { FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.
 import { fetchAllRelevantPayments, getSquareCredentials, computeRevenueByFilm, fetchFilmDeals } from './_lib/filmmakerBalance.js';
 import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { sumShards, summarizeWatch } from './_lib/watchStats.js';
 
 export async function POST(request: Request) {
     try {
@@ -56,6 +57,15 @@ export async function POST(request: Request) {
         const sentimentSnap = await db.collection('movies').doc(movieKey).collection('sentiment').orderBy('timestamp', 'asc').get();
         const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);
 
+        // Plays / finish rate / where viewers stop: a film is one funnel, a series one per episode.
+        const watchIds: { id: string; label: string }[] = Array.isArray(movie.episodes) && movie.episodes.length > 0
+            ? movie.episodes.map((ep, i) => ({ id: `${movieKey}__e${i + 1}`, label: `Episode ${i + 1}${ep?.title ? `: ${ep.title}` : ''}` }))
+            : [{ id: movieKey, label: movie.title }];
+        const watch = await Promise.all(watchIds.map(async ({ id, label }) => {
+            const shards = await db.collection('film_watch').doc(id).collection('shards').get();
+            return { label, ...summarizeWatch(sumShards(shards.docs.map(d => d.data()))) };
+        }));
+
         const performance: FilmmakerFilmPerformance & { trafficEvents?: any[] } = {
             key: movie.key,
             title: movie.title,
@@ -71,6 +81,7 @@ export async function POST(request: Request) {
             netRentalEarnings: Math.round(revenue.vodRentals * PARTNER_SHARE),
             totalEarnings: Math.round((revenue.donations + revenue.tickets + revenue.vodRentals) * PARTNER_SHARE),
             sentimentData,
+            watch,
             trafficEvents
         };
 
