@@ -1,6 +1,7 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { isOutsidePartner, selectPwffDays } from './partnerRules.js';
 import { isFestivalPassActive } from './festivalPass.js';
+import { onDemandStartGate, type StreamGate } from './streamTiming.js';
 
 export type AccessMode = 'ondemand' | 'live';
 
@@ -30,6 +31,8 @@ export interface MovieAccessResult {
      *  requested movieKey when movieKey is a festival block's own id (see mode: 'live' above).
      *  Null when it couldn't be resolved (e.g. movieKey matches nothing at all). */
     filmKey: string | null;
+    /** Set when access is paid for but the screening has not started yet (on-demand player only). */
+    notStarted?: Extract<StreamGate, { open: false }>;
 }
 
 interface FestivalBlock { id: string; price: number; movieKeys: string[]; day?: number; partnerId?: string; /** Part of the PWFF schedule (the only blocks the PWFF all-access pass opens). */ inPwff?: boolean; }
@@ -167,6 +170,12 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
             : true;
     } else {
         granted = isRented(movieKey);
+    }
+
+    // Paid or free, a watch party's film is not available before it starts.
+    if (granted) {
+        const gate = await onDemandStartGate(db, movieKey, { inBlock: !!parentBlock, movie: movieData });
+        if (!gate.open) return { granted: false, filmKey: movieKey, notStarted: gate };
     }
 
     return { granted, filmKey: movieKey };

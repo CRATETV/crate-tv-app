@@ -67,3 +67,33 @@ export function isJustPremiered(
         : DEFAULT_PREMIERE_LENGTH_MS;
     return nowMs - start > length;
 }
+
+
+/**
+ * Is this film being held back from viewers RIGHT NOW? One rule for every place
+ * that can hand out the video (film page, Roku, public feeds), so a premiere can
+ * never leak through a side door (Oct 30 2026).
+ *   'not-released'  its release date/time is still in the future.
+ *   'party-waiting' it has a watch party that hasn't started (15 seconds early is
+ *                   fine, so the picture is ready at 0:00).
+ *   'gone'          its "hide automatically after" time has passed.
+ * `publicFeed` is for feeds anyone can read with no ticket: there, a watch party
+ * film with NO start time is held too, since nothing says it has begun.
+ */
+export type HoldReason = 'not-released' | 'party-waiting' | 'gone' | null;
+export function filmHoldReason(
+    movie: { releaseDateTime?: string | null; availableUntil?: string | null; isWatchPartyEnabled?: boolean; watchPartyStartTime?: string | null } | null | undefined,
+    nowMs: number,
+    opts: { publicFeed?: boolean } = {},
+): HoldReason {
+    if (!movie) return null;
+    if (isPastAvailableUntil(movie, nowMs)) return 'gone';
+    const release = toMs(movie.releaseDateTime);
+    if (release != null && release > nowMs) return 'not-released';
+    if (movie.isWatchPartyEnabled === true) {
+        const start = toMs(movie.watchPartyStartTime);
+        if (start == null) return opts.publicFeed ? 'party-waiting' : null;
+        if (start - 15_000 > nowMs) return 'party-waiting';
+    }
+    return null;
+}

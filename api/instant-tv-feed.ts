@@ -2,6 +2,7 @@ import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
+import { filmHoldReason } from './_lib/filmAvailability.js';
 
 // Set per request from the festival schedule: films in paid festival blocks.
 let paidKeys = new Set<string>();
@@ -18,6 +19,8 @@ const isMovieVisible = (movie: Movie | undefined | null): boolean => {
     // premier titles belong in roku-feed.ts's properly-gated "Premier Access" row instead.
     // Festival films are priced by their block, so check that too (Oct 23 2026).
     const isFree = isFreeForEveryone(movie, paidKeys);
+    // Also: not while a premiere is waiting, and not after "hide automatically after" (Oct 30 2026).
+    if (filmHoldReason(movie, now.getTime(), { publicFeed: true })) return false;
     return isReleased && isFree && !!movie.fullMovie && !!movie.poster;
 };
 

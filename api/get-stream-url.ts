@@ -24,6 +24,7 @@ export async function POST(request: Request) {
 
         let granted = false;
         let filmKey: string | null = null;
+        let notStarted: { startsAtMs: number | null; retryAfterSeconds: number } | undefined;
 
         if (typeof backstageKey === 'string' && backstageKey.trim() && resolvedMode === 'live') {
             // Directors/hosts joining a live party with the backstage key.
@@ -47,9 +48,14 @@ export async function POST(request: Request) {
             let uid: string;
             try { uid = (await auth.verifyIdToken(idToken)).uid; }
             catch { return new Response(JSON.stringify({ error: 'Invalid session.' }), { status: 401, headers: { 'Content-Type': 'application/json' } }); }
-            ({ granted, filmKey } = await resolveMovieAccess(db, { uid, movieKey, mode: resolvedMode }));
+            ({ granted, filmKey, notStarted } = await resolveMovieAccess(db, { uid, movieKey, mode: resolvedMode }));
         }
 
+        if (notStarted) {
+            return new Response(JSON.stringify({ error: 'The screening has not started yet.', notStarted: true, startsAt: notStarted.startsAtMs ? new Date(notStarted.startsAtMs).toISOString() : null, retryAfterSeconds: notStarted.retryAfterSeconds }), {
+                status: 425, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+            });
+        }
         if (!granted || !filmKey) return new Response(JSON.stringify({ error: 'Access denied.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
 
         // A watch party's film is only handed out once the party has started
@@ -75,6 +81,18 @@ export async function POST(request: Request) {
         // including people who paid before (api/_lib/filmAvailability.ts).
         if (isPastAvailableUntil(data.movies?.[filmKey], Date.now())) {
             return new Response(JSON.stringify({ error: 'This film is no longer available on CRATE.', unavailable: true }), { status: 410, headers: { 'Content-Type': 'application/json' } });
+        }
+        // Before its release date nobody gets the film from the catalog player
+        // (the page only hid the button; the server now refuses too). The watch
+        // party player is exempt: a premiere plays before the release date.
+        if (resolvedMode === 'ondemand') {
+            const m: any = data.movies?.[filmKey];
+            const rel = m?.releaseDateTime ? Date.parse(m.releaseDateTime) : NaN;
+            if (Number.isFinite(rel) && rel > Date.now()) {
+                return new Response(JSON.stringify({ error: 'This film is not available yet.', notStarted: true, notReleased: true, startsAt: new Date(rel).toISOString(), retryAfterSeconds: Math.min(30, Math.max(5, Math.ceil((rel - Date.now()) / 1000))) }), {
+                    status: 425, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+            }
         }
         // A series' episode is asked for by number (0 = the first) and signed
         // after the same access check as the film; only the on-demand player

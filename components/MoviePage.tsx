@@ -252,6 +252,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // session that outlives the signed URL's TTL is a known, accepted gap for
   // now, not silently handled.
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  // Set when the server says the screening hasn't started (ticket holders who arrive early).
+  const [notStartedAt, setNotStartedAt] = useState<string | null | undefined>(undefined);
+  const [startRetryTick, setStartRetryTick] = useState(0);
+  const [notReleasedYet, setNotReleasedYet] = useState(false);
   // Phones (iPhone especially) won't start a film WITH sound unless the play
   // comes straight from a tap. Opening a film from its poster loads the video
   // address first, so by then the tap "doesn't count". Instead of stopping on
@@ -268,6 +272,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
       setSignedUrl(null);
       if (!hasAccess || !movie || embedUrl || episodeStreamOverride) return;
+      let retryTimer: ReturnType<typeof setTimeout> | undefined;
       // A series always plays one of its episodes (see "start at an episode"
       // below): wait for that instead of fetching the series' own file.
       if (movie.isSeries && movie.episodes && movie.episodes.length > 0 && episodeIndex < 0) return;
@@ -281,15 +286,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ movieKey, mode: 'ondemand', idToken, ...(episodeIndex >= 0 ? { episode: episodeIndex } : {}) }),
               });
+              if (res.status === 425) {
+                  // The screening hasn't started: say when, and ask again shortly.
+                  const info = await res.json().catch(() => ({}));
+                  if (!cancelled) {
+                      setNotStartedAt(info.startsAt || null);
+                      setNotReleasedYet(info.notReleased === true);
+                      retryTimer = setTimeout(() => setStartRetryTick(t => t + 1), Math.max(2, Math.min(30, info.retryAfterSeconds || 8)) * 1000);
+                  }
+                  return;
+              }
               if (!res.ok) { console.error('[MoviePage] get-stream-url failed:', res.status); return; }
               const data = await res.json();
-              if (!cancelled) setSignedUrl(data.url);
+              if (!cancelled) { setNotStartedAt(undefined); setSignedUrl(data.url); }
           } catch (e) {
               console.error('[MoviePage] failed to fetch signed stream URL:', e);
           }
       })();
-      return () => { cancelled = true; };
-  }, [hasAccess, movie, movieKey, embedUrl, episodeStreamOverride, episodeIndex, getUserIdToken]);
+      return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
+  }, [hasAccess, movie, movieKey, embedUrl, episodeStreamOverride, episodeIndex, getUserIdToken, startRetryTick]);
 
   const playableUrl = episodeStreamOverride || signedUrl || undefined;
 
@@ -1035,7 +1050,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     <div
                         className="relative w-full h-full cursor-pointer"
                         onClick={() => {
-                            if (!hasAccess || !isMovieReleased(movie)) return;
+                            if (!hasAccess || !isMovieReleased(movie) || notStartedAt !== undefined) return;
                             // Fire play() synchronously, in the same tap, before
                             // the setPlayerMode/useEffect chain gets a chance to
                             // — see the comment on playContent() above for why
@@ -1089,8 +1104,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         {/* Bottom fade into page (behind the poster) */}
                         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-[5] pointer-events-none" />
 
+                        {/* Early arrival: the server holds the film until the screening starts */}
+                        {hasAccess && notStartedAt !== undefined && (
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 max-w-[90%] rounded-lg bg-black/80 border border-white/15 px-4 py-2 text-center text-sm text-white shadow-xl">
+                                {(() => {
+                                    const when = notStartedAt ? new Date(notStartedAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+                                    if (notReleasedYet) return when ? `This film opens ${when}.` : 'This film is not available yet.';
+                                    return when ? `Your ticket is confirmed. This screening starts ${when}.` : 'Your ticket is confirmed. This screening has not started yet.';
+                                })()}
+                            </div>
+                        )}
+
                         {/* Play circle for accessible content */}
-                        {hasAccess && (
+                        {hasAccess && notStartedAt === undefined && (
                             <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                 <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 border-2 border-white/30 shadow-2xl">
                                     <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">

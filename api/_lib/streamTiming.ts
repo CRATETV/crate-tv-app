@@ -47,3 +47,21 @@ export async function partyTimingFor(db: Firestore, movieKey: string): Promise<{
     const movie = (await db.collection('movies').doc(movieKey).get()).data();
     return { partyId: movieKey, scheduledStartMs: toMillis(movie?.watchPartyStartTime) };
 }
+
+/**
+ * The same "not before the start" rule for the catalog (on-demand) player.
+ * A film that has a watch party (it sits in a festival block, or has its own
+ * party switched on) is only handed out once that party has started or ended.
+ * Without this, someone with a ticket could open the regular film page before
+ * the screening and watch it early. A film with no party at all is never held
+ * back, and neither is one whose party has no start time and has never run
+ * (nothing is scheduled, so there is nothing to protect).
+ */
+export async function onDemandStartGate(db: Firestore, movieKey: string, opts: { inBlock: boolean; movie: any }): Promise<StreamGate> {
+    if (!opts.inBlock && opts.movie?.isWatchPartyEnabled !== true) return { open: true };
+    const { partyId, scheduledStartMs } = await partyTimingFor(db, movieKey);
+    const partyDoc = await db.collection('watch_parties').doc(partyId).get();
+    const partyState = partyDoc.exists ? partyDoc.data() : undefined;
+    if (scheduledStartMs == null && !partyState) return { open: true };
+    return liveStreamGate({ partyState, scheduledStartMs, nowMs: Date.now() });
+}

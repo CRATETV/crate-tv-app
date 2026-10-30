@@ -1,6 +1,6 @@
 import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
-import { isPastAvailableUntil, isWatchPartyListable } from './_lib/filmAvailability.js';
+import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_lib/filmAvailability.js';
 import { isStaleLive } from './_lib/watchPartyRules.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
@@ -76,6 +76,8 @@ function isReleased(movie: Movie | undefined | null): boolean {
 async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = false, isLiveOverride: boolean = false, isFestivalOverride: boolean = false): Promise<RokuMovie> {
     // Past its "Hide automatically after" time: nobody gets the film anymore.
     if (isPastAvailableUntil(movie, Date.now())) isUnlocked = false;
+    // Not before its release date or its watch party start (api/_lib/filmAvailability.ts).
+    if (filmHoldReason(movie, Date.now())) isUnlocked = false;
     const fullStreamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const trailerUrl = sanitizeUrl(movie.trailer || '');
 
