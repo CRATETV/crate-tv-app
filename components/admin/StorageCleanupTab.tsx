@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Card, EmptyState, Modal, Notice, PageHeader, StatTile, adminPost, inputClass } from './ui';
+import ImageCleanupSection from './ImageCleanupSection';
 
 // Admin → Storage clean-up (Oct 2026). Lists the video files in the S3
 // bucket that CRATE doesn't use (hidden films, old copies, unused
@@ -27,6 +28,7 @@ const StorageCleanupTab: React.FC = () => {
     const [doneMsg, setDoneMsg] = useState('');
     const [removeFilms, setRemoveFilms] = useState(false);
     const [filmList, setFilmList] = useState<'inUse' | 'notInUse' | null>(null);
+    const [view, setView] = useState<'videos' | 'images'>('videos');
 
     const runScan = async (keepMessage = false) => {
         setLoading(true); setError(''); if (!keepMessage) setDoneMsg('');
@@ -67,8 +69,17 @@ const StorageCleanupTab: React.FC = () => {
         finally { setDeleting(false); }
     };
 
+    const switcher = (
+        <div className="flex rounded-xl overflow-hidden border border-white/10 text-sm font-bold w-fit">
+            <button onClick={() => setView('videos')} className={`px-4 py-2 ${view === 'videos' ? 'bg-sky-600 text-white' : 'text-[#8A8A96] hover:text-white'}`}>Videos</button>
+            <button onClick={() => setView('images')} className={`px-4 py-2 ${view === 'images' ? 'bg-sky-600 text-white' : 'text-[#8A8A96] hover:text-white'}`}>Posters & photos</button>
+        </div>
+    );
+    if (view === 'images') return <div className="space-y-6">{switcher}<ImageCleanupSection /></div>;
+
     return (
         <div className="space-y-6">
+            {switcher}
             <PageHeader title="Storage clean-up" subtitle="Video files in your S3 bucket that CRATE doesn't use. Mark what to delete, keep the rest." accent="sky"
                 actions={<Button variant="primary" accent="sky" onClick={() => runScan()} disabled={loading}>{loading ? 'Checking… (can take a minute)' : scan ? 'Check again' : 'Check storage'}</Button>} />
 
@@ -79,7 +90,7 @@ const StorageCleanupTab: React.FC = () => {
                 <Card>
                     <p className="text-sm text-[#A1A1AD] leading-relaxed">
                         Press <strong className="text-white">Check storage</strong> to list the video files nothing on CRATE uses: hidden films, old copies, unused submission uploads, and original files that were converted for streaming.
-                        Always kept, and never listed: posters and photos, anything uploaded in the last 2 days, every visible film, hidden films with an upcoming watch party or a "Hide automatically after" date still to come, films premiered in the last week, festival blocks still in their rewatch week, and partner festival films.
+                        Always kept, and never listed here: posters and photos (see the Posters & photos button above), anything uploaded in the last 2 days, every visible film, hidden films with an upcoming watch party or a "Hide automatically after" date still to come, films premiered in the last week, festival blocks still in their rewatch week, and partner festival films.
                     </p>
                 </Card>
             )}

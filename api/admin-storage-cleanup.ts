@@ -3,6 +3,8 @@
 //   POST { password, action:'scan' }
 //        → the video files in the S3 bucket that CRATE doesn't use, one row
 //          per film file (an HLS folder is one row), biggest first.
+//   POST { password, action:'scanImages' | 'deleteImages', ids:[keys] }
+//        → the same for posters and photos (api/_lib/imageCleanup.ts).
 //   POST { password, action:'delete', ids:[...] }
 //        → deletes those rows. The server works the list out AGAIN first and
 //          only deletes files that are still unused right now: it never
@@ -18,6 +20,30 @@ import { getApiData } from './_lib/data.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { buildPlan, groupPlan, looksLikeRealCatalog, catalogRemoval } from './_lib/storageCleanup.js';
 import { bucketStore, listAllObjects, deleteKeys, earnedByTitle, removeFilmRecords } from './_lib/filmRemoval.js';
+import { buildImagePlan } from './_lib/imageCleanup.js';
+
+// Records outside the site data that can point at pictures. If any of these
+// can't be read, no image is listed or deleted (we can't prove it's unused).
+const IMAGE_RECORD_COLLECTIONS = ['actor_profiles', 'actorSubmissions', 'movie_pipeline', 'editorial_stories', 'filmmaker_claims', 'content', 'roku_assets', 'watch_parties', 'film_deals', 'users', 'settings', 'categories', 'partners'];
+const PUBLIC_IMAGE_HOST = 'https://d3jhtrl1gnrh4b.cloudfront.net/';
+
+async function currentImagePlan() {
+    const store = bucketStore();
+    if (!store) throw new Error('Storage is not set up on the server.');
+    const db = getAdminDb();
+    if (!db) throw new Error('Could not reach the database to check which pictures are used. Nothing was listed.');
+    const data = await getApiData({ noCache: true });
+    if (!looksLikeRealCatalog(data)) throw new Error('Could not load the real CRATE catalog right now. Nothing was listed. Try again in a few minutes.');
+    const extra: unknown[] = [];
+    for (const name of IMAGE_RECORD_COLLECTIONS) {
+        const snap = await db.collection(name).limit(20000).get();
+        snap.forEach(d => extra.push(d.data()));
+    }
+    const days = await db.collectionGroup('days').limit(5000).get();
+    days.forEach(d => extra.push(d.data()));
+    const objects = await listAllObjects(store.client, store.bucket);
+    return { ...buildImagePlan(objects, data, extra, Date.now()), store };
+}
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -53,6 +79,31 @@ export async function POST(request: Request) {
                 }),
                 keptVideos, filmsInUse, filmsNotInUse, totalObjects, inUseList, notInUseList,
             });
+        }
+
+        if (action === 'scanImages') {
+            const { items, keptImages, totalImages } = await currentImagePlan();
+            return json({
+                images: items.map(i => ({ id: i.key, key: i.key, size: i.size, reason: i.reason, lastModified: i.lastModified, url: PUBLIC_IMAGE_HOST + i.key.split('/').map(encodeURIComponent).join('/') })),
+                keptImages, totalImages,
+            });
+        }
+
+        if (action === 'deleteImages') {
+            const ids: string[] = Array.isArray(body.ids) ? body.ids.filter((x: unknown) => typeof x === 'string').slice(0, 5000) : [];
+            if (ids.length === 0) return json({ error: 'Nothing selected.' }, 400);
+            // Works the list out AGAIN: only pictures still unused right now go.
+            const { items, store } = await currentImagePlan();
+            const byKey = new Map(items.map(i => [i.key, i]));
+            const chosen = ids.map(id => byKey.get(id)).filter((i): i is NonNullable<typeof i> => !!i);
+            const skipped = ids.length - chosen.length;
+            const { deleted, errors } = await deleteKeys(store.client, store.bucket, chosen.map(i => i.key));
+            const bytes = chosen.reduce((s, i) => s + i.size, 0);
+            await getAdminDb()?.collection('audit_logs').add({
+                action: 'STORAGE_CLEANUP_IMAGES', type: 'CONTENT', operatorName: 'ADMIN', timestamp: FieldValue.serverTimestamp(),
+                details: `Deleted ${deleted} picture(s), ${(bytes / 1024 ** 2).toFixed(1)} MB: ${chosen.map(i => i.key).join(', ').slice(0, 1800)}`,
+            }).catch(() => {});
+            return json({ deleted, skipped, bytes, errors: errors.slice(0, 20) });
         }
 
         if (action === 'delete') {
