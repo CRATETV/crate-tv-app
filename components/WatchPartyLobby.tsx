@@ -311,7 +311,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                 onClick={onBuyTicket}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Get Ticket — {blockPrice == null && movie.watchPartyPayWhatYouWant ? `Pay what you want (from $3)` : `$${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}`}
+                                {movie.isPrivateScreening ? 'Enter Invite Code' : <>Get Ticket — {blockPrice == null && movie.watchPartyPayWhatYouWant ? `Pay what you want (from $3)` : `$${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}`}</>}
                             </button>
                         )}
                     </div>
@@ -486,7 +486,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             onClick={onBuyTicket}
                             className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-95 shadow-2xl"
                         >
-                            Get Ticket — {blockPrice == null && movie.watchPartyPayWhatYouWant ? `Pay what you want (from $3)` : `$${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}`}
+                            {movie.isPrivateScreening ? 'Enter Invite Code' : <>Get Ticket — {blockPrice == null && movie.watchPartyPayWhatYouWant ? `Pay what you want (from $3)` : `$${(blockPrice ?? movie.watchPartyPrice ?? 10).toFixed(2)}`}</>}
                         </button>
                     )}
 
@@ -680,10 +680,12 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             <div className="animate-[fadeIn_0.8s_ease-out] space-y-3 w-full max-w-sm mx-auto px-4 md:px-0">
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center space-y-4">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-red-500">
-                                        {isFreeParty ? 'Free Screening' : 'Admission Required'}
+                                        {movie.isPrivateScreening ? 'Private Screening' : isFreeParty ? 'Free Screening' : 'Admission Required'}
                                     </p>
                                     <p className="text-gray-400 text-sm">
-                                        {isFreeParty
+                                        {movie.isPrivateScreening
+                                            ? 'This screening is by invite only. Enter the code you were given.'
+                                            : isFreeParty
                                             ? 'Reserve your spot before the party starts.'
                                             : 'Secure your seat before the party starts.'}
                                     </p>
@@ -691,7 +693,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                         onClick={onBuyTicket}
                                         className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                     >
-                                        {isFreeParty ? 'Reserve My Free Seat' : isPwyw ? 'Get Ticket — Pay what you want (from $3)' : `Get Ticket — $${ticketPrice.toFixed(2)}`}
+                                        {movie.isPrivateScreening ? 'Enter Invite Code' : isFreeParty ? 'Reserve My Free Seat' : isPwyw ? 'Get Ticket — Pay what you want (from $3)' : `Get Ticket — $${ticketPrice.toFixed(2)}`}
                                     </button>
                                     <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
                                 </div>

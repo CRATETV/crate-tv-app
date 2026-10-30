@@ -72,7 +72,7 @@ const UpcomingWatchParties: React.FC<{
             out.push({
                 key: m.key, title: m.title, startMs, poster: m.poster || m.tvPoster || '', isBlock: false,
                 isFree: !paid,
-                priceLabel: !paid ? 'Free' : m.watchPartyPayWhatYouWant ? `Pay what you want ($${PWYW_MIN_DOLLARS}+)` : `$${(m.watchPartyPrice ?? 5).toFixed(2)}`,
+                priceLabel: m.isPrivateScreening ? 'Invite only' : !paid ? 'Free' : m.watchPartyPayWhatYouWant ? `Pay what you want ($${PWYW_MIN_DOLLARS}+)` : `$${(m.watchPartyPrice ?? 5).toFixed(2)}`,
             });
         }
         for (const day of festivalData || []) {

@@ -83,6 +83,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     // Pay what you want (watch parties the admin switched to it): the viewer
     // picks the amount, from the minimum up. The server checks it again.
     const isPwyw = paymentType === 'watchPartyTicket' && movie?.isWatchPartyPaid === true && movie?.watchPartyPayWhatYouWant === true;
+    // Private screening: no price and no card. Only an invite code (a free code made for this film).
+    const isPrivate = paymentType === 'watchPartyTicket' && movie?.isPrivateScreening === true;
     const [pwywAmount, setPwywAmount] = useState<string>(String(PWYW_SUGGESTED[1] ?? PWYW_MIN_DOLLARS));
     const [pwywOther, setPwywOther] = useState(false);
     // A free code (cast and crew) skips the amount: nothing is being paid.
@@ -244,8 +246,9 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
         try {
             let sourceId = 'PROMO_VOUCHER';
+            if (isPrivate && !promoCode.trim()) throw new Error('Please enter your invite code.');
             
-            if (!isFree) {
+            if (!isFree && !isPrivate) {
                 if (!cardRef.current) throw new Error("Payment node offline.");
                 const result = await cardRef.current.tokenize();
                 if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message || "Card validation failed.");
@@ -269,7 +272,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 headers,
                 body: JSON.stringify({
                     sourceId,
-                    amount: displayAmount,
+                    amount: isPrivate ? 0 : displayAmount,
                     paymentType,
                     itemId: movie?.key || block?.id || (paymentType === 'pass' ? 'full-festival-pass' : paymentType),
                     movieTitle: movie?.title ?? premiereFilmTitle,
@@ -289,7 +292,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 onPaymentSuccess({
                     paymentType,
                     itemId: movie?.key || block?.id,
-                    amount: displayAmount,
+                    amount: isPrivate ? 0 : displayAmount,
                     email: user?.email || undefined
                 });
             }, 2000);
@@ -359,8 +362,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
             <div className="bg-[#111] border border-white/10 rounded-[1.75rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
                 <div className="p-6 sm:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                     <div>
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Secure Checkout</h2>
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">Verified Node Terminal</p>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{isPrivate ? 'Private Screening' : 'Secure Checkout'}</h2>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">{isPrivate ? 'Invite only' : 'Verified Node Terminal'}</p>
                     </div>
                     {!paymentSuccess && !isProcessing && (
                         <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -390,12 +393,14 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                     <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Target Resource</p>
                                     <h4 className="text-xl font-black text-white uppercase tracking-tight truncate">{itemTitle}</h4>
                                 </div>
+                                {!isPrivate && (
                                 <div className="text-right shrink-0">
                                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Amount</p>
                                     <p className={`text-2xl font-black ${isFree ? 'text-green-500' : 'text-white'}`}>
                                         {isFree ? 'FREE' : `$${displayAmount.toFixed(2)}`}
                                     </p>
                                 </div>
+                                )}
                             </div>
 
                             {['donation', 'billSavingsDeposit'].includes(paymentType) && (
@@ -446,7 +451,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {!isFree && (
+                            {!isFree && !isPrivate && (
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
                                     {/* p-4 on mobile, p-6 from sm: up — narrow phones (~320-375px) were
@@ -471,15 +476,16 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
                             {!['donation', 'billSavingsDeposit', 'premiereBooking', 'premiereBalance'].includes(paymentType) && (
                                 <div className="space-y-3">
-                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Promotion Logic</p>
+                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{isPrivate ? 'Invite code' : 'Promotion Logic'}</p>
                                     <div className="flex gap-2">
                                         <input 
                                             type="text" 
-                                            placeholder="Voucher Code" 
+                                            placeholder={isPrivate ? "Enter your invite code" : "Voucher Code"} 
                                             value={promoCode} 
                                             onChange={e => setPromoCode(e.target.value.toUpperCase())}
                                             className="flex-grow bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-mono tracking-widest text-white outline-none focus:border-red-600"
                                         />
+                                        {!isPrivate && (
                                         <button 
                                             type="button"
                                             onClick={handleApplyPromo}
@@ -488,6 +494,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                         >
                                             {isValidatingPromo ? '...' : 'Apply'}
                                         </button>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -501,8 +508,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
                             <button 
                                 type="submit" 
-                                disabled={isLoading || isProcessing || !pwywValid}
-                                className={`w-full ${isFree ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3`}
+                                disabled={(isLoading && !isPrivate) || isProcessing || !pwywValid || (isPrivate && !promoCode.trim())}
+                                className={`w-full ${(isFree || isPrivate) ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3`}
                             >
                                 {isProcessing ? (
                                     <>
@@ -510,7 +517,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                         Processing...
                                     </>
                                 ) : (
-                                    isFree ? 'Redeem Digital Access' : `Authorize Transaction: $${displayAmount.toFixed(2)}`
+                                    isPrivate ? 'Enter Screening' : isFree ? 'Redeem Digital Access' : `Authorize Transaction: $${displayAmount.toFixed(2)}`
                                 )}
                             </button>
                         </form>

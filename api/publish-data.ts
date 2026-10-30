@@ -23,7 +23,7 @@ const getRoleFromPassword = (password: string | null) => {
 };
 
 // The only movie fields allowed in the public data/movies document.
-export const PUBLIC_WATCH_PARTY_FIELDS = ['isWatchPartyEnabled', 'watchPartyStartTime', 'isWatchPartyPaid', 'watchPartyPrice', 'watchPartyPayWhatYouWant'] as const;
+export const PUBLIC_WATCH_PARTY_FIELDS = ['isWatchPartyEnabled', 'watchPartyStartTime', 'isWatchPartyPaid', 'watchPartyPrice', 'watchPartyPayWhatYouWant', 'isPrivateScreening'] as const;
 
 export const assembleAndSyncMasterData = async (db: Firestore) => {
     // Parallel fetching for manifest assembly - ADDED editorial_stories
@@ -55,6 +55,7 @@ export const assembleAndSyncMasterData = async (db: Firestore) => {
                     isWatchPartyPaid: m.isWatchPartyPaid,
                     watchPartyPrice: m.watchPartyPrice,
                     watchPartyPayWhatYouWant: m.watchPartyPayWhatYouWant ?? moviesData[key].watchPartyPayWhatYouWant,
+                    isPrivateScreening: m.isPrivateScreening ?? moviesData[key].isPrivateScreening,
                 };
             }
         });

@@ -2,6 +2,7 @@
 
 ## 2026-10 — Cast & crew codes, tighter festival pass, director's note on any film
 
+- **Private screenings show only an invite-code box.** No price and no card form: the ticket button says "Enter Invite Code", the checkout window asks for the code only, and the home-page list says "Invite only". The switch is also published with the watch party settings so the website sees it (`api/publish-data.ts`). `components/SquarePaymentModal.tsx`, `components/WatchPartyLobby.tsx`, `components/WatchPartyPage.tsx`, `components/UpcomingWatchParties.tsx`.
 - **iPhone: the close (X) button on a film's detail screen could not be tapped.** It sat under the status bar / Dynamic Island. On phones it now sits below it, bigger, outside the scrolling box. `components/MovieDetailsModal.tsx`.
 - **Featured Cast photos load fast.** They loaded full-size originals; now they use the shrunk copies from the image proxy (and never show a broken icon). Same for the Actors directory. `components/MovieDetailsModal.tsx`, `components/ActorsDirectoryPage.tsx`.
 - **Copy, text selection, right-click / long-press menus and picture dragging are blocked** on the public site (typing boxes, anything marked `data-allow-copy`, and signed-in admins are left alone). This does NOT stop screenshots or screen recording; only DRM can (see security plan). `services/contentProtection.ts`, `index.tsx`; tests in `tests/contentProtection.test.ts`.
