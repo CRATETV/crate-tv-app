@@ -830,7 +830,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={true} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video md:aspect-auto md:h-[48vh] md:min-h-[300px]'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
+            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video md:aspect-auto md:h-[56vh] md:min-h-[340px]'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
                 {/* Blurred backdrop — fills black bars when film isn't 16:9 */}
                 {hasAccess && !embedUrl && (
                     <video
@@ -1066,35 +1066,34 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         {movie.poster && (
                             <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}&w=400`} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 scale-110" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                         )}
-                        {/* Poster: a modest centred picture on the frosted background (not filling the whole box).
-                            Shows a title tile instead of a broken icon if the link is bad. */}
-                        <div className="absolute inset-0 z-10 flex items-center justify-center py-[7%]">
-                            <SafePoster
-                                src={movie.poster}
-                                title={movie.title}
-                                width={600}
-                                className={`h-full w-auto max-w-[44%] aspect-[2/3] object-contain rounded-lg shadow-2xl ${!hasAccess ? 'opacity-70' : ''}`}
-                            />
-                        </div>
-                        {/* Bottom fade into page */}
-                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-20" />
-
-                        {/* Lock badge for premium — no buttons here, they live below */}
-                        {!hasAccess && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center">
-                                <div className="bg-gradient-to-br from-amber-500 to-amber-700 p-5 rounded-2xl shadow-2xl border border-amber-400/30">
-                                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                    </svg>
-                                </div>
+                        {/* Poster: a centred picture on the frosted background (not filling the whole box).
+                            Shows a title tile instead of a broken icon if the link is bad.
+                            The lock is a small badge in the poster's corner so it never hides the picture. */}
+                        <div className="absolute inset-0 z-10 flex items-center justify-center py-[4%]">
+                            <div className="relative h-full aspect-[2/3] max-w-[75%]">
+                                <SafePoster
+                                    src={movie.poster}
+                                    title={movie.title}
+                                    width={700}
+                                    className={`w-full h-full object-contain rounded-lg shadow-2xl ${!hasAccess ? 'opacity-80' : ''}`}
+                                />
+                                {!hasAccess && (
+                                    <div className="absolute bottom-2 right-2 bg-gradient-to-br from-amber-500 to-amber-700 p-2 rounded-lg shadow-xl border border-amber-400/30" aria-label="Locked">
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
+                        {/* Bottom fade into page (behind the poster) */}
+                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-[5] pointer-events-none" />
 
                         {/* Play circle for accessible content */}
                         {hasAccess && (
                             <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                <div className="bg-white/20 backdrop-blur-sm rounded-full p-6 border-2 border-white/30 shadow-2xl">
-                                    <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 border-2 border-white/30 shadow-2xl">
+                                    <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                                     </svg>
                                 </div>
