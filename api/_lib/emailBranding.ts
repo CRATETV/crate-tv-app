@@ -54,7 +54,12 @@ export interface BrandedEmailOptions {
     footerTagline?: string;
 }
 
-export const EMAIL_WORDMARK_URL = 'https://cratetv.net/email-wordmark.png';
+// The wordmark sits on its OWN solid near-black box (same color as the card), not on a
+// see-through background. Some phone mail apps (Gmail on iPhone in dark mode) flip the whole
+// email to light colors, and a see-through white logo disappeared (Oct 30 2026: "you can't see
+// the crate logo"). A logo with its own dark background shows on any card color. Pictures are
+// never recolored by mail apps.
+export const EMAIL_WORDMARK_URL = 'https://cratetv.net/email-wordmark-boxed.png';
 
 // Oct 29 2026 redesign (modelled on Pavilion+'s emails; made near-black the same day so CRATE stands out): one dark card, the CRATE
 // wordmark sitting at the top-left with a thin line under it, no coloured banner.
@@ -101,9 +106,9 @@ export const renderBrandedEmail = ({ title, bodyHtml, footerTagline }: BrandedEm
 
                     <!-- Logo: just the wordmark, top-left -->
                     <tr>
-                        <td align="left" bgcolor="#0b0b0d" style="background-color: #0b0b0d; padding: 32px 40px 28px; border-bottom: 1px solid #1d1d22;">
+                        <td align="left" bgcolor="#0b0b0d" style="background-color: #0b0b0d; padding: 20px 40px 16px; border-bottom: 1px solid #1d1d22;">
                             <a href="https://cratetv.net" target="_blank" style="text-decoration: none;">
-                                <img src="${EMAIL_WORDMARK_URL}" alt="CRATE TV" width="170" style="display: block; width: 170px; max-width: 60%; height: auto; border: 0;">
+                                <img src="${EMAIL_WORDMARK_URL}" alt="CRATE TV" width="194" style="display: block; width: 194px; max-width: 70%; height: auto; border: 0; margin-left: -12px; background-color: #0b0b0d;">
                             </a>
                         </td>
                     </tr>
