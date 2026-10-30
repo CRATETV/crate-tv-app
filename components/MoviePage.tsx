@@ -830,7 +830,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={true} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
+            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video md:aspect-auto md:h-[48vh] md:min-h-[300px]'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
                 {/* Blurred backdrop — fills black bars when film isn't 16:9 */}
                 {hasAccess && !embedUrl && (
                     <video
@@ -1064,15 +1064,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     >
                         {/* Blurred backdrop */}
                         {movie.poster && (
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}&w=400`} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}&w=400`} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 scale-110" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                         )}
-                        {/* Poster (shows a title tile instead of a broken icon if the link is bad) */}
-                        <SafePoster
-                            src={movie.poster}
-                            title={movie.title}
-                            width={1280}
-                            className={`w-full h-full object-contain relative z-10 ${!hasAccess ? 'opacity-70' : ''}`}
-                        />
+                        {/* Poster: a modest centred picture on the frosted background (not filling the whole box).
+                            Shows a title tile instead of a broken icon if the link is bad. */}
+                        <div className="absolute inset-0 z-10 flex items-center justify-center py-[7%]">
+                            <SafePoster
+                                src={movie.poster}
+                                title={movie.title}
+                                width={600}
+                                className={`h-full w-auto max-w-[44%] aspect-[2/3] object-contain rounded-lg shadow-2xl ${!hasAccess ? 'opacity-70' : ''}`}
+                            />
+                        </div>
                         {/* Bottom fade into page */}
                         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-20" />
 
