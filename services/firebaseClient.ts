@@ -8,6 +8,7 @@ import 'firebase/compat/storage';
 
 // FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
+import { userFromDoc } from './userProfileMap';
 
 let authInstance: firebase.auth.Auth | null = null;
 let app: firebase.app.App | null = null;
@@ -105,25 +106,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
         // ensuring 'isActor' and other fields are always present with a default.
         // FIX: Sanitize array fields from Firestore to ensure they are string arrays, preventing downstream type errors.
         // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
-        const userProfile: User = {
-            uid,
-            email: data.email || '',
-            name: data.name || data.email?.split('@')[0] || 'Creator',
-            isActor: data.isActor === true, // Coerce to boolean, defaulting to false
-            isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
-            avatar: data.avatar || 'fox',
-            isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
-            watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item: any): item is string => typeof item === 'string') : [],
-            watchedMovies: Array.isArray(data.watchedMovies) ? data.watchedMovies.filter((item: any): item is string => typeof item === 'string') : [],
-            likedMovies: Array.isArray(data.likedMovies) ? data.likedMovies.filter((item: any): item is string => typeof item === 'string') : [],
-            hasFestivalAllAccess: data.hasFestivalAllAccess === true,
-            festivalPassExpiry: typeof data.festivalPassExpiry === 'string' ? data.festivalPassExpiry : undefined,
-            unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
-            unlockedBlocks: (data.unlockedBlocks && typeof data.unlockedBlocks === 'object') ? data.unlockedBlocks : {},
-            purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : [],
-            rentals: data.rentals || {},
-            rokuDeviceId: data.rokuDeviceId || undefined,
-        };
+        const userProfile: User = userFromDoc(uid, data);
         return userProfile;
     }
     return null;
