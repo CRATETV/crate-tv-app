@@ -6,6 +6,7 @@ import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { findBlock } from './_lib/watchPartyLifecycle.js';
 import { checkBackstageKey } from './_lib/backstage.js';
 import { pickStreamSource } from './_lib/streamSource.js';
+import { liveStreamGate, partyTimingFor } from './_lib/streamTiming.js';
 
 export async function POST(request: Request) {
     try {
@@ -50,6 +51,20 @@ export async function POST(request: Request) {
         }
 
         if (!granted || !filmKey) return new Response(JSON.stringify({ error: 'Access denied.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+
+        // A watch party's film is only handed out once the party has started
+        // (api/_lib/streamTiming.ts). Directors with the backstage key already
+        // had to wait for "live" above.
+        if (resolvedMode === 'live' && !(typeof backstageKey === 'string' && backstageKey.trim())) {
+            const { partyId, scheduledStartMs } = await partyTimingFor(db, movieKey);
+            const partyState = (await db.collection('watch_parties').doc(partyId).get()).data();
+            const gate = liveStreamGate({ partyState, scheduledStartMs, nowMs: Date.now() });
+            if (!gate.open) {
+                return new Response(JSON.stringify({ error: 'The screening has not started yet.', notStarted: true, startsAt: gate.startsAtMs ? new Date(gate.startsAtMs).toISOString() : null, retryAfterSeconds: gate.retryAfterSeconds }), {
+                    status: 425, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+            }
+        }
 
         // NOTE: filmKey, not movieKey — for a festival block watch party (mode 'live'),
         // movieKey is the block's own id, and filmKey is whichever film within it is

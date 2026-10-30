@@ -26,7 +26,6 @@ export const TAB_META: Record<string, TabMeta> = {
     users:        { label: 'Audience', icon: '👥', desc: 'Your viewers: who signed up, what they watch, account help.', keywords: 'users viewers accounts lookup' },
     actors:       { label: 'Actor approvals', icon: '🎭', desc: 'Approve actor profiles before they go public.', keywords: 'actors portal approve profiles talent' },
     email:        { label: 'Email', icon: '✉️', desc: 'Reply to messages and email your audience.', keywords: 'mail inbox newsletter blast' },
-    outreach:     { label: 'Filmmaker outreach', icon: '🎯', desc: 'Find and invite filmmakers to CRATE.', keywords: 'outreach invite filmmakers' },
 
     money:        { label: 'Earnings & payouts', icon: '💸', desc: 'What every film earned, the split, and who you owe.', keywords: 'money revenue payouts pay filmmakers split earnings' },
     refunds:      { label: 'Payments & refunds', icon: '💳', desc: 'Every payment, double-charge alerts, and two-click refunds.', keywords: 'refund refunds payments double charge square customer charged twice' },
@@ -45,7 +44,7 @@ export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] 
     { title: 'Home', accent: 'coral', ids: ['pulse'] },
     { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels'] },
     { title: 'Live & festivals', accent: 'violet', ids: ['watchParty', 'pwff', 'partners', 'crateFestHub', 'ticketCodes'] },
-    { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email', 'outreach'] },
+    { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email'] },
     { title: 'Money & legal', accent: 'green', ids: ['money', 'refunds', 'contracts', 'vouchers', 'shop'] },
     { title: 'Platform', accent: 'sky', ids: ['analytics', 'roku', 'storage', 'system', 'permissions'] },
 ];

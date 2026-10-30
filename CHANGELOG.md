@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10 — Cast & crew codes, tighter festival pass, director's note on any film
+
+- **Free cast & crew codes now work on pay-what-you-want watch parties.** Before, any promo code was refused there. Now a code that makes the ticket free (a "one-time access" code or 100% off) is accepted; the amount picker and card box disappear and the ticket is granted like any other. A part-discount code is still refused there, because the viewer picks the amount. `api/process-square-payment.ts`, `components/SquarePaymentModal.tsx`, `promoMakesFree` in `api/_lib/paymentRules.ts`.
+- **A free code must name its film or screening.** A free code with no film used to open everything it was tried on (every paid party and block). The admin form now refuses to make one, checkout refuses any that already exist, and "Apply" uses the same rules as checkout. `api/manage-promo-codes.ts`, `api/validate-promo-code.ts`. **Check Admin → Promo codes**: any existing free code shown as "Full Platform Access" stops working until it is re-made for one film.
+- **The PWFF pass opens the PWFF schedule only.** Old days left in the schedule (last year's, or days entered before the committee lineup was published) and partner festivals are no longer opened by a PWFF pass, on the website or the Roku. `api/_lib/entitlements.ts`, `api/roku-feed.ts` (tests added in `tests/watchPartyAccess.test.ts`).
+- **A watch party's film is only handed out at the start time.** The server now says "not yet" to the video request until the scheduled start (15 seconds early so the picture is ready at 0:00), or until an admin starts the party by hand. Before, a ticket holder could ask for the video link any time. The page waits and asks again just before the start. `api/_lib/streamTiming.ts`, `api/get-stream-url.ts`, `components/WatchPartyPage.tsx`, tests in `tests/streamTiming.test.ts`.
+- **No more broken picture on "Access Locked"** (and on the PWFF, festival program and Top Ten pages): a bad poster link falls back to the original file, then to a tile with the film's title. New `components/SafePoster.tsx`.
+- **My List row now sits below Top Ten Today** on the home page.
+- **Director's note on any film** (Films → edit → "Director's Note (any film)"): shows on the film's own page and details window. The PWFF page keeps using only the Festival / PWFF Profile fields, so these never appear there. New fields `directorNote`, `filmmakerBio`.
+- **Filmmaker outreach tab removed** (tab, screen and `api/filmmaker-outreach.ts`).
+- **Emails are darker**: near-black card on black, so the CRATE wordmark and red buttons stand out. `api/_lib/emailBranding.ts`.
+
 ## 2026-10 — Premiere reminder emails, My List row, film viewing numbers, weekly backup
 
 - **New email look (all emails made with the shared template).** One dark card with the CRATE wordmark sitting at the top-left and a thin line under it, like Pavilion+: no coloured banner. Dark mode in phone mail apps can no longer wash the logo out. Older emails written for a white card are flipped to dark colors automatically (`darkenEmailBody`), so none had to be rewritten. `api/_lib/emailBranding.ts`, new logo file `public/email-wordmark.png`. A few older one-off emails that don't use the shared template (e.g. promo email) keep their old look.

@@ -27,6 +27,7 @@ import { useWatchReporter } from './useWatchReporter';
 import { introWindow, inIntro } from '../api/_lib/introSkip';
 import { isPastAvailableUntil } from '../api/_lib/filmAvailability';
 
+import SafePoster from './SafePoster';
 interface MoviePageProps {
   movieKey: string;
 }
@@ -1018,7 +1019,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
-                             <img src={movie.poster} alt={movie.title} className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
+                             <SafePoster src={movie.poster} title={movie.title} className="w-32 aspect-[2/3] object-cover rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
                              <p className="text-gray-400 max-w-md">{isPaidPartyOnly ? 'This film is shown as a paid watch party.' : 'This selection requires a rental to stream.'}</p>
                              {isPaidPartyOnly ? (
@@ -1200,6 +1201,24 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         className="text-gray-300 text-base leading-relaxed mb-6"
                         dangerouslySetInnerHTML={{ __html: movie.synopsis }}
                     />
+
+                    {/* Director's note (any film; the PWFF page uses its own festival fields) */}
+                    {(movie.directorNote || movie.filmmakerBio) && (
+                        <div className="mb-8 space-y-4 border-l-2 border-red-600/60 pl-4">
+                            {movie.directorNote && (
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500 mb-1">Director's Note</h3>
+                                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{movie.directorNote}</p>
+                                </div>
+                            )}
+                            {movie.filmmakerBio && (
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-1">About the filmmaker</h3>
+                                    <p className="text-gray-400 text-sm leading-relaxed whitespace-pre-line">{movie.filmmakerBio}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Episodes — FEATURE (user request, matching Netflix's always-open
                         layout): previously episodes only existed inside a separate details

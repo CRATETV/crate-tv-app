@@ -64,6 +64,11 @@ export async function POST(request: Request) {
         }
 
         const resolvedType: PromoCode['type'] = type === 'discount' ? 'discount' : 'one_time_access';
+        // A free code must be tied to one film or screening (cast and crew codes).
+        const makesFree = resolvedType === 'one_time_access' || Number(discountValue) >= 100;
+        if (makesFree && !itemId) {
+            return new Response(JSON.stringify({ error: 'Pick the film or screening this free code is for. A free code with no film would open everything.' }), { status: 400 });
+        }
         const codeData: Omit<PromoCode, 'id'> = {
             code: cleanCode,
             type: resolvedType,

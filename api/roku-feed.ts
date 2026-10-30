@@ -11,7 +11,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { isMovieReleased, moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
 import { getAiRecommendations } from './_lib/recommendations.js';
 import { signStreamUrl } from './_lib/signStreamUrl.js';
-import { isOutsidePartner } from './_lib/partnerRules.js';
+import { isOutsidePartner, selectPwffDays } from './_lib/partnerRules.js';
 import { streakSummary } from './_lib/streaks.js';
 import { isFestivalPassActive } from './_lib/festivalPass.js';
 import { introWindow } from './_lib/introSkip.js';
@@ -370,10 +370,11 @@ export async function GET(request: Request) {
                 const festivalPassActive = isFestivalPassActive(userData, nowDate.getTime());
                 if (festivalPassActive) {
                     if (!festSnap) festSnap = await db.collection('festival').doc('schedule').collection('days').get();
-                    festSnap.forEach((doc: any) => {
-                        const day = doc.data();
+                    // The PWFF schedule only (same rule as the website): old days left in the
+                    // schedule and partner festivals are not opened by the pass.
+                    const pwffDays = selectPwffDays((festSnap.docs as any[]).map((doc: any) => doc.data() || {}));
+                    pwffDays.forEach((day: any) => {
                         day.blocks?.forEach((block: any) => {
-                            // PWFF / Crate's own festival blocks only, not partner festivals
                             if (!isOutsidePartner(block.partnerId || day.partnerId)) {
                                 block.movieKeys?.forEach((k: string) => unlockedMovies.add(k));
                             }

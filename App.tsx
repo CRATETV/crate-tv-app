@@ -759,6 +759,26 @@ const App: React.FC = () => {
                                 />
                             )}
 
+                            {topTenMovies.length > 0 && (
+                                <MovieCarousel 
+                                    title={
+                                        <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tighter text-white px-2 border-l-4 border-red-600 pl-4 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+                                            Top Ten Today
+                                        </h2>
+                                    } 
+                                    movies={topTenMovies} 
+                                    onSelectMovie={handlePlayMovie} 
+                                    onShowDetails={handleSelectMovie}
+                                    watchedMovies={watchedMovies} 
+                                    watchlist={watchlist} 
+                                    likedMovies={likedMovies} 
+                                    onToggleLike={toggleLikeMovie} 
+                                    onToggleWatchlist={toggleWatchlist} 
+                                    onSupportMovie={() => {}} 
+                                    showRankings={true}
+                                />
+                            )}
+
                             {myListMovies.length > 0 && (
                                 <MovieCarousel
                                     title={
@@ -777,26 +797,6 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist}
                                     onSupportMovie={() => {}}
                                     categoryKey="myList"
-                                />
-                            )}
-
-                            {topTenMovies.length > 0 && (
-                                <MovieCarousel 
-                                    title={
-                                        <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tighter text-white px-2 border-l-4 border-red-600 pl-4 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
-                                            Top Ten Today
-                                        </h2>
-                                    } 
-                                    movies={topTenMovies} 
-                                    onSelectMovie={handlePlayMovie} 
-                                    onShowDetails={handleSelectMovie}
-                                    watchedMovies={watchedMovies} 
-                                    watchlist={watchlist} 
-                                    likedMovies={likedMovies} 
-                                    onToggleLike={toggleLikeMovie} 
-                                    onToggleWatchlist={toggleWatchlist} 
-                                    onSupportMovie={() => {}} 
-                                    showRankings={true}
                                 />
                             )}
 

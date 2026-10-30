@@ -10,6 +10,7 @@ import SEO from './SEO';
 import TopTenShareableImage from './TopTenShareableImage';
 import { isMovieReleased } from '../constants';
 
+import SafePoster from './SafePoster';
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void }> = ({ movie, rank, onSelect }) => (
     <div 
         onClick={() => onSelect(movie)}
@@ -29,7 +30,7 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
             </div>
             
             <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
-                <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                <SafePoster src={movie.poster} title={movie.title} className="w-full h-full object-cover" />
             </div>
 
             <div className="flex-grow min-w-0">

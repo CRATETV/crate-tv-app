@@ -11,7 +11,7 @@ import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 import { isFestivalPassActive, laterExpiry, festivalPassOnSale, festivalPassExpiryFor, blockSaleClosed, partnerPassIsCurrent } from './_lib/festivalPass.js';
 import { getPwffBlocks } from './_lib/festivalTiming.js';
 import { escapeHtml } from './_lib/validation.js';
-import { promoProblem, priceAfterPromo, payWhatYouWantCents, PWYW_MIN_DOLLARS, PREMIERE_PRICES_CENTS, PREMIERE_LABELS, isPremierePayment } from './_lib/paymentRules.js';
+import { promoProblem, priceAfterPromo, promoMakesFree, payWhatYouWantCents, PWYW_MIN_DOLLARS, PREMIERE_PRICES_CENTS, PREMIERE_LABELS, isPremierePayment } from './_lib/paymentRules.js';
 import { cleanLine } from './_lib/validation.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
@@ -450,17 +450,24 @@ export async function POST(request: Request) {
             amountInCents = Math.round(rawPrice * 100);
             note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
             // Pay what you want: the viewer's amount, checked here (never trusted
-            // as-is): a real number from the minimum up. No promo codes on top.
+            // as-is): a real number from the minimum up. Only a code that makes it free (cast and crew) can be used.
             if (paymentType === 'watchPartyTicket' && movieData?.isWatchPartyPaid === true && movieData?.watchPartyPayWhatYouWant === true) {
+                if (promo) {
+                    // Cast and crew: a code that makes the ticket free works here.
+                    // A part-discount can't, because the viewer picks the amount.
+                    if (!promoMakesFree(promo)) {
+                        return new Response(JSON.stringify({ error: "Only free guest codes can be used on pay-what-you-want tickets." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                    }
+                    amountInCents = 0;
+                    note = `Watch Party Ticket (guest code): ${movieData?.title || itemId}`;
+                } else {
                 const chosen = payWhatYouWantCents(amount);
                 if (chosen == null) {
                     return new Response(JSON.stringify({ error: `Please choose an amount of at least $${PWYW_MIN_DOLLARS}.` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
                 }
-                if (promo) {
-                    return new Response(JSON.stringify({ error: "Promo codes can't be used on pay-what-you-want tickets." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-                }
                 amountInCents = chosen;
                 note = `Watch Party Ticket (pay what you want): ${movieData?.title || itemId}`;
+                }
             }
         }
     }

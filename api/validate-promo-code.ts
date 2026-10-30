@@ -2,6 +2,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { PromoCode } from '../types.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
+import { promoProblem } from './_lib/paymentRules.js';
 
 export async function POST(request: Request) {
     try {
@@ -29,20 +30,11 @@ export async function POST(request: Request) {
         const promoDoc = promoSnap.docs[0];
         const promo = { id: promoDoc.id, ...promoDoc.data() } as PromoCode;
 
-        // Validation Logic
-        if (promo.usedCount >= promo.maxUses) {
-            return new Response(JSON.stringify({ error: "This code has reached its maximum usage limit." }), { status: 403 });
-        }
-
-        if (promo.expiresAt && new Date(promo.expiresAt) < new Date()) {
-             return new Response(JSON.stringify({ error: "This code has expired." }), { status: 403 });
-        }
-
-        // Broad matching: If the promo itemId matches the request itemId, or if the promo is global (empty itemId)
-        const isMatch = !promo.itemId || promo.itemId === itemId;
-        
-        if (!isMatch) {
-             return new Response(JSON.stringify({ error: "This code is not valid for this specific content." }), { status: 403 });
+        // Same rules as checkout (api/_lib/paymentRules.ts), so "Apply" never
+        // says yes to a code the payment would then refuse.
+        const problem = promoProblem(promo, itemId);
+        if (problem) {
+            return new Response(JSON.stringify({ error: problem }), { status: 403 });
         }
 
         // Calculate Result

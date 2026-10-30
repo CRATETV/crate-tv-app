@@ -7,6 +7,7 @@ import SquarePaymentModal from './SquarePaymentModal';
 import BottomNavBar from './BottomNavBar';
 import WatchPartyLobby from './WatchPartyLobby';
 
+import SafePoster from './SafePoster';
 // ─── FILM CARD ───────────────────────────────────────────────────────────────
 const FilmEntry: React.FC<{
     movie: Movie;
@@ -27,7 +28,7 @@ const FilmEntry: React.FC<{
             <div className="flex-shrink-0 w-16 md:w-20">
                 <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-900 border border-white/5">
                     {movie.poster ? (
-                        <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                        <SafePoster src={movie.poster} title={movie.title} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-gray-700" fill="currentColor" viewBox="0 0 24 24">

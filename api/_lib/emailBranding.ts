@@ -56,7 +56,7 @@ export interface BrandedEmailOptions {
 
 export const EMAIL_WORDMARK_URL = 'https://cratetv.net/email-wordmark.png';
 
-// Oct 29 2026 redesign (modelled on Pavilion+'s emails): one dark card, the CRATE
+// Oct 29 2026 redesign (modelled on Pavilion+'s emails; made near-black the same day so CRATE stands out): one dark card, the CRATE
 // wordmark sitting at the top-left with a thin line under it, no coloured banner.
 // A dark card with an explicit background is also what phone mail apps leave alone
 // in dark mode, so the white logo can't vanish.
@@ -69,8 +69,8 @@ const TEXT_COLORS: Record<string, string> = {
     '#444': '#c4c4cc', '#444444': '#c4c4cc', '#555': '#b4b4bc', '#555555': '#b4b4bc', '#666': '#b4b4bc', '#666666': '#b4b4bc',
     '#888': '#9d9da7', '#888888': '#9d9da7', '#999': '#9d9da7', '#999999': '#9d9da7', '#bbb': '#c8c8d0', '#bbbbbb': '#c8c8d0',
 };
-const PANEL_COLORS: Record<string, string> = { '#f4f4f4': '#2a2b30', '#f5f5f5': '#2a2b30', '#fafafa': '#2a2b30', '#ffffff': '#2a2b30', '#fff': '#2a2b30', white: '#2a2b30' };
-const LINE_COLORS: Record<string, string> = { '#e5e5e5': '#34353b', '#eee': '#34353b', '#eeeeee': '#34353b', '#ddd': '#34353b', '#dddddd': '#34353b' };
+const PANEL_COLORS: Record<string, string> = { '#f4f4f4': '#18181c', '#f5f5f5': '#18181c', '#fafafa': '#18181c', '#ffffff': '#18181c', '#fff': '#18181c', white: '#18181c' };
+const LINE_COLORS: Record<string, string> = { '#e5e5e5': '#232329', '#eee': '#232329', '#eeeeee': '#232329', '#ddd': '#232329', '#dddddd': '#232329' };
 
 /** Flip an email body written for a white card so it reads on the dark card. Colored accents and buttons are left alone. */
 export const darkenEmailBody = (html: string): string =>
@@ -93,15 +93,15 @@ export const renderBrandedEmail = ({ title, bodyHtml, footerTagline }: BrandedEm
     <meta name="supported-color-schemes" content="dark">
     <title>${title}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #121214; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#121214" style="background-color: #121214;">
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#000000" style="background-color: #000000;">
         <tr>
             <td align="center" style="padding: 32px 16px;">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#1f2023" style="max-width: 600px; background-color: #1f2023; border: 1px solid #2e2f35; border-radius: 20px; overflow: hidden;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#0b0b0d" style="max-width: 600px; background-color: #0b0b0d; border: 1px solid #1d1d22; border-radius: 20px; overflow: hidden;">
 
                     <!-- Logo: just the wordmark, top-left -->
                     <tr>
-                        <td align="left" bgcolor="#1f2023" style="background-color: #1f2023; padding: 32px 40px 28px; border-bottom: 1px solid #2e2f35;">
+                        <td align="left" bgcolor="#0b0b0d" style="background-color: #0b0b0d; padding: 32px 40px 28px; border-bottom: 1px solid #1d1d22;">
                             <a href="https://cratetv.net" target="_blank" style="text-decoration: none;">
                                 <img src="${EMAIL_WORDMARK_URL}" alt="CRATE TV" width="170" style="display: block; width: 170px; max-width: 60%; height: auto; border: 0;">
                             </a>
@@ -110,7 +110,7 @@ export const renderBrandedEmail = ({ title, bodyHtml, footerTagline }: BrandedEm
 
                     <!-- Core Content -->
                     <tr>
-                        <td style="padding: 40px 40px 36px; background-color: #1f2023;" bgcolor="#1f2023">
+                        <td style="padding: 40px 40px 36px; background-color: #0b0b0d;" bgcolor="#0b0b0d">
                             <div style="font-size: 16px; line-height: 1.75; color: #f5f5f7;">
                                 ${darkenEmailBody(bodyHtml)}
                             </div>
@@ -119,7 +119,7 @@ export const renderBrandedEmail = ({ title, bodyHtml, footerTagline }: BrandedEm
 
                     <!-- Footer -->
                     <tr>
-                        <td align="left" bgcolor="#1f2023" style="background-color: #1f2023; padding: 24px 40px 32px; border-top: 1px solid #2e2f35;">
+                        <td align="left" bgcolor="#0b0b0d" style="background-color: #0b0b0d; padding: 24px 40px 32px; border-top: 1px solid #1d1d22;">
                             <p style="font-size: 12px; color: #8b8b95; margin: 0 0 6px 0; line-height: 1.5;">${footerTagline || 'Television powered by creatives'}</p>
                             <p style="font-size: 11px; color: #6f6f79; margin: 0; line-height: 1.5;">© ${new Date().getFullYear()} Crate TV · Philadelphia, PA // NYC · <a href="https://cratetv.net" style="color: #8b8b95;">cratetv.net</a></p>
                         </td>

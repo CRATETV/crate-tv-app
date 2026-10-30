@@ -182,6 +182,23 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         <div className="text-gray-300 text-lg md:text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                     </div>
                     
+                    {(movie.directorNote || movie.filmmakerBio) && (
+                        <div className="space-y-4">
+                            {movie.directorNote && (
+                                <>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">Director's Note</h3>
+                                    <p className="text-gray-300 text-base leading-relaxed whitespace-pre-line">{movie.directorNote}</p>
+                                </>
+                            )}
+                            {movie.filmmakerBio && (
+                                <>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">About the filmmaker</h3>
+                                    <p className="text-gray-400 text-base leading-relaxed whitespace-pre-line">{movie.filmmakerBio}</p>
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     {movie.cast && movie.cast.length > 0 && (
                         <div className="space-y-8">
                             <div className="flex items-center gap-4">

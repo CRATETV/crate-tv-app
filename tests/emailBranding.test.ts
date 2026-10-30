@@ -12,9 +12,9 @@ test('dark text on a white card becomes light text on the dark card', () => {
 
 test('light panels and thin lines flip, accents and buttons stay', () => {
     const out = darkenEmailBody('<div style="background:#f4f4f4;border-left:3px solid #ef4444;border-top:1px solid #e5e5e5"><a style="background-color:#FF3B5C;color:#ffffff">Go</a></div>');
-    assert.match(out, /background:#2a2b30/);
+    assert.match(out, /background:#18181c/);
     assert.match(out, /#ef4444/);
-    assert.match(out, /border-top:1px solid #34353b/);
+    assert.match(out, /border-top:1px solid #232329/);
     assert.match(out, /background-color:#FF3B5C;color:#ffffff/);
 });
 
@@ -29,7 +29,7 @@ test('the template has the wordmark, no colored banner, and a dark card', () => 
     assert.ok(html.includes(EMAIL_WORDMARK_URL));
     assert.ok(!html.includes('email-header.png'));
     assert.ok(!html.includes('#FF3B5C; height: 3px'));
-    assert.match(html, /bgcolor="#1f2023"/);
+    assert.match(html, /bgcolor="#0b0b0d"/);
     assert.match(html, /color:#f5f5f7/);
 });
 

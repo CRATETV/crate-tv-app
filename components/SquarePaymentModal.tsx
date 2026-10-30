@@ -85,7 +85,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const isPwyw = paymentType === 'watchPartyTicket' && movie?.isWatchPartyPaid === true && movie?.watchPartyPayWhatYouWant === true;
     const [pwywAmount, setPwywAmount] = useState<string>(String(PWYW_SUGGESTED[1] ?? PWYW_MIN_DOLLARS));
     const [pwywOther, setPwywOther] = useState(false);
-    const pwywValid = !isPwyw || payWhatYouWantCents(pwywAmount) != null;
+    // A free code (cast and crew) skips the amount: nothing is being paid.
+    const pwywValid = !isPwyw || appliedPromo?.isFree === true || payWhatYouWantCents(pwywAmount) != null;
     
     const cardRef = useRef<any>(null);
     // Generated once when this checkout attempt opens, not per request — if
@@ -121,10 +122,10 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
             return parseFloat(customAmount) || 0;
         }
-        if (isPwyw) return parseFloat(pwywAmount) || 0;
         if (appliedPromo) {
             return appliedPromo.finalPriceInCents / 100;
         }
+        if (isPwyw) return parseFloat(pwywAmount) || 0;
         return basePrice;
     }, [paymentType, customAmount, basePrice, appliedPromo, isPwyw, pwywAmount]);
 
@@ -222,6 +223,9 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Validation failed.");
+            // Pay-what-you-want: the viewer picks the amount, so only a code
+            // that makes the ticket free (cast and crew) can be used.
+            if (isPwyw && data.isFree !== true) throw new Error("Only free guest codes work on pay-what-you-want tickets.");
             setAppliedPromo(data);
         } catch (err: any) {
             setError(err.message);
@@ -411,7 +415,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {isPwyw && (
+                            {isPwyw && !isFree && (
                                 <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Pay what you want</label>
                                     <p className="text-sm text-gray-400">Choose any amount from ${PWYW_MIN_DOLLARS}. Every bit supports the filmmakers.</p>
@@ -465,7 +469,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {!['donation', 'billSavingsDeposit', 'premiereBooking', 'premiereBalance'].includes(paymentType) && !isPwyw && (
+                            {!['donation', 'billSavingsDeposit', 'premiereBooking', 'premiereBalance'].includes(paymentType) && (
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Promotion Logic</p>
                                     <div className="flex gap-2">

@@ -69,3 +69,39 @@ test('no ticket means no entry to a paid party, but free parties are open', asyn
     assert.equal(await live('nobody', 'block-a'), false);
     assert.equal(await live('nobody', 'freeParty'), true);
 });
+
+// ── The PWFF pass opens the PWFF schedule only ───────────────────────────────
+function daysDb(days: any[], users: Record<string, any>, movies: Record<string, any> = {}) {
+    const docOf = (data: any) => ({ exists: data !== undefined, data: () => data });
+    return {
+        collection: (name: string) => ({
+            doc: (id: string) => ({
+                get: async () => docOf(name === 'users' ? users[id] : name === 'movies' ? movies[id] : undefined),
+                collection: () => ({ get: async () => ({ docs: days.map(d => ({ data: () => d })) }) }),
+            }),
+        }),
+    } as any;
+}
+const passUser = { passHolder: { hasFestivalAllAccess: true, festivalPassExpiry: new Date(Date.now() + 86_400_000).toISOString() } };
+
+test('LOOPHOLE: an old no-partner day left in the schedule is not opened by the new PWFF pass', async () => {
+    const d = daysDb([
+        { day: 1, partnerId: 'pwff', blocks: [{ id: 'new-block', price: 10, movieKeys: [] }] },
+        { day: 1, blocks: [{ id: 'old-block', price: 10, movieKeys: [] }] },
+    ], passUser);
+    assert.equal((await resolveMovieAccess(d, { uid: 'passHolder', movieKey: 'new-block', mode: 'live' })).granted, true);
+    assert.equal((await resolveMovieAccess(d, { uid: 'passHolder', movieKey: 'old-block', mode: 'live' })).granted, false);
+});
+
+test('before a committee lineup exists, the admin-entered days are the PWFF days', async () => {
+    const d = daysDb([{ day: 1, blocks: [{ id: 'a', price: 10, movieKeys: [] }] }], passUser);
+    assert.equal((await resolveMovieAccess(d, { uid: 'passHolder', movieKey: 'a', mode: 'live' })).granted, true);
+});
+
+test('a partner festival block is never opened by the PWFF pass', async () => {
+    const d = daysDb([
+        { day: 1, blocks: [{ id: 'a', price: 10, movieKeys: [] }] },
+        { day: 1, partnerId: 'some-partner', blocks: [{ id: 'p', price: 10, movieKeys: [], partnerId: 'some-partner' }] },
+    ], passUser);
+    assert.equal((await resolveMovieAccess(d, { uid: 'passHolder', movieKey: 'p', mode: 'live' })).granted, false);
+});

@@ -608,6 +608,35 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
 
                             <section className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase text-amber-400 tracking-[0.4em]">Director's Note (any film)</h4>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-amber-500/10 space-y-5">
+                                    <p className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Shows on this film's page and details window. It does not show on the PWFF festival page; that page uses the Festival / PWFF Profile below.</p>
+                                    <div className="space-y-2">
+                                        <label className="form-label">Director's Note</label>
+                                        <textarea
+                                            name="directorNote"
+                                            value={formData.directorNote || ''}
+                                            onChange={handleChange}
+                                            rows={4}
+                                            placeholder="Why did you make this film? What do you want audiences to feel?"
+                                            className="form-input bg-black/40"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="form-label">Filmmaker Bio</label>
+                                        <textarea
+                                            name="filmmakerBio"
+                                            value={formData.filmmakerBio || ''}
+                                            onChange={handleChange}
+                                            rows={3}
+                                            placeholder="Short bio about the filmmaker..."
+                                            className="form-input bg-black/40"
+                                        />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-purple-400 tracking-[0.4em]">02. Festival / PWFF Profile</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-purple-500/10 space-y-5">
                                     <p className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">These fields appear on the PWFF festival page at cratetv.net/pwff</p>

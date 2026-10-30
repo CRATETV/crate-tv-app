@@ -9,6 +9,9 @@ export function promoProblem(promo: any, itemId: unknown, nowMs: number = Date.n
     if (!Number.isFinite(maxUses) || (Number(promo.usedCount) || 0) >= maxUses) return 'This promo code has reached its maximum usage limit.';
     if (promo.expiresAt && Date.parse(String(promo.expiresAt)) < nowMs) return 'This promo code has expired.';
     if (promo.itemId && promo.itemId !== itemId) return "This promo code doesn't apply to this item.";
+    // A free code must name its film or screening. One with no item would open
+    // everything on CRATE (every paid party and block), so it is refused.
+    if (!promo.itemId && promoMakesFree(promo)) return "This free code isn't linked to a film or screening, so it can't be used.";
     return null;
 }
 
@@ -20,6 +23,11 @@ export function priceAfterPromo(amountInCents: number, promo: any): number {
         return Math.max(0, Math.round(amountInCents * ((100 - pct) / 100)));
     }
     return amountInCents;
+}
+
+/** True when this code makes the ticket free (a one-time access code, or 100% off). Pure, tested. */
+export function promoMakesFree(promo: any): boolean {
+    return priceAfterPromo(10_000, promo) === 0;
 }
 
 // ── Pay what you want (watch parties) ──────────────────────────────────────

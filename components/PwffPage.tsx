@@ -12,6 +12,7 @@ import WatchPartyLobby from './WatchPartyLobby';
 import FestivalTicketFlow from './FestivalTicketFlow';
 import AudienceChoiceVote from './AudienceChoiceVote';
 
+import SafePoster from './SafePoster';
 // How long a block stays visible on the public festival page after its
 // watch party ends. See isBlockExpired in the main component. The window
 // itself now lives in types.ts, shared with the server-side cron that
@@ -169,7 +170,7 @@ const FilmRow: React.FC<{ movie: Movie; index: number; isUnlocked: boolean; onWa
             <span className="text-[10px] font-black text-gray-700 w-5 flex-shrink-0 pt-1">{String(index + 1).padStart(2, '0')}</span>
             <div className="flex-shrink-0 w-12">
                 <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-900 border border-white/5">
-                    {movie.poster && <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />}
+                    <SafePoster src={movie.poster} title={movie.title} className="w-full h-full object-cover" />
                 </div>
             </div>
             <div className="flex-grow min-w-0">

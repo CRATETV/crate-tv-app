@@ -30,7 +30,6 @@ import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
 import RokuManagementTab from './RokuManagementTab';
 import RokuAnalyticsTab from './RokuAnalyticsTab';
-import FilmmakerOutreachTab from './FilmmakerOutreachTab';
 import FestivalReportTab from './FestivalReportTab';
 import TicketCodesTab from './TicketCodesTab';
 import MonthlySpotlightTab from './MonthlySpotlightTab';
@@ -75,7 +74,7 @@ const normalizeTabIds = (ids: string[]): string[] =>
 
 // Hard-coded security boundary: never visible to non-master admins no matter
 // what is stored in Firestore.
-const MASTER_ONLY = ['permissions', 'system', 'money', 'refunds', 'contracts', 'roku', 'outreach', 'partners', 'storage'];
+const MASTER_ONLY = ['permissions', 'system', 'money', 'refunds', 'contracts', 'roku', 'partners', 'storage'];
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4">{children}</h3>
@@ -792,7 +791,6 @@ const AdminPage: React.FC = () => {
                             <section><SectionTitle>Roku analytics</SectionTitle><RokuAnalyticsTab analytics={analytics} movies={movies} /></section>
                         </div>
                     )}
-                    {activeTab === 'outreach' && <FilmmakerOutreachTab />}
                     {activeTab === 'system' && (
                         <div className="space-y-16">
                             <section><SectionTitle>Errors from the live site</SectionTitle><ErrorLogTab /></section>

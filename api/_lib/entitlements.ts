@@ -1,5 +1,5 @@
 import { Firestore } from 'firebase-admin/firestore';
-import { isOutsidePartner } from './partnerRules.js';
+import { isOutsidePartner, selectPwffDays } from './partnerRules.js';
 import { isFestivalPassActive } from './festivalPass.js';
 
 export type AccessMode = 'ondemand' | 'live';
@@ -32,7 +32,7 @@ export interface MovieAccessResult {
     filmKey: string | null;
 }
 
-interface FestivalBlock { id: string; price: number; movieKeys: string[]; day?: number; partnerId?: string; }
+interface FestivalBlock { id: string; price: number; movieKeys: string[]; day?: number; partnerId?: string; /** Part of the PWFF schedule (the only blocks the PWFF all-access pass opens). */ inPwff?: boolean; }
 
 /**
  * Resolves whether a user (by uid, or by Roku deviceId via roku_links) has real access to
@@ -87,7 +87,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
             let granted = false;
             if (unlockedWatchPartyKeys.includes(movieKey)) granted = true;
             // The PWFF all-access pass never covers partner festivals.
-            else if (hasFestivalAllAccess && !isOutsidePartner(directBlock.partnerId)) granted = true;
+            else if (hasFestivalAllAccess && directBlock.inPwff) granted = true;
             else if (isBlockUnlocked(movieKey)) granted = true;
             else if (directBlock.price === 0) granted = true;
             else granted = isRented(movieKey);
@@ -106,7 +106,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
         // A festival pass opens festival films only. A standalone paid watch
         // party (no festival block) used to fall into this line too, so every
         // pass holder got every paid watch party free (found Oct 23 2026).
-        else if (parentBlock && hasFestivalAllAccess && !isOutsidePartner(parentBlock.partnerId)) granted = true;
+        else if (parentBlock && hasFestivalAllAccess && parentBlock.inPwff) granted = true;
         else if (isBlockUnlocked(movieKey)) granted = true;
         else if (parentBlock) {
             if (isBlockUnlocked(parentBlock.id)) granted = true;
@@ -149,7 +149,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
     if (hasJuryPass) granted = true;
     else if (parentBlock) {
         const status = await getPartyStatus(db, parentBlock.id);
-        if ((hasFestivalAllAccess && !isOutsidePartner(parentBlock.partnerId)) || isBlockUnlocked(parentBlock.id) || unlockedWatchPartyKeys.includes(parentBlock.id)) {
+        if ((hasFestivalAllAccess && parentBlock.inPwff) || isBlockUnlocked(parentBlock.id) || unlockedWatchPartyKeys.includes(parentBlock.id)) {
             granted = status === 'ended';
         } else if (parentBlock.price === 0) {
             // Only a block priced at exactly $0 is free. A block with no
@@ -180,10 +180,15 @@ async function resolveUidFromDeviceId(db: Firestore, deviceId: string): Promise<
 
 async function getFestivalBlocks(db: Firestore): Promise<FestivalBlock[]> {
     const daysSnap = await db.collection('festival').doc('schedule').collection('days').get();
+    const dayData = daysSnap.docs.map(d => d.data() || {});
+    // The PWFF pass opens the PWFF schedule only. Older days left in the
+    // schedule (last year's, or ones entered before the committee lineup was
+    // published) are not part of it, and a partner festival never is.
+    const pwffDays = new Set<any>(selectPwffDays(dayData as any[]));
     const blocks: FestivalBlock[] = [];
-    for (const d of daysSnap.docs) {
-        for (const b of (d.data().blocks || [])) {
-            if (b?.id) blocks.push({ id: b.id, price: b.price, movieKeys: Array.isArray(b.movieKeys) ? b.movieKeys : [], day: isOutsidePartner(d.data().partnerId) ? undefined : d.data().day, partnerId: b.partnerId || d.data().partnerId || undefined });
+    for (const d of dayData as any[]) {
+        for (const b of (d.blocks || [])) {
+            if (b?.id) blocks.push({ id: b.id, price: b.price, movieKeys: Array.isArray(b.movieKeys) ? b.movieKeys : [], day: isOutsidePartner(d.partnerId) ? undefined : d.day, partnerId: b.partnerId || d.partnerId || undefined, inPwff: pwffDays.has(d) && !isOutsidePartner(b.partnerId || d.partnerId) });
         }
     }
     return blocks;

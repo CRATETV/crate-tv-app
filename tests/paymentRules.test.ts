@@ -46,3 +46,21 @@ test('premiere payments: fixed server prices ($25 booking, $50 free-premiere bal
     assert.equal(isPremierePayment('donation'), false);
     assert.equal(isPremierePayment('toString'), false);
 });
+
+import { promoMakesFree } from '../api/_lib/paymentRules';
+test('cast and crew codes: a free code makes a pay-what-you-want ticket free, a part-discount does not', () => {
+    assert.equal(promoMakesFree({ type: 'one_time_access' }), true);
+    assert.equal(promoMakesFree({ type: 'discount', discountValue: 100 }), true);
+    assert.equal(promoMakesFree({ type: 'discount', discountValue: 50 }), false);
+    assert.equal(promoMakesFree({ type: 'discount', discountValue: 0 }), false);
+    assert.equal(promoMakesFree(null), false);
+});
+
+test('a free code with no film is refused; a free code for one film works only there', () => {
+    const free = { type: 'one_time_access', maxUses: 5, usedCount: 0 };
+    assert.match(String(promoProblem(free, 'film-a')), /isn't linked/);
+    assert.equal(promoProblem({ ...free, itemId: 'film-a' }, 'film-a'), null);
+    assert.match(String(promoProblem({ ...free, itemId: 'film-a' }, 'film-b')), /doesn't apply/);
+    // a part-discount with no film is still fine
+    assert.equal(promoProblem({ type: 'discount', discountValue: 25, maxUses: 5, usedCount: 0 }, 'film-a'), null);
+});

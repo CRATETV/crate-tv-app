@@ -206,6 +206,9 @@ export interface Movie {
   zineUrl?: string;
   genres?: string[];
   subtitleUrl?: string;
+  // ── ANY FILM: shown on the film's own page and details window, never on the PWFF page
+  directorNote?: string;           // note from the director about the film
+  filmmakerBio?: string;           // short filmmaker bio
   // ── FESTIVAL / PWFF FIELDS ────────────────────────────────────────────────
   festivalDirectorNote?: string;   // note from the director about the film
   festivalFilmmakerBio?: string;   // short filmmaker bio

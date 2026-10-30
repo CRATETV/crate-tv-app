@@ -862,6 +862,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         setStreamProblem(null);
         if (!hasAccess || !movie || movie.isLiveStream) return;
         let cancelled = false;
+        let retryTimer: ReturnType<typeof setTimeout> | undefined;
         (async () => {
             try {
                 // Directors/hosts verified with the backstage key get the same
@@ -876,6 +877,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
                 });
+                if (res.status === 425) {
+                    // Not started yet: the server only hands out the film at the
+                    // start time. Ask again just before it is due.
+                    const info = await res.json().catch(() => ({}));
+                    const waitMs = Math.min(30, Math.max(2, Number(info?.retryAfterSeconds) || 8)) * 1000;
+                    if (!cancelled) retryTimer = setTimeout(() => { if (!cancelled) setStreamRetry(n => n + 1); }, waitMs);
+                    return;
+                }
                 if (!res.ok) {
                     console.error('[WatchPartyPage] get-stream-url failed:', res.status);
                     if (!cancelled) setStreamProblem(res.status === 401 ? 'signin' : res.status === 410 ? 'unavailable' : 'error');
@@ -888,7 +897,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 if (!cancelled) setStreamProblem('error');
             }
         })();
-        return () => { cancelled = true; };
+        return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
     }, [hasAccess, movie, movieKey, isBackstageVerified, verifiedBackstageKey, getUserIdToken, streamRetry, user?.uid]);
 
     const playableUrl = signedUrl || undefined;
