@@ -1063,13 +1063,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         }}
                     >
                         {/* Blurred backdrop */}
-                        <img src={movie.poster} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" crossOrigin="anonymous" />
-                        {/* Poster */}
-                        <img
+                        {movie.poster && (
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}&w=400`} alt="" role="presentation" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                        )}
+                        {/* Poster (shows a title tile instead of a broken icon if the link is bad) */}
+                        <SafePoster
                             src={movie.poster}
-                            alt={movie.title}
+                            title={movie.title}
+                            width={1280}
                             className={`w-full h-full object-contain relative z-10 ${!hasAccess ? 'opacity-70' : ''}`}
-                            crossOrigin="anonymous"
                         />
                         {/* Bottom fade into page */}
                         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-20" />
