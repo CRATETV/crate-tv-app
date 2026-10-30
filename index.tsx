@@ -68,6 +68,9 @@ import RedCarpetPage from './components/RedCarpetPage';
 import FaqPage from './components/FaqPage';
 import FestivalHelpButton from './components/FestivalHelpButton';
 import { isOutsidePartner } from './api/_lib/partnerRules';
+import { installContentProtection } from './services/contentProtection';
+
+installContentProtection();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

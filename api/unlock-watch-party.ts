@@ -102,7 +102,7 @@ export default async function handler(req: any, res: any) {
       const parent = daysSnap.docs.flatMap(d => (d.data().blocks || []) as any[]).find(b => Array.isArray(b?.movieKeys) && b.movieKeys.includes(movieKey));
       isFreeParty = parent
         ? parent.price === 0
-        : (await db.collection('movies').doc(movieKey).get()).data()?.isWatchPartyPaid !== true;
+        : await (async () => { const d = (await db.collection('movies').doc(movieKey).get()).data(); return d?.isWatchPartyPaid !== true && d?.isPrivateScreening !== true; })();
     }
     if (!isFreeParty) {
       return res.status(200).json({ ok: true, viaTimedAccess: true });

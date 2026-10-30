@@ -4,6 +4,7 @@ import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import SEO from './SEO';
+import SafePoster from './SafePoster';
 import { ActorProfile, Movie } from '../types';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
@@ -17,7 +18,7 @@ const ActorCard: React.FC<{ actor: ActorProfile }> = ({ actor }) => {
     return (
         <a href={`/actors-directory/${actor.slug}`} onClick={handleNavigate} className="group block text-center">
             <div className="relative aspect-square w-full rounded-full overflow-hidden mx-auto max-w-[200px] border-4 border-gray-800 group-hover:border-purple-500 transition-colors duration-300 bg-gray-900">
-                <img src={actor.photo} alt={actor.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
+                <SafePoster src={actor.photo} title={actor.name} width={400} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
             </div>
             <h3 className="mt-4 text-lg font-bold text-white group-hover:text-purple-400 transition-colors">{actor.name}</h3>
         </a>

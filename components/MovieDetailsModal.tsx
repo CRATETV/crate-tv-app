@@ -4,6 +4,7 @@ import Countdown from './Countdown';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import SquarePaymentModal from './SquarePaymentModal';
+import SafePoster from './SafePoster';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -133,12 +134,23 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 md:p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
+      {/* Phone close button: outside the scrolling box and below the notch / status bar, so it is always tappable. */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        aria-label="Close"
+        className="md:hidden fixed right-3 z-[120] flex items-center justify-center w-12 h-12 rounded-full text-white bg-black/60 backdrop-blur-xl border border-white/20 shadow-2xl active:scale-95"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
       <div 
         className="bg-[#0a0a0a] md:rounded-[3rem] shadow-2xl w-full max-w-5xl h-full md:h-auto md:max-h-[92vh] overflow-y-auto relative scrollbar-hide border border-white/10"
         onClick={(e) => e.stopPropagation()}
         ref={modalContentRef}
       >
-        <button onClick={onClose} className="fixed md:absolute top-5 right-5 text-white bg-black/40 backdrop-blur-xl rounded-full p-2.5 hover:bg-red-600 transition-all z-[110] shadow-2xl border border-white/10">
+        <button onClick={onClose} aria-label="Close" className="hidden md:block absolute top-5 right-5 text-white bg-black/40 backdrop-blur-xl rounded-full p-2.5 hover:bg-red-600 transition-all z-[110] shadow-2xl border border-white/10">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -213,7 +225,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                                         className="flex flex-col items-center text-center group transition-all transform hover:scale-105"
                                     >
                                         <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-white/10 mb-4 group-hover:border-red-600 transition-colors shadow-2xl bg-gray-900">
-                                            <img src={actor.photo} alt={actor.name} className="w-full h-full object-cover" />
+                                            <SafePoster src={actor.photo} title={actor.name} width={256} className="w-full h-full object-cover" />
                                         </div>
                                         <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-tighter group-hover:text-red-500 transition-colors px-2 leading-tight">{actor.name}</p>
                                     </button>

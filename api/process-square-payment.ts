@@ -427,6 +427,11 @@ export async function POST(request: Request) {
             if (isPastAvailableUntil(movieData as any, Date.now())) {
                 return new Response(JSON.stringify({ error: 'This film is no longer available on CRATE.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
             }
+            // Code-only screening: the only way in is a free invite code made for
+            // this film. No card sale, and no part-discount code (Oct 30 2026).
+            if (movieData?.isPrivateScreening === true && !(promo && promoMakesFree(promo))) {
+                return new Response(JSON.stringify({ error: 'This is a private screening. You need a valid invite code to get in.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+            }
             // A paid watch party film that isn't for sale on its own is sold
             // only as a party ticket. A $5 "rental" of it used to be possible by
             // calling this endpoint directly (Oct 23 2026). Festival films stay

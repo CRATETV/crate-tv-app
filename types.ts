@@ -190,6 +190,8 @@ export interface Movie {
   watchPartyPrice?: number;
   /** Viewers choose their price (minimum $3, see api/_lib/paymentRules.ts). */
   watchPartyPayWhatYouWant?: boolean;
+  /** Code-only screening: nobody gets in without a ticket from a free invite code. */
+  isPrivateScreening?: boolean;
   /** When its last watch party premiered (kept after the party ends; drives "Just Premiered"). */
   lastPremiereAt?: string;
   isForSale?: boolean;

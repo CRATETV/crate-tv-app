@@ -20,6 +20,7 @@ interface WatchableItem {
     isWatchPartyPaid?: boolean;
     watchPartyPrice?: number;
     watchPartyPayWhatYouWant?: boolean; // Only for movies
+    isPrivateScreening?: boolean; // Only for movies
     fullMovie?: string; // Only for movies
     movieKeys?: string[]; // Only for blocks
 }
@@ -1535,6 +1536,20 @@ const MovieRow: React.FC<{
                         Pay what you want (from ${PWYW_MIN_DOLLARS})
                     </label>
                 )}
+                {item.type === 'movie' && (
+                    <label className="mt-2 flex items-center gap-2 text-[11px] font-bold text-gray-300 cursor-pointer"
+                        title="Nobody gets in without a free invite code made for this film (Admin → Promo codes). Card sales are turned off.">
+                        <input
+                            type="checkbox"
+                            className="w-3.5 h-3.5 accent-amber-500"
+                            checked={!!item.isPrivateScreening}
+                            onChange={e => onChange(e.target.checked
+                                ? { isPrivateScreening: true, isWatchPartyPaid: true, watchPartyPayWhatYouWant: false }
+                                : { isPrivateScreening: false })}
+                        />
+                        Private screening (invite code only)
+                    </label>
+                )}
             </td>
             <td className="p-3">
                 <button 
@@ -1675,6 +1690,7 @@ const WatchPartyManager: React.FC<{
                 isWatchPartyPaid: m.isWatchPartyPaid,
                 watchPartyPrice: m.watchPartyPrice,
                 watchPartyPayWhatYouWant: m.watchPartyPayWhatYouWant,
+                isPrivateScreening: m.isPrivateScreening,
                 fullMovie: m.fullMovie
             });
         });
