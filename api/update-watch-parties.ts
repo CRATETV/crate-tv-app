@@ -1,4 +1,5 @@
 
+import { testPartyResetDue, TEST_PARTY_RESET } from './_lib/testParty.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
@@ -130,10 +131,22 @@ export async function GET(request: Request) {
         const partyStates = new Map();
         partiesSnapshot.forEach(doc => partyStates.set(doc.id, doc.data()));
 
+        // 1b. TEST PARTIES clean up after themselves (api/_lib/testParty.ts)
+        const resetIds = new Set<string>();
+        moviesSnapshot.forEach(doc => {
+            if (testPartyResetDue(doc.data(), partyStates.get(doc.id), now.getTime())) {
+                batch.update(doc.ref, { ...TEST_PARTY_RESET });
+                batch.delete(db.collection('watch_party_schedule').doc(doc.id));
+                resetIds.add(doc.id);
+                mutationsCount++;
+            }
+        });
+
         // 2. AUTO-START: Standalone Movies
         moviesSnapshot.forEach(doc => {
             const movie = doc.data();
             const state = partyStates.get(doc.id);
+            if (resetIds.has(doc.id)) return;
             const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
             
             // shouldAutoStart: only if this scheduled run hasn't happened yet —

@@ -187,6 +187,8 @@ export interface Movie {
   watchPartyStartTime?: string;
   watchPartyIntroVideoUrl?: string;  // Plays before the film — opening night use
   isWatchPartyPaid?: boolean;
+  /** Marked as a test: when the party ends the film is switched back to normal by itself (api/_lib/testParty.ts). */
+  isTestParty?: boolean;
   watchPartyPrice?: number;
   /** Viewers choose their price (minimum $3, see api/_lib/paymentRules.ts). */
   watchPartyPayWhatYouWant?: boolean;
