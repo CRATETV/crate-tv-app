@@ -4,6 +4,8 @@ import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_l
 import { isStaleLive } from './_lib/watchPartyRules.js';
 import { rankByViews } from './_lib/topTen.js';
 import { rokuImageUrl } from './_lib/imageHosts.js';
+import { findFilmsWithoutVideo, storageKeyCheck } from './_lib/videoExists.js';
+import { rokuHlsProxyUrl } from './_lib/hlsRewrite.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -40,6 +42,15 @@ function isRokuPlayable(url: string | undefined | null): boolean {
     return !(u.includes('youtube.com') || u.includes('youtu.be') || u.includes('vimeo.com'));
 }
 
+// The address a Roku is given for a video. Streaming (HLS) films go through the
+// cleaned-playlist page (api/_lib/hlsRewrite.ts); single files get a signed link.
+async function rokuVideoAddress(raw: string): Promise<string | null> {
+    const hls = rokuHlsProxyUrl(raw);
+    if (hls) return hls;
+    const signed = await signStreamUrl(raw);
+    return signed ? signed.url : null;
+}
+
 // Series (e.g. "Made in New Jersey"): the episodes the Roku can play, in order.
 // Episode video addresses are only included when the viewer has access, and
 // are signed (short-lived) like full films.
@@ -53,8 +64,7 @@ async function rokuEpisodes(movie: Movie, isUnlocked: boolean) {
         let url = '';
         if (isUnlocked) {
             const raw = sanitizeUrl(ep.url);
-            const signed = await signStreamUrl(raw);
-            url = signed ? signed.url : raw;
+            url = (await rokuVideoAddress(raw)) || raw;
         }
         const intro = introWindow(movie, ep);
         return {
@@ -94,8 +104,8 @@ async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: b
     // since the real access gate is the isUnlocked check, not the signature.
     let signedFullStreamUrl = fullStreamUrl;
     if (isUnlocked && fullStreamUrl) {
-        const signed = await signStreamUrl(fullStreamUrl);
-        if (signed) signedFullStreamUrl = signed.url;
+        const signed = await rokuVideoAddress(fullStreamUrl);
+        if (signed) signedFullStreamUrl = signed;
         else console.warn(`[roku-feed] Could not sign stream URL for "${movie.title}" — falling back to raw URL.`);
     }
 
@@ -431,8 +441,15 @@ export async function GET(request: Request) {
     const categories: any[] = [];
     const publicSquare: any[] = [];
 
+    // Films whose video file is gone from storage are left out (never a Top Ten
+    // tile that only says "loading"). See api/_lib/videoExists.ts.
+    const noVideo = await findFilmsWithoutVideo(
+        (Object.values(moviesObj) as Movie[]).map(m => ({ key: m.key, address: sanitizeUrl(assets[m.key]?.rokuStreamUrl || m.rokuStreamUrl || m.fullMovie || ''), liveStreamUrl: m.liveStreamUrl, episodes: m.episodes })),
+        storageKeyCheck()).catch(() => new Set<string>());
+
     const isValidForRoku = (m: Movie, isLiveOverride: boolean = false) => {
         if (!m) return false;
+        if (m.key && noVideo.has(m.key)) { console.log(`Movie rejected for Roku [${m.key}]: video file is missing from storage`); return false; }
         const hasTitle = !!m.title;
         const hasPoster = !!m.poster || !!m.tvPoster || !!m.rokuHeroImage;
         const isNotUnlisted = !m.isUnlisted && !isPastAvailableUntil(m, Date.now());

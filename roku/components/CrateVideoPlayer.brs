@@ -549,7 +549,6 @@ Function ShowEndCard() as Boolean
     group.RemoveChildrenIndex(group.GetChildCount(), 0)
     TILE_W = 420 : GAP = 40
     startX = Int((1920 - (tiles.Count() * TILE_W + (tiles.Count() - 1) * GAP)) / 2)
-    encoder = CreateObject("roUrlTransfer")
     For i = 0 To tiles.Count() - 1
         t = tiles[i]
         tile = group.CreateChild("Group")
@@ -566,7 +565,7 @@ Function ShowEndCard() as Boolean
         white.color = "#FFFFFF" : white.width = 252 : white.height = 252 : white.translation = [Int((TILE_W - 252) / 2), 118]
         qr = tile.CreateChild("Poster")
         qr.width = 236 : qr.height = 236 : qr.translation = [Int((TILE_W - 236) / 2), 126]
-        qr.uri = "https://api.qrserver.com/v1/create-qr-code/?size=236x236&margin=0&data=" + encoder.Escape(t.url)
+        qr.uri = "https://api.qrserver.com/v1/create-qr-code/?size=236x236&margin=0&data=" + UrlEncode(t.url)
         u = tile.CreateChild("Label")
         u.text = t.shown : u.font = CrateFont("semibold", 18) : u.color = "#FFFFFF"
         u.width = TILE_W - 40 : u.maxLines = 1 : u.horizAlign = "center" : u.translation = [20, 400]

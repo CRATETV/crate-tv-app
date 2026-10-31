@@ -78,7 +78,27 @@ Sub Init()
     fade.keyValue = [0.0, 1.0]
 End Sub
 
+' Safety net: whatever is wrong with ONE film's data, the page still opens and
+' the channel never closes. A problem is printed to the debug log instead.
 Sub OnContentChange()
+    Try
+        RenderTitle()
+    Catch e
+        Print "CrateTV [Title]: could not draw the page fully - " + e.message
+        film = m.top.content
+        If film <> Invalid
+            m.titleLabel.text = Txt(film, "title")
+            m.unlockCard.visible = false
+            m.buttonsGroup.RemoveChildrenIndex(m.buttonsGroup.GetChildCount(), 0)
+            m.buttons = []
+            If Txt(film, "trailerUrl") <> "" Then AddButton("▶  Watch trailer", "trailer")
+            m.focusIndex = 0
+            UpdateButtonFocus()
+        End If
+    End Try
+End Sub
+
+Sub RenderTitle()
     film = m.top.content
     If film = Invalid Then Return
     locked = (film.HasField("isUnlocked") And Not film.isUnlocked)
@@ -147,8 +167,7 @@ Sub OnContentChange()
             m.unlockPrice.text = "Watch on any screen once unlocked"
         End If
         ' Same free QR service the Now Streaming tab already uses.
-        encoder = CreateObject("roUrlTransfer")
-        m.qrCode.uri = "https://api.qrserver.com/v1/create-qr-code/?size=216x216&margin=0&data=" + encoder.Escape(pageUrl)
+        m.qrCode.uri = "https://api.qrserver.com/v1/create-qr-code/?size=216x216&margin=0&data=" + UrlEncode(pageUrl)
         If IsDeviceLinked()
             m.unlockNote.text = "This page updates by itself once you've paid."
         Else

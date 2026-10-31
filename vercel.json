@@ -38,6 +38,7 @@
     }
   ],
   "functions": {
+    "api/warm-roku-images.ts": { "maxDuration": 60 },
     "api/backup-firestore.ts": { "maxDuration": 60 },
     "api/admin-backup.ts": { "maxDuration": 60 }
   },
@@ -92,6 +93,10 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    },
+    {
+      "path": "/api/warm-roku-images",
+      "schedule": "20 */3 * * *"
     }
   ],
   "buildCommand": "npm run build",

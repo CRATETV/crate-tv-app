@@ -4,6 +4,30 @@
 ' ##############################################################################
 
 ' =============================================================================
+' WEB ADDRESS HELPER (works anywhere, including screens)
+' =============================================================================
+' Makes text safe to put inside a web address (spaces become %20, and so on).
+' Pure BrightScript on purpose: the old way (roUrlTransfer.Escape) needs a
+' network object, which Roku does not allow on a screen's own thread and which
+' can close the channel. Letters, numbers and - _ . ~ stay as they are.
+Function UrlEncode(text as String) as String
+    bytes = CreateObject("roByteArray")
+    bytes.FromAsciiString(text)
+    hex = "0123456789ABCDEF"
+    out = ""
+    For i = 0 To bytes.Count() - 1
+        b = bytes[i]
+        isSafe = (b >= 48 And b <= 57) Or (b >= 65 And b <= 90) Or (b >= 97 And b <= 122) Or b = 45 Or b = 95 Or b = 46 Or b = 126
+        If isSafe
+            out = out + Chr(b)
+        Else
+            out = out + "%" + Mid(hex, (b \ 16) + 1, 1) + Mid(hex, (b Mod 16) + 1, 1)
+        End If
+    End For
+    Return out
+End Function
+
+' =============================================================================
 ' REGISTRY HELPER FUNCTIONS
 ' =============================================================================
 Function RegistryRead(key as String, section as String) as Dynamic

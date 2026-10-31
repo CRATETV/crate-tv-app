@@ -100,8 +100,7 @@ Sub OnLinkCodeTaskComplete()
                 ch = UCase(Mid(linkCode, ci, 1))
                 If (ch >= "A" And ch <= "Z") Or (ch >= "0" And ch <= "9") Then plain = plain + ch
             End For
-            encoder = CreateObject("roUrlTransfer")
-            m.qrCode.uri = "https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=0&data=" + encoder.Escape("https://cratetv.net/link?code=" + plain)
+            m.qrCode.uri = "https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=0&data=" + UrlEncode("https://cratetv.net/link?code=" + plain)
             
             ' Start polling for authentication
             StartAuthPolling()

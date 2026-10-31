@@ -71,7 +71,7 @@ export async function signStreamUrl(rawUrl: string): Promise<{ url: string; expi
  * informal stand-in for a literal space in the filename (non-standard for a URL path, but
  * that's what's actually in use here) — "+" must be converted to a space, not left literal.
  */
-function extractS3Key(rawUrl: string, bucketName: string, region: string): string | null {
+export function extractS3Key(rawUrl: string, bucketName: string, region: string): string | null {
     let parsed: URL;
     try { parsed = new URL(rawUrl); } catch { return null; }
 

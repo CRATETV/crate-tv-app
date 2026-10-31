@@ -335,8 +335,7 @@ Sub StartTally()
     If key = "" And m.currentFilm <> Invalid Then key = m.currentFilm.id
     If key = "" Then Return
     m.tallyBlockId = key
-    encoder = CreateObject("roUrlTransfer")
-    m.top.FindNode("voteQr").uri = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=" + encoder.Escape("https://cratetv.net/watchparty/" + key)
+    m.top.FindNode("voteQr").uri = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=" + UrlEncode("https://cratetv.net/watchparty/" + key)
     m.top.FindNode("voteUrl").text = "cratetv.net/watchparty/" + key
     FetchTally()
     m.tallyTimer.control = "start"

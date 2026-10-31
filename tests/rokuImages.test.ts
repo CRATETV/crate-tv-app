@@ -25,3 +25,11 @@ test('empty, foreign, svg and gif addresses are returned unchanged', () => {
     assert.equal(rokuImageUrl(S3 + 'x.gif', 900), S3 + 'x.gif');
     assert.ok(isAllowedImageUrl(S3 + 'x.jpg'));
 });
+
+import { warmUrls } from '../api/warm-roku-images.js';
+test('warm-up lists each film\'s Roku pictures once, skipping unlisted films and foreign pictures', () => {
+    const p = 'https://d3jhtrl1gnrh4b.cloudfront.net/p.jpg';
+    const urls = warmUrls([{ poster: p, tvPoster: p }, { poster: p, isUnlisted: true }, { poster: 'https://example.com/x.jpg' }, null]);
+    assert.equal(urls.length, 2);                       // 900 px poster + 1920 px hero
+    assert.ok(urls.every(u => u.startsWith('https://cratetv.net/api/proxy-image')));
+});
