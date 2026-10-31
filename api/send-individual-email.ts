@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { MAIL_COLLECTION, prepareAttachments, replyToAddress, buildSentRecord, stripHtml } from './_lib/mailLog.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
@@ -14,7 +15,7 @@ const LOGO_URL = 'https://cratetv.net/email-logo-on-dark.png';
 
 export async function POST(request: Request) {
     try {
-        const { password: __raw_password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey } = await request.json();
+        const { password: __raw_password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey, attachments } = await request.json();
         const password = await resolveAdminCredential(__raw_password);
 
         // 1. Initialize DB first to check dynamic permissions
@@ -57,8 +58,18 @@ export async function POST(request: Request) {
         const businessEmail = settingsData?.businessEmail || FALLBACK_FROM;
         const signature = settingsData?.emailSignature || "";
 
+        // Files (receipts and so on) are checked before anything is sent.
+        const prepared = prepareAttachments(attachments);
+        if (!prepared.ok) {
+            return new Response(JSON.stringify({ error: prepared.error }), { status: 400 });
+        }
+        const files = prepared.files;
+
         // 4. Handle Scheduling Logic
         if (scheduledAt) {
+            if (files.length) {
+                return new Response(JSON.stringify({ error: 'Scheduled emails cannot carry attachments yet. Send it now, or remove the file.' }), { status: 400 });
+            }
             await db.collection('scheduled_dispatches').add({
                 email,
                 subject,
@@ -78,12 +89,14 @@ export async function POST(request: Request) {
         const plainText = htmlBody.replace(/<[^>]+>/g, '').trim();
 
         // 6. Execute Transmission via Resend
-        const { error } = await resend.emails.send({
+        const { data: sent, error } = await resend.emails.send({
             from: `Crate TV <${businessEmail}>`,
             to: [email],
             subject: subject,
-            reply_to: businessEmail,
+            // Replies go to the dashboard mailbox when it has been set up (MAIL_INBOUND_ADDRESS).
+            reply_to: replyToAddress({ MAIL_INBOUND_ADDRESS: process.env.MAIL_INBOUND_ADDRESS }, businessEmail),
             text: plainText,
+            attachments: files.length ? files.map(f => ({ filename: f.filename, content: f.content })) : undefined,
             html: `
                 <!DOCTYPE html>
                 <html lang="en">
@@ -155,7 +168,7 @@ export async function POST(request: Request) {
                                     <!-- Footer -->
                                     <tr>
                                         <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 28px 40px;">
-                                            <p style="font-size: 10px; color: #666666; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; margin: 0 0 8px 0;">Global Independent Infrastructure</p>
+                                            <p style="font-size: 10px; color: #666666; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; margin: 0 0 8px 0;">Independent film, streaming worldwide</p>
                                             <p style="font-size: 9px; color: #444444; margin: 0;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA // NYC.</p>
                                         </td>
                                     </tr>
@@ -170,6 +183,17 @@ export async function POST(request: Request) {
         });
 
         if (error) throw new Error(`Resend Cloud Error: ${error.message}`);
+
+        // Keep a copy in the dashboard Sent folder. If saving the copy fails the
+        // email has still gone out, so this never turns into an error.
+        try {
+            await db.collection(MAIL_COLLECTION).add(buildSentRecord({
+                resendId: sent?.id, fromEmail: businessEmail, to: email, subject,
+                text: stripHtml(htmlBody.replace(/<br\s*\/?>/gi, '\n')), files, movieTitle, nowIso: new Date().toISOString(),
+            }));
+        } catch (logErr) {
+            console.error('[Crate API] Sent copy not saved:', logErr);
+        }
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
 
