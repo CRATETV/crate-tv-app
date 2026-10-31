@@ -35,12 +35,22 @@
     {
       "path": "/api/backup-firestore",
       "schedule": "40 7 * * 0"
+    },
+    {
+      "path": "/api/warm-roku-images",
+      "schedule": "20 */3 * * *"
     }
   ],
   "functions": {
-    "api/warm-roku-images.ts": { "maxDuration": 60 },
-    "api/backup-firestore.ts": { "maxDuration": 60 },
-    "api/admin-backup.ts": { "maxDuration": 60 }
+    "api/warm-roku-images.ts": {
+      "maxDuration": 60
+    },
+    "api/backup-firestore.ts": {
+      "maxDuration": 60
+    },
+    "api/admin-backup.ts": {
+      "maxDuration": 60
+    }
   },
   "rewrites": [
     {
@@ -93,10 +103,6 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
-    },
-    {
-      "path": "/api/warm-roku-images",
-      "schedule": "20 */3 * * *"
     }
   ],
   "buildCommand": "npm run build",
