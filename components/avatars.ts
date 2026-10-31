@@ -1,5 +1,7 @@
 
-export const avatars: { [key: string]: string } = {
+import { applySeason, seasonFor, seasonOverrideFromPage } from './seasonalAvatars';
+
+const baseAvatars: { [key: string]: string } = {
     fox: `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -125,3 +127,14 @@ export const avatars: { [key: string]: string } = {
         </svg>
     `,
 };
+
+// Everything on the site reads avatars[key]. During a holiday window each read
+// returns the same avatar wearing the holiday look (components/seasonalAvatars.ts);
+// outside a window it is exactly the normal avatar.
+export const avatars: { [key: string]: string } = new Proxy(baseAvatars, {
+    get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver);
+        if (typeof prop !== 'string' || typeof value !== 'string') return value;
+        return applySeason(value, prop, seasonFor(new Date(), seasonOverrideFromPage()));
+    },
+});
