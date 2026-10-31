@@ -4,7 +4,7 @@ import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_l
 import { isStaleLive } from './_lib/watchPartyRules.js';
 import { rankByViews } from './_lib/topTen.js';
 import { rokuImageUrl, ROKU_POSTER_WIDTH, ROKU_HERO_WIDTH } from './_lib/imageHosts.js';
-import { findFilmsWithoutVideo, storageKeyCheck } from './_lib/videoExists.js';
+import { findFilmsWithoutVideo, storageKeyCheck, firstWorkingAddress } from './_lib/videoExists.js';
 import { rokuHlsProxyUrl } from './_lib/hlsRewrite.js';
 import { explainFilm, findFilm } from './_lib/rokuWhy.js';
 
@@ -457,6 +457,25 @@ export async function GET(request: Request) {
     const noVideo = await findFilmsWithoutVideo(
         (Object.values(moviesObj) as Movie[]).map(m => ({ key: m.key, address: sanitizeUrl(assets[m.key]?.rokuStreamUrl || m.rokuStreamUrl || m.fullMovie || ''), liveStreamUrl: m.liveStreamUrl, episodes: m.episodes })),
         storageKeyCheck()).catch(() => new Set<string>());
+
+    // The Roku's own address can be stale while the film's main video (the one the
+    // website plays) is fine. Use whichever address really exists, in this order,
+    // so a stale Roku address never hides a film that plays on the website.
+    if (noVideo.size > 0) {
+        const check = storageKeyCheck();
+        for (const key of Array.from(noVideo)) {
+            const m = moviesObj[key];
+            if (!m) continue;
+            const good = await firstWorkingAddress([
+                sanitizeUrl(assets[key]?.rokuStreamUrl || ''), sanitizeUrl(m.rokuStreamUrl || ''), sanitizeUrl(m.fullMovie || ''),
+            ], check).catch(() => null);
+            if (good) {
+                assets[key] = { ...(assets[key] || {}), rokuStreamUrl: good } as RokuAsset;
+                moviesObj[key] = { ...m, rokuStreamUrl: good } as Movie;
+                noVideo.delete(key);
+            }
+        }
+    }
 
     if (whyParam) {
         const film = findFilm(moviesObj as Record<string, any>, whyParam);

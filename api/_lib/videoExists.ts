@@ -64,3 +64,22 @@ export async function findFilmsWithoutVideo(movies: FilmVideoCheck[], check: Key
     await Promise.race([Promise.all(work), new Promise(r => setTimeout(r, timeoutMs))]);
     return missing;
 }
+
+/**
+ * A film's Roku address can be out of date (an old file that was replaced) while the
+ * main video address, the one the website plays, is fine. Given the addresses in order
+ * of preference, returns the first one whose file is NOT confirmed missing, or null.
+ */
+export async function firstWorkingAddress(candidates: (string | undefined | null)[], check: KeyCheck | null): Promise<string | null> {
+    if (!check) return null;
+    const seen = new Set<string>();
+    for (const c of candidates) {
+        if (!isVideoAddress(c) || seen.has(c)) continue;
+        seen.add(c);
+        const keys = keysFromUrl(c);
+        if (keys.length === 0) return c;                       // not one of ours: assume fine
+        const answers = await Promise.all(keys.map(k => check(k)));
+        if (!answers.every(x => x === 'no')) return c;          // found, or any doubt: usable
+    }
+    return null;
+}
