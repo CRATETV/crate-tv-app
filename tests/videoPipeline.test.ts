@@ -24,8 +24,20 @@ test('the streaming version goes in hsl/<name>/ with a main playlist named after
 test('job settings match ops/video/convert-film.sh', () => {
     const j = jobSettings('cratetelevision', 'originals/x.mov', 's3://cratetelevision/hsl/x/');
     assert.equal(j.Inputs[0].FileInput, 's3://cratetelevision/originals/x.mov');
-    assert.deepEqual(j.OutputGroups[0].Outputs.map(o => o.NameModifier), ['_1080p', '_720p', '_360p']);
-    assert.equal(j.OutputGroups[0].OutputGroupSettings.HlsGroupSettings.SegmentLength, 10);
+    assert.deepEqual(j.OutputGroups[0].Outputs.map(o => o.NameModifier), ['_1080p', '_720p', '_480p', '_360p', '_270p']);
+    assert.equal(j.OutputGroups[0].OutputGroupSettings.HlsGroupSettings.SegmentLength, 6);
+});
+
+test('quality ladder: every step is well below the one above, same GOP everywhere, 6 s pieces divide evenly', () => {
+    const rungs = jobSettings('b', 'k', 's3://b/h/').OutputGroups[0].Outputs;
+    const rates = rungs.map(r => r.VideoDescription.CodecSettings.H264Settings.MaxBitrate);
+    for (let i = 1; i < rates.length; i++) assert.ok(rates[i] < rates[i - 1] * 0.7, `step ${i} too close to the one above`);
+    assert.ok(rates[0] / rates[1] < 2.2 && rates[1] / rates[2] <= 2.2 && rates[2] / rates[3] <= 2.2, 'no big gaps');
+    for (const r of rungs) {
+        const h = r.VideoDescription.CodecSettings.H264Settings;
+        assert.equal(h.GopSizeUnits, 'SECONDS');
+        assert.equal(6 % h.GopSize, 0);
+    }
 });
 
 test('upload pieces and runtime', () => {

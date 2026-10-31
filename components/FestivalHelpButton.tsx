@@ -50,7 +50,7 @@ const SignInFirst: React.FC = () => (
     </div>
 );
 
-/** placement 'top' keeps the button clear of video controls and chat on the watch party page. */
+/** placement 'top' keeps the button clear of video controls and chat on the watch party page. On phones it sits low, above the chat box, so it never covers the film. */
 const FestivalHelpButton: React.FC<{ blocks?: FilmBlock[]; placement?: 'bottom' | 'top' }> = ({ blocks, placement = 'bottom' }) => {
     const { user, getUserIdToken, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
     const { pwffFestivalData } = useFestival();
@@ -114,16 +114,14 @@ const FestivalHelpButton: React.FC<{ blocks?: FilmBlock[]; placement?: 'bottom' 
         <>
             <button type="button" onClick={() => { setOpen(o => !o); if (open) reset(); }}
                 className={placement === 'top'
-                    ? 'fixed right-3 z-[600] flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/70 backdrop-blur border border-white/20 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black/90'
+                    ? 'fixed right-3 z-[600] flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/70 backdrop-blur border border-white/20 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black/90 bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] md:bottom-auto md:top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'
                     : 'fixed bottom-24 md:bottom-20 right-4 z-[600] flex items-center gap-2 px-4 py-3 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-transform'}
-                aria-expanded={open} aria-label="Need help?"
-                style={placement === 'top' ? { top: 'calc(env(safe-area-inset-top, 0px) + 4.75rem)' } : undefined}>
+                aria-expanded={open} aria-label="Need help?">
                 <span aria-hidden>?</span> {open ? 'Close' : placement === 'top' ? 'Help' : 'Need help?'}
             </button>
             {open && (
                 <div role="dialog" aria-label="Festival help"
-                    className={`fixed ${placement === 'top' ? '' : 'bottom-40 md:bottom-36'} right-4 z-[600] w-[calc(100vw-2rem)] max-w-sm max-h-[75vh] overflow-y-auto rounded-2xl bg-[#111] border border-white/15 shadow-2xl p-5 text-white`}
-                    style={placement === 'top' ? { top: 'calc(env(safe-area-inset-top, 0px) + 8.25rem)' } : undefined}>
+                    className={`fixed ${placement === 'top' ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+10rem)] max-h-[60vh] md:bottom-auto md:top-[calc(env(safe-area-inset-top,0px)+8.25rem)] md:max-h-[75vh]' : 'bottom-40 md:bottom-36 max-h-[75vh]'} right-4 z-[600] w-[calc(100vw-2rem)] max-w-sm overflow-y-auto rounded-2xl bg-[#111] border border-white/15 shadow-2xl p-5 text-white`}>
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500">Festival help</p>
                         {view !== 'menu' && <button type="button" className="text-xs text-gray-400 hover:text-white" onClick={reset}>← Back</button>}

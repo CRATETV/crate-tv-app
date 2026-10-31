@@ -2,6 +2,7 @@ import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_lib/filmAvailability.js';
 import { isStaleLive } from './_lib/watchPartyRules.js';
+import { rankByViews } from './_lib/topTen.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -172,6 +173,37 @@ async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: b
     } as RokuMovie;
 }
 
+// One read of the linked account per request (the feed used to read the same
+// two documents three times, one after another).
+const linkedCache = new Map<string, Promise<{ userId: string; userData: any } | null>>();
+function loadLinked(db: any, deviceId: string) {
+    let p = linkedCache.get(deviceId);
+    if (!p) {
+        p = (async () => {
+            const linkDoc = await db.collection('roku_links').doc(deviceId).get();
+            if (!linkDoc.exists) return null;
+            const userId = linkDoc.data()?.userId;
+            if (!userId) return null;
+            const userDoc = await db.collection('users').doc(userId).get();
+            return { userId, userData: userDoc.data() };
+        })();
+        linkedCache.set(deviceId, p);
+        // Short-lived: forget it after 20 seconds so a new link/purchase shows up.
+        setTimeout(() => linkedCache.delete(deviceId), 20_000).unref?.();
+    }
+    return p;
+}
+
+// "Crate Intelligence" asks an AI model, which can take seconds. Remember each
+// viewer's answer for 6 hours and never wait more than 2.5 s for it.
+const recsCache = new Map<string, { at: number; recs: any[] }>();
+async function recommendationsFor(userId: string, movies: any[], watchlist: any[], liked: any[]) {
+    const hit = recsCache.get(userId);
+    if (hit && Date.now() - hit.at < 6 * 60 * 60 * 1000) return hit.recs;
+    const work = getAiRecommendations(movies, watchlist, liked).then(recs => { recsCache.set(userId, { at: Date.now(), recs }); return recs; });
+    return Promise.race([work, new Promise<any[]>(resolve => setTimeout(() => resolve(hit?.recs || []), 2500))]);
+}
+
 const cache = new Map<string, { response: any, timestamp: number }>();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
@@ -195,7 +227,8 @@ export async function GET(request: Request) {
         });
     }
 
-    const apiData = await getApiData({ noCache: true });
+    // (30-second copy is fine here: the whole feed is cached for a minute anyway)
+    const apiData = await getApiData();
     paidKeys = paidFestivalFilmKeys(apiData.festivalData);
     const moviesObj: Record<string, Movie> = { ...fallbackMovies, ...(apiData.movies || {}) };
     const categoriesObj: Record<string, Category> = { ...fallbackCategories, ...(apiData.categories || {}) };
@@ -293,11 +326,10 @@ export async function GET(request: Request) {
         }
 
         if (deviceIdParam) {
-            const linkDoc = await db.collection('roku_links').doc(deviceIdParam).get();
-            if (linkDoc.exists) {
-                const userId = linkDoc.data()?.userId;
-                const userDoc = await db.collection('users').doc(userId).get();
-                const userData = userDoc.data();
+            const linked = await loadLinked(db, deviceIdParam);
+            if (linked) {
+                const userId = linked.userId;
+                const userData = linked.userData;
                 if (userData?.rentals) {
                     Object.entries(userData.rentals).forEach(([key, exp]: [string, any]) => {
                         const expDate = toDate(exp);
@@ -512,9 +544,9 @@ export async function GET(request: Request) {
 
     // 3. TOP 10 TODAY
     if (config.topTen?.enabled !== false) {
-        const topMovies = await Promise.all((Object.values(moviesObj) as Movie[])
+        // Same ranking as the website (api/_lib/topTen.ts); then only films the Roku can play.
+        const topMovies = await Promise.all(rankByViews(Object.values(moviesObj) as Movie[], viewCounts, Date.now())
             .filter(m => isValidForRoku(m))
-            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .slice(0, 10)
             .map(m => {
                 const isMovieFree = isFreeForEveryone(m, paidKeys);
@@ -536,11 +568,10 @@ export async function GET(request: Request) {
     if (deviceIdParam) {
         const db = getAdminDb();
         if (db) {
-            const linkDoc = await db.collection('roku_links').doc(deviceIdParam).get();
-            if (linkDoc.exists) {
-                const userId = linkDoc.data()?.userId;
-                const userDoc = await db.collection('users').doc(userId).get();
-                const userData = userDoc.data();
+            const linked = await loadLinked(db, deviceIdParam);
+            if (linked) {
+                const userId = linked.userId;
+                const userData = linked.userData;
                 
                 if (userData) {
                     // CONTINUE WATCHING
@@ -595,13 +626,13 @@ export async function GET(request: Request) {
     if (deviceIdParam) {
         const db = getAdminDb();
         if (db) {
-            const linkDoc = await db.collection('roku_links').doc(deviceIdParam).get();
-            if (linkDoc.exists) {
-                const userId = linkDoc.data()?.userId;
-                const userDoc = await db.collection('users').doc(userId).get();
-                const userData = userDoc.data();
+            const linked = await loadLinked(db, deviceIdParam);
+            if (linked) {
+                const userId = linked.userId;
+                const userData = linked.userData;
                 if (userData) {
-                    const recommendations = await getAiRecommendations(
+                    const recommendations = await recommendationsFor(
+                        userId,
                         Object.values(moviesObj),
                         userData.watchlist || [],
                         userData.likedMovies || []

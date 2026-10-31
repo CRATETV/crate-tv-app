@@ -5,6 +5,9 @@ import { getSignedUrl as s3GetSignedUrl } from '@aws-sdk/s3-request-presigner';
 // feature could outlast the link mid-film (the player re-requests byte ranges
 // as it plays). Still short enough that a shared link goes dead the same day.
 const STREAM_URL_TTL_SECONDS = 8 * 60 * 60;
+const SIGN_REUSE_MS = 30 * 60 * 1000;
+let s3Client: S3Client | null = null;
+const signedCache = new Map<string, { value: { url: string; expiresAt: string }; madeAt: number }>();
 
 /**
  * Turns a raw, permanent S3 URL (the shape stored in movie.fullMovie, e.g.
@@ -29,11 +32,29 @@ export async function signStreamUrl(rawUrl: string): Promise<{ url: string; expi
     const key = extractS3Key(rawUrl, bucketName, region);
     if (!key) return null;
 
-    const s3Client = new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
+    // Streaming (HLS) films, when switched on: hand out the CloudFront address
+    // instead of a signed storage link, so the pieces come from a server near the
+    // viewer (Tobago, and everywhere else) instead of one region in the US. The
+    // pieces were already loaded without a signature (they sit next to the playlist),
+    // so nothing becomes more public. Off until HLS_VIA_CLOUDFRONT=1 is set in Vercel.
+    if (process.env.HLS_VIA_CLOUDFRONT === '1' && /\.m3u8$/i.test(key)) {
+        const domain = process.env.CLOUDFRONT_VIDEO_DOMAIN || 'd2sbutzk4qyhiw.cloudfront.net';
+        return { url: `https://${domain}/${key.split('/').map(encodeURIComponent).join('/')}`, expiresAt: new Date(Date.now() + STREAM_URL_TTL_SECONDS * 1000).toISOString() };
+    }
+
+    // The Roku feed signs the same film several times per request (once per row it
+    // appears in). A signed link lasts 8 hours, so reuse one for up to 30 minutes.
+    const hit = signedCache.get(key);
+    if (hit && Date.now() - hit.madeAt < SIGN_REUSE_MS) return hit.value;
+
+    s3Client ??= new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
     const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
     const url = await s3GetSignedUrl(s3Client, command, { expiresIn: STREAM_URL_TTL_SECONDS });
 
-    return { url, expiresAt: new Date(Date.now() + STREAM_URL_TTL_SECONDS * 1000).toISOString() };
+    const value = { url, expiresAt: new Date(Date.now() + STREAM_URL_TTL_SECONDS * 1000).toISOString() };
+    signedCache.set(key, { value, madeAt: Date.now() });
+    if (signedCache.size > 500) signedCache.clear();
+    return value;
 }
 
 /**

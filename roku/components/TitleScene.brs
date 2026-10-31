@@ -41,7 +41,7 @@ Sub Init()
     m.previewTimer.ObserveField("fire", "OnPreviewTimerFire")
 
     ' Automatic unlock check for locked films
-    m.MAX_UNLOCK_CHECKS = 40           ' 40 x 15 seconds = 10 minutes
+    m.MAX_UNLOCK_CHECKS = 20           ' 20 x 30 seconds = 10 minutes
     m.unlockChecks = 0
     m.unlockTask = Invalid
     m.unlockTimer = m.top.FindNode("unlockTimer")
@@ -235,7 +235,7 @@ Function IsLocked() as Boolean
     Return film <> Invalid And film.HasField("isUnlocked") And Not film.isUnlocked
 End Function
 
-' Every 15 s: download this Roku's catalogue again (it knows what the linked
+' Every 30 s: download this Roku's catalogue again (it knows what the linked
 ' account owns) and look for this film.
 Sub CheckForUnlock()
     If Not IsLocked() Then m.unlockTimer.control = "stop" : Return

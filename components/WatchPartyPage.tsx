@@ -472,6 +472,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     // value instead of whatever it was when the effect first ran.
     const syncPhaseRef = useRef<'idle' | 'seeking' | 'given-up'>('idle');
     const catchUpAttemptsRef = useRef(0);
+    // FIX (Oct 30 2026 — a viewer who had been watching from the start was told
+    // "You joined late" halfway through): a long buffering stall puts a viewer
+    // behind the live clock, and the sync engine used to treat that exactly like
+    // a late join, then lock them out when the catch-up seek was slow or the
+    // film was past 85%. Now: once a viewer has really been watching this film
+    // (hasPlayedRef), falling behind never locks them out. They keep watching
+    // from where they are (softUntilRef pauses hard re-syncs for 2 minutes),
+    // and only a jump bigger than 45 s triggers a re-sync. The "already
+    // started" screen is only for people who really arrived late.
+    const hasPlayedRef = useRef(false);
+    const softUntilRef = useRef(0);
     // Set by the sync engine effect below; called by anything that needs to
     // ask for an immediate resync — the "Try Again" button, a fresh session
     // starting (new film in a block) — instead of waiting for the periodic
@@ -1098,6 +1109,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // again.
             syncPhaseRef.current = 'idle';
             catchUpAttemptsRef.current = 0;
+            hasPlayedRef.current = false;
+            softUntilRef.current = 0;
             setIsCatchingUpToLive(false);
             setIsPreparingStream(false);
             setLateJoinGaveUp(null);
@@ -1246,6 +1259,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // be a meaningful outcome — skip straight to the honest explanation
             // rather than seeking someone in just in time for the credits.
             if (target.targetPosition >= target.movieDuration * TOO_LATE_TO_BOTHER_FRACTION) {
+                if (hasPlayedRef.current) {
+                    // Already watching (just behind after buffering): carry on, never lock out.
+                    syncPhaseRef.current = 'idle';
+                    setIsCatchingUpToLive(false);
+                    softUntilRef.current = Date.now() + 120000;
+                    if (target.isPlaying && video.paused && !video.ended) attemptPlay(video);
+                    return;
+                }
                 video.pause();
                 syncPhaseRef.current = 'given-up';
                 setIsCatchingUpToLive(false);
@@ -1324,6 +1345,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         // red error — and the video stays explicitly paused, so
                         // nobody ends up watching live from the beginning just
                         // because catch-up happened to fail.
+                        if (hasPlayedRef.current) {
+                            // Was watching and fell behind: keep playing from here.
+                            catchUpAttemptsRef.current = 0;
+                            syncPhaseRef.current = 'idle';
+                            setIsCatchingUpToLive(false);
+                            softUntilRef.current = Date.now() + 120000;
+                            attemptPlay(v);
+                            return;
+                        }
                         v.pause();
                         syncPhaseRef.current = 'given-up';
                         setIsCatchingUpToLive(false);
@@ -1422,15 +1452,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // paused and silent; they catch up to the live point when back.
             if (document.hidden) return;
 
+            if (!video.paused && video.currentTime > 5) hasPlayedRef.current = true;
             const drift = target.targetPosition - video.currentTime;
             const absDrift = Math.abs(drift);
+            // Someone who has been watching and fell behind (buffering) only
+            // gets a hard re-sync for a big gap, and never right after one failed.
+            const hardLimit = hasPlayedRef.current ? 45 : CATCH_UP_LATE_JOIN_THRESHOLD_SEC;
 
-            if (absDrift > CATCH_UP_LATE_JOIN_THRESHOLD_SEC) {
+            if (absDrift > hardLimit && Date.now() >= softUntilRef.current) {
                 startFreshSync();
                 return;
             } else if (absDrift > 1.5) {
-                // Gentle catch-up rate for small ongoing drift — no pause/reseek needed.
-                video.playbackRate = drift > 0 ? 1.03 : 0.97;
+                // Gentle catch-up rate for ongoing drift — no pause/reseek needed.
+                video.playbackRate = drift > 0 ? (drift > 8 ? 1.06 : 1.03) : 0.97;
             } else if (video.playbackRate !== 1.0) {
                 video.playbackRate = 1.0;
             }
@@ -1500,7 +1534,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // connection (not festival-venue wifi), prefetching 30s ahead
             // burns data fast and stalls harder when it does run dry; 20s is
             // still enough runway to absorb normal network jitter.
-            const hls = new Hls({ maxBufferLength: 20, enableWorker: true, startLevel: 0 });
+            const hls = new Hls({ maxBufferLength: IS_IOS ? 20 : 40, enableWorker: true, startLevel: 0 });
 
             // Previously nothing listened for hls.js errors at all — a fatal
             // network or media error (a dropped segment, a manifest hiccup,

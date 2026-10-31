@@ -29,6 +29,7 @@ import CrateVaultRow from './components/CrateVaultRow';
 import CrateIntelligence from './components/CrateIntelligence';
 import firebase from 'firebase/compat/app';
 import { isOutsidePartner, PWFF_PARTNER_ID } from './api/_lib/partnerRules';
+import { topTen } from './api/_lib/topTen';
 
 const MaintenanceScreen: React.FC = () => (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
@@ -339,10 +340,8 @@ const App: React.FC = () => {
     }, [movies, allPartyStates, minuteTick]);
 
     const topTenMovies = useMemo(() => {
-        return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
-            .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
-            .slice(0, 10);
-    }, [movies, viewCounts]);
+        return topTen(Object.values(movies) as Movie[], viewCounts, Date.now());
+    }, [movies, viewCounts, minuteTick]);
 
     const premierMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])

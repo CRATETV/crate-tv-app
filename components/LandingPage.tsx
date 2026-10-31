@@ -10,6 +10,7 @@ import Footer from './Footer';
 import SEO from './SEO';
 import { HERO_DEFAULTS } from './HeroEditor';
 import UpcomingWatchParties from './UpcomingWatchParties';
+import { topTen } from '../api/_lib/topTen';
 
 const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ title, desc, icon }) => (
     <div className="relative p-[1px] bg-gradient-to-br from-red-600 via-purple-600 to-indigo-600 rounded-[2.5rem] shadow-2xl group transition-all duration-700 hover:shadow-[0_20px_80px_rgba(239,68,68,0.2)] hover:-translate-y-2">
@@ -148,12 +149,8 @@ const LandingPage: React.FC = () => {
     }, [modernPosters]);
 
     const topTenMovies = useMemo(() => {
-        const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
-        return (Object.values(movies) as Movie[])
-            .filter(m => !!m.poster && !m.isUnlisted && !vintageKeys.has(m.key))
-            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
-            .slice(0, 10);
-    }, [movies, viewCounts, categories]);
+        return topTen(Object.values(movies) as Movie[], viewCounts, Date.now());
+    }, [movies, viewCounts]);
 
     const marqueeTitles = useMemo(() => {
         return (Object.values(movies) as Movie[])

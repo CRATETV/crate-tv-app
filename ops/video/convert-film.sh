@@ -61,35 +61,54 @@ echo "Endpoint:    $ENDPOINT"
 echo "Role:        $ROLE_ARN"
 echo ""
 
+# Same ladder as api/_lib/videoPipeline.ts (HLS_LADDER): five steps, 6-second pieces.
 JOB_JSON=$(jq -n \
   --arg input "$INPUT_URI" \
   --arg dest "$DEST_URI" \
-  '{
-    Inputs: [
-      {
-        FileInput: $input,
-        AudioSelectors: {
-          "Audio Selector 1": {
-            DefaultSelection: "DEFAULT"
+  'def rung($h; $br; $q; $mod): {
+      NameModifier: $mod,
+      ContainerSettings: { Container: "M3U8", M3u8Settings: {} },
+      VideoDescription: {
+        Height: $h,
+        ScalingBehavior: "DEFAULT",
+        CodecSettings: {
+          Codec: "H_264",
+          H264Settings: {
+            RateControlMode: "QVBR",
+            QvbrSettings: { QvbrQualityLevel: $q },
+            MaxBitrate: $br,
+            CodecProfile: (if $h >= 720 then "HIGH" else "MAIN" end),
+            CodecLevel: "AUTO",
+            GopSizeUnits: "SECONDS",
+            GopSize: 2,
+            GopClosedCadence: 1,
+            SceneChangeDetect: "TRANSITION_DETECTION",
+            FramerateControl: "INITIALIZE_FROM_SOURCE",
+            ParControl: "INITIALIZE_FROM_SOURCE",
+            InterlaceMode: "PROGRESSIVE",
+            QualityTuningLevel: "SINGLE_PASS_HQ"
           }
         }
-      }
+      },
+      AudioDescriptions: [ { AudioSourceName: "Audio Selector 1", CodecSettings: { Codec: "AAC", AacSettings: { Bitrate: 96000, CodingMode: "CODING_MODE_2_0", SampleRate: 48000 } } } ]
+    };
+  {
+    Inputs: [
+      { FileInput: $input, AudioSelectors: { "Audio Selector 1": { DefaultSelection: "DEFAULT" } } }
     ],
     OutputGroups: [
       {
         Name: "Apple HLS",
         OutputGroupSettings: {
           Type: "HLS_GROUP_SETTINGS",
-          HlsGroupSettings: {
-            Destination: $dest,
-            SegmentLength: 10,
-            MinSegmentLength: 0
-          }
+          HlsGroupSettings: { Destination: $dest, SegmentLength: 6, MinSegmentLength: 0 }
         },
         Outputs: [
-          { Preset: "System-Avc_16x9_1080p_29_97fps_8500kbps", NameModifier: "_1080p" },
-          { Preset: "System-Avc_16x9_720p_29_97fps_5000kbps", NameModifier: "_720p" },
-          { Preset: "System-Avc_16x9_360p_29_97fps_600kbps", NameModifier: "_360p" }
+          rung(1080; 5500000; 8; "_1080p"),
+          rung(720; 3000000; 8; "_720p"),
+          rung(480; 1500000; 7; "_480p"),
+          rung(360; 800000; 7; "_360p"),
+          rung(270; 400000; 6; "_270p")
         ]
       }
     ]

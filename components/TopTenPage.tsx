@@ -11,6 +11,7 @@ import TopTenShareableImage from './TopTenShareableImage';
 import { isMovieReleased } from '../constants';
 
 import SafePoster from './SafePoster';
+import { topTen } from '../api/_lib/topTen';
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void }> = ({ movie, rank, onSelect }) => (
     <div 
         onClick={() => onSelect(movie)}
@@ -62,10 +63,7 @@ const TopTenPage: React.FC = () => {
     const exportRef = useRef<HTMLDivElement>(null);
 
     const sortedMovies = useMemo(() => {
-        return (Object.values(movies) as Movie[])
-            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
-            .sort((a, b) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
-            .slice(0, 10);
+        return topTen(Object.values(movies) as Movie[], viewCounts, Date.now());
     }, [movies, viewCounts]);
 
     const handleSelectMovie = (movie: Movie) => {

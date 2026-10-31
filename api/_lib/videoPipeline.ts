@@ -40,6 +40,25 @@ export function hlsOutput(bucket: string, region: string, sourceKey: string, slu
     };
 }
 
+/**
+ * The quality ladder for the streaming version (Oct 30 2026).
+ * Before: 1080p 8500 kbps, 720p 5000, 360p 600: a huge gap between 720p and
+ * 360p, so a viewer with 2 to 4 Mbps (common on phones and in the Caribbean)
+ * either stalled on 720p or was stuck on a blurry 360p. Now five steps, each
+ * about half to two thirds of the one above, so the player can always find one
+ * that fits the connection. Every step uses the same 2-second GOP and the
+ * segments are 6 seconds (was 10), so the player can switch quickly and the
+ * pieces line up across steps. Same list lives in ops/video/convert-film.sh.
+ */
+export const HLS_LADDER: { height: number; maxBitrate: number; quality: number; modifier: string }[] = [
+    { height: 1080, maxBitrate: 5_500_000, quality: 8, modifier: '_1080p' },
+    { height: 720, maxBitrate: 3_000_000, quality: 8, modifier: '_720p' },
+    { height: 480, maxBitrate: 1_500_000, quality: 7, modifier: '_480p' },
+    { height: 360, maxBitrate: 800_000, quality: 7, modifier: '_360p' },
+    { height: 270, maxBitrate: 400_000, quality: 6, modifier: '_270p' },
+];
+export const HLS_SEGMENT_SECONDS = 6;
+
 /** The MediaConvert job settings: same as ops/video/convert-film.sh. */
 export function jobSettings(bucket: string, sourceKey: string, destination: string) {
     return {
@@ -51,13 +70,39 @@ export function jobSettings(bucket: string, sourceKey: string, destination: stri
             Name: 'Apple HLS',
             OutputGroupSettings: {
                 Type: 'HLS_GROUP_SETTINGS',
-                HlsGroupSettings: { Destination: destination, SegmentLength: 10, MinSegmentLength: 0 },
+                HlsGroupSettings: { Destination: destination, SegmentLength: HLS_SEGMENT_SECONDS, MinSegmentLength: 0 },
             },
-            Outputs: [
-                { Preset: 'System-Avc_16x9_1080p_29_97fps_8500kbps', NameModifier: '_1080p' },
-                { Preset: 'System-Avc_16x9_720p_29_97fps_5000kbps', NameModifier: '_720p' },
-                { Preset: 'System-Avc_16x9_360p_29_97fps_600kbps', NameModifier: '_360p' },
-            ],
+            Outputs: HLS_LADDER.map(r => ({
+                NameModifier: r.modifier,
+                ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
+                VideoDescription: {
+                    // Only the height is given: MediaConvert works out the width, keeping the picture's shape.
+                    Height: r.height,
+                    ScalingBehavior: 'DEFAULT',
+                    CodecSettings: {
+                        Codec: 'H_264',
+                        H264Settings: {
+                            RateControlMode: 'QVBR',
+                            QvbrSettings: { QvbrQualityLevel: r.quality },
+                            MaxBitrate: r.maxBitrate,
+                            CodecProfile: r.height >= 720 ? 'HIGH' : 'MAIN',
+                            CodecLevel: 'AUTO',
+                            GopSizeUnits: 'SECONDS',
+                            GopSize: 2,
+                            GopClosedCadence: 1,
+                            SceneChangeDetect: 'TRANSITION_DETECTION',
+                            FramerateControl: 'INITIALIZE_FROM_SOURCE',
+                            ParControl: 'INITIALIZE_FROM_SOURCE',
+                            InterlaceMode: 'PROGRESSIVE',
+                            QualityTuningLevel: 'SINGLE_PASS_HQ',
+                        },
+                    },
+                },
+                AudioDescriptions: [{
+                    AudioSourceName: 'Audio Selector 1',
+                    CodecSettings: { Codec: 'AAC', AacSettings: { Bitrate: 96000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 } },
+                }],
+            })),
         }],
     };
 }
