@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { pickableAvatarKeys, avatars, REACTION_AVATAR_KEYS } from '../components/avatars.js';
 import { seasonFor, applySeason, type Season } from '../components/seasonalAvatars.js';
 
 const d = (m: number, day: number) => new Date(2026, m - 1, day, 12, 0, 0);
@@ -48,4 +49,13 @@ test('every look is drawn inside the avatar, before its closing tag, and stays w
 test('Valentine heart eyes sit on each animal\'s eyes', () => {
     const out = applySeason('<svg></svg>', 'owl', 'valentines');
     assert.ok(out.includes('M 38 ') && out.includes('M 62 '));
+});
+
+test('reaction faces are not offered as avatars and never get a holiday look', () => {
+    for (const k of REACTION_AVATAR_KEYS) {
+        assert.ok(!pickableAvatarKeys.includes(k), `${k} hidden from picker`);
+        assert.ok(typeof avatars[k] === 'string' && avatars[k].includes('<text'), `${k} still renders`);
+    }
+    assert.ok(pickableAvatarKeys.includes('fox') && pickableAvatarKeys.includes('crate'));
+    assert.equal(pickableAvatarKeys.length, Object.keys(avatars).length - REACTION_AVATAR_KEYS.length);
 });
