@@ -461,6 +461,12 @@ export async function GET(request: Request) {
     // The Roku's own address can be stale while the film's main video (the one the
     // website plays) is fine. Use whichever address really exists, in this order,
     // so a stale Roku address never hides a film that plays on the website.
+    const missingAtFirst = new Set(noVideo);
+    const recovered = new Set<string>();
+    const fullMovieBefore: Record<string, string> = {};
+    for (const k of missingAtFirst) fullMovieBefore[k] = (moviesObj[k] as any)?.fullMovie || '';
+    const originalRokuAddress: Record<string, string | null> = {};
+    for (const k of missingAtFirst) originalRokuAddress[k] = assets[k]?.rokuStreamUrl || (moviesObj[k] as any)?.rokuStreamUrl || null;
     if (noVideo.size > 0) {
         const check = storageKeyCheck();
         for (const key of Array.from(noVideo)) {
@@ -473,8 +479,23 @@ export async function GET(request: Request) {
                 assets[key] = { ...(assets[key] || {}), rokuStreamUrl: good } as RokuAsset;
                 moviesObj[key] = { ...m, rokuStreamUrl: good } as Movie;
                 noVideo.delete(key);
+                recovered.add(key);
             }
         }
+    }
+
+    // /api/roku-feed?missing=1 : every film whose video file is gone from storage.
+    if (searchParams.get('missing')) {
+        const rows = Array.from(missingAtFirst).map(key => {
+            const m: any = moviesObj[key] || {};
+            return {
+                film: m.title || key, key,
+                rokuAddressInAdmin: originalRokuAddress[key] || null,
+                fullMovieAddress: (fullMovieBefore[key] ?? m.fullMovie) || null,
+                result: recovered.has(key) ? 'Fine: the Roku now plays the main video address instead.' : 'Broken: no video file found at any address. Re-upload this film.',
+            };
+        });
+        return new Response(JSON.stringify({ filmsWithAMissingFile: rows.length, films: rows }, null, 2), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     if (whyParam) {
