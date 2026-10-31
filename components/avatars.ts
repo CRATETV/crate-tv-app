@@ -128,6 +128,11 @@ const baseAvatars: { [key: string]: string } = {
     `,
 };
 
+// The five reaction faces are for reactions only. They stay in the list below so
+// anyone who already picked one still sees it, but they are not offered in the
+// avatar picker and never get a holiday look.
+export const REACTION_AVATAR_KEYS = ['crate_fire', 'crate_heart', 'crate_wow', 'crate_clap', 'crate_sad'];
+
 // Everything on the site reads avatars[key]. During a holiday window each read
 // returns the same avatar wearing the holiday look (components/seasonalAvatars.ts);
 // outside a window it is exactly the normal avatar.
@@ -135,6 +140,10 @@ export const avatars: { [key: string]: string } = new Proxy(baseAvatars, {
     get(target, prop, receiver) {
         const value = Reflect.get(target, prop, receiver);
         if (typeof prop !== 'string' || typeof value !== 'string') return value;
+        if (REACTION_AVATAR_KEYS.includes(prop)) return value;
         return applySeason(value, prop, seasonFor(new Date(), seasonOverrideFromPage()));
     },
 });
+
+/** The avatars people can choose from (reaction faces left out). */
+export const pickableAvatarKeys: string[] = Object.keys(baseAvatars).filter(k => !REACTION_AVATAR_KEYS.includes(k));

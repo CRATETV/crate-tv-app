@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
-import { avatars } from './avatars';
+import { avatars, pickableAvatarKeys } from './avatars';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import { StreaksCard } from './WatchStreaks';
@@ -112,7 +112,7 @@ const AccountPage: React.FC = () => {
                                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6 w-full text-center md:text-left">Your Avatar</p>
                                 <div className="w-40 h-40 rounded-[2rem] bg-white/5 p-4 mb-6 border border-white/10 shadow-inner group" dangerouslySetInnerHTML={{ __html: avatars[selectedAvatar] }} />
                                 <div className="grid grid-cols-5 gap-3">
-                                    {Object.keys(avatars).map(avatarKey => (
+                                    {pickableAvatarKeys.map(avatarKey => (
                                         <button
                                             key={avatarKey}
                                             onClick={() => setSelectedAvatar(avatarKey)}
