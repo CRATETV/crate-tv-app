@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
+import PartnerZineTab from './zine/PartnerZineTab';
 import {
     PartnerDraft, PartnerFilmDraft, PartnerBlockDraft, PartnerDayDraft, PartnerReview, PartnerPublished, PartnerPayout,
     checkDraft, emptyDraft, newDraftId, SalesSummary, PayoutBreakdown,
@@ -34,7 +35,7 @@ interface PartnerSummary {
     cleanup?: { deletedAt: string; deletedFilmKeys: string[]; keptFilmKeys: string[] } | null;
 }
 
-type Tab = 'overview' | 'festival' | 'films' | 'schedule' | 'sales';
+type Tab = 'overview' | 'festival' | 'films' | 'schedule' | 'sales' | 'zine';
 
 const navigate = (path: string) => { window.history.pushState({}, '', path); window.dispatchEvent(new Event('pushstate')); };
 
@@ -506,7 +507,7 @@ const PartnerPortalPage: React.FC = () => {
 
     if (!user) return null; // route redirects to login
 
-    const tabs: [Tab, string][] = [['overview', 'Overview'], ['festival', partner?.isPwff ? 'Festival' : 'Festival & branding'], ['films', `Films (${draft?.films.length || 0})`], ['schedule', 'Schedule'], ['sales', 'Sales']];
+    const tabs: [Tab, string][] = [['overview', 'Overview'], ['festival', partner?.isPwff ? 'Festival' : 'Festival & branding'], ['films', `Films (${draft?.films.length || 0})`], ['schedule', 'Schedule'], ['sales', 'Sales'], ['zine', 'Write for The Unpack']];
     const reviewState = partner?.review?.state || 'draft';
     const copy = REVIEW_COPY[reviewState] || REVIEW_COPY.draft;
 
@@ -586,6 +587,7 @@ const PartnerPortalPage: React.FC = () => {
                         {tab === 'films' && <FilmsTab draft={draft} partnerId={partner.id} onChange={change} />}
                         {tab === 'schedule' && <ScheduleTab draft={draft} onChange={change} />}
                         {tab === 'sales' && <SalesTab partner={partner} />}
+                        {tab === 'zine' && <PartnerZineTab partnerId={partner.id} partnerName={partner.name} />}
 
                         {dirty && (
                             <div className="fixed bottom-4 inset-x-4 md:inset-x-auto md:right-6 md:left-auto z-50 bg-[#111] border border-white/15 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl">

@@ -31,7 +31,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
         
         db.collection('editorial_stories').orderBy('publishedAt', 'desc').limit(20).get().then(snap => {
             const fetched: EditorialStory[] = [];
-            snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
+            snap.forEach(doc => { if (doc.data().status !== 'draft') fetched.push({ id: doc.id, ...doc.data() } as EditorialStory); });
             setStories(fetched);
             if (fetched.length > 0) setSelectedStoryId(fetched[0].id);
         });

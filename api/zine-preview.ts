@@ -1,4 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { isPublishedStory } from './_lib/zineRules.js';
 
 /**
  * SOCIAL SHARE PREVIEW FOR THE UNPACK
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
         if (!db) throw new Error('Database offline');
 
         const doc = await db.collection('editorial_stories').doc(id).get();
-        if (!doc.exists) {
+        if (!doc.exists || !isPublishedStory(doc.data() as { status?: string })) {
             return new Response('Not found', { status: 404 });
         }
 

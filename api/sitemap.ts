@@ -70,6 +70,7 @@ export async function GET(request: Request) {
 
         // 4. Add Zine Stories
         storiesSnap.forEach(doc => {
+            if (doc.data()?.status === 'draft') return; // drafts are private
             xml += `
   <url>
     <loc>${baseUrl}/zine/${doc.id}</loc>
