@@ -55,6 +55,7 @@ const emptyMovie: Movie = {
     isWatchPartyEnabled: false,
     watchPartyStartTime: '',
     isWatchPartyPaid: false,
+    isTestParty: false,
     watchPartyPrice: 5.00,
     isForSale: false,
     salePrice: 5.00,
@@ -1023,6 +1024,16 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" name="isWatchPartyPaid" checked={formData.isWatchPartyPaid} onChange={handleChange} className="sr-only peer" />
                                                     <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-black text-white uppercase tracking-widest">This is a test party</p>
+                                                    <p className="text-[9px] text-gray-500 uppercase">When the party ends, this film goes back to normal by itself (watch party and paid ticket switched off)</p>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" name="isTestParty" checked={!!formData.isTestParty} onChange={handleChange} className="sr-only peer" />
+                                                    <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-amber-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                                 </label>
                                             </div>
                                             {formData.isWatchPartyPaid && (

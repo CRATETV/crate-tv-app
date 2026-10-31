@@ -28,6 +28,11 @@ const SITE = 'https://cratetv.net';
  * values, are returned unchanged. The resizer's results are kept by the CDN
  * for a month, so only the first viewer waits.
  */
+// Sizes the Roku is sent (tiles are ~214 px wide, the home header ~1280 px is
+// plenty on a TV): small files load fast, which is what makes rows feel instant.
+export const ROKU_POSTER_WIDTH = 640;
+export const ROKU_HERO_WIDTH = 1280;
+
 export function rokuImageUrl(raw: string | undefined | null, width: number): string {
     const url = typeof raw === 'string' ? raw.trim() : '';
     if (!url || !isAllowedImageUrl(url)) return url;

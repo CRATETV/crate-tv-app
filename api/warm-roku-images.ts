@@ -6,7 +6,7 @@
 // first viewer on a Roku gets them already made.
 // Safe: it only asks for pictures, never changes anything.
 import { getApiData } from './_lib/data.js';
-import { rokuImageUrl } from './_lib/imageHosts.js';
+import { rokuImageUrl, ROKU_POSTER_WIDTH, ROKU_HERO_WIDTH } from './_lib/imageHosts.js';
 
 const SITE = 'https://cratetv.net';
 const BUDGET_MS = 50_000;
@@ -15,8 +15,8 @@ export function warmUrls(movies: any[]): string[] {
     const out = new Set<string>();
     for (const m of movies) {
         if (!m || m.isUnlisted) continue;
-        for (const raw of [m.poster, m.tvPoster]) { const u = rokuImageUrl(raw, 900); if (u.startsWith(SITE)) out.add(u); }
-        const hero = rokuImageUrl(m.rokuHeroImage || m.tvPoster || m.poster, 1920);
+        for (const raw of [m.poster, m.tvPoster]) { const u = rokuImageUrl(raw, ROKU_POSTER_WIDTH); if (u.startsWith(SITE)) out.add(u); }
+        const hero = rokuImageUrl(m.rokuHeroImage || m.tvPoster || m.poster, ROKU_HERO_WIDTH);
         if (hero.startsWith(SITE)) out.add(hero);
     }
     return [...out];

@@ -3,9 +3,10 @@ import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_lib/filmAvailability.js';
 import { isStaleLive } from './_lib/watchPartyRules.js';
 import { rankByViews } from './_lib/topTen.js';
-import { rokuImageUrl } from './_lib/imageHosts.js';
+import { rokuImageUrl, ROKU_POSTER_WIDTH, ROKU_HERO_WIDTH } from './_lib/imageHosts.js';
 import { findFilmsWithoutVideo, storageKeyCheck } from './_lib/videoExists.js';
 import { rokuHlsProxyUrl } from './_lib/hlsRewrite.js';
+import { explainFilm, findFilm } from './_lib/rokuWhy.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -143,10 +144,10 @@ async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: b
         description: description,
         synopsis: movie.synopsis,
         // Right-sized copies (api/_lib/imageHosts.ts): tiles are 214 px wide, so never send the multi-megabyte original.
-        hdPosterUrl: rokuImageUrl(posterUrl, 900),
-        heroImage: rokuImageUrl(heroUrl, 1920),
-        poster: rokuImageUrl(movie.poster, 900),
-        tvPoster: rokuImageUrl(movie.tvPoster, 900),
+        hdPosterUrl: rokuImageUrl(posterUrl, ROKU_POSTER_WIDTH),
+        heroImage: rokuImageUrl(heroUrl, ROKU_HERO_WIDTH),
+        poster: rokuImageUrl(movie.poster, ROKU_POSTER_WIDTH),
+        tvPoster: rokuImageUrl(movie.tvPoster, ROKU_POSTER_WIDTH),
         // CRITICAL: Only include streamUrl (which is already trailer for locked content)
         // NEVER include fullMovie or rokuStreamUrl directly - the Roku app checks those first!
         streamUrl: streamUrl,
@@ -225,9 +226,10 @@ export async function GET(request: Request) {
     const deviceIdParam = searchParams.get('deviceId');
     const cacheKey = deviceIdParam || 'global';
     const nowTime = Date.now();
+    const whyParam = searchParams.get('why');   // /api/roku-feed?why=consumed : explains one film (api/_lib/rokuWhy.ts)
 
     // Check cache
-    const cached = cache.get(cacheKey);
+    const cached = whyParam ? undefined : cache.get(cacheKey);
     if (cached && (nowTime - cached.timestamp < CACHE_TTL)) {
         console.log(`Serving Roku feed from cache for key: ${cacheKey}`);
         return new Response(JSON.stringify(cached.response), {
@@ -254,10 +256,11 @@ export async function GET(request: Request) {
     const assets: Record<string, RokuAsset> = {};
     const viewCounts: Record<string, number> = {};
     let unlockedMovies = new Set<string>();
+    let liveFestivalDays: any[] | null = null;
 
     if (db) {
         console.log("Fetching data from Firestore...");
-        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, configSettingsDoc, partiesSnap, rokuSettingsDoc] = await Promise.all([
+        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, configSettingsDoc, partiesSnap, rokuSettingsDoc, festivalDaysSnap] = await Promise.all([
             db.collection('roku').doc('config').get(),
             db.collection('roku_assets').get(),
             db.collection('view_counts').get(),
@@ -266,8 +269,16 @@ export async function GET(request: Request) {
             db.collection('content').doc('settings').get(),
             db.collection('settings').doc('config').get(),
             db.collection('watch_parties').get(),
-            db.collection('settings').doc('roku').get()
+            db.collection('settings').doc('roku').get(),
+            // The LIVE festival schedule. The published copy (apiData.festivalData) only
+            // changes when the admin presses Publish, so a film taken out of a block
+            // would stay "paid" on the Roku until then.
+            db.collection('festival').doc('schedule').collection('days').get().catch(() => null),
         ]);
+        if (festivalDaysSnap) {
+            liveFestivalDays = (festivalDaysSnap as any).docs.map((d: any) => ({ id: d.id, ...d.data() }));
+            paidKeys = paidFestivalFilmKeys(liveFestivalDays);
+        }
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
         
@@ -446,6 +457,19 @@ export async function GET(request: Request) {
     const noVideo = await findFilmsWithoutVideo(
         (Object.values(moviesObj) as Movie[]).map(m => ({ key: m.key, address: sanitizeUrl(assets[m.key]?.rokuStreamUrl || m.rokuStreamUrl || m.fullMovie || ''), liveStreamUrl: m.liveStreamUrl, episodes: m.episodes })),
         storageKeyCheck()).catch(() => new Set<string>());
+
+    if (whyParam) {
+        const film = findFilm(moviesObj as Record<string, any>, whyParam);
+        const address = film ? sanitizeUrl(assets[film.key]?.rokuStreamUrl || film.rokuStreamUrl || film.fullMovie || '') : '';
+        const body = film
+            ? explainFilm({
+                movie: film, festivalDays: liveFestivalDays || (Array.isArray(apiData.festivalData) ? apiData.festivalData : []), nowMs: Date.now(),
+                inPaidKeys: paidKeys.has(film.key), hasVideoAddress: !!address || !!film.liveStreamUrl || (Array.isArray(film.episodes) && film.episodes.length > 0),
+                videoMissing: noVideo.has(film.key), rokuOverrideAddress: assets[film.key]?.rokuStreamUrl || undefined,
+            })
+            : { film: null, message: `No film found for "${whyParam}". Try the film's key or its exact title.` };
+        return new Response(JSON.stringify(body, null, 2), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
 
     const isValidForRoku = (m: Movie, isLiveOverride: boolean = false) => {
         if (!m) return false;

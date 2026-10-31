@@ -89,7 +89,7 @@ export async function GET(request: Request) {
           .resize({ width, withoutEnlargement: true });
         const out = acceptsWebp
           ? await pipeline.webp({ quality: 80 }).toBuffer()
-          : await pipeline.flatten({ background: '#000000' }).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+          : await pipeline.flatten({ background: '#000000' }).jpeg({ quality: searchParams.get('fmt') === 'jpeg' ? 74 : 82, mozjpeg: true }).toBuffer();
         body = new Uint8Array(out);
         contentType = acceptsWebp ? 'image/webp' : 'image/jpeg';
       } catch (resizeError) {
