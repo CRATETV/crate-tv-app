@@ -7,7 +7,6 @@ import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
 import { EditorialStory, Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
-import ZineTrailerPark from './ZineTrailerPark';
 import UnpackCountdown from './UnpackCountdown';
 import ZineArticleBody, { zineImg, SERIF } from './zine/ZineArticleBody';
 import { isPublishedStory, readingMinutes, typeLabel } from '../api/_lib/zineRules';
@@ -32,32 +31,32 @@ const Byline: React.FC<{ story: EditorialStory; light?: boolean }> = ({ story, l
 );
 
 const CoverStory: React.FC<{ story: EditorialStory; onOpen: () => void }> = ({ story, onOpen }) => (
-    <article onClick={onOpen} className="group cursor-pointer grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-        <div className="lg:col-span-7 overflow-hidden bg-zinc-200 aspect-[4/3] lg:aspect-[5/4]">
+    <article onClick={onOpen} className="group cursor-pointer grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+        <div className="lg:col-span-7 overflow-hidden bg-zinc-200 aspect-[16/10] lg:aspect-[16/9]">
             <img src={zineImg(story.heroImage, 1400)} alt="" className="w-full h-full object-cover transition-transform duration-[1400ms] group-hover:scale-105" />
         </div>
-        <div className="lg:col-span-5 space-y-5">
+        <div className="lg:col-span-5 space-y-3 md:space-y-4">
             <div className="flex items-center gap-3">
                 <span className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.25em] px-3 py-1.5">Cover story</span>
                 <Kicker story={story} />
             </div>
-            <h2 style={{ fontFamily: SERIF }} className="text-4xl md:text-5xl lg:text-[3.4rem] font-bold leading-[1.02] text-zinc-900 group-hover:text-red-700 transition-colors">{story.title}</h2>
-            {story.subtitle && <p style={{ fontFamily: SERIF }} className="text-xl md:text-2xl italic text-zinc-600 leading-snug">{story.subtitle}</p>}
+            <h2 style={{ fontFamily: SERIF }} className="text-3xl md:text-4xl lg:text-[2.6rem] font-bold leading-[1.05] text-zinc-900 group-hover:text-red-700 transition-colors">{story.title}</h2>
+            {story.subtitle && <p style={{ fontFamily: SERIF }} className="text-lg md:text-xl italic text-zinc-600 leading-snug line-clamp-3">{story.subtitle}</p>}
             <Byline story={story} />
-            <span className="inline-block pt-1 text-sm font-black uppercase tracking-widest text-zinc-900 border-b-2 border-red-600 pb-1">Read the story →</span>
+            <span className="inline-block text-sm font-black uppercase tracking-widest text-zinc-900 border-b-2 border-red-600 pb-1">Read the story →</span>
         </div>
     </article>
 );
 
 const StoryCard: React.FC<{ story: EditorialStory; onOpen: () => void }> = ({ story, onOpen }) => (
-    <article onClick={onOpen} className="group cursor-pointer flex flex-col gap-4">
-        <div className="overflow-hidden bg-zinc-200 aspect-[3/2]">
+    <article onClick={onOpen} className="group cursor-pointer flex flex-col gap-3">
+        <div className="overflow-hidden bg-zinc-200 aspect-[16/10]">
             <img src={zineImg(story.heroImage, 800)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
             <Kicker story={story} />
-            <h3 style={{ fontFamily: SERIF }} className="text-[1.7rem] font-bold leading-[1.08] text-zinc-900 group-hover:text-red-700 transition-colors">{story.title}</h3>
-            {story.subtitle && <p className="text-[15px] text-zinc-600 leading-relaxed line-clamp-2">{story.subtitle}</p>}
+            <h3 style={{ fontFamily: SERIF }} className="text-[1.3rem] font-bold leading-[1.12] text-zinc-900 group-hover:text-red-700 transition-colors">{story.title}</h3>
+            {story.subtitle && <p className="text-sm text-zinc-600 leading-snug line-clamp-2">{story.subtitle}</p>}
             <Byline story={story} />
         </div>
     </article>
@@ -67,18 +66,18 @@ const Shelf: React.FC<{ title: string; blurb: string; stories: EditorialStory[];
     if (!stories.length) return null;
     return (
         <section className={dark ? 'bg-zinc-900 text-white' : PAPER}>
-            <div className="max-w-[1300px] mx-auto px-6 md:px-12 py-16 md:py-20">
-                <div className="mb-10 md:mb-12">
-                    <h2 style={{ fontFamily: SERIF }} className={`text-4xl md:text-5xl font-bold italic ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
-                    <p className={`mt-2 text-lg ${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{blurb}</p>
+            <div className="max-w-[1300px] mx-auto px-6 md:px-12 py-10 md:py-12">
+                <div className="mb-6 md:mb-8">
+                    <h2 style={{ fontFamily: SERIF }} className={`text-3xl md:text-4xl font-bold italic ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
+                    <p className={`mt-1 text-base ${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{blurb}</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-14">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8">
                     {stories.slice(0, 3).map(s => (
-                        <article key={s.id} onClick={() => onOpen(s.id)} className="group cursor-pointer flex flex-col gap-4">
-                            <div className="overflow-hidden aspect-[4/3] bg-zinc-800">
+                        <article key={s.id} onClick={() => onOpen(s.id)} className="group cursor-pointer flex flex-col gap-3">
+                            <div className="overflow-hidden aspect-[16/10] bg-zinc-800">
                                 <img src={zineImg(s.heroImage, 800)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                             </div>
-                            <h3 style={{ fontFamily: SERIF }} className={`text-2xl font-bold leading-tight ${dark ? 'text-white group-hover:text-red-300' : 'text-zinc-900 group-hover:text-red-700'} transition-colors`}>{s.title}</h3>
+                            <h3 style={{ fontFamily: SERIF }} className={`text-xl font-bold leading-tight ${dark ? 'text-white group-hover:text-red-300' : 'text-zinc-900 group-hover:text-red-700'} transition-colors`}>{s.title}</h3>
                             {s.subtitle && <p className={`text-[15px] line-clamp-2 ${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{s.subtitle}</p>}
                             <Byline story={s} light={dark} />
                         </article>
@@ -141,11 +140,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const filtered = useMemo(() => activeFilter === 'ALL' ? stories : stories.filter(s => s.type === activeFilter), [stories, activeFilter]);
     const presentTypes = useMemo(() => new Set(stories.map(s => s.type)), [stories]);
 
-    const stageMovies = useMemo(() => {
-        const all = (Object.values(movies || {}) as Movie[]).filter(m => !!m && !m.isUnlisted && !!m.poster);
-        return [...all.filter(m => !!m.trailer), ...all.filter(m => !m.trailer)].slice(0, 12);
-    }, [movies]);
-
     const nextPremiere = useMemo(() => {
         const now = Date.now();
         return (Object.values(movies || {}) as Movie[])
@@ -199,18 +193,29 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 {!activeStory ? (
                     <>
                         {/* Masthead */}
-                        <header className={`pt-36 md:pt-44 pb-10 px-6 ${PAPER}`}>
+                        <header className={`pt-28 md:pt-32 pb-6 px-6 ${PAPER}`}>
                             <div className="max-w-[1300px] mx-auto">
                                 <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 pb-4 border-b-2 border-zinc-900">
-                                    <span>Crate TV presents</span>
+                                    <span className="flex items-center gap-2">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+                                            <path d="M3 9h18v11H3z" />
+                                            <path d="M3 13h18M3 17h18" />
+                                            <path d="M3 9l2-5h14l2 5" />
+                                        </svg>
+                                        Crate TV presents
+                                    </span>
                                     <span className="hidden sm:inline">{month}</span>
                                     <span>{stories.length} {stories.length === 1 ? 'story' : 'stories'}</span>
                                 </div>
-                                <h1 style={{ fontFamily: SERIF }} className="text-center text-[4.2rem] sm:text-[7rem] md:text-[10rem] font-black italic leading-[1] tracking-tight text-zinc-900 pt-6 md:pt-8 pb-4 md:pb-6">The Unpack</h1>
-                                <p style={{ fontFamily: SERIF }} className="text-center text-lg md:text-2xl italic text-zinc-600 pb-6 max-w-2xl mx-auto">Stories, interviews and director's notes from the filmmakers and festivals on Crate TV.</p>
+                                <h1 style={{ fontFamily: SERIF }} className="text-center text-[3.6rem] sm:text-[5.5rem] md:text-[7.5rem] font-black italic leading-[1] tracking-tight text-zinc-900 pt-3 md:pt-4 pb-3 md:pb-4">The Unpack</h1>
+                                <p style={{ fontFamily: SERIF }} className="text-center text-base md:text-lg italic text-zinc-600 pb-4 max-w-2xl mx-auto">What's inside this week.</p>
                                 <div className="border-t border-zinc-900 border-b-4 border-double h-2" />
                             </div>
                         </header>
+
+                        {nextPremiere && (
+                            <UnpackCountdown movie={nextPremiere} onExplore={() => go(`/movie/${nextPremiere.key}`)} onRemindMe={() => newsletterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+                        )}
 
                         {stories.length === 0 ? (
                             <div className="max-w-2xl mx-auto px-6 py-24 text-center">
@@ -219,14 +224,14 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         ) : (
                             <>
-                                <section className="max-w-[1300px] mx-auto px-6 md:px-12 pt-10 pb-16">
+                                <section className="max-w-[1300px] mx-auto px-6 md:px-12 pt-8 pb-10">
                                     {cover && <CoverStory story={cover} onOpen={() => openStory(cover.id)} />}
                                 </section>
 
                                 {latest.length > 0 && (
-                                    <section className="max-w-[1300px] mx-auto px-6 md:px-12 pb-20">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-900 border-t-2 border-zinc-900 pt-4 mb-8">Latest</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-14">
+                                    <section className="max-w-[1300px] mx-auto px-6 md:px-12 pb-10">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-900 border-t-2 border-zinc-900 pt-3 mb-5">Just unpacked</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8">
                                             {latest.map(s => <StoryCard key={s.id} story={s} onOpen={() => openStory(s.id)} />)}
                                         </div>
                                     </section>
@@ -237,43 +242,31 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </>
                         )}
 
-                        {nextPremiere && (
-                            <div className="max-w-[1300px] mx-auto px-6 md:px-12 py-16">
-                                <UnpackCountdown movie={nextPremiere} onExplore={() => go(`/movie/${nextPremiere.key}`)} onRemindMe={() => newsletterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
-                            </div>
-                        )}
-
-                        {stageMovies.length > 0 && (
-                            <section className="max-w-[1300px] mx-auto px-6 md:px-12 pb-16">
-                                <ZineTrailerPark movies={stageMovies} />
-                            </section>
-                        )}
-
                         {stories.length > 3 && (
-                            <section className="max-w-[1300px] mx-auto px-6 md:px-12 pb-20">
-                                <p style={{ fontFamily: SERIF }} className="text-4xl font-bold italic mb-6 border-t-2 border-zinc-900 pt-6">All stories</p>
-                                <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-hide">
+                            <section className="max-w-[1300px] mx-auto px-6 md:px-12 pt-10 pb-12">
+                                <p style={{ fontFamily: SERIF }} className="text-3xl font-bold italic mb-4 border-t-2 border-zinc-900 pt-4">From the crate</p>
+                                <div className="flex gap-2 overflow-x-auto pb-3 mb-6 scrollbar-hide">
                                     {FILTERS.filter(f => f.id === 'ALL' || presentTypes.has(f.id as EditorialStory['type'])).map(f => (
                                         <button key={f.id} onClick={() => setActiveFilter(f.id)}
-                                            className={`whitespace-nowrap px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest border-2 transition-colors ${activeFilter === f.id ? 'bg-zinc-900 text-white border-zinc-900' : 'border-zinc-300 text-zinc-600 hover:border-zinc-900'}`}>
+                                            className={`whitespace-nowrap px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-widest border transition-colors ${activeFilter === f.id ? 'bg-zinc-900 text-white border-zinc-900' : 'border-zinc-300 text-zinc-600 hover:border-zinc-900'}`}>
                                             {f.label}
                                         </button>
                                     ))}
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-14">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
                                     {filtered.map(s => <StoryCard key={s.id} story={s} onOpen={() => openStory(s.id)} />)}
                                 </div>
                             </section>
                         )}
 
-                        <section ref={newsletterRef} className="max-w-4xl mx-auto px-6 pb-24">
-                            <div className="bg-zinc-900 text-white p-10 md:p-16 text-center">
-                                <h2 style={{ fontFamily: SERIF }} className="text-4xl md:text-5xl font-bold italic">Get the next issue.</h2>
-                                <p className="mt-3 text-zinc-400 text-lg max-w-xl mx-auto">New stories, festival dates and watch party reveals, straight to your inbox.</p>
+                        <section ref={newsletterRef} className="max-w-3xl mx-auto px-6 pb-12">
+                            <div className="bg-zinc-900 text-white p-8 md:p-10 text-center">
+                                <h2 style={{ fontFamily: SERIF }} className="text-3xl md:text-4xl font-bold italic">Get the next issue.</h2>
+                                <p className="mt-2 text-zinc-400 text-base max-w-xl mx-auto">New stories, festival dates and watch party reveals, straight to your inbox.</p>
                                 {subStatus === 'success' ? (
                                     <p className="mt-8 text-emerald-300 font-bold">You are on the list. Thank you!</p>
                                 ) : (
-                                    <form onSubmit={handleSubscribe} className="mt-8 flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+                                    <form onSubmit={handleSubscribe} className="mt-5 flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
                                         <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email address"
                                             className="flex-grow bg-white text-zinc-900 px-5 py-4 text-base outline-none focus:ring-2 focus:ring-red-600" />
                                         <button type="submit" disabled={subStatus === 'loading'} className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs px-8 py-4 disabled:opacity-50">
