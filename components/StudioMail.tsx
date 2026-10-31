@@ -1,369 +1,340 @@
-
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { StudioMessage } from '../types';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
 import LoadingSpinner from './LoadingSpinner';
 
-interface ExtendedMessage extends StudioMessage {
-    source?: string;
+// One row in either folder. Messages from the website forms, film submissions and
+// real emails all end up in this same shape.
+interface MailItem {
+    id: string;
+    folder: 'in' | 'out';
+    kind: 'EMAIL' | 'CONTACT' | 'INQUIRY' | 'SUBMISSION' | 'SENT';
+    name: string;
+    email: string;
+    subject: string;
+    text: string;
+    when: number;
+    unread: boolean;
+    attachments: { filename: string; size?: number }[];
+    canOpenOriginal?: boolean;
 }
 
-// Previously took analytics/movies/festivalConfig props from AdminPage.tsx —
-// none of them were actually read anywhere in this component (it fetches
-// its own data directly from Firestore below and uses useFestival() for
-// settings). Dead wiring left over from an earlier version, removed rather
-// than fixed since there's nothing here to connect them to.
+const MAX_TOTAL_BYTES = 3_000_000;
+const MAX_FILES = 5;
+const ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx';
+
+const toMs = (v: any): number => {
+    if (!v) return 0;
+    if (typeof v === 'string') return Date.parse(v) || 0;
+    if (typeof v.seconds === 'number') return v.seconds * 1000;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    return 0;
+};
+const sizeLabel = (n?: number) => !n ? '' : n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+const dateLabel = (ms: number) => {
+    if (!ms) return '';
+    const d = new Date(ms), now = new Date();
+    return d.toDateString() === now.toDateString()
+        ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        : d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+};
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const readAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error(`Could not read ${file.name}`));
+    r.readAsDataURL(file);
+});
+
+const KIND_LABEL: Record<MailItem['kind'], string> = {
+    EMAIL: 'Email', CONTACT: 'Contact form', INQUIRY: 'Talent inquiry', SUBMISSION: 'Film submission', SENT: 'Sent',
+};
+
 const StudioMail: React.FC = () => {
     const { settings } = useFestival();
-    const [messages, setMessages] = useState<ExtendedMessage[]>([]);
-    const [selectedMessage, setSelectedMessage] = useState<ExtendedMessage | null>(null);
+    const [folder, setFolder] = useState<'in' | 'out'>('in');
+    const [received, setReceived] = useState<MailItem[]>([]);
+    const [sent, setSent] = useState<MailItem[]>([]);
+    const [mailboxNote, setMailboxNote] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [selected, setSelected] = useState<MailItem | null>(null);
+    const [isNewCompose, setIsNewCompose] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
     const [isSending, setIsSending] = useState(false);
-    const [copyStatus, setCopyStatus] = useState(false);
-    
-    // Composer State
+    const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
     const [replyText, setReplyText] = useState('');
     const [recipient, setRecipient] = useState('');
     const [subject, setSubject] = useState('');
-    const [isNewCompose, setIsNewCompose] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
+    const fileInput = useRef<HTMLInputElement>(null);
 
-    const authorizedIdentity = settings.businessEmail || "studio@cratetv.net";
-    const isSignatureActive = !!settings.emailSignature;
+    const fromAddress = settings.businessEmail || 'studio@cratetv.net';
+    const adminKey = () => sessionStorage.getItem('adminPassword');
 
-    const handleCopyLink = () => {
-        navigator.clipboard.writeText("https://cratetv.net/contact");
-        setCopyStatus(true);
-        setTimeout(() => setCopyStatus(false), 2000);
-    };
+    const callMail = useCallback(async (payload: Record<string, unknown>) => {
+        const res = await fetch('/api/admin-mail', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: adminKey(), ...payload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not load the mailbox.');
+        return data;
+    }, []);
 
-    useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
+    const loadAll = useCallback(async () => {
+        setIsLoading(true);
+        const incoming: MailItem[] = [];
 
-        const fetchMessages = async () => {
-            setIsLoading(true);
-            try {
+        // 1. Messages from the website (contact form, talent inquiries, film submissions).
+        try {
+            const db = getDbInstance();
+            if (db) {
                 const [contacts, inquiries, pipeline] = await Promise.all([
                     db.collection('security_events').where('type', 'in', ['CONTACT_SENT', 'SUBMISSION_RECEIVED']).orderBy('timestamp', 'desc').limit(30).get(),
                     db.collection('talent_inquiries').orderBy('timestamp', 'desc').limit(20).get(),
-                    db.collection('movie_pipeline').orderBy('submissionDate', 'desc').limit(20).get()
+                    db.collection('movie_pipeline').orderBy('submissionDate', 'desc').limit(20).get(),
                 ]);
-
-                const allMsgs: ExtendedMessage[] = [];
-
                 contacts.forEach(doc => {
-                    const data = doc.data();
-                    if (data.type === 'CONTACT_SENT') {
-                        allMsgs.push({
-                            id: doc.id,
-                            senderName: data.details?.name || 'User',
-                            senderEmail: data.details?.email || 'unknown@cratetv.net',
-                            subject: 'General Inquiry Transmission',
-                            content: data.details?.message || 'Check system logs for payload.',
-                            timestamp: data.timestamp,
-                            type: 'CONTACT',
-                            status: 'OPEN',
-                            source: 'WEB_FORM'
-                        });
-                    }
+                    const d: any = doc.data();
+                    if (d.type !== 'CONTACT_SENT') return;
+                    incoming.push({ id: doc.id, folder: 'in', kind: 'CONTACT', name: d.details?.name || 'Visitor', email: d.details?.email || '', subject: 'Message from the contact form', text: d.details?.message || '', when: toMs(d.timestamp), unread: false, attachments: [] });
                 });
-
                 inquiries.forEach(doc => {
-                    const data = doc.data();
-                    allMsgs.push({
-                        id: doc.id,
-                        senderName: data.senderName,
-                        senderEmail: data.senderEmail,
-                        subject: `Talent Inquiry: ${data.actorName}`,
-                        content: data.message,
-                        timestamp: data.timestamp,
-                        type: 'INQUIRY',
-                        status: data.status?.toUpperCase() || 'OPEN',
-                        source: 'ACTOR_DIRECTORY'
-                    });
+                    const d: any = doc.data();
+                    incoming.push({ id: doc.id, folder: 'in', kind: 'INQUIRY', name: d.senderName || 'Someone', email: d.senderEmail || '', subject: `Talent inquiry: ${d.actorName || ''}`, text: d.message || '', when: toMs(d.timestamp), unread: false, attachments: [] });
                 });
-
                 pipeline.forEach(doc => {
-                    const data = doc.data();
-                    allMsgs.push({
-                        id: doc.id,
-                        senderName: data.director,
-                        senderEmail: data.submitterEmail,
-                        subject: `Submission: ${data.title}`,
-                        content: `FILM SUBMISSION DETAILS:\nTitle: ${data.title}\nDirector: ${data.director}\nLink: ${data.movieUrl}\n\nSynopsis: ${data.synopsis}`,
-                        timestamp: data.submissionDate,
-                        type: 'SUBMISSION',
-                        status: data.status?.toUpperCase() || 'OPEN',
-                        source: data.source || 'SUBMIT_FORM'
-                    });
+                    const d: any = doc.data();
+                    incoming.push({ id: doc.id, folder: 'in', kind: 'SUBMISSION', name: d.director || 'Filmmaker', email: d.submitterEmail || '', subject: `Film submission: ${d.title || ''}`, text: `Title: ${d.title}\nDirector: ${d.director}\nLink: ${d.movieUrl}\n\n${d.synopsis || ''}`, when: toMs(d.submissionDate), unread: false, attachments: [] });
                 });
-
-                setMessages(allMsgs.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)));
-            } catch (e) {
-                console.error("Inbox aggregation failed", e);
-            } finally {
-                setIsLoading(false);
             }
-        };
+        } catch (e) { console.error('Website messages failed to load', e); }
 
-        fetchMessages();
-    }, []);
+        // 2. Real emails people sent to the mailbox, and your Sent copies.
+        const outgoing: MailItem[] = [];
+        try {
+            const [inbox, outbox] = await Promise.all([callMail({ action: 'list', folder: 'in' }), callMail({ action: 'list', folder: 'out' })]);
+            (inbox.messages || []).forEach((m: any) => incoming.push({
+                id: m.id, folder: 'in', kind: 'EMAIL', name: m.fromName || m.fromEmail || 'Unknown', email: m.fromEmail || '', subject: m.subject || '(no subject)',
+                text: m.text || '', when: toMs(m.createdAt), unread: m.read === false, attachments: m.attachments || [], canOpenOriginal: true,
+            }));
+            (outbox.messages || []).forEach((m: any) => outgoing.push({
+                id: m.id, folder: 'out', kind: 'SENT', name: (m.to || [])[0] || '', email: (m.to || [])[0] || '', subject: m.subject || '(no subject)',
+                text: m.text || '', when: toMs(m.createdAt), unread: false, attachments: m.attachments || [],
+            }));
+            setMailboxNote('');
+        } catch (e) {
+            setMailboxNote(e instanceof Error ? e.message : 'Could not load the mailbox.');
+        }
 
-    const handleSelectMessage = (msg: ExtendedMessage) => {
-        setIsNewCompose(false);
-        setSelectedMessage(msg);
-        setRecipient(msg.senderEmail);
-        setSubject(`Re: ${msg.subject}`);
-        setReplyText('');
+        setReceived(incoming.sort((a, b) => b.when - a.when));
+        setSent(outgoing.sort((a, b) => b.when - a.when));
+        setIsLoading(false);
+    }, [callMail]);
+
+    useEffect(() => { loadAll(); }, [loadAll]);
+
+    const list = folder === 'in' ? received : sent;
+    const unreadCount = useMemo(() => received.filter(m => m.unread).length, [received]);
+
+    const resetComposer = () => { setReplyText(''); setFiles([]); if (fileInput.current) fileInput.current.value = ''; };
+
+    const openMessage = (m: MailItem) => {
+        setIsNewCompose(false); setNotice(null); setSelected(m);
+        setRecipient(m.folder === 'in' ? m.email : ''); setSubject(m.folder === 'in' ? (/^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`) : '');
+        resetComposer();
+        if (m.kind === 'EMAIL' && m.unread) {
+            callMail({ action: 'markRead', id: m.id }).catch(() => {});
+            setReceived(prev => prev.map(x => x.id === m.id ? { ...x, unread: false } : x));
+        }
     };
 
-    const handleDraftWithAI = async () => {
-        if (!selectedMessage && !isNewCompose) return;
-        setIsDrafting(true);
-        const password = sessionStorage.getItem('adminPassword');
+    const startCompose = () => { setFolder('out'); setSelected(null); setIsNewCompose(true); setNotice(null); setRecipient(''); setSubject(''); resetComposer(); };
 
+    const addFiles = (picked: FileList | null) => {
+        if (!picked) return;
+        const next = [...files, ...Array.from(picked)];
+        const total = next.reduce((n, f) => n + f.size, 0);
+        if (next.length > MAX_FILES) { setNotice({ ok: false, text: `Up to ${MAX_FILES} files per email.` }); return; }
+        if (total > MAX_TOTAL_BYTES) { setNotice({ ok: false, text: 'Those files are too big together. Keep the total under 3 MB (a receipt as a PDF is fine).' }); return; }
+        setNotice(null); setFiles(next);
+        if (fileInput.current) fileInput.current.value = '';
+    };
+
+    const handleDraft = async () => {
+        setIsDrafting(true); setNotice(null);
         try {
             const res = await fetch('/api/draft-studio-reply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    password, 
-                    context: selectedMessage ? selectedMessage.content : 'General studio update',
-                    senderName: selectedMessage?.senderName,
-                    type: selectedMessage?.type || 'GENERAL'
-                }),
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminKey(), context: selected ? selected.text : 'General studio update', senderName: selected?.name, type: selected?.kind === 'EMAIL' ? 'GENERAL' : selected?.kind || 'GENERAL' }),
             });
             const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
             setReplyText(data.draft);
-        } catch (e) {
-            alert("AI Drafting failed.");
-        } finally {
-            setIsDrafting(false);
-        }
+        } catch { setNotice({ ok: false, text: 'The writing helper could not draft that right now. You can write it yourself.' }); }
+        finally { setIsDrafting(false); }
     };
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSending(true);
-        const password = sessionStorage.getItem('adminPassword');
-
+        setIsSending(true); setNotice(null);
         try {
+            const attachments = await Promise.all(files.map(async f => ({ filename: f.name, content: await readAsBase64(f) })));
             const res = await fetch('/api/send-individual-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    password, 
-                    email: recipient, 
-                    subject, 
-                    htmlBody: replyText.replace(/\n/g, '<br/>')
-                }),
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminKey(), email: recipient.trim(), subject, htmlBody: escapeHtml(replyText).replace(/\n/g, '<br/>'), attachments }),
             });
-            if (res.ok) {
-                alert(`Transmission Dispatched via ${authorizedIdentity}.`);
-                setReplyText('');
-                if (isNewCompose) setIsNewCompose(false);
-            } else {
-                const err = await res.json();
-                throw new Error(err.error);
-            }
-        } catch (e) {
-            alert(`Transmission failed: ${e instanceof Error ? e.message : 'Unknown Error'}`);
-        } finally {
-            setIsSending(false);
-        }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'The email did not send.');
+            setNotice({ ok: true, text: `Sent to ${recipient.trim()}. A copy is in your Sent folder.` });
+            resetComposer(); setIsNewCompose(false); setSelected(null);
+            await loadAll(); setFolder('out');
+        } catch (err) {
+            setNotice({ ok: false, text: err instanceof Error ? err.message : 'The email did not send.' });
+        } finally { setIsSending(false); }
     };
 
+    const openOriginal = async () => {
+        if (!selected) return;
+        try { const { url } = await callMail({ action: 'original', id: selected.id }); window.open(url, '_blank', 'noopener'); }
+        catch (err) { setNotice({ ok: false, text: err instanceof Error ? err.message : 'Could not open the original.' }); }
+    };
+
+    const showComposer = isNewCompose || (selected && selected.folder === 'in');
+
     return (
-        <div className="flex flex-col h-[calc(100vh-280px)] min-h-[650px] animate-[fadeIn_0.5s_ease-out]">
-            
-            {/* Top Routing Helper */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-grow bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between shadow-xl">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Routing Link Active</p>
-                            <p className="text-xs text-white mt-1">Authorized Identity: <span className="text-red-500 font-bold uppercase">{authorizedIdentity}</span></p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-3">
-                            <span className="w-1 h-1 rounded-full bg-red-600 animate-pulse"></span>
-                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">HABIT_LOOP: ONLINE</span>
-                        </div>
-                        <button 
-                            onClick={handleCopyLink}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copyStatus ? 'bg-green-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white hover:text-black'}`}
-                        >
-                            {copyStatus ? 'Link Copied' : 'Copy Contact Link'}
-                        </button>
-                    </div>
+        <div className="flex flex-col h-[calc(100vh-280px)] min-h-[650px]">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <p className="text-sm text-gray-300">Sending as <span className="font-bold text-white">{fromAddress}</span></p>
+                <div className="flex gap-2">
+                    <button onClick={loadAll} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10">Refresh</button>
+                    <button onClick={startCompose} className="px-5 py-2 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700">+ New email</button>
                 </div>
             </div>
 
-            <div className="flex-grow flex gap-6 overflow-hidden">
-                
-                {/* Inbox Sidebar */}
-                <div className="w-96 flex flex-col bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                        <div>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Studio Dispatch</h3>
-                            <p className="text-[8px] font-black text-gray-700 uppercase tracking-widest mt-0.5">Aggregated Inbound Feed</p>
-                        </div>
-                        <button 
-                            onClick={() => { setIsNewCompose(true); setSelectedMessage(null); setRecipient(''); setSubject(''); setReplyText(''); }}
-                            className="p-2.5 bg-red-600/10 hover:bg-red-600 rounded-xl text-red-500 hover:text-white transition-all border border-red-600/20"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                        </button>
+            {mailboxNote && <p className="mb-4 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">{mailboxNote}</p>}
+            {notice && <p className={`mb-4 text-xs rounded-xl px-4 py-3 border ${notice.ok ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20' : 'text-red-300 bg-red-500/10 border-red-500/20'}`}>{notice.text}</p>}
+
+            <div className="flex-grow flex flex-col lg:flex-row gap-5 overflow-hidden">
+                {/* List */}
+                <div className="lg:w-96 flex flex-col bg-[#0f0f0f] border border-white/5 rounded-3xl overflow-hidden min-h-[260px]">
+                    <div className="flex border-b border-white/5">
+                        {([['in', 'Received'], ['out', 'Sent']] as const).map(([key, label]) => (
+                            <button key={key} onClick={() => { setFolder(key); setSelected(null); setIsNewCompose(false); }}
+                                className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors ${folder === key ? 'text-white border-b-2 border-red-600' : 'text-gray-500 hover:text-gray-300'}`}>
+                                {label}{key === 'in' && unreadCount > 0 && <span className="ml-2 bg-red-600 text-white rounded-full px-2 py-0.5 text-[10px]">{unreadCount}</span>}
+                            </button>
+                        ))}
                     </div>
-                    <div className="flex-grow overflow-y-auto scrollbar-hide">
-                        {isLoading ? <div className="p-10 text-center"><LoadingSpinner /></div> : messages.length === 0 ? (
-                            <div className="p-10 text-center opacity-20">
-                                <p className="text-xs font-black uppercase tracking-widest">No Active Transmissions</p>
-                            </div>
-                        ) : (
-                            messages.map(msg => (
-                                <button 
-                                    key={msg.id}
-                                    onClick={() => handleSelectMessage(msg)}
-                                    className={`w-full text-left p-6 border-b border-white/5 transition-all hover:bg-white/[0.02] group ${selectedMessage?.id === msg.id ? 'bg-red-600/5 !border-red-600/30' : ''}`}
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex gap-1.5">
-                                            <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded border ${msg.type === 'SUBMISSION' ? 'text-blue-500 border-blue-500/30 bg-blue-500/5' : msg.type === 'INQUIRY' ? 'text-purple-500 border-purple-500/30 bg-purple-500/5' : 'text-gray-500 border-white/10 bg-white/5'}`}>{msg.type}</span>
-                                            {msg.source && <span className="text-[7px] font-black uppercase text-gray-700 bg-black px-1.5 py-0.5 rounded tracking-tighter">{msg.source.replace('_', ' ')}</span>}
-                                        </div>
-                                        <span className="text-[9px] text-gray-700 font-mono">{msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleDateString() : '---'}</span>
-                                    </div>
-                                    <h4 className={`text-sm font-black uppercase truncate group-hover:text-red-500 transition-colors ${selectedMessage?.id === msg.id ? 'text-red-500' : 'text-white'}`}>{msg.senderName}</h4>
-                                    <p className="text-[10px] text-gray-500 truncate mt-1 font-medium">{msg.subject}</p>
-                                </button>
-                            ))
-                        )}
+                    <div className="flex-grow overflow-y-auto">
+                        {isLoading ? <div className="p-10 text-center"><LoadingSpinner /></div> : list.length === 0 ? (
+                            <p className="p-10 text-center text-sm text-gray-500">{folder === 'in' ? 'Nothing received yet.' : 'Nothing sent yet. Emails you send from here show up in this folder.'}</p>
+                        ) : list.map(m => (
+                            <button key={m.id} onClick={() => openMessage(m)}
+                                className={`w-full text-left px-5 py-4 border-b border-white/5 hover:bg-white/[0.03] ${selected?.id === m.id ? 'bg-red-600/5' : ''}`}>
+                                <div className="flex justify-between gap-3 mb-1">
+                                    <span className={`truncate text-sm ${m.unread ? 'font-black text-white' : 'font-bold text-gray-300'}`}>
+                                        {m.unread && <span className="inline-block w-2 h-2 rounded-full bg-red-600 mr-2 align-middle" />}{m.name || m.email}
+                                    </span>
+                                    <span className="text-[11px] text-gray-600 whitespace-nowrap">{dateLabel(m.when)}</span>
+                                </div>
+                                <p className="truncate text-xs text-gray-400">{m.subject}</p>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                    <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{KIND_LABEL[m.kind]}</span>
+                                    {m.attachments.length > 0 && <span className="text-[10px] text-gray-500">📎 {m.attachments.length}</span>}
+                                </div>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* Message Detail / Composer */}
-                <div className="flex-grow bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] flex flex-col shadow-2xl overflow-hidden relative">
-                    {!selectedMessage && !isNewCompose ? (
-                        <div className="flex-grow flex flex-col items-center justify-center text-center opacity-20 space-y-4">
-                            <img src="/logo-wordmark-tight.svg" className="w-32" alt="" />
-                            <p className="text-sm font-black uppercase tracking-[0.5em]">Studio Communications Hub</p>
+                {/* Reading / writing */}
+                <div className="flex-grow bg-[#0f0f0f] border border-white/5 rounded-3xl flex flex-col overflow-hidden min-h-[420px]">
+                    {!selected && !isNewCompose ? (
+                        <div className="flex-grow flex flex-col items-center justify-center text-center text-gray-600 p-8 gap-2">
+                            <p className="text-sm font-bold uppercase tracking-widest">Pick a message, or start a new email</p>
+                            <p className="text-xs max-w-sm">Replies to emails you send from here land in Received once the mailbox is connected (see the setup steps your assistant gave you).</p>
                         </div>
                     ) : (
-                        <div className="flex flex-col h-full animate-[fadeIn_0.3s_ease-out]">
-                            {/* Header */}
-                            <div className="p-8 border-b border-white/5 bg-white/[0.01]">
+                        <form onSubmit={handleSend} className="flex flex-col h-full">
+                            <div className="p-6 border-b border-white/5">
                                 {isNewCompose ? (
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2 block">Destination Address</label>
-                                            <input 
-                                                value={recipient} 
-                                                onChange={e => setRecipient(e.target.value)} 
-                                                placeholder="email@address.com" 
-                                                className="w-full bg-transparent text-xl font-black uppercase tracking-tighter text-white focus:outline-none placeholder:text-gray-800"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2 block">Transmission Subject</label>
-                                            <input 
-                                                value={subject} 
-                                                onChange={e => setSubject(e.target.value)} 
-                                                placeholder="Subject Line..." 
-                                                className="w-full bg-transparent text-sm font-bold text-gray-500 focus:outline-none placeholder:text-gray-800"
-                                            />
-                                        </div>
+                                    <div className="space-y-3">
+                                        <input value={recipient} onChange={e => setRecipient(e.target.value)} type="email" required placeholder="To: email@address.com" className="w-full bg-transparent text-lg font-bold text-white focus:outline-none placeholder:text-gray-700" />
+                                        <input value={subject} onChange={e => setSubject(e.target.value)} required placeholder="Subject" className="w-full bg-transparent text-sm text-gray-300 focus:outline-none placeholder:text-gray-700" />
                                     </div>
-                                ) : (
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{selectedMessage?.senderName}</h2>
-                                            <p className="text-sm text-gray-500 font-bold mt-2">{selectedMessage?.senderEmail}</p>
-                                            <div className="flex items-center gap-3 mt-4">
-                                                <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">RE: {selectedMessage?.subject}</span>
-                                                <div className="h-px w-8 bg-white/10"></div>
-                                                <span className="text-[9px] text-gray-600 font-mono">ID: {selectedMessage?.id.substring(0,8)}</span>
+                                ) : selected && (
+                                    <div>
+                                        <h2 className="text-2xl font-black text-white">{selected.subject}</h2>
+                                        <p className="text-sm text-gray-400 mt-1">{selected.folder === 'in' ? 'From' : 'To'} {selected.name && selected.name !== selected.email ? `${selected.name} · ` : ''}{selected.email} · {selected.when ? new Date(selected.when).toLocaleString() : ''}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex-grow overflow-y-auto p-6 space-y-6">
+                                {selected && (
+                                    <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
+                                        <p className="text-gray-200 whitespace-pre-wrap leading-relaxed text-sm">{selected.text || '(No message text.)'}</p>
+                                        {selected.attachments.length > 0 && (
+                                            <div className="mt-5 pt-4 border-t border-white/10">
+                                                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Attachments</p>
+                                                <ul className="space-y-1">
+                                                    {selected.attachments.map((a, i) => <li key={i} className="text-sm text-gray-300">📎 {a.filename} <span className="text-gray-600">{sizeLabel(a.size)}</span></li>)}
+                                                </ul>
+                                                {selected.canOpenOriginal && <button type="button" onClick={openOriginal} className="mt-3 text-xs font-bold text-red-400 hover:text-red-300 underline">Download the original email with its attachments</button>}
                                             </div>
-                                        </div>
-                                        <button onClick={() => { setSelectedMessage(null); setIsNewCompose(false); }} className="text-gray-600 hover:text-white transition-colors">
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Content & Reply */}
-                            <div className="flex-grow overflow-y-auto p-8 space-y-12 scrollbar-hide">
-                                {selectedMessage && (
-                                    <div className="bg-white/5 p-8 rounded-3xl border border-white/5 shadow-inner">
-                                        <p className="text-gray-300 leading-relaxed whitespace-pre-wrap font-medium">{selectedMessage.content}</p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center px-2">
-                                        <div className="flex items-center gap-3">
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Studio Response Payload</h4>
-                                            <div className="h-1 w-1 rounded-full bg-red-600 animate-pulse"></div>
-                                        </div>
-                                        <button 
-                                            onClick={handleDraftWithAI}
-                                            disabled={isDrafting}
-                                            className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 uppercase tracking-widest bg-indigo-600/10 px-3 py-1.5 rounded-lg border border-indigo-500/20"
-                                        >
-                                            <span className="text-sm">✨</span>
-                                            {isDrafting ? 'Synthesizing...' : 'Draft with Gemini'}
-                                        </button>
-                                    </div>
-                                    <textarea 
-                                        value={replyText}
-                                        onChange={e => setReplyText(e.target.value)}
-                                        placeholder="Compose studio correspondence..."
-                                        className="w-full bg-black/40 border border-white/10 rounded-3xl p-8 text-gray-200 min-h-[300px] focus:border-red-600 transition-all focus:outline-none leading-relaxed font-medium"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Footer Actions */}
-                            <div className="p-8 border-t border-white/5 bg-white/[0.01] flex flex-col sm:flex-row justify-between items-center gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest">SMTP_RELAY: Resend // VERCEL_INFRASTRUCTURE</p>
-                                    <p className="text-[8px] text-gray-800 font-black uppercase tracking-widest">Authorized Identity: {authorizedIdentity}</p>
-                                    {isSignatureActive && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-1 h-1 rounded-full bg-green-500"></span>
-                                            <p className="text-[8px] text-green-700 font-black uppercase tracking-widest">Global Signature Applied</p>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-4">
-                                    <button onClick={() => { setSelectedMessage(null); setIsNewCompose(false); }} className="px-6 py-4 text-gray-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Discard Draft</button>
-                                    <button 
-                                        onClick={handleSend}
-                                        disabled={isSending || !replyText || !recipient}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-black px-12 py-4 rounded-2xl uppercase tracking-widest text-xs shadow-2xl shadow-red-900/40 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-3"
-                                    >
-                                        {isSending ? (
-                                            <>
-                                                <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                                                Transmitting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                                                Dispatch Message
-                                            </>
                                         )}
-                                    </button>
-                                </div>
+                                    </div>
+                                )}
+
+                                {showComposer && (
+                                    <div className="space-y-4">
+                                        {!isNewCompose && selected?.folder === 'in' && (
+                                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                                                <span className="font-bold uppercase tracking-widest">Reply to</span>
+                                                <input value={recipient} onChange={e => setRecipient(e.target.value)} type="email" required className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-gray-200 flex-grow" />
+                                            </div>
+                                        )}
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Your message</label>
+                                            <button type="button" onClick={handleDraft} disabled={isDrafting} className="text-xs font-bold text-indigo-300 bg-indigo-600/10 border border-indigo-500/20 rounded-lg px-3 py-1.5 hover:bg-indigo-600/20">
+                                                {isDrafting ? 'Writing…' : '✨ Help me write this'}
+                                            </button>
+                                        </div>
+                                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)} required placeholder="Write your message…" className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-gray-200 min-h-[220px] focus:border-red-600 focus:outline-none leading-relaxed text-sm" />
+
+                                        <div>
+                                            <input ref={fileInput} type="file" multiple accept={ACCEPT} className="hidden" onChange={e => addFiles(e.target.files)} />
+                                            <button type="button" onClick={() => fileInput.current?.click()} className="text-xs font-bold text-gray-200 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 hover:bg-white/10">📎 Attach files (receipts, PDFs, pictures)</button>
+                                            <span className="ml-3 text-[11px] text-gray-600">Up to {MAX_FILES} files, 3 MB total</span>
+                                            {files.length > 0 && (
+                                                <ul className="mt-3 space-y-1.5">
+                                                    {files.map((f, i) => (
+                                                        <li key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200">
+                                                            <span className="truncate">📎 {f.name} <span className="text-gray-600">{sizeLabel(f.size)}</span></span>
+                                                            <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-gray-500 hover:text-red-400 text-xs font-bold ml-3">Remove</button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+
+                            {showComposer && (
+                                <div className="p-5 border-t border-white/5 flex items-center justify-between gap-4">
+                                    <p className="text-[11px] text-gray-600">{settings.emailSignature ? 'Your signature is added automatically.' : ''}</p>
+                                    <div className="flex gap-3">
+                                        <button type="button" onClick={() => { setSelected(null); setIsNewCompose(false); resetComposer(); }} className="px-5 py-3 text-xs font-bold text-gray-500 hover:text-white">Discard</button>
+                                        <button type="submit" disabled={isSending || !replyText || !recipient} className="bg-red-600 hover:bg-red-700 disabled:opacity-30 text-white font-black px-8 py-3 rounded-xl text-xs uppercase tracking-widest">
+                                            {isSending ? 'Sending…' : 'Send email'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </form>
                     )}
                 </div>
             </div>
