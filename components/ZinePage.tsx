@@ -196,12 +196,19 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         <header className={`pt-28 md:pt-32 pb-6 px-6 ${PAPER}`}>
                             <div className="max-w-[1300px] mx-auto">
                                 <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 pb-4 border-b-2 border-zinc-900">
-                                    <span>Crate TV presents</span>
+                                    <span className="flex items-center gap-2">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+                                            <path d="M3 9h18v11H3z" />
+                                            <path d="M3 13h18M3 17h18" />
+                                            <path d="M3 9l2-5h14l2 5" />
+                                        </svg>
+                                        Crate TV presents
+                                    </span>
                                     <span className="hidden sm:inline">{month}</span>
                                     <span>{stories.length} {stories.length === 1 ? 'story' : 'stories'}</span>
                                 </div>
                                 <h1 style={{ fontFamily: SERIF }} className="text-center text-[3.6rem] sm:text-[5.5rem] md:text-[7.5rem] font-black italic leading-[1] tracking-tight text-zinc-900 pt-3 md:pt-4 pb-3 md:pb-4">The Unpack</h1>
-                                <p style={{ fontFamily: SERIF }} className="text-center text-base md:text-lg italic text-zinc-600 pb-4 max-w-2xl mx-auto">Stories, interviews and director's notes from the filmmakers and festivals on Crate TV.</p>
+                                <p style={{ fontFamily: SERIF }} className="text-center text-base md:text-lg italic text-zinc-600 pb-4 max-w-2xl mx-auto">What's inside this week.</p>
                                 <div className="border-t border-zinc-900 border-b-4 border-double h-2" />
                             </div>
                         </header>
@@ -223,7 +230,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                                 {latest.length > 0 && (
                                     <section className="max-w-[1300px] mx-auto px-6 md:px-12 pb-10">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-900 border-t-2 border-zinc-900 pt-3 mb-5">Latest</p>
+                                        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-900 border-t-2 border-zinc-900 pt-3 mb-5">Just unpacked</p>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8">
                                             {latest.map(s => <StoryCard key={s.id} story={s} onOpen={() => openStory(s.id)} />)}
                                         </div>
@@ -237,7 +244,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                         {stories.length > 3 && (
                             <section className="max-w-[1300px] mx-auto px-6 md:px-12 pt-10 pb-12">
-                                <p style={{ fontFamily: SERIF }} className="text-3xl font-bold italic mb-4 border-t-2 border-zinc-900 pt-4">All stories</p>
+                                <p style={{ fontFamily: SERIF }} className="text-3xl font-bold italic mb-4 border-t-2 border-zinc-900 pt-4">From the crate</p>
                                 <div className="flex gap-2 overflow-x-auto pb-3 mb-6 scrollbar-hide">
                                     {FILTERS.filter(f => f.id === 'ALL' || presentTypes.has(f.id as EditorialStory['type'])).map(f => (
                                         <button key={f.id} onClick={() => setActiveFilter(f.id)}
