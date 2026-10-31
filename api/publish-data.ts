@@ -1,5 +1,6 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { isPublishedStory } from './_lib/zineRules.js';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { sealSnapshot, PRIVATE_SNAPSHOT_KEY } from './_lib/privateSnapshot.js';
 import { publicSafeData } from './_lib/paidRules.js';
@@ -65,7 +66,8 @@ export const assembleAndSyncMasterData = async (db: Firestore) => {
     categoriesSnap.forEach(doc => categoriesData[doc.id] = doc.data());
 
     const storiesData: EditorialStory[] = [];
-    storiesSnap.forEach(doc => storiesData.push({ id: doc.id, ...doc.data() } as EditorialStory));
+    // Drafts stay private: only published stories go to the public manifest.
+    storiesSnap.forEach(doc => { if (isPublishedStory(doc.data() as { status?: string })) storiesData.push({ id: doc.id, ...doc.data() } as EditorialStory); });
 
     // Public branding/details for partner festivals (Festival in a box).
     // Imported lazily: partners.ts itself imports this file.

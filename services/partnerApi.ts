@@ -31,7 +31,7 @@ export async function callAdminPartners<T = any>(action: string, payload: Record
 export async function uploadPartnerFile(
     getToken: GetToken,
     partnerId: string,
-    kind: 'poster' | 'video' | 'logo' | 'hero',
+    kind: 'poster' | 'video' | 'logo' | 'hero' | 'story',
     file: File,
     onProgress?: (pct: number) => void,
 ): Promise<string> {

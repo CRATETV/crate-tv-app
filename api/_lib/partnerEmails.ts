@@ -48,3 +48,25 @@ export function notifyPartnerReviewed(to: string[], partnerName: string, approve
     return send(to, approved ? `${partnerName} is live on Crate TV` : `Changes requested: ${partnerName}`,
         approved ? 'Your festival is live' : 'A few changes needed', body);
 }
+
+// ── Zine pieces written by partners ──────────────────────────────────────
+
+export function notifyOwnerPieceSubmitted(partnerName: string, title: string) {
+    return send(ownerEmails(), `New zine piece from ${partnerName}`, 'A partner wrote for The Unpack',
+        `<p style="font-size:14px;"><strong>${esc(partnerName)}</strong> sent in a piece for The Unpack: <em>${esc(title)}</em>.</p>
+         ${renderEmailButton('Read it in the Editorial tab', `${siteUrl()}/admin`)}`);
+}
+
+export function notifyPartnerPiece(to: string[], partnerName: string, title: string, outcome: 'accepted' | 'changes' | 'live', note: string, storyId?: string) {
+    const copy = {
+        accepted: { subject: `Your piece "${title}" is in the editing queue`, heading: 'We loved it', body: `Thank you for writing for The Unpack. Your piece <strong>${esc(title)}</strong> is accepted. We will edit it lightly and publish it soon. You will get another email when it is live.` },
+        changes: { subject: `A few notes on your piece "${title}"`, heading: 'A few notes', body: `Thank you for sending <strong>${esc(title)}</strong>. Before we can publish it, we would like you to take another look:` },
+        live: { subject: `Your piece "${title}" is live on The Unpack`, heading: 'Your piece is live', body: `<strong>${esc(title)}</strong> is now live on The Unpack. Share it with your community!` },
+    }[outcome];
+    const button = outcome === 'live' && storyId ? renderEmailButton('Read it on The Unpack', `${siteUrl()}/zine/${storyId}`) : outcome === 'changes' ? renderEmailButton('Open the festival portal', `${siteUrl()}/partner`) : '';
+    return send(to, copy.subject, copy.heading,
+        `<p style="font-size:14px;">${copy.body}</p>
+         ${note ? `<p style="font-size:14px;background:#f4f4f4;padding:12px 16px;border-radius:8px;white-space:pre-wrap;">${esc(note)}</p>` : ''}
+         ${button}
+         <p style="margin:20px 0 0;font-size:12px;color:#999;">${esc(partnerName)} · Crate TV</p>`);
+}

@@ -12,6 +12,7 @@
 //   submit        → sends the draft to CRATE for review
 //   uploadUrl     → { kind, fileName, fileType, size } presigned upload for a poster/film/logo
 //   sales         → live ticket sales + payout estimate
+//   zineList / zineSave / zineSubmit / zineDelete → the partner's pieces for The Unpack (the zine)
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -23,7 +24,8 @@ import {
     planPartnerCleanup,
 } from './_lib/partners.js';
 import { checkDraft, sanitizeDraft, computePayout, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
-import { notifyOwnerSubmitted } from './_lib/partnerEmails.js';
+import { notifyOwnerSubmitted, notifyOwnerPieceSubmitted } from './_lib/partnerEmails.js';
+import { sanitizePartnerPiece } from './_lib/zineRules.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -33,6 +35,7 @@ const UPLOAD_KINDS: Record<string, { folder: string; types: RegExp; maxBytes: nu
     logo: { folder: 'branding', types: /^image\/(jpeg|png|webp|svg\+xml)$/, maxBytes: 5 * 1024 * 1024 },
     hero: { folder: 'branding', types: /^image\/(jpeg|png|webp)$/, maxBytes: 15 * 1024 * 1024 },
     // A single presigned PUT is limited to 5 GB by S3.
+    story: { folder: 'zine', types: /^image\/(jpeg|png|webp)$/, maxBytes: 15 * 1024 * 1024 },
     video: { folder: 'films', types: /^video\/(mp4|quicktime|x-m4v)$/, maxBytes: 5 * 1024 * 1024 * 1024 },
 };
 
@@ -134,6 +137,56 @@ export async function POST(request: Request) {
                 const s3 = new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
                 const signedUrl = await getSignedUrl(s3, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: fileType }), { expiresIn: 3600 });
                 return json({ signedUrl, publicUrl: `https://${bucket}.s3.${region}.amazonaws.com/${key}` });
+            }
+
+            case 'zineList': {
+                const { partner } = await requirePartnerMember(db, idToken, partnerId);
+                const snap = await db.collection('zine_submissions').where('partnerId', '==', partner.id).get();
+                const pieces = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a: any, b: any) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+                return json({ pieces });
+            }
+
+            case 'zineSave': {
+                const { partner, email } = await requirePartnerMember(db, idToken, partnerId);
+                if (!rateLimit(`partner-zine:${partner.id}`, 120, 60 * 60_000)) throw new HttpError(429, 'Too many saves. Try again in a bit.');
+                const { piece } = sanitizePartnerPiece(body.piece);
+                const col = db.collection('zine_submissions');
+                const now = new Date().toISOString();
+                const pieceId = typeof body.pieceId === 'string' && body.pieceId ? body.pieceId : '';
+                if (pieceId) {
+                    const ref = col.doc(pieceId);
+                    const cur = (await ref.get()).data();
+                    if (!cur || cur.partnerId !== partner.id) throw new HttpError(404, 'That piece was not found.');
+                    if (cur.status === 'submitted' || cur.status === 'accepted') throw new HttpError(409, cur.status === 'accepted' ? 'This piece was accepted and is being edited by Crate TV.' : 'This piece is waiting for review. Ask Crate TV to send it back if you need to change it.');
+                    await ref.set({ piece, updatedAt: now, status: cur.status === 'changes' ? 'changes' : 'draft' }, { merge: true });
+                    return json({ success: true, id: pieceId });
+                }
+                const ref = await col.add({ partnerId: partner.id, partnerName: partner.name, piece, status: 'draft', createdAt: now, updatedAt: now, createdBy: email || '' });
+                return json({ success: true, id: ref.id });
+            }
+
+            case 'zineSubmit': {
+                const { partner } = await requirePartnerMember(db, idToken, partnerId);
+                const ref = db.collection('zine_submissions').doc(String(body.pieceId || ''));
+                const cur = (await ref.get()).data();
+                if (!cur || cur.partnerId !== partner.id) throw new HttpError(404, 'That piece was not found.');
+                if (cur.status === 'submitted' || cur.status === 'accepted') throw new HttpError(409, 'This piece was already sent.');
+                const { piece, errors } = sanitizePartnerPiece(cur.piece);
+                if (errors.length) throw new HttpError(400, `Please fix these first: ${errors.join(' ')}`);
+                await ref.set({ status: 'submitted', submittedAt: new Date().toISOString(), note: '' }, { merge: true });
+                notifyOwnerPieceSubmitted(partner.name, piece.title).catch(e => console.error('[partner-portal] zine notify failed:', e));
+                return json({ success: true });
+            }
+
+            case 'zineDelete': {
+                const { partner } = await requirePartnerMember(db, idToken, partnerId);
+                const ref = db.collection('zine_submissions').doc(String(body.pieceId || ''));
+                const cur = (await ref.get()).data();
+                if (!cur || cur.partnerId !== partner.id) throw new HttpError(404, 'That piece was not found.');
+                if (cur.status === 'accepted') throw new HttpError(409, 'This piece was accepted, so it can not be deleted here.');
+                await ref.delete();
+                return json({ success: true });
             }
 
             case 'sales': {

@@ -458,8 +458,18 @@ export interface HeroConfig {
 
 export interface ZineSection {
   id: string;
-  type: 'text' | 'header' | 'quote' | 'image' | 'video';
+  // text = a paragraph, header = a heading, quote = a big pull quote,
+  // image = one picture (content = its web address), video = a video file,
+  // callout = a boxed note (for example a director's note; `label` is its title),
+  // gallery = several pictures (content = one address per line),
+  // film = a film card with a Watch button (content = the film's key).
+  type: 'text' | 'header' | 'quote' | 'image' | 'video' | 'callout' | 'gallery' | 'film';
   content: string;
+  caption?: string;
+  credit?: string;
+  label?: string;
+  /** Writing prompt shown in the editor only; removed when the story is saved. */
+  hint?: string;
 }
 
 export interface EditorialStory {
@@ -470,10 +480,17 @@ export interface EditorialStory {
   sections?: ZineSection[];
   heroImage: string;
   author: string;
-  type: 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE';
+  type: 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE' | 'FILM_FEATURE' | 'DIRECTORS_NOTES' | 'FESTIVAL_VOICES';
   publishedAt?: any;
   linkedMovieKey?: string;
   linkedBlockId?: string;
+  /** Stories saved before drafts existed have no status and count as published. */
+  status?: 'draft' | 'published';
+  /** Set when a festival partner wrote the piece. */
+  partnerId?: string;
+  partnerName?: string;
+  /** Which writing template it was started from. */
+  template?: string;
 }
 
 export interface FilmmakerPayout {

@@ -14,7 +14,7 @@ export const TAB_META: Record<string, TabMeta> = {
     homepage:     { label: 'Homepage', icon: '🏠', desc: 'The hero banner and featured films on the home screen.', keywords: 'hero featured banner' },
     categories:   { label: 'Rows & categories', icon: '🗂️', desc: 'The rows of films people browse.', keywords: 'rows categories carousel order' },
     spotlight:    { label: 'Monthly spotlight', icon: '🌟', desc: 'Pick a catalog film to highlight and email about each month.', keywords: 'spotlight highlight feature email' },
-    editorial:    { label: 'Editorial', icon: '✍️', desc: 'Articles and stories about films on CRATE.', keywords: 'articles stories zine' },
+    editorial:    { label: 'Editorial', icon: '✍️', desc: 'Write and publish stories for The Unpack (the zine).', keywords: 'articles stories zine unpack write blog magazine partner pieces' },
     laurels:      { label: 'Laurels', icon: '🏆', desc: 'Award laurels for festival winners and selections.', keywords: 'awards laurel' },
 
     watchParty:   { label: 'Watch parties', icon: '🍿', desc: 'Schedule and run live screenings.', keywords: 'live screening premiere watch party' },
