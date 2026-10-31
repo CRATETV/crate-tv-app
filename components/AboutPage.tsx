@@ -54,7 +54,7 @@ const AboutPage: React.FC = () => {
                         <div className="space-y-10">
                             <div className="space-y-4">
                                 <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic border-l-8 border-red-600 pl-8 leading-none">The Independent <br/>Spirit.</h2>
-                                <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">Crate TV // Core Identity</p>
+                                <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">About Crate TV</p>
                             </div>
                             <div className="text-gray-400 text-lg md:text-xl leading-relaxed space-y-8 font-medium">
                                 <p>We don't believe in algorithms. We believe in <span className="text-white font-bold">vision</span>. In a world of safe, corporate-molded content, Crate TV is the escape hatch. We are the digital record of the cinematic underground—a hub for imagination, raw creativity, and the independent spirit that major platforms have forgotten.</p>
@@ -64,7 +64,7 @@ const AboutPage: React.FC = () => {
                         <div className="relative group">
                             <div className="absolute -inset-4 bg-gradient-to-br from-red-600/20 to-purple-600/20 rounded-[4rem] blur-3xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
                             <div className="relative bg-[#0a0a0a] border border-white/10 p-10 md:p-16 rounded-[4rem] shadow-2xl space-y-10">
-                                <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">The 70/30 Handshake</h3>
+                                <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">The 70/30 Promise</h3>
                                 <div className="space-y-6">
                                     <div className="flex items-start gap-4">
                                         <div className="w-1.5 h-1.5 rounded-full bg-red-600 mt-2"></div>
@@ -76,7 +76,7 @@ const AboutPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="pt-10 border-t border-white/5">
-                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.4em]">Creator-First Economics // V4.0 Stable</p>
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.4em]">Creator-first. Always.</p>
                                 </div>
                             </div>
                         </div>

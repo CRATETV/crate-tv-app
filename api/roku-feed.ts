@@ -3,6 +3,7 @@ import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_lib/filmAvailability.js';
 import { isStaleLive } from './_lib/watchPartyRules.js';
 import { rankByViews } from './_lib/topTen.js';
+import { rokuImageUrl } from './_lib/imageHosts.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -131,10 +132,11 @@ async function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: b
         title: movie.title || 'Untitled',
         description: description,
         synopsis: movie.synopsis,
-        hdPosterUrl: posterUrl,
-        heroImage: heroUrl,
-        poster: movie.poster,
-        tvPoster: movie.tvPoster,
+        // Right-sized copies (api/_lib/imageHosts.ts): tiles are 214 px wide, so never send the multi-megabyte original.
+        hdPosterUrl: rokuImageUrl(posterUrl, 900),
+        heroImage: rokuImageUrl(heroUrl, 1920),
+        poster: rokuImageUrl(movie.poster, 900),
+        tvPoster: rokuImageUrl(movie.tvPoster, 900),
         // CRITICAL: Only include streamUrl (which is already trailer for locked content)
         // NEVER include fullMovie or rokuStreamUrl directly - the Roku app checks those first!
         streamUrl: streamUrl,

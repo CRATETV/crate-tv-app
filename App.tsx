@@ -38,13 +38,13 @@ const MaintenanceScreen: React.FC = () => (
             <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 bg-amber-600/10 border border-amber-500/20 px-4 py-1 rounded-full">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    <p className="text-amber-500 font-black uppercase tracking-widest text-[9px]">Maintenance Protocol Active</p>
+                    <p className="text-amber-500 font-black uppercase tracking-widest text-[9px]">Back Soon</p>
                 </div>
                 <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic">Optimizing the Stream.</h2>
-                <p className="text-gray-500 font-medium leading-relaxed">Our engineering core is currently performing scheduled infrastructure upgrades. We will be back online shortly.</p>
+                <p className="text-gray-500 font-medium leading-relaxed">We're making a few improvements. We'll be back shortly.</p>
             </div>
             <div className="pt-8 border-t border-white/5">
-                <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Crate TV Infrastructure // V4.0</p>
+                <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Crate TV</p>
             </div>
         </div>
     </div>

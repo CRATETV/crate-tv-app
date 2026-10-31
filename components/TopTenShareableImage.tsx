@@ -45,8 +45,8 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
             />
             <div className="h-10 w-px bg-white/10"></div>
             <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.8em] text-gray-500">Official Dispatch</p>
-                <p className="text-[7px] font-bold uppercase tracking-[0.4em] text-red-600 mt-1">Global Infrastructure</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.8em] text-gray-500">Official Top 10</p>
+                <p className="text-[7px] font-bold uppercase tracking-[0.4em] text-red-600 mt-1">cratetv.net</p>
             </div>
         </div>
         <div className="text-right">

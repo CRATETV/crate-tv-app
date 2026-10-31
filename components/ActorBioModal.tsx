@@ -135,7 +135,7 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                     <div className="mt-10 pt-8 border-t border-white/5">
                         <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Available for Casting via Crate Terminal</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Available for casting on Crate TV</p>
                         </div>
                     </div>
                 )}

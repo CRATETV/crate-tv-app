@@ -82,7 +82,7 @@ const CrateFestPage: React.FC = () => {
     };
 
     if (isLoading || !authInitialized) return <LoadingSpinner />;
-    if (!config) return <div className="h-screen bg-black flex items-center justify-center font-black uppercase text-gray-800">System Core Offline</div>;
+    if (!config) return <div className="h-screen bg-black flex items-center justify-center font-black uppercase text-gray-800">Coming Soon</div>;
 
     const showPartyBanner = !!livePartyMovie && !isBannerDismissed;
     const headerTop = (showPartyBanner || isCrateFestActive) ? '3rem' : '0px';

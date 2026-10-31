@@ -364,7 +364,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 <div className="absolute inset-0 bg-gradient-radial from-red-900/20 via-black to-black animate-pulse" />
                 
                 <div className="relative text-center space-y-8">
-                    <p className="text-red-500 text-sm font-black uppercase tracking-[0.5em] animate-pulse">Transmission Imminent</p>
+                    <p className="text-red-500 text-sm font-black uppercase tracking-[0.5em] animate-pulse">Starting Soon</p>
                     <div className="text-[12rem] md:text-[20rem] font-black text-white leading-none tabular-nums animate-[pulse_1s_ease-in-out_infinite]">
                         {countdown.seconds}
                     </div>

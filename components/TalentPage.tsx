@@ -30,7 +30,7 @@ const TalentPage: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black to-black"></div>
                     </div>
                     <div className="relative z-10 max-w-5xl space-y-6 animate-[fadeIn_1.2s_ease-out]">
-                        <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs">Global Talent Infrastructure</p>
+                        <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs">For Actors & Talent</p>
                         <h1 className="text-5xl md:text-[8rem] font-black uppercase tracking-tighter leading-[0.8] italic text-white drop-shadow-2xl">
                             The Source.
                         </h1>

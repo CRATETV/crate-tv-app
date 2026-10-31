@@ -517,7 +517,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                         Processing...
                                     </>
                                 ) : (
-                                    isPrivate ? 'Enter Screening' : isFree ? 'Redeem Digital Access' : `Authorize Transaction: $${displayAmount.toFixed(2)}`
+                                    isPrivate ? 'Enter Screening' : isFree ? 'Redeem Digital Access' : `Pay $${displayAmount.toFixed(2)}`
                                 )}
                             </button>
                         </form>
@@ -525,7 +525,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 </div>
 
                 <div className="p-5 sm:p-6 bg-black/40 border-t border-white/5 text-center">
-                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.3em]">AES-256 Cloud Encryption // PII_PROTECTED // NO_STORAGE</p>
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.3em]">Secure checkout</p>
                 </div>
             </div>
         </div>

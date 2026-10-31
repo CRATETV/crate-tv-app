@@ -8,6 +8,7 @@
 // default 1000) and sends WebP when the browser accepts it, JPEG otherwise.
 // SVGs and anything sharp can't read are passed through untouched.
 import sharp from 'sharp';
+import { isAllowedImageUrl } from './_lib/imageHosts.js';
 
 const DEFAULT_WIDTH = 1000;
 const MIN_WIDTH = 100;
@@ -29,21 +30,7 @@ export function detectImageType(bytes: Uint8Array, url: string, headerType: stri
   return (ext && byExt[ext]) || 'image/jpeg';
 }
 
-/** CRATE's own image hosts only: its S3 bucket and its image CDN. */
-export function isAllowedImageUrl(raw: string): boolean {
-  let u: URL;
-  try { u = new URL(raw.replace(/\s/g, '%20')); } catch { return false; }
-  if (u.protocol !== 'https:' || u.username || u.password || u.port) return false;
-  const bucket = (process.env.AWS_S3_BUCKET_NAME || 'cratetelevision').toLowerCase();
-  const region = (process.env.AWS_S3_REGION && process.env.AWS_S3_REGION !== 'global' ? process.env.AWS_S3_REGION : 'us-east-1').toLowerCase();
-  const allowed = new Set([
-    `${bucket}.s3.${region}.amazonaws.com`, `${bucket}.s3.amazonaws.com`,
-    'cratetelevision.s3.us-east-1.amazonaws.com', 'cratetelevision.s3.amazonaws.com',
-    'd3jhtrl1gnrh4b.cloudfront.net',
-    ...(process.env.CLOUDFRONT_IMAGE_DOMAIN ? [process.env.CLOUDFRONT_IMAGE_DOMAIN.toLowerCase()] : []),
-  ]);
-  return allowed.has(u.hostname.toLowerCase());
-}
+export { isAllowedImageUrl };
 
 export function clampWidth(raw: string | null): number {
   const n = Number(raw);
@@ -88,7 +75,8 @@ export async function GET(request: Request) {
     const original = new Uint8Array(await imageResponse.arrayBuffer());
     const originalType = detectImageType(original, correctedImageUrl, imageResponse.headers.get('Content-Type'));
     const width = clampWidth(searchParams.get('w'));
-    const acceptsWebp = (request.headers.get('accept') || '').includes('image/webp');
+    // ?fmt=jpeg forces JPEG (the Roku can't show WebP on every model).
+    const acceptsWebp = searchParams.get('fmt') !== 'jpeg' && (request.headers.get('accept') || '').includes('image/webp');
 
     let body: Uint8Array = original;
     let contentType = originalType;

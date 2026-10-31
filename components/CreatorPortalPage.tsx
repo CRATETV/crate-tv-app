@@ -39,7 +39,7 @@ const CreatorPortalPage: React.FC = () => {
             <main className="flex-grow pb-24 md:pb-0">
                 <div className="relative py-24 md:py-32 text-center px-4 overflow-hidden">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-red-600/5 blur-[150px] pointer-events-none"></div>
-                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Official Infrastructure</p>
+                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">For Filmmakers</p>
                     <h1 className="text-5xl md:text-9xl font-black uppercase tracking-tighter leading-none italic mb-4">Portals.</h1>
                     <p className="text-gray-400 max-w-xl mx-auto text-lg md:text-xl font-medium leading-relaxed">Secure interfaces for filmmakers, talent, and distribution partners.</p>
                 </div>
@@ -115,15 +115,15 @@ const CreatorPortalPage: React.FC = () => {
                                 <li className="flex gap-4">
                                     <div className="w-6 h-6 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-bold text-xs flex-shrink-0 mt-1">✓</div>
                                     <div className="space-y-1">
-                                        <p className="text-sm font-bold text-white uppercase">Encryption Integrity</p>
-                                        <p className="text-xs text-gray-500 leading-relaxed">Your professional telemetry is strictly guarded. Analytics are only visible to the verified owner of the content.</p>
+                                        <p className="text-sm font-bold text-white uppercase">Private Analytics</p>
+                                        <p className="text-xs text-gray-500 leading-relaxed">Your numbers are private. Analytics are only visible to the verified owner of the film.</p>
                                     </div>
                                 </li>
                                 <li className="flex gap-4">
                                     <div className="w-6 h-6 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-bold text-xs flex-shrink-0 mt-1">✓</div>
                                     <div className="space-y-1">
-                                        <p className="text-sm font-bold text-white uppercase">Vetting Protocol</p>
-                                        <p className="text-xs text-gray-500 leading-relaxed">Actor profiles and Filmmaker dashboards require specific crediential alignment with our master database.</p>
+                                        <p className="text-sm font-bold text-white uppercase">Verified Profiles</p>
+                                        <p className="text-xs text-gray-500 leading-relaxed">Actor profiles and filmmaker dashboards are only opened after we verify your details.</p>
                                     </div>
                                 </li>
                                 <li className="flex gap-4">

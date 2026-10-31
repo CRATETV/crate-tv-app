@@ -97,7 +97,7 @@ const FeaturedZineCard: React.FC<{ story: EditorialStory; onClick: () => void }>
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
         <div className="relative z-10 p-8 md:p-16 space-y-6 max-w-4xl">
             <div className="flex items-center gap-3">
-                <span className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.3em] px-3 py-1.5 rounded-full">Latest Dispatch</span>
+                <span className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.3em] px-3 py-1.5 rounded-full">Latest Story</span>
                 <span className="text-white/70 font-black uppercase text-[9px] tracking-[0.3em]">{story.type}</span>
             </div>
             <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter text-white leading-[0.9]">

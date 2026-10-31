@@ -484,7 +484,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <div className="space-y-1">
                                             <p className="text-xs font-black text-white uppercase tracking-widest">Episodic Series</p>
-                                            <p className="text-[9px] text-gray-500 uppercase">Enable episodic navigation for this node</p>
+                                            <p className="text-[9px] text-gray-500 uppercase">Enable episodic navigation for this film</p>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" name="isSeries" checked={formData.isSeries} onChange={handleChange} className="sr-only peer" />

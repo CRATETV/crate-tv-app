@@ -2363,7 +2363,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                 )}
                 <div className="relative z-10 text-center space-y-6 max-w-md">
-                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Transmission Complete</p>
+                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Thanks for Watching</p>
                     <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white">The Watch Party Has Ended</h2>
                     <p className="text-gray-400 text-sm leading-relaxed">
                         Taking you to on-demand playback so you can keep watching{isNoCatalogFilm((movie as any)?._activeFilmTitle || movie?.title) ? '' : ' anytime'}.
@@ -2921,7 +2921,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-start bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8 overflow-y-auto">
                                             <div className="max-w-2xl space-y-10 my-auto w-full">
                                                 <div>
-                                                    <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Transmission Complete</p>
+                                                    <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Thanks for Watching</p>
                                                     <h3 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Thank You.</h3>
                                                     <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-6 max-w-lg mx-auto leading-relaxed">
                                                         "{movie.title}" produced by <span className="text-white">{movie.director}</span>. Thank you for supporting the distribution afterlife of independent cinema.

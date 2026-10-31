@@ -1007,7 +1007,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                     <div className="max-w-2xl w-full space-y-12">
                                         <div>
-                                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Transmission Complete</p>
+                                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Thanks for Watching</p>
                                             <h2 className="text-fluid-title-lg font-black uppercase tracking-tighter italic leading-none break-words">{movie.title}</h2>
                                             <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-4">Directed by {movie.director}</p>
                                         </div>

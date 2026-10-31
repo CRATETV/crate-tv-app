@@ -84,3 +84,12 @@ test('width is kept within limits', () => {
     assert.equal(clampWidth('99999'), 2000);
     assert.equal(detectImageType(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), 'x', null), 'image/png');
 });
+
+test('fmt=jpeg always gives a JPEG, even if the caller says it accepts WebP (Roku)', async () => {
+    await withFakeS3(await bigPoster('png'), 'image/png', async () => {
+        const res = await GET(new Request(`https://x/api/proxy-image?url=${encodeURIComponent(S3 + 'Big+poster.png')}&w=500&fmt=jpeg`, { headers: { accept: 'image/webp,*/*' } }));
+        assert.equal(res.headers.get('Content-Type'), 'image/jpeg');
+        const meta = await sharp(Buffer.from(await res.arrayBuffer())).metadata();
+        assert.equal(meta.width, 500);
+    });
+});

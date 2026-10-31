@@ -89,7 +89,7 @@ const AccountPage: React.FC = () => {
                     
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-4">
                         <div>
-                            <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mb-2">Member Terminal</p>
+                            <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mb-2">Your Account</p>
                             <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none italic">Account.</h1>
                         </div>
                         {isCreator && (
@@ -109,7 +109,7 @@ const AccountPage: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                             {/* Avatar Selection */}
                             <div className="md:col-span-1 flex flex-col items-center">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6 w-full text-center md:text-left">Node Identity</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6 w-full text-center md:text-left">Your Avatar</p>
                                 <div className="w-40 h-40 rounded-[2rem] bg-white/5 p-4 mb-6 border border-white/10 shadow-inner group" dangerouslySetInnerHTML={{ __html: avatars[selectedAvatar] }} />
                                 <div className="grid grid-cols-5 gap-3">
                                     {Object.keys(avatars).map(avatarKey => (
@@ -125,7 +125,7 @@ const AccountPage: React.FC = () => {
 
                             {/* Account Details */}
                             <div className="md:col-span-2 space-y-8">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Encrypted Credentials</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Sign-in Details</p>
                                 <div className="space-y-6">
                                     <div>
                                         <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Account UID</label>
@@ -171,7 +171,7 @@ const AccountPage: React.FC = () => {
 
                                     {user.ticketStubs && user.ticketStubs.length > 0 && (
                                         <div className="pt-8 border-t border-white/5">
-                                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Digital Ticket Stubs // NFT Collection</label>
+                                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Your Ticket Stubs</label>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                                 {user.ticketStubs.map((stub: any) => (
                                                     <div key={stub.id} className="group relative aspect-[2/3] bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 hover:border-pink-500/50 transition-all shadow-xl hover:scale-105">

@@ -78,7 +78,7 @@ const ContactPage: React.FC = () => {
 
                     <h1 className="text-4xl md:text-7xl font-black text-white mb-4 text-center uppercase tracking-tighter">Contact Us</h1>
                     <p className="text-lg text-gray-400 mb-10 text-center font-medium">
-                        Transmissions routed to <span className="text-red-500 font-black">{studioEmail}</span>
+                        Your message goes to <span className="text-red-500 font-black">{studioEmail}</span>
                     </p>
 
                     <div className="bg-white/5 border border-white/5 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl">

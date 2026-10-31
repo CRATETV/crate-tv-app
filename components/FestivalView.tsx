@@ -140,7 +140,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                       <div className="space-y-6 text-center lg:text-left">
                           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-5 py-1.5 rounded-full border border-white/30 shadow-2xl">
                               <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
-                              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">Transmission Active Now</span>
+                              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">Live Now</span>
                           </div>
                           <h2 className="text-fluid-title font-black text-white uppercase tracking-tighter italic leading-none drop-shadow-2xl break-words">
                               {(activePartyEntity as any).title}
@@ -282,7 +282,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                                         onClick={() => navigateToParty(movie.key)}
                                                         className="w-full bg-gradient-to-r from-red-600 to-purple-700 hover:from-red-500 hover:to-purple-600 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-xl transition-all animate-pulse"
                                                     >
-                                                        Live Party Node
+                                                        Join Live Party
                                                     </button>
                                                 )}
                                             </div>

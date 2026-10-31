@@ -72,7 +72,7 @@ const SmartInstallPrompt: React.FC = () => {
                     </div>
                     <div className="flex-grow">
                         <h3 className="text-white font-black text-lg uppercase tracking-tighter">Crate TV Pro</h3>
-                        <p className="text-gray-400 text-xs font-medium leading-snug">Install for the full cinematic experience and zero-latency dispatches.</p>
+                        <p className="text-gray-400 text-xs font-medium leading-snug">Add Crate TV to your home screen for the best viewing experience.</p>
                     </div>
                     <button onClick={handleDismiss} className="p-2 text-gray-600 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

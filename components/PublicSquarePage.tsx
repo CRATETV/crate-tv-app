@@ -102,7 +102,7 @@ const PublicSquarePage: React.FC = () => {
                     <div className="max-w-7xl mx-auto text-center px-4 animate-[fadeIn_0.8s_ease-out]">
                         <div className="inline-flex items-center gap-3 bg-emerald-600/10 border border-emerald-500/20 px-4 py-1.5 rounded-full mb-8 shadow-2xl">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <p className="text-emerald-400 font-black uppercase tracking-[0.4em] text-[10px]">Community Stage // The Commons</p>
+                            <p className="text-emerald-400 font-black uppercase tracking-[0.4em] text-[10px]">Community Stage</p>
                         </div>
                         <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic mb-8">
                             The <span className="text-emerald-500">Square.</span>
@@ -120,7 +120,7 @@ const PublicSquarePage: React.FC = () => {
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
                                     <h2 className="text-3xl font-black uppercase tracking-widest text-emerald-500 italic">Community Records</h2>
-                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">Status: Open Stream // Modern Dispatches</p>
+                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">Free to watch · New voices</p>
                                 </div>
                                 <div className="h-px flex-grow bg-white/5 mx-10 hidden md:block"></div>
                             </div>
@@ -149,7 +149,7 @@ const PublicSquarePage: React.FC = () => {
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
                                 <div>
                                     <h2 className="text-3xl font-black uppercase tracking-widest text-amber-500 italic">Vintage Visions</h2>
-                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">Status: Historical Archive // Global Heritage</p>
+                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">Free to watch · Classic cinema</p>
                                 </div>
                                 <div className="h-px flex-grow bg-white/5 mx-10 hidden md:block"></div>
                             </div>
@@ -206,7 +206,7 @@ const PublicSquarePage: React.FC = () => {
 
                     {publicAccessMovies.length === 0 && vintageVisionsMovies.length === 0 && squareRows.length === 0 && (
                         <div className="text-center py-32 border-2 border-dashed border-white/5 rounded-[4rem] opacity-30">
-                            <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Establishing Local Uplink Feed...</p>
+                            <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Loading films...</p>
                         </div>
                     )}
                 </div>

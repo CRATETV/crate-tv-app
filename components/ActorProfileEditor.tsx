@@ -120,7 +120,7 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
                     <div className="text-center md:text-left">
                         <h3 className="text-xl font-black text-white uppercase tracking-widest">Discovery Readiness</h3>
-                        <p className="text-xs text-gray-500 mt-1 uppercase font-bold tracking-widest">Visibility strength in the Industry Terminal</p>
+                        <p className="text-xs text-gray-500 mt-1 uppercase font-bold tracking-widest">Visibility strength in the Crate TV talent directory</p>
                     </div>
                     <div className="flex-grow max-w-md w-full">
                         <div className="flex justify-between items-end mb-2">

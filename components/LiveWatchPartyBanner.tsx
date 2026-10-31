@@ -178,7 +178,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                 ) : isLive && (
                     <div className="bg-white/10 px-3 md:px-4 py-1 rounded-full border border-white/20 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                        <span className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">Live Transmission Active</span>
+                        <span className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">Live Now</span>
                     </div>
                 )}
             </div>

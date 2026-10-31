@@ -42,9 +42,9 @@ const TalentInquiryModal: React.FC<{ actor: ActorProfile; onClose: () => void }>
                         <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto">
                             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter">Inquiry Secured</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tighter">Message Sent</h3>
                         <p className="text-gray-400 text-sm">Your message has been routed to our talent coordination team. We will review and bridge the connection if appropriate.</p>
-                        <button onClick={onClose} className="mt-4 bg-white text-black font-black py-3 px-8 rounded-xl uppercase text-xs tracking-widest">Close Terminal</button>
+                        <button onClick={onClose} className="mt-4 bg-white text-black font-black py-3 px-8 rounded-xl uppercase text-xs tracking-widest">Close</button>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-6">

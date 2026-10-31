@@ -147,7 +147,7 @@ const Header: React.FC<HeaderProps> = ({
                             {isProfileMenuOpen && (
                                 <div className="origin-top-right absolute right-0 mt-4 w-56 rounded-[1.5rem] shadow-2xl py-3 bg-black/95 backdrop-blur-3xl border border-white/10 ring-1 ring-black ring-opacity-5 z-[110] animate-[fadeIn_0.2s_ease-out]">
                                     <div className="px-5 py-3 border-b border-white/5 mb-2">
-                                        <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Operator Node</p>
+                                        <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Signed in as</p>
                                         <p className="text-sm font-black text-white truncate uppercase italic">{user.name || user.email}</p>
                                     </div>
                                     <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-5 py-2.5 text-xs font-bold text-gray-400 hover:bg-white/5 hover:text-white transition-colors uppercase tracking-widest">Account Hub</a>

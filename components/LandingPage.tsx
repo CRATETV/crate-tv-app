@@ -375,7 +375,7 @@ const LandingPage: React.FC = () => {
                         <div className="space-y-4">
                             <FaqItem 
                                 question="What is Crate TV?" 
-                                answer={<p>Crate TV is a specialized streaming infrastructure for independent cinema. We provide a "Distribution Afterlife" for films, ensuring great stories live on long after the festival circuit.</p>}
+                                answer={<p>Crate TV is a streaming home for independent cinema. We provide a "Distribution Afterlife" for films, ensuring great stories live on long after the festival circuit.</p>}
                             />
                             <FaqItem 
                                 question="How much does it cost?" 
