@@ -97,3 +97,37 @@ test('small helpers', () => {
     assert.equal(escapeHtml('<b>"x"</b> & y'), '&lt;b&gt;&quot;x&quot;&lt;/b&gt; &amp; y');
     assert.equal(stripHtml('<div>A &amp; B</div><div>C</div>'), 'A & B\nC');
 });
+
+import { DEFAULT_SIGNATURES, normalizeSignatures, visibleSignatures, renderSignatureHtml } from '../api/_lib/mailLog.js';
+
+test('signatures: the two starting ones are Crate Team and Salome (owner only)', () => {
+    assert.deepEqual(DEFAULT_SIGNATURES.map(s => s.id), ['crate-team', 'salome']);
+    assert.equal(DEFAULT_SIGNATURES[1].ownerOnly, true);
+    assert.match(DEFAULT_SIGNATURES[1].text, /Founder \| Crate TV/);
+    assert.match(DEFAULT_SIGNATURES[1].text, /Television powered by Creatives\./);
+});
+test('signatures: empty or broken lists fall back to the defaults', () => {
+    assert.equal(normalizeSignatures(undefined).length, 2);
+    assert.equal(normalizeSignatures([]).length, 2);
+    assert.equal(normalizeSignatures([{ name: '', text: '' }]).length, 2);
+});
+test('signatures: cleaned, given safe ids, no duplicates, web code removed', () => {
+    const list = normalizeSignatures([{ name: 'Ann <b>Lee</b>', text: 'Ann\r\n<script>x</script>Festival' }, { name: 'Ann Lee', text: 'again' }, { name: 'Owner', text: 'me', ownerOnly: true }]);
+    assert.equal(list[0].name, 'Ann Lee');
+    assert.equal(list[0].text, 'Ann\nxFestival');
+    assert.equal(new Set(list.map(s => s.id)).size, 3);
+    assert.equal(list[2].ownerOnly, true);
+    assert.equal(normalizeSignatures(Array.from({ length: 30 }, (_, i) => ({ name: `n${i}`, text: 't' }))).length, 12);
+});
+test('signatures: staff never see or use the owner-only one', () => {
+    assert.deepEqual(visibleSignatures(DEFAULT_SIGNATURES, false).map(s => s.id), ['crate-team']);
+    assert.equal(visibleSignatures(DEFAULT_SIGNATURES, true).length, 2);
+});
+test('signatures: shown as bold name, clickable site and email, nothing injected', () => {
+    const html = renderSignatureHtml({ id: 'x', name: 'x', text: 'Salome <b>Denoon</b>\nFounder | Crate TV\ncratetv.net\nhello@cratetv.net' });
+    assert.match(html, /^<strong[^>]*>Salome &lt;b&gt;Denoon&lt;\/b&gt;<\/strong>/);
+    assert.match(html, /<a href="https:\/\/cratetv\.net"[^>]*>cratetv\.net<\/a>/);
+    assert.match(html, /<a href="mailto:hello@cratetv\.net"/);
+    assert.ok(!html.includes('<b>'));
+    assert.equal((html.match(/<a /g) || []).length, 2);
+});

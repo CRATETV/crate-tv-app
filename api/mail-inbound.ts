@@ -8,6 +8,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { MAIL_COLLECTION, verifyWebhookSignature, parseInboundEvent, buildInboundRecord } from './_lib/mailLog.js';
+import { notifyOwnerMailReceived } from './_lib/partnerEmails.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -48,7 +49,14 @@ export async function POST(request: Request) {
         }
 
         // The email's own id is the document id, so a repeat delivery never makes a duplicate.
-        await db.collection(MAIL_COLLECTION).doc(`in_${event.emailId}`).set(buildInboundRecord(event, full, new Date().toISOString()), { merge: true });
+        const ref = db.collection(MAIL_COLLECTION).doc(`in_${event.emailId}`);
+        const alreadySaved = (await ref.get()).exists;
+        const record = buildInboundRecord(event, full, new Date().toISOString());
+        await ref.set(record, { merge: true });
+        // A short "you have a new email" note to the owner (once per email, not on retries).
+        if (!alreadySaved) {
+            notifyOwnerMailReceived(record.fromName || record.fromEmail, record.subject, record.text).catch(e => console.error('[mail-inbound] owner alert failed', e));
+        }
         return json({ success: true });
     } catch (e) {
         console.error('[mail-inbound] failed:', e);

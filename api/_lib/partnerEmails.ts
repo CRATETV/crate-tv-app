@@ -70,3 +70,11 @@ export function notifyPartnerPiece(to: string[], partnerName: string, title: str
          ${button}
          <p style="margin:20px 0 0;font-size:12px;color:#999;">${esc(partnerName)} · Crate TV</p>`);
 }
+
+export function notifyOwnerMailReceived(fromLabel: string, subject: string, preview: string) {
+    return send(ownerEmails(), `New email from ${fromLabel}`, 'You have a new email',
+        `<p style="font-size:14px;"><strong>${esc(fromLabel)}</strong> wrote to your Crate TV mailbox:</p>
+         <p style="font-size:14px;font-weight:bold;">${esc(subject)}</p>
+         <p style="font-size:14px;background:#f4f4f4;padding:12px 16px;border-radius:8px;white-space:pre-wrap;">${esc(preview.slice(0, 280))}${preview.length > 280 ? '…' : ''}</p>
+         ${renderEmailButton('Open Studio Mail', `${siteUrl()}/admin`)}`);
+}
