@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import HypeMap from './HypeMap';
 import WatchFunnel from './admin/WatchFunnel';
+import ViewCountries from './admin/ViewCountries';
 import PayoutPreferenceCard from './PayoutPreferenceCard';
 
 const formatCurrency = (amountInCents: number) => `$${((amountInCents || 0) / 100).toFixed(2)}`;
@@ -96,6 +97,7 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                     </div>
 
                     <WatchFunnel watch={film.watch} className="pt-4" />
+                    <ViewCountries countries={film.countries} className="pt-4" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
