@@ -1,7 +1,8 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
-import { MAIL_COLLECTION, prepareAttachments, replyToAddress, buildSentRecord, stripHtml } from './_lib/mailLog.js';
+import { isMasterAdmin } from './_lib/adminAuth.js';
+import { MAIL_COLLECTION, SIGNATURES_DOC, prepareAttachments, replyToAddress, buildSentRecord, stripHtml, normalizeSignatures, renderSignatureHtml } from './_lib/mailLog.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
@@ -15,7 +16,7 @@ const LOGO_URL = 'https://cratetv.net/email-logo-on-dark.png';
 
 export async function POST(request: Request) {
     try {
-        const { password: __raw_password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey, attachments } = await request.json();
+        const { password: __raw_password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey, attachments, signatureId } = await request.json();
         const password = await resolveAdminCredential(__raw_password);
 
         // 1. Initialize DB first to check dynamic permissions
@@ -56,7 +57,26 @@ export async function POST(request: Request) {
         const settingsData = settingsDoc.exists ? settingsDoc.data() : {};
         
         const businessEmail = settingsData?.businessEmail || FALLBACK_FROM;
-        const signature = settingsData?.emailSignature || "";
+        // A signature picked in Studio Mail ('none' = no signature). Callers that
+        // don't pick one keep the old behavior: the single site-wide signature.
+        const legacySignature = settingsData?.emailSignature || "";
+        let signatureHtml = '';
+        let signaturePlain = '';
+        if (typeof signatureId === 'string' && signatureId) {
+            if (signatureId !== 'none') {
+                const sigDoc = await db.doc(SIGNATURES_DOC).get();
+                const chosen = normalizeSignatures(sigDoc.data()?.list).find(s => s.id === signatureId);
+                if (!chosen) {
+                    return new Response(JSON.stringify({ error: 'That signature no longer exists. Pick another one.' }), { status: 400 });
+                }
+                if (chosen.ownerOnly && !(await isMasterAdmin(__raw_password))) {
+                    return new Response(JSON.stringify({ error: 'That signature is for the owner only.' }), { status: 403 });
+                }
+                signatureHtml = renderSignatureHtml(chosen);
+                signaturePlain = chosen.text;
+            }
+        }
+        const signature = signatureId ? '' : legacySignature;
 
         // Files (receipts and so on) are checked before anything is sent.
         const prepared = prepareAttachments(attachments);
@@ -86,7 +106,7 @@ export async function POST(request: Request) {
         }
 
         // 5. Content Preparation
-        const plainText = htmlBody.replace(/<[^>]+>/g, '').trim();
+        const plainText = htmlBody.replace(/<[^>]+>/g, '').trim() + (signaturePlain ? `\n\n--\n${signaturePlain}` : '');
 
         // 6. Execute Transmission via Resend
         const { data: sent, error } = await resend.emails.send({
@@ -155,6 +175,12 @@ export async function POST(request: Request) {
                                                     </td>
                                                 </tr>
                                             </table>
+                                            ` : ''}
+
+                                            ${signatureHtml ? `
+                                            <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e5e5; color: #555555; font-size: 14px; line-height: 1.7;">
+                                                ${signatureHtml}
+                                            </div>
                                             ` : ''}
 
                                             ${signature ? `

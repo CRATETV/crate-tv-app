@@ -8,6 +8,8 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
 export const MAIL_COLLECTION = 'mail_messages';
+/** Where the saved signatures live (a document of their own, so site settings can't overwrite it). */
+export const SIGNATURES_DOC = 'mail_config/signatures';
 
 export const MAX_ATTACHMENTS = 5;
 // Vercel accepts about 4.5 MB per request and email attachments grow by about a
@@ -176,4 +178,60 @@ export function buildSentRecord(args: {
 export function replyToAddress(env: { MAIL_INBOUND_ADDRESS?: string }, businessEmail: string): string {
     const a = (env.MAIL_INBOUND_ADDRESS || '').trim();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a) ? a : businessEmail;
+}
+
+// ── Signatures ────────────────────────────────────────────────────────────
+
+export interface MailSignature { id: string; name: string; text: string; ownerOnly?: boolean; }
+
+export const DEFAULT_SIGNATURES: MailSignature[] = [
+    { id: 'crate-team', name: 'Crate Team', text: 'The Crate TV Team\nTelevision powered by Creatives.\ncratetv.net' },
+    { id: 'salome', name: 'Salome Denoon (Founder)', text: 'Salome Denoon\nFounder | Crate TV\nTelevision powered by Creatives.\ncratetv.net', ownerOnly: true },
+];
+
+export const MAX_SIGNATURES = 12;
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+
+/** Cleans a list of signatures coming from the screen or the database. Falls back to the two defaults. */
+export function normalizeSignatures(input: unknown): MailSignature[] {
+    if (!Array.isArray(input) || input.length === 0) return DEFAULT_SIGNATURES.map(s => ({ ...s }));
+    const seen = new Set<string>();
+    const out: MailSignature[] = [];
+    for (const raw of input.slice(0, MAX_SIGNATURES)) {
+        const name = (typeof raw?.name === 'string' ? raw.name : '').replace(/<[^>]*>/g, '').trim().slice(0, 40);
+        const text = (typeof raw?.text === 'string' ? raw.text : '').replace(/<[^>]*>/g, '').replace(/\r\n/g, '\n').trim().slice(0, 600);
+        if (!name || !text) continue;
+        let id = slug(typeof raw?.id === 'string' && raw.id ? raw.id : name) || 'signature';
+        while (seen.has(id)) id = `${id}-2`;
+        seen.add(id);
+        out.push({ id, name, text, ...(raw?.ownerOnly ? { ownerOnly: true } : {}) });
+    }
+    return out.length ? out : DEFAULT_SIGNATURES.map(s => ({ ...s }));
+}
+
+/** Only the owner sees (and can use) owner-only signatures. */
+export const visibleSignatures = (list: MailSignature[], isOwner: boolean) => list.filter(s => isOwner || !s.ownerOnly);
+
+const LINKABLE = /([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})|(?<![@\w.-])((?:https?:\/\/)?(?:[a-z0-9-]+\.)+(?:net|com|org|tv|co|io)\b(?:\/[^\s<]*)?)/gi;
+
+/** The signature as email HTML: first line bold, web addresses and emails clickable. */
+export function renderSignatureHtml(sig: MailSignature): string {
+    const lines = sig.text.split('\n').map(l => l.trim());
+    const html = lines.map((line, i) => {
+        let out = '', last = 0;
+        for (const m of line.matchAll(LINKABLE)) {
+            out += escapeHtml(line.slice(last, m.index));
+            if (m[1]) out += `<a href="mailto:${escapeHtml(m[1])}" style="color:#ef4444;text-decoration:none;">${escapeHtml(m[1])}</a>`;
+            else {
+                const url = /^https?:/i.test(m[2]) ? m[2] : `https://${m[2]}`;
+                out += `<a href="${escapeHtml(url)}" style="color:#ef4444;text-decoration:none;">${escapeHtml(m[2])}</a>`;
+            }
+            last = (m.index ?? 0) + m[0].length;
+        }
+        out += escapeHtml(line.slice(last));
+        if (!line) return '<br>';
+        return i === 0 ? `<strong style="color:#1a1a1a;font-size:15px;">${out}</strong>` : out;
+    });
+    return html.join('<br>');
 }

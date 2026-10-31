@@ -19,6 +19,8 @@ interface MailItem {
     canOpenOriginal?: boolean;
 }
 
+interface Signature { id: string; name: string; text: string; ownerOnly?: boolean; }
+
 const MAX_TOTAL_BYTES = 3_000_000;
 const MAX_FILES = 5;
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx';
@@ -62,6 +64,13 @@ const StudioMail: React.FC = () => {
     const [isDrafting, setIsDrafting] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+    const [checked, setChecked] = useState<Set<string>>(new Set());
+    const [signatures, setSignatures] = useState<Signature[]>([]);
+    const [signatureId, setSignatureId] = useState('');
+    const [isOwner, setIsOwner] = useState(false);
+    const [showSigs, setShowSigs] = useState(false);
+    const [sigDraft, setSigDraft] = useState<Signature[]>([]);
+    const [sigBusy, setSigBusy] = useState(false);
 
     const [replyText, setReplyText] = useState('');
     const [recipient, setRecipient] = useState('');
@@ -82,8 +91,8 @@ const StudioMail: React.FC = () => {
         return data;
     }, []);
 
-    const loadAll = useCallback(async () => {
-        setIsLoading(true);
+    const loadAll = useCallback(async (quiet = false) => {
+        if (!quiet) setIsLoading(true);
         const incoming: MailItem[] = [];
 
         // 1. Messages from the website (contact form, talent inquiries, film submissions).
@@ -128,12 +137,33 @@ const StudioMail: React.FC = () => {
             setMailboxNote(e instanceof Error ? e.message : 'Could not load the mailbox.');
         }
 
-        setReceived(incoming.sort((a, b) => b.when - a.when));
+        // Website messages you removed from the inbox stay hidden.
+        let hiddenIds = new Set<string>();
+        try { hiddenIds = new Set<string>((await callMail({ action: 'hidden' })).ids || []); } catch { /* none hidden */ }
+
+        setReceived(incoming.filter(m => !hiddenIds.has(m.id)).sort((a, b) => b.when - a.when));
         setSent(outgoing.sort((a, b) => b.when - a.when));
         setIsLoading(false);
     }, [callMail]);
 
-    useEffect(() => { loadAll(); }, [loadAll]);
+    const loadSignatures = useCallback(async () => {
+        try {
+            const res = await callMail({ action: 'getSignatures' });
+            setSignatures(res.signatures || []);
+            setIsOwner(!!res.isOwner);
+            setSignatureId(cur => cur && (res.signatures || []).some((x: Signature) => x.id === cur) ? cur : (res.signatures?.[0]?.id || 'none'));
+        } catch { /* the composer still works without a signature */ }
+    }, [callMail]);
+
+    useEffect(() => { loadAll(); loadSignatures(); }, [loadAll, loadSignatures]);
+
+    // Check for new mail every minute while this screen is open, and when you come back to the tab.
+    useEffect(() => {
+        const tick = () => { if (document.visibilityState === 'visible') loadAll(true); };
+        const t = setInterval(tick, 60_000);
+        document.addEventListener('visibilitychange', tick);
+        return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
+    }, [loadAll]);
 
     const list = folder === 'in' ? received : sent;
     const unreadCount = useMemo(() => received.filter(m => m.unread).length, [received]);
@@ -183,7 +213,7 @@ const StudioMail: React.FC = () => {
             const attachments = await Promise.all(files.map(async f => ({ filename: f.name, content: await readAsBase64(f) })));
             const res = await fetch('/api/send-individual-email', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: adminKey(), email: recipient.trim(), subject, htmlBody: escapeHtml(replyText).replace(/\n/g, '<br/>'), attachments }),
+                body: JSON.stringify({ password: adminKey(), email: recipient.trim(), subject, htmlBody: escapeHtml(replyText).replace(/\n/g, '<br/>'), attachments, signatureId: signatureId || 'none' }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'The email did not send.');
@@ -193,6 +223,38 @@ const StudioMail: React.FC = () => {
         } catch (err) {
             setNotice({ ok: false, text: err instanceof Error ? err.message : 'The email did not send.' });
         } finally { setIsSending(false); }
+    };
+
+    const toggleChecked = (id: string) => setChecked(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+    // Real emails (sent or received) are deleted for good. Website messages (contact form,
+    // talent inquiries, film submissions) are only taken out of this inbox; the original stays on record.
+    const removeItems = async (items: MailItem[]) => {
+        if (!items.length) return;
+        const real = items.filter(m => m.kind === 'EMAIL' || m.kind === 'SENT');
+        const website = items.filter(m => !(m.kind === 'EMAIL' || m.kind === 'SENT'));
+        const what = items.length === 1 ? 'this message' : `these ${items.length} messages`;
+        const extra = website.length ? ' Website messages are only taken out of this inbox; the original record is kept.' : '';
+        if (!window.confirm(`Delete ${what}? This can not be undone.${extra}`)) return;
+        try {
+            if (real.length) await callMail({ action: 'delete', ids: real.map(m => m.id) });
+            if (website.length) await callMail({ action: 'hide', ids: website.map(m => m.id) });
+            setChecked(new Set());
+            if (selected && items.some(m => m.id === selected.id)) setSelected(null);
+            setNotice({ ok: true, text: items.length === 1 ? 'Deleted.' : `Deleted ${items.length} messages.` });
+            await loadAll(true);
+        } catch (err) { setNotice({ ok: false, text: err instanceof Error ? err.message : 'Could not delete.' }); }
+    };
+
+    const saveSigs = async () => {
+        setSigBusy(true);
+        try {
+            const res = await callMail({ action: 'saveSignatures', signatures: sigDraft });
+            setSignatures(res.signatures); setShowSigs(false);
+            setNotice({ ok: true, text: 'Signatures saved.' });
+            if (!res.signatures.some((x: Signature) => x.id === signatureId)) setSignatureId(res.signatures[0]?.id || 'none');
+        } catch (err) { setNotice({ ok: false, text: err instanceof Error ? err.message : 'Could not save signatures.' }); }
+        finally { setSigBusy(false); }
     };
 
     const openOriginal = async () => {
@@ -206,15 +268,42 @@ const StudioMail: React.FC = () => {
     return (
         <div className="flex flex-col h-[calc(100vh-280px)] min-h-[650px]">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-5 bg-white/5 border border-white/10 p-4 rounded-2xl">
-                <p className="text-sm text-gray-300">Sending as <span className="font-bold text-white">{fromAddress}</span></p>
+                <p className="text-sm text-gray-300">Sending as <span className="font-bold text-white">{fromAddress}</span>
+                    {unreadCount > 0 && <span className="ml-3 bg-red-600 text-white rounded-full px-3 py-1 text-xs font-black">{unreadCount} new {unreadCount === 1 ? 'email' : 'emails'}</span>}
+                </p>
                 <div className="flex gap-2">
-                    <button onClick={loadAll} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10">Refresh</button>
+                    {isOwner && <button onClick={() => { setSigDraft(signatures.map(x => ({ ...x }))); setShowSigs(!showSigs); }} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10">Signatures</button>}
+                    <button onClick={() => loadAll()} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10">Refresh</button>
                     <button onClick={startCompose} className="px-5 py-2 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700">+ New email</button>
                 </div>
             </div>
 
             {mailboxNote && <p className="mb-4 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">{mailboxNote}</p>}
             {notice && <p className={`mb-4 text-xs rounded-xl px-4 py-3 border ${notice.ok ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20' : 'text-red-300 bg-red-500/10 border-red-500/20'}`}>{notice.text}</p>}
+
+            {showSigs && (
+                <div className="mb-5 bg-[#0f0f0f] border border-white/10 rounded-3xl p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-black text-white">Your signatures</h3>
+                        <button onClick={() => setShowSigs(false)} className="text-xs text-gray-500 hover:text-white">Close</button>
+                    </div>
+                    <p className="text-xs text-gray-500">The first line shows in bold. Web addresses and email addresses become clickable. "Owner only" signatures can only be used when you are signed in as owner.</p>
+                    {sigDraft.map((sg, i) => (
+                        <div key={i} className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-3">
+                            <div className="flex gap-3 items-center">
+                                <input value={sg.name} onChange={e => setSigDraft(sigDraft.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder="Name of this signature (only you see this)" className="flex-grow bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                                <label className="flex items-center gap-2 text-xs text-gray-400 whitespace-nowrap"><input type="checkbox" checked={!!sg.ownerOnly} onChange={e => setSigDraft(sigDraft.map((x, j) => j === i ? { ...x, ownerOnly: e.target.checked } : x))} /> Owner only</label>
+                                <button onClick={() => setSigDraft(sigDraft.filter((_, j) => j !== i))} className="text-xs text-gray-500 hover:text-red-400">Delete</button>
+                            </div>
+                            <textarea value={sg.text} onChange={e => setSigDraft(sigDraft.map((x, j) => j === i ? { ...x, text: e.target.value } : x))} rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                        </div>
+                    ))}
+                    <div className="flex gap-3">
+                        <button onClick={() => setSigDraft([...sigDraft, { id: '', name: 'New signature', text: 'Your name\nYour title | Crate TV\ncratetv.net' }])} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-200 bg-white/5 border border-white/10">+ Add a signature</button>
+                        <button onClick={saveSigs} disabled={sigBusy} className="px-6 py-2 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700 disabled:opacity-40">{sigBusy ? 'Saving…' : 'Save signatures'}</button>
+                    </div>
+                </div>
+            )}
 
             <div className="flex-grow flex flex-col lg:flex-row gap-5 overflow-hidden">
                 {/* List */}
@@ -227,12 +316,23 @@ const StudioMail: React.FC = () => {
                             </button>
                         ))}
                     </div>
+                    {checked.size > 0 && (
+                        <div className="flex items-center justify-between px-5 py-3 bg-red-600/10 border-b border-red-600/20">
+                            <span className="text-xs text-gray-200">{checked.size} selected</span>
+                            <div className="flex gap-3">
+                                <button onClick={() => setChecked(new Set())} className="text-xs text-gray-400 hover:text-white">Clear</button>
+                                <button onClick={() => removeItems(list.filter(m => checked.has(m.id)))} className="text-xs font-black text-red-400 hover:text-red-300">Delete selected</button>
+                            </div>
+                        </div>
+                    )}
                     <div className="flex-grow overflow-y-auto">
                         {isLoading ? <div className="p-10 text-center"><LoadingSpinner /></div> : list.length === 0 ? (
                             <p className="p-10 text-center text-sm text-gray-500">{folder === 'in' ? 'Nothing received yet.' : 'Nothing sent yet. Emails you send from here show up in this folder.'}</p>
                         ) : list.map(m => (
-                            <button key={m.id} onClick={() => openMessage(m)}
-                                className={`w-full text-left px-5 py-4 border-b border-white/5 hover:bg-white/[0.03] ${selected?.id === m.id ? 'bg-red-600/5' : ''}`}>
+                            <div key={m.id} className="flex items-start border-b border-white/5 hover:bg-white/[0.03]">
+                            <input type="checkbox" aria-label="Select message" checked={checked.has(m.id)} onChange={() => toggleChecked(m.id)} className="ml-4 mt-5 flex-shrink-0 accent-red-600" />
+                            <button onClick={() => openMessage(m)}
+                                className={`flex-grow min-w-0 text-left px-4 py-4 ${selected?.id === m.id ? 'bg-red-600/5' : ''}`}>
                                 <div className="flex justify-between gap-3 mb-1">
                                     <span className={`truncate text-sm ${m.unread ? 'font-black text-white' : 'font-bold text-gray-300'}`}>
                                         {m.unread && <span className="inline-block w-2 h-2 rounded-full bg-red-600 mr-2 align-middle" />}{m.name || m.email}
@@ -245,6 +345,7 @@ const StudioMail: React.FC = () => {
                                     {m.attachments.length > 0 && <span className="text-[10px] text-gray-500">📎 {m.attachments.length}</span>}
                                 </div>
                             </button>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -266,7 +367,10 @@ const StudioMail: React.FC = () => {
                                     </div>
                                 ) : selected && (
                                     <div>
-                                        <h2 className="text-2xl font-black text-white">{selected.subject}</h2>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <h2 className="text-2xl font-black text-white">{selected.subject}</h2>
+                                            <button type="button" onClick={() => removeItems([selected])} className="text-xs font-bold text-gray-500 hover:text-red-400 whitespace-nowrap border border-white/10 rounded-lg px-3 py-1.5">🗑 Delete</button>
+                                        </div>
                                         <p className="text-sm text-gray-400 mt-1">{selected.folder === 'in' ? 'From' : 'To'} {selected.name && selected.name !== selected.email ? `${selected.name} · ` : ''}{selected.email} · {selected.when ? new Date(selected.when).toLocaleString() : ''}</p>
                                     </div>
                                 )}
@@ -325,7 +429,12 @@ const StudioMail: React.FC = () => {
 
                             {showComposer && (
                                 <div className="p-5 border-t border-white/5 flex items-center justify-between gap-4">
-                                    <p className="text-[11px] text-gray-600">{settings.emailSignature ? 'Your signature is added automatically.' : ''}</p>
+                                    <label className="flex items-center gap-2 text-xs text-gray-400">Sign as
+                                        <select value={signatureId} onChange={e => setSignatureId(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200">
+                                            {signatures.map(sg => <option key={sg.id} value={sg.id}>{sg.name}</option>)}
+                                            <option value="none">No signature</option>
+                                        </select>
+                                    </label>
                                     <div className="flex gap-3">
                                         <button type="button" onClick={() => { setSelected(null); setIsNewCompose(false); resetComposer(); }} className="px-5 py-3 text-xs font-bold text-gray-500 hover:text-white">Discard</button>
                                         <button type="submit" disabled={isSending || !replyText || !recipient} className="bg-red-600 hover:bg-red-700 disabled:opacity-30 text-white font-black px-8 py-3 rounded-xl text-xs uppercase tracking-widest">
