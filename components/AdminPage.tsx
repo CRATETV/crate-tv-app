@@ -117,7 +117,7 @@ const AdminPage: React.FC = () => {
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [showMoneyTools, setShowMoneyTools] = useState(false);
     // Sidebar badges / Overview "needs attention".
-    const [counts, setCounts] = useState({ submissions: 0, actors: 0, payouts: 0, contracts: 0 });
+    const [counts, setCounts] = useState({ submissions: 0, actors: 0, payouts: 0, contracts: 0, email: 0 });
     const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
@@ -261,16 +261,18 @@ const AdminPage: React.FC = () => {
         const post = (url: string, body: Record<string, unknown> = {}) => fetch(url, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass, ...body }),
         }).then(r => (r.ok ? r.json() : null)).catch(() => null);
-        const [actors, payouts, contracts] = await Promise.all([
+        const [actors, payouts, contracts, mail] = await Promise.all([
             allowedTabs.includes('actors') ? post('/api/get-actor-submissions') : Promise.resolve(null),
             allowedTabs.includes('money') ? post('/api/get-payouts') : Promise.resolve(null),
             allowedTabs.includes('contracts') ? post('/api/contracts', { action: 'admin-list' }) : Promise.resolve(null),
+            allowedTabs.includes('email') ? post('/api/admin-mail', { action: 'unread' }) : Promise.resolve(null),
         ]);
         setCounts(c => ({
             ...c,
             actors: actors ? (actors.submissions || []).filter((x: any) => x.status === 'pending').length : c.actors,
             payouts: payouts ? (payouts.payoutRequests || []).filter((x: any) => x.status === 'pending').length : c.payouts,
             contracts: contracts ? (contracts.requests || []).filter((x: any) => x.status === 'sent').length : c.contracts,
+            email: mail ? Number(mail.count) || 0 : c.email,
         }));
     }, [allowedTabs]);
     useEffect(() => {
@@ -578,7 +580,7 @@ const AdminPage: React.FC = () => {
     const operatorName = sessionStorage.getItem('operatorName') || '';
     const activeMeta = TAB_META[activeTab];
     const activeGroup = groupOf(activeTab);
-    const badges: Record<string, number> = { submissions: newSubmissionCount, actors: counts.actors, money: counts.payouts, contracts: counts.contracts };
+    const badges: Record<string, number> = { submissions: newSubmissionCount, actors: counts.actors, money: counts.payouts, contracts: counts.contracts, email: counts.email };
     const sidebar = (
         <AdminSidebar
             allowedTabs={allowedTabs}
