@@ -12,10 +12,10 @@ const faqs = [
     },
     {
         q: "What are Watch Parties?",
-        a: "Watch Parties are live simultaneous screenings where everyone watching sees the film at the exact same moment — whether you're in the room in Philadelphia or watching from across the world. There's a live chat running alongside the film so you're experiencing it together. It's the closest thing to a cinema experience you can have from your couch. Watch parties are typically ticketed events, often tied to the Playhouse West Film Festival."
+        a: "Watch Parties are live simultaneous screenings where everyone watching sees the film at the exact same moment — whether you're in the room in Philadelphia or watching from across the world. There's a live chat running alongside the film so you're experiencing it together. It's the closest thing to a cinema experience you can have from your couch. Watch parties are typically ticketed events, often tied to the Playhouse West-Philadelphia Film Festival."
     },
     {
-        q: "What is the Playhouse West Film Festival?",
+        q: "What is the Playhouse West-Philadelphia Film Festival?",
         a: "PWFF is an annual independent film festival based in Philadelphia, PA. It's one of the longest-running independent film festivals in the region — now in its 13th year. Crate TV is the official virtual streaming home of the festival, meaning virtual ticket holders can watch every screening live from anywhere in the world at the same time films screen physically in Philadelphia."
     },
     {

@@ -85,7 +85,7 @@ const RedCarpetPage: React.FC<RedCarpetPageProps> = ({ settings, onEnterWatchPar
                 <div>
                     <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-500 mb-0.5">Crate TV</p>
                     <p className="text-white font-black text-sm uppercase tracking-widest">
-                        {settings.pwffFestivalName || 'Playhouse West Film Festival'}
+                        {settings.pwffFestivalName || 'Playhouse West-Philadelphia Film Festival'}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">

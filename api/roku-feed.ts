@@ -559,7 +559,7 @@ export async function GET(request: Request) {
             // Auto-generate title with annual number
             const festYear = new Date().getFullYear();
             const edition = getPwffEdition(festYear);
-            const festTitle = fest.title || ('Playhouse West Film Festival — ' + edition + ' Annual');
+            const festTitle = fest.title || ('Playhouse West-Philadelphia Film Festival — ' + edition + ' Annual');
             categories.unshift({  // unshift = insert at position 0 (FIRST row)
                 title: festTitle,
                 type: 'standard',
