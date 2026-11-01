@@ -91,6 +91,10 @@ const AdminPayoutsTab: React.FC = () => {
                 body: JSON.stringify({ requestId, password }),
             });
             if (!res.ok) throw new Error('Failed to mark payout as paid.');
+            const done = await res.json().catch(() => ({} as any));
+            if (done?.w9 && done.w9 !== 'received') {
+                alert(`Recorded in Bookkeeping.\n\nHeads up: you don't have a W-9 on file for ${done.payee || 'this person'} yet. Open Bookkeeping and press "Request W-9" so it's collected before the year ends.`);
+            }
             await fetchPayouts();
         } catch (e) {
             alert(e instanceof Error ? e.message : 'Failed to mark payout as paid.');

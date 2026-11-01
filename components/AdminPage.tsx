@@ -43,6 +43,7 @@ import AdminOverview from './admin/AdminOverview';
 import type { FilmGroup } from '../api/_lib/filmStatus';
 import EarningsPayoutsTab from './admin/EarningsPayoutsTab';
 import ContractsCenterTab from './admin/ContractsCenterTab';
+import BookkeepingTab from './admin/BookkeepingTab';
 import ActorApprovalsTab from './admin/ActorApprovalsTab';
 import PaymentsRefundsTab from './admin/PaymentsRefundsTab';
 import StorageCleanupTab from './admin/StorageCleanupTab';
@@ -74,7 +75,7 @@ const normalizeTabIds = (ids: string[]): string[] =>
 
 // Hard-coded security boundary: never visible to non-master admins no matter
 // what is stored in Firestore.
-const MASTER_ONLY = ['permissions', 'system', 'money', 'refunds', 'contracts', 'roku', 'partners', 'storage'];
+const MASTER_ONLY = ['permissions', 'system', 'money', 'bookkeeping', 'refunds', 'contracts', 'roku', 'partners', 'storage'];
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4">{children}</h3>
@@ -698,6 +699,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'refunds' && <PaymentsRefundsTab />}
                     {activeTab === 'storage' && <StorageCleanupTab />}
                     {activeTab === 'bulkUpload' && <BulkFilmUploadTab movies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!, true)} />}
+                    {activeTab === 'bookkeeping' && <BookkeepingTab onOpenTab={navigateTo} />}
                     {activeTab === 'contracts' && <ContractsCenterTab movies={movies} pipeline={pipeline} categories={categories} />}
                     {activeTab === 'partners' && <PartnersAdminTab allMovies={movies} />}
                     {activeTab === 'money' && (
