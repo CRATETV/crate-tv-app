@@ -421,6 +421,7 @@ const agoLabel = (msAgo: number) => {
 interface SalesSummaryView {
     tickets: number; revenue: number; averagePaid: number; withPromo: number; last15Min: number;
     recent: { email: string; amount: number; atMs: number | null; type: string }[];
+    split?: { squareFees: number; feesPending: number; filmmakerShare: number; filmmakerAmount: number; crateKeeps: number };
 }
 
 const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId, isLive }) => {
@@ -456,6 +457,15 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
                         <div><div className="text-2xl font-black text-white tabular-nums">${sales.averagePaid.toFixed(2)}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Average paid</div></div>
                         <div><div className="text-2xl font-black text-white tabular-nums">{sales.last15Min}</div><div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Last 15 min</div></div>
                     </div>
+                    {sales.split && (
+                        <div className="mt-4 rounded-xl bg-black/30 border border-white/10 p-4 space-y-1.5 text-sm">
+                            <div className="flex justify-between"><span className="text-gray-400">Buyers paid</span><span className="text-white font-bold tabular-nums">${sales.revenue.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Square card fees{sales.split.feesPending > 0 ? ` (${sales.split.feesPending} not reported yet)` : ''}</span><span className="text-red-300 font-bold tabular-nums">−${sales.split.squareFees.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Filmmaker gets ({Math.round(sales.split.filmmakerShare * 100)}%)</span><span className="text-white font-bold tabular-nums">${sales.split.filmmakerAmount.toFixed(2)}</span></div>
+                            <div className="flex justify-between border-t border-white/10 pt-1.5"><span className="text-gray-300 font-semibold">CRATE keeps</span><span className="text-green-400 font-black tabular-nums">${sales.split.crateKeeps.toFixed(2)}</span></div>
+                            <p className="text-[11px] text-gray-500 pt-1">The filmmaker’s share is figured on what buyers paid, so Square’s fees come out of CRATE’s part. A film with its own deal uses that split.</p>
+                        </div>
+                    )}
                     {sales.recent.length > 0 && (
                         <ul className="mt-4 space-y-1.5 max-h-40 overflow-y-auto pr-1">
                             {sales.recent.map((r, i) => (
