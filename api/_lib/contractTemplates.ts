@@ -107,6 +107,67 @@ You agree to keep copies of your music licences, releases and permissions for as
 ${GENERAL}`,
     },
     {
+        id: 'filmmaker-master',
+        title: 'Master Filmmaker Agreement (all-in-one)',
+        version: '1.0',
+        audience: 'filmmaker',
+        summary: 'One agreement covering the licence, money, music and other rights, takedowns and payee/tax info. Send this instead of the separate ones.',
+        needsFilm: true,
+        body: `${PARTIES}
+It covers the film **{{filmTitle}}** (the "Film"). It combines in one place everything in CRATE's separate Distribution Agreement, Rights & Clearances Warranty and Payee Information & Tax Acknowledgement, so you only need to sign this one.
+
+## 1. What you're giving CRATE
+You give CRATE a **non-exclusive** licence to stream the Film on cratetv.net, the CRATE TV Roku channel and any other CRATE apps, **worldwide**, for the term below. Non-exclusive means you keep every other right: you can show, sell or license the Film anywhere else at the same time.
+
+CRATE may also use the Film's title, poster, stills, trailer and up to 2 minutes of clips, and your name and approved bio, to promote the Film and CRATE. CRATE may add captions or subtitles it makes, and may use technical formats and copies needed to host and stream the Film.
+
+CRATE may choose not to show the Film in certain countries or regions (for example where the law requires it, or where a music or other licence does not reach). That does not breach this agreement.
+
+## 2. What CRATE does
+- Hosts and streams the Film, and lists it in the CRATE catalog.
+- Sells rentals, watch party tickets and accepts tips for the Film, at prices CRATE sets in good faith.
+- Gives you a filmmaker dashboard showing views and earnings.
+
+## 3. Money
+- **Your share:** **{{filmmakerPercent}}%** of the money CRATE receives for the Film (rentals, watch party tickets and tips). **CRATE keeps {{cratePercent}}%** to pay for hosting, streaming and distribution.
+- If more than one person is credited as director or producer, your share is divided between them equally unless you tell us in writing how to divide it.
+- Refunded or failed payments don't count.
+- Festival passes and festival block tickets follow the festival's own terms, not this split. A festival film's individual rentals count toward your share once the festival has ended.
+- **Payouts:** once your balance is at least $5.00 you can request a payout from your dashboard, and CRATE will send it within 30 days using the payout method you choose (PayPal, Cash App, Venmo, Zelle or check). CRATE may also pay you without a request.
+
+## 4. Music, footage and everything in the Film (rights & clearances)
+By signing, you confirm that:
+1. You made the Film or own it, or you have written permission from whoever does to let CRATE stream it.
+2. **Music.** Every song, score and sound recording in the Film is original, in the public domain, or licensed in writing **for online streaming, worldwide, for as long as the Film is on CRATE** (including the composition and the recording). You will give CRATE copies of those licences if asked.
+3. **Footage, images and artwork.** Any footage, photos, logos or artwork you didn't create is licensed, permitted or in the public domain for the same use.
+4. **People.** Everyone who appears in the Film agreed to appear, anyone under 18 appears with a parent or guardian's permission, and you have their releases.
+5. **Locations.** You had permission to film where you filmed, where permission was needed.
+6. The Film doesn't defame anyone, invade anyone's privacy, or contain anything illegal.
+7. Nobody else has an exclusive deal for the Film that would stop CRATE from streaming it.
+8. You will keep copies of your licences, releases and permissions for as long as the Film is on CRATE.
+
+## 5. If there's a problem
+- Tell CRATE right away if you learn of any rights problem or claim.
+- CRATE may take the Film down while a claim is checked. That isn't a breach of any agreement with you.
+- If someone makes a claim against CRATE because one of the statements in section 4 wasn't true, you agree to cover CRATE's reasonable costs from that claim, including reasonable legal fees.
+
+## 6. Who gets paid, and taxes
+- You confirm that **{{signerName}}** is the correct legal name (or business name) to receive CRATE earnings for the Film, and that the payout method you choose in your dashboard belongs to you. Tell CRATE if these details change; CRATE isn't responsible for a payment sent to the details you gave us.
+- Payments from CRATE are not wages and nothing is withheld from them. You're responsible for reporting them and paying any taxes on them.
+- Before paying you, CRATE may ask for a completed IRS Form W-9 (US) or W-8BEN (outside the US). Send it to CRATE by email or as an upload; please don't type your Social Security number anywhere on cratetv.net.
+- Where US law requires it, CRATE will issue you a Form 1099.
+
+## 7. Term and taking the Film down
+- This agreement starts today and lasts **two years**, then renews automatically for one year at a time.
+- **You can end it any time** by emailing CRATE. We'll remove the Film within 14 days. Money already earned is still paid to you.
+- CRATE can remove the Film or end this agreement at any time, for example if there's a rights complaint.
+
+## 8. Limits
+CRATE provides the service as it is and doesn't guarantee any number of views or any amount of money. Neither of us is responsible to the other for indirect losses. CRATE's total responsibility to you under this agreement is limited to the money owed to you under section 3.
+
+${GENERAL}`,
+    },
+    {
         id: 'festival-submission',
         title: 'Festival Submission Terms',
         version: '1.0',
