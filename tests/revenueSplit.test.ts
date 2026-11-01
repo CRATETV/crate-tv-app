@@ -1,7 +1,7 @@
 // Revenue splits and payout links. Run with: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { splitRevenue, payeeFractions, filmmakerShareOf, cleanDeal, payoutLink } from '../api/_lib/revenueSplit.js';
+import { applySignedPayees, splitRevenue, payeeFractions, filmmakerShareOf, cleanDeal, payoutLink } from '../api/_lib/revenueSplit.js';
 
 test('default split is 70% filmmaker, 30% CRATE', () => {
     const r = splitRevenue(1000, { director: 'Ana Ruiz' }, undefined);
@@ -61,4 +61,17 @@ test('payout links fill in the amount', () => {
     assert.match(payoutLink('venmo', '@ana-ruiz', 500) || '', /^https:\/\/venmo\.com\/ana-ruiz\?txn=pay&amount=5\.00/);
     assert.equal(payoutLink('zelle', 'ana@example.com', 500), null);
     assert.equal(payoutLink('paypal', 'javascript:alert(1)', 500), null);
+});
+
+test('the person who signed the agreement is paid, unless the deal names someone on purpose', () => {
+    const merged = applySignedPayees(
+        { luna: { filmmakerShare: 0.8 }, onpurpose: { payees: [{ name: 'Pat Doe', share: 100 }] } },
+        { luna: { name: ' Ben Cole ' }, onpurpose: { name: 'Ben Cole' }, fresh: { name: 'Ana Ruiz' }, blank: { name: '  ' } },
+    );
+    assert.deepEqual(merged.luna, { filmmakerShare: 0.8, payees: [{ name: 'Ben Cole', share: 100 }] });
+    assert.deepEqual(merged.onpurpose.payees, [{ name: 'Pat Doe', share: 100 }]);
+    assert.deepEqual(merged.fresh.payees, [{ name: 'Ana Ruiz', share: 100 }]);
+    assert.equal(merged.blank, undefined);
+    const r = splitRevenue(1000, { director: 'Cy Dunn, Ben Cole' }, merged.luna);
+    assert.deepEqual(r.payees.map(p => [p.name, p.amount]), [['Ben Cole', 800]]);
 });

@@ -5,7 +5,7 @@ import { normalize } from './creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './shopRevenue.js';
 import { getFestivalConclusionTime } from './festivalTiming.js';
 import { isOutsidePartner } from './partnerRules.js';
-import { DEFAULT_FILMMAKER_SHARE, FilmDeal, splitRevenue } from './revenueSplit.js';
+import { DEFAULT_FILMMAKER_SHARE, FilmDeal, splitRevenue, applySignedPayees } from './revenueSplit.js';
 
 export const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
 // Default filmmaker share. A film can have its own split (see revenueSplit.ts).
@@ -18,7 +18,12 @@ export async function fetchFilmDeals(db: Firestore): Promise<Record<string, Film
         const snap = await db.collection('film_deals').get();
         snap.forEach(doc => { deals[doc.id] = doc.data() as FilmDeal; });
     } catch { /* no deals yet — everyone on the default split */ }
-    return deals;
+    // The person who signed a film's agreement is its payee, unless the deal names someone on purpose.
+    try {
+        const signed: Record<string, { name?: string }> = {};
+        (await db.collection('film_payees').get()).forEach(doc => { signed[doc.id] = doc.data() as { name?: string }; });
+        return applySignedPayees(deals, signed);
+    } catch { return deals; }
 }
 
 export interface SquarePayment {

@@ -152,6 +152,21 @@ export async function POST(request: Request) {
             });
             await ref.update({ status: 'signed', signatureId, signedAt: FieldValue.serverTimestamp() });
 
+            // The person who signs a film's distribution agreement becomes the one CRATE pays for that film
+            // (first signer only; a different payee can still be named in Earnings & payouts).
+            let payeeNote = '';
+            if (r.movieKey && ['filmmaker-distribution', 'filmmaker-master'].includes(t.id)) {
+                try {
+                    await d.collection('film_payees').doc(String(r.movieKey)).create({
+                        name: r.recipientName, email, signatureId, templateId: t.id, signedAt: FieldValue.serverTimestamp(),
+                    });
+                    payeeNote = `${r.recipientName} is now the person CRATE pays for this film.`;
+                } catch {
+                    const current = (await d.collection('film_payees').doc(String(r.movieKey)).get()).data();
+                    payeeNote = `${current?.name || 'Someone else'} stays the person CRATE pays for this film (they signed first). To change it, name a payee in Earnings & payouts.`;
+                }
+            }
+
             const when = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'long', timeStyle: 'short' });
             await sendMail(email, `Your signed copy: ${t.title}`, `
 <h1 style="margin:0 0 16px;font-size:24px;font-weight:900;">Signed — thank you</h1>
@@ -161,7 +176,7 @@ ${renderEmailButton('View signed copy', linkFor(token))}
 ${t.audience === 'filmmaker' ? renderFilmmakerNextStepsHtml() : ''}`);
             const owners = ownerEmails();
             if (owners.length) {
-                await sendMail(owners, `Signed: ${t.title} — ${r.recipientName}`, `<p style="margin:0 0 12px;"><strong>${escapeHtml(r.recipientName)}</strong> signed the ${escapeHtml(t.title)}${r.filmTitle ? ` for ${escapeHtml(r.filmTitle)}` : ''}.</p>${renderEmailButton('Open Contracts in admin', `${SITE}/admin`)}`);
+                await sendMail(owners, `Signed: ${t.title} — ${r.recipientName}`, `<p style="margin:0 0 12px;"><strong>${escapeHtml(r.recipientName)}</strong> signed the ${escapeHtml(t.title)}${r.filmTitle ? ` for ${escapeHtml(r.filmTitle)}` : ''}.</p>${payeeNote ? `<p style="margin:0 0 12px;">${escapeHtml(payeeNote)}</p>` : ''}${renderEmailButton('Open Contracts in admin', `${SITE}/admin`)}`);
             }
             return json({ success: true });
         }
