@@ -22,6 +22,8 @@ export interface ContractTemplate {
     summary: string;
     /** When true, the admin picks a film when sending it. */
     needsFilm: boolean;
+    /** Replaced by another template: no longer offered for sending, kept so older links and signed copies still open. */
+    retired?: boolean;
     body: string;
 }
 
@@ -42,6 +44,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
         audience: 'filmmaker',
         summary: 'Lets CRATE stream a film; sets the revenue split and how payouts work.',
         needsFilm: true,
+        retired: true,   // replaced by the Master Filmmaker Agreement (Oct 31 2026)
         body: `${PARTIES}
 It covers the film **{{filmTitle}}** (the "Film").
 
@@ -84,6 +87,7 @@ ${GENERAL}`,
         audience: 'filmmaker',
         summary: 'The filmmaker confirms they own or cleared the music, footage and performances.',
         needsFilm: true,
+        retired: true,   // replaced by the Master Filmmaker Agreement (Oct 31 2026)
         body: `${PARTIES}
 It covers the film **{{filmTitle}}** (the "Film").
 
@@ -109,13 +113,13 @@ ${GENERAL}`,
     },
     {
         id: 'filmmaker-master',
-        title: 'Master Filmmaker Agreement (all-in-one)',
-        version: '1.1',
+        title: 'Master Filmmaker Agreement',
+        version: '1.2',
         audience: 'filmmaker',
-        summary: 'One agreement covering the licence, money, music and other rights, takedowns and payee/tax info. Send this instead of the separate ones.',
+        summary: 'The one agreement every filmmaker signs: the licence, money and payouts, music and other rights, takedowns, and payee/tax info.',
         needsFilm: true,
         body: `${PARTIES}
-It covers the film **{{filmTitle}}** (the "Film"). It combines in one place everything in CRATE's separate Distribution Agreement, Rights & Clearances Warranty and Payee Information & Tax Acknowledgement, so you only need to sign this one.
+It covers the film **{{filmTitle}}** (the "Film").
 
 ## 1. What you're giving CRATE
 You give CRATE a **non-exclusive** licence to stream the Film on cratetv.net, the CRATE TV Roku channel and any other CRATE apps, **worldwide**, for the term below. Non-exclusive means you keep every other right: you can show, sell or license the Film anywhere else at the same time.
@@ -264,6 +268,7 @@ ${GENERAL}`,
         audience: 'anyone',
         summary: 'Confirms who gets paid, how, and their tax responsibility. Pair with a W-9.',
         needsFilm: false,
+        retired: true,   // replaced by the Master Filmmaker Agreement (Oct 31 2026)
         body: `${PARTIES}
 
 ## Who gets paid
@@ -280,6 +285,11 @@ You agree to tell CRATE if your name, payout method or tax details change. CRATE
 ${GENERAL}`,
     },
 ];
+
+/** What can be sent today: the Master Filmmaker Agreement first, then the rest. Retired ones stay in CONTRACT_TEMPLATES only so old links and signed copies keep working. */
+export const ACTIVE_CONTRACT_TEMPLATES: ContractTemplate[] = CONTRACT_TEMPLATES
+    .filter(t => !t.retired)
+    .sort((a, b) => (a.id === 'filmmaker-master' ? -1 : 0) - (b.id === 'filmmaker-master' ? -1 : 0));
 
 export const getTemplate = (id: string) => CONTRACT_TEMPLATES.find(t => t.id === id);
 

@@ -102,7 +102,7 @@ const SignPage: React.FC = () => {
                                 <ContractText text={data.text} />
                             </div>
 
-                            {data.status === 'signed' && ['filmmaker-distribution', 'rights-warranty', 'festival-submission'].includes(data.template.id) && (
+                            {data.status === 'signed' && ['filmmaker-master', 'filmmaker-distribution', 'rights-warranty', 'festival-submission'].includes(data.template.id) && (
                                 <div className="mt-8 rounded-2xl bg-green-50 border border-green-200 p-5 print:hidden">
                                     <p className="font-black text-green-800">Next: get paid</p>
                                     <p className="text-sm text-green-900 mt-1">Set up your free filmmaker dashboard to see views and earnings, and choose how you want to be paid. Use your name exactly as it appears in your film's credits.</p>

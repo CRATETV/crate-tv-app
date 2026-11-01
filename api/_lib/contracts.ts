@@ -93,7 +93,7 @@ export async function createSigningRequest(db: Firestore, r: SigningRequestInput
 }
 
 /** Agreements every newly approved film gets, in signing order. */
-export const FILM_ONBOARDING_TEMPLATES = ['filmmaker-distribution', 'rights-warranty'];
+export const FILM_ONBOARDING_TEMPLATES = ['filmmaker-master'];
 
 /**
  * On film approval: create (or reuse) the filmmaker's signing links for that
@@ -115,7 +115,7 @@ export async function ensureFilmOnboardingRequests(
             : (await createSigningRequest(db, {
                 templateId, recipientName: o.recipientName, recipientEmail: o.recipientEmail,
                 movieKey: o.movieKey, filmTitle: o.filmTitle,
-                filmmakerPercent: templateId === 'filmmaker-distribution' ? o.filmmakerPercent : null,
+                filmmakerPercent: templateId === 'filmmaker-master' ? o.filmmakerPercent : null,
                 source: 'film-approval', emailed: true,
             })).link;
         out.push({ templateId, title: t.title, link });
