@@ -652,6 +652,8 @@ export interface FilmmakerFilmPerformance {
   netRentalEarnings: number;
   totalEarnings: number;
   sentimentData?: SentimentPoint[];
+  /** Views by country (website and Roku), biggest first. */
+  countries?: Array<{ code: string; name: string; views: number; web: number; roku: number }>;
   /** Plays, finish rate and where viewers stop: one entry per film, or per episode of a series. */
   watch?: Array<{
     label: string;

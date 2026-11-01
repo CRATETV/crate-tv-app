@@ -3,6 +3,7 @@ import { Movie, FilmmakerFilmPerformance, SentimentPoint } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import HypeMap from './HypeMap';
 import WatchFunnel from './admin/WatchFunnel';
+import ViewCountries from './admin/ViewCountries';
 
 interface AdminFilmDeepDiveProps {
     movie: Movie;
@@ -239,6 +240,7 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
                             </div>
 
                             <WatchFunnel watch={performance.watch} />
+                            <ViewCountries countries={performance.countries} className="pt-6" />
 
                             {/* Main Content */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

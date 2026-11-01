@@ -1,3 +1,4 @@
+import { viewsByCountry } from './_lib/viewCountries.js';
 import { sumShards, summarizeWatch } from './_lib/watchStats.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
@@ -119,6 +120,9 @@ export async function POST(request: Request) {
                 return { label, ...summarizeWatch(sumShards(shards.docs.map(d => d.data()))) };
             }));
 
+            const viewEvents = await db.collection('traffic_events').where('movieKey', '==', film.key).get().catch(() => null);
+            const countries = viewsByCountry(viewEvents ? viewEvents.docs.map(d => d.data() as any) : []);
+
             return {
                 key: film.key,
                 title: film.title,
@@ -135,6 +139,7 @@ export async function POST(request: Request) {
                 totalEarnings: mine(film, rev.donations + rev.tickets + rev.vodRentals),
                 sentimentData,
                 watch,
+                countries,
             };
         }));
 

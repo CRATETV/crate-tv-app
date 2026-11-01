@@ -4,6 +4,7 @@ import { fetchAllRelevantPayments, getSquareCredentials, computeRevenueByFilm, f
 import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { sumShards, summarizeWatch } from './_lib/watchStats.js';
+import { viewsByCountry } from './_lib/viewCountries.js';
 
 export async function POST(request: Request) {
     try {
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
             totalEarnings: Math.round((revenue.donations + revenue.tickets + revenue.vodRentals) * PARTNER_SHARE),
             sentimentData,
             watch,
+            countries: viewsByCountry(trafficEvents as any[]),
             trafficEvents
         };
 
