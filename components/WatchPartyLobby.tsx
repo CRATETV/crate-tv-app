@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import RequestInvite from './RequestInvite';
 import { Movie, WatchPartyState } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
@@ -705,6 +706,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                                     >
                                         {movie.isPrivateScreening ? 'Enter Invite Code' : isFreeParty ? 'Reserve My Free Seat' : isPwyw ? 'Get Ticket — Pay what you want (from $3)' : `Get Ticket — $${ticketPrice.toFixed(2)}`}
                                     </button>
+                                    {movie.isPrivateScreening && <RequestInvite movieKey={movie.key} movieTitle={movie.title} />}
                                     <p className="text-gray-700 text-[10px]">Films unlock after the Watch Party ends.</p>
                                 </div>
                             </div>

@@ -251,6 +251,7 @@ export function buildInquiryRecord(inq: InquiryLike, nowIso: string) {
     const detailPairs: [string, string][] = Array.isArray(inq.details) ? inq.details : Object.entries(inq.details || {});
     const first = detailPairs[0]?.[1] || '';
     const festival = inq.kind === 'festival';
+    const invite = inq.kind === 'invite';
     const lines = [
         ...detailPairs.map(([k, v]) => `${k}: ${v}`),
         ...(inq.link ? [`Link: ${inq.link}`] : []),
@@ -262,11 +263,11 @@ export function buildInquiryRecord(inq: InquiryLike, nowIso: string) {
         fromName: String(inq.name || '').slice(0, 150),
         fromEmail: String(inq.email || '').toLowerCase().slice(0, 200),
         to: [],
-        subject: `${festival ? 'Festival hosting request' : 'Premiere request'}: ${first}`.slice(0, 200).trim(),
+        subject: `${invite ? 'Invite request' : festival ? 'Festival hosting request' : 'Premiere request'}: ${first}`.slice(0, 200).trim(),
         text: lines.join('\n').slice(0, 20_000),
         attachments: [],
         createdAt: nowIso,
         read: false,
-        meta: { source: 'inquiry', kind: festival ? 'festival' : 'premiere', film: first.slice(0, 150) },
+        meta: { source: 'inquiry', kind: invite ? 'invite' : festival ? 'festival' : 'premiere', film: first.slice(0, 150) },
     };
 }
