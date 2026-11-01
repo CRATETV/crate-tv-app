@@ -6,7 +6,7 @@ import { rankByViews } from './_lib/topTen.js';
 import { rokuImageUrl, ROKU_POSTER_WIDTH, ROKU_HERO_WIDTH } from './_lib/imageHosts.js';
 import { findFilmsWithoutVideo, storageKeyCheck, firstWorkingAddress } from './_lib/videoExists.js';
 import { rokuHlsProxyUrl } from './_lib/hlsRewrite.js';
-import { explainFilm, findFilm } from './_lib/rokuWhy.js';
+import { explainFilm, findFilm, explainPlacement, isHeldBackCategory } from './_lib/rokuWhy.js';
 
 // Films in paid festival blocks (their block has the price, not the film).
 // Refreshed at the start of every request from the festival schedule.
@@ -218,7 +218,7 @@ async function recommendationsFor(userId: string, movies: any[], watchlist: any[
 }
 
 const cache = new Map<string, { response: any, timestamp: number }>();
-const CACHE_TTL = 60 * 1000; // 1 minute
+const CACHE_TTL = 20 * 1000; // 20 seconds, so a change in the admin reaches the Roku quickly
 
 export async function GET(request: Request) {
   try {
@@ -241,7 +241,7 @@ export async function GET(request: Request) {
         });
     }
 
-    // (30-second copy is fine here: the whole feed is cached for a minute anyway)
+    // (30-second copy is fine here: the whole feed is cached for 20 seconds anyway)
     const apiData = await getApiData();
     paidKeys = paidFestivalFilmKeys(apiData.festivalData);
     const moviesObj: Record<string, Movie> = { ...fallbackMovies, ...(apiData.movies || {}) };
@@ -451,6 +451,7 @@ export async function GET(request: Request) {
 
     const categories: any[] = [];
     const publicSquare: any[] = [];
+    const holidayModeOn = (apiData as any)?.settings?.isHolidayModeActive === true;
 
     // Films whose video file is gone from storage are left out (never a Top Ten
     // tile that only says "loading"). See api/_lib/videoExists.ts.
@@ -502,11 +503,11 @@ export async function GET(request: Request) {
         const film = findFilm(moviesObj as Record<string, any>, whyParam);
         const address = film ? sanitizeUrl(assets[film.key]?.rokuStreamUrl || film.rokuStreamUrl || film.fullMovie || '') : '';
         const body = film
-            ? explainFilm({
+            ? (() => { const r: any = explainFilm({
                 movie: film, festivalDays: liveFestivalDays || (Array.isArray(apiData.festivalData) ? apiData.festivalData : []), nowMs: Date.now(),
                 inPaidKeys: paidKeys.has(film.key), hasVideoAddress: !!address || !!film.liveStreamUrl || (Array.isArray(film.episodes) && film.episodes.length > 0),
                 videoMissing: noVideo.has(film.key), rokuOverrideAddress: assets[film.key]?.rokuStreamUrl || undefined,
-            })
+            }); r.rows = explainPlacement(film.key, categoriesObj as any, config, holidayModeOn); return r; })()
             : { film: null, message: `No film found for "${whyParam}". Try the film's key or its exact title.` };
         return new Response(JSON.stringify(body, null, 2), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
@@ -750,7 +751,8 @@ export async function GET(request: Request) {
     // formatMovieForRoku() below is now async (it signs unlocked stream URLs).
     console.log(`Processing ${Object.keys(categoriesObj).length} categories...`);
     for (const [key, cat] of Object.entries(categoriesObj) as [string, any][]) {
-        if (key === 'featured' || (config.categories?.hidden || []).includes(key)) continue;
+        // Same rows as the website: skip the ones it never shows as an ordinary row.
+        if (isHeldBackCategory(key, cat.title, holidayModeOn) || (config.categories?.hidden || []).includes(key)) continue;
 
         const movieKeys = cat.movieKeys || [];
         const children = await Promise.all(movieKeys
