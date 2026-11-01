@@ -23,3 +23,21 @@ test('the payout takes Square fees off the top, then splits', () => {
     assert.equal(computePayout(100, 0, 30, 500).net, 0);       // fees can never push the payout negative
     assert.equal(computePayout(1000, 0, 30).squareFees, 0);    // not counted unless given
 });
+
+import { ticketFees, PWFF_FEES_SHARED_FROM } from '../api/_lib/partnerFees.js';
+
+test('PWFF ticket fees are matched by payment id and only shared from the 2027 festival on', () => {
+    const payments = [{ id: 'p1', amount_money: { amount: 1000 }, processing_fee: [{ amount_money: { amount: 59 } }] }, { id: 'p2', amount_money: { amount: 1000 } }];
+    const r = ticketFees([
+        { id: 't1', squarePaymentId: 'p1', purchasedAt: '2026-10-01T00:00:00.000Z' },
+        { id: 't2', squarePaymentId: 'p1', purchasedAt: PWFF_FEES_SHARED_FROM },
+        { id: 't3', squarePaymentId: 'p2', purchasedAt: '2027-03-01T00:00:00.000Z' },
+        { id: 't4', purchasedAt: '2027-03-01T00:00:00.000Z' },
+    ], payments as any);
+    assert.deepEqual(r, [
+        { id: 't1', fee: 0.59, shared: false },
+        { id: 't2', fee: 0.59, shared: true },
+        { id: 't3', fee: null, shared: true },
+        { id: 't4', fee: null, shared: true },
+    ]);
+});

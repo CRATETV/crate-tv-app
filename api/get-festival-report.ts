@@ -15,6 +15,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { isOutsidePartner } from './_lib/partnerRules.js';
+import { loadAllPayments, ticketFees, PWFF_FEES_SHARED_FROM } from './_lib/partnerFees.js';
 
 export async function POST(request: Request) {
     try {
@@ -44,12 +45,16 @@ export async function POST(request: Request) {
             const data = doc.data();
             return { id: doc.id, ...data, purchasedAt: data.purchasedAt?.toDate?.().toISOString() || null };
         });
+        // Square's card fee on each sale (shared with the festival from the 2027 festival on).
+        const payments = await loadAllPayments();
+        const fees = payments ? new Map(ticketFees(tickets as any[], payments).map(f => [f.id, f])) : null;
+        const ticketsWithFees = tickets.map((t: any) => ({ ...t, squareFee: fees?.get(t.id)?.fee ?? null, feeShared: fees?.get(t.id)?.shared ?? false }));
         const viewers = viewerSnap.docs.map(doc => {
             const data = doc.data();
             return { id: doc.id, ...data, firstJoinedAt: data.firstJoinedAt?.toDate?.().toISOString() || null };
         });
 
-        return new Response(JSON.stringify({ tickets, viewers }), { status: 200 });
+        return new Response(JSON.stringify({ tickets: ticketsWithFees, viewers, squareFeesLoaded: !!payments, feesSharedFrom: PWFF_FEES_SHARED_FROM }), { status: 200 });
     } catch (error) {
         console.error('[get-festival-report] Failed:', error);
         return new Response(JSON.stringify({ error: (error as Error).message || 'Unknown error' }), { status: 500 });

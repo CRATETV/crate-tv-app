@@ -21,6 +21,8 @@ export async function fetchFilmDeals(db: Firestore): Promise<Record<string, Film
 }
 
 export interface SquarePayment {
+    /** Square's payment id (matches `squarePaymentId` saved on each ticket). */
+    id?: string;
     amount_money: { amount: number };
     note?: string;
     created_at?: string;
@@ -100,8 +102,9 @@ export async function fetchAllRelevantPayments(accessToken: string, locationId: 
         .filter(p => p.status === 'COMPLETED')
         .map(p => {
             const refunded = p.refunded_money?.amount || 0;
-            if (refunded <= 0) return { amount_money: p.amount_money, note: p.note, created_at: p.created_at, processing_fee: p.processing_fee, reference_id: p.reference_id };
+            if (refunded <= 0) return { id: p.id, amount_money: p.amount_money, note: p.note, created_at: p.created_at, processing_fee: p.processing_fee, reference_id: p.reference_id };
             return {
+                id: p.id,
                 amount_money: { amount: Math.max(0, p.amount_money.amount - refunded) },
                 note: p.note,
                 created_at: p.created_at,

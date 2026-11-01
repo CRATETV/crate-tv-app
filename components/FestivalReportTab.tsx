@@ -9,6 +9,10 @@ interface TicketRecord {
     purchasedAt: any;
     paymentType: string;
     isWatchParty: boolean;
+    /** Square card fee on this sale in dollars (null until Square reports it). */
+    squareFee?: number | null;
+    /** True when this fee is shared with the festival (sales from the 2027 festival on). */
+    feeShared?: boolean;
 }
 
 interface ViewerRecord {
@@ -65,8 +69,12 @@ const FestivalReportTab: React.FC = () => {
     }, []);
 
     const totalRevenue = useMemo(() => tickets.reduce((sum, t) => sum + (t.amountPaid || 0), 0), [tickets]);
-    const crateAmount = totalRevenue * 0.30;
-    const pwffAmount = totalRevenue * 0.70;
+    // Square's card fees on tickets sold from the 2027 festival on come off before the split.
+    const sharedFees = useMemo(() => tickets.reduce((sum, t) => sum + (t.feeShared && typeof t.squareFee === 'number' ? t.squareFee : 0), 0), [tickets]);
+    const feesWaiting = useMemo(() => tickets.filter(t => t.feeShared && t.squareFee == null && (t.amountPaid || 0) > 0).length, [tickets]);
+    const splitBase = Math.max(0, totalRevenue - sharedFees);
+    const crateAmount = splitBase * 0.30;
+    const pwffAmount = splitBase * 0.70;
     const uniqueViewers = useMemo(() => new Set(viewers.map(v => v.email || v.name)).size, [viewers]);
     const uniqueTicketBuyers = useMemo(() => new Set(tickets.map(t => t.email).filter(Boolean)).size, [tickets]);
 
@@ -175,7 +183,7 @@ const FestivalReportTab: React.FC = () => {
                     <div className="px-6 py-6 text-center">
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2">Gross Revenue</p>
                         <p className="text-3xl font-black text-white">${totalRevenue.toFixed(2)}</p>
-                        <p className="text-[9px] text-gray-700 mt-1">Total ticket sales</p>
+                        <p className="text-[9px] text-gray-700 mt-1">Total ticket sales{sharedFees > 0 ? ` · Square card fees −$${sharedFees.toFixed(2)} taken off before the split` : ''}</p>
                     </div>
                     <div className="px-6 py-6 text-center bg-red-500/[0.03]">
                         <p className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-2">Crate TV — 30%</p>
@@ -253,6 +261,13 @@ const FestivalReportTab: React.FC = () => {
                                     <td className="px-6 py-3 text-right text-xl font-black text-white">${totalRevenue.toFixed(2)}</td>
                                     <td />
                                 </tr>
+                                {sharedFees > 0 && (
+                                    <tr>
+                                        <td colSpan={2} className="px-6 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500">Square card fees (shared){feesWaiting > 0 ? ` · ${feesWaiting} not reported yet` : ''}</td>
+                                        <td className="px-6 py-2 text-right font-black text-gray-400">— ${sharedFees.toFixed(2)}</td>
+                                        <td />
+                                    </tr>
+                                )}
                                 <tr>
                                     <td colSpan={2} className="px-6 py-2 text-[10px] font-black uppercase tracking-widest text-red-400">Crate TV Platform Fee (30%)</td>
                                     <td className="px-6 py-2 text-right font-black text-red-400">— ${crateAmount.toFixed(2)}</td>

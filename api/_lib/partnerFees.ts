@@ -43,3 +43,38 @@ export async function loadPartnerFees(partnerId: string): Promise<PartnerFees | 
         return null;
     }
 }
+
+// ─── PWFF (Playhouse West) ─────────────────────────────────────────────────
+// From the 2027 festival on, Square's card fees come off PWFF ticket sales before
+// the 70/30 split, the same as every partner festival. Sales before this date are
+// left exactly as they were settled.
+export const PWFF_FEES_SHARED_FROM = '2027-01-01T00:00:00.000Z';
+
+export interface TicketFee { id: string; /** dollars, or null when Square has not reported it */ fee: number | null; shared: boolean }
+
+/** The Square fee on each ticket (matched by the payment id saved on it) and whether it is shared. Pure, tested. */
+export function ticketFees(tickets: { id: string; squarePaymentId?: string | null; purchasedAt?: string | null }[], payments: SquarePayment[]): TicketFee[] {
+    const byId = new Map<string, number | null>();
+    for (const p of payments || []) {
+        if (!p?.id) continue;
+        const fees = Array.isArray(p.processing_fee) ? p.processing_fee : [];
+        byId.set(p.id, fees.length ? fees.reduce((s, f) => s + (Number(f?.amount_money?.amount) || 0), 0) / 100 : null);
+    }
+    return (tickets || []).map(t => {
+        const fee = t.squarePaymentId && byId.has(t.squarePaymentId) ? byId.get(t.squarePaymentId)! : null;
+        const shared = !!t.purchasedAt && t.purchasedAt >= PWFF_FEES_SHARED_FROM;
+        return { id: t.id, fee: fee === null ? null : Math.round(fee * 100) / 100, shared };
+    });
+}
+
+/** Loads every Square payment once so ticket fees can be matched. Null when Square can't be reached. */
+export async function loadAllPayments(): Promise<SquarePayment[] | null> {
+    try {
+        const { accessToken, locationId } = getSquareCredentials();
+        if (!accessToken) return null;
+        return await fetchAllRelevantPayments(accessToken, locationId);
+    } catch (e) {
+        console.error('[partnerFees] could not read Square payments:', e);
+        return null;
+    }
+}
