@@ -328,7 +328,7 @@ const FilmmakerDashboardView: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-8 md:space-y-10">
-                                <p className="text-gray-400 text-sm md:text-xl leading-relaxed font-medium max-w-2xl">Your balance is your <span className="text-white font-bold">filmmaker share</span> of ticket sales, rentals and tips (70% unless your agreement with CRATE says otherwise, divided with any co-credited director or producer), plus your share of shop products made from your artwork. CRATE keeps the rest to cover hosting, streaming and distribution. Once your balance reaches {formatCurrency(MINIMUM_PAYOUT_CENTS)}, you can request a payout.</p>
+                                <p className="text-gray-400 text-sm md:text-xl leading-relaxed font-medium max-w-2xl">Your balance is your <span className="text-white font-bold">filmmaker share</span> of ticket sales, rentals and tips (70% unless your agreement with CRATE says otherwise, after Square's card fee; paid to the approved filmmaker, who shares it with the rest of the team), plus your share of shop products made from your artwork. CRATE keeps the rest to cover hosting, streaming and distribution. Once your balance reaches {formatCurrency(MINIMUM_PAYOUT_CENTS)}, you can request a payout.</p>
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <button
                                         disabled={analytics.balance < MINIMUM_PAYOUT_CENTS || payoutStatus === 'submitting' || payoutStatus === 'success'}

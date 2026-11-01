@@ -10,14 +10,23 @@ test('default split is 70% filmmaker, 30% CRATE', () => {
     assert.deepEqual(r.payees.map(p => [p.name, p.amount]), [['Ana Ruiz', 700]]);
 });
 
-test('co-credits share the filmmaker side instead of each getting all of it', () => {
+test('co-credits are not divided: the first credited person is paid the whole filmmaker side', () => {
     const r = splitRevenue(1000, { director: 'Ana Ruiz', producers: 'Ben Cole' }, undefined);
     assert.equal(r.filmmakerAmount, 700);
-    assert.deepEqual(r.payees.map(p => p.amount), [350, 350]);
+    assert.deepEqual(r.payees.map(p => [p.name, p.amount]), [['Ana Ruiz', 700]]);
+    const twoDirectors = splitRevenue(1000, { director: 'Cy Dunn, Ana Ruiz' }, undefined);
+    assert.deepEqual(twoDirectors.payees.map(p => p.name), ['Cy Dunn']);
+    const producerOnly = splitRevenue(1000, { director: '', producers: 'Ben Cole, Di Fox' }, undefined);
+    assert.deepEqual(producerOnly.payees.map(p => p.name), ['Ben Cole']);
+});
+
+test('naming one payee in the deal pays that person instead', () => {
+    const r = splitRevenue(1000, { director: 'Ana Ruiz, Ben Cole' }, { payees: [{ name: 'Ben Cole', share: 100 }] });
+    assert.deepEqual(r.payees.map(p => [p.name, p.amount]), [['Ben Cole', 700]]);
 });
 
 test('pennies are never created or lost', () => {
-    const r = splitRevenue(1001, { director: 'A, B, C' }, undefined);
+    const r = splitRevenue(1001, { director: 'A' }, { payees: [{ name: 'A', share: 1 }, { name: 'B', share: 1 }, { name: 'C', share: 1 }] });
     assert.equal(r.filmmakerAmount + r.crateAmount, 1001);
     assert.equal(r.payees.reduce((s, p) => s + p.amount, 0), r.filmmakerAmount);
 });
