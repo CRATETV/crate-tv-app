@@ -17,6 +17,7 @@ import { verifyAdminPassword, isMasterAdmin } from './_lib/adminAuth.js';
 import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord } from './_lib/mailLog.js';
 
 const HIDDEN_COLLECTION = 'mail_hidden';
+const DELETED_COLLECTION = 'mail_deleted';   // ids of website-request copies that were deleted on purpose
 
 // Premiere / festival requests sent before the dashboard copy existed: add the
 // missing ones to the Received folder (once each; the newest 50 are checked).
@@ -25,7 +26,9 @@ async function addMissingInquiries(db: FirebaseFirestore.Firestore) {
         const snap = await db.collection('inquiries').orderBy('createdAt', 'desc').limit(50).get();
         if (snap.empty) return;
         const refs = snap.docs.map(d => db.collection(MAIL_COLLECTION).doc(`${INQUIRY_MAIL_PREFIX}${d.id}`));
-        const existing = await db.getAll(...refs);
+        // Copies you deleted are remembered, so they are not put back the next time the inbox loads.
+        const removed = await db.getAll(...refs.map(r => db.collection(DELETED_COLLECTION).doc(r.id)));
+        const existing = (await db.getAll(...refs)).map((e, i) => (removed[i].exists ? { exists: true } as any : e));
         const batch = db.batch();
         let n = 0;
         existing.forEach((e, i) => {
@@ -90,7 +93,11 @@ export async function POST(request: Request) {
                 const ids = (Array.isArray(body.ids) ? body.ids : []).filter((x: unknown) => typeof x === 'string' && x).slice(0, 100);
                 if (!ids.length) return json({ error: 'Nothing selected.' }, 400);
                 const batch = db.batch();
-                ids.forEach((id: string) => batch.delete(db.collection(MAIL_COLLECTION).doc(id)));
+                ids.forEach((id: string) => {
+                    batch.delete(db.collection(MAIL_COLLECTION).doc(id));
+                    // Premiere / festival request copies would otherwise be re-created on the next load.
+                    if (id.startsWith(INQUIRY_MAIL_PREFIX)) batch.set(db.collection(DELETED_COLLECTION).doc(id), { deletedAt: new Date().toISOString() });
+                });
                 await batch.commit();
                 return json({ success: true, deleted: ids.length });
             }
@@ -123,6 +130,6 @@ export async function POST(request: Request) {
         }
     } catch (e) {
         console.error('[admin-mail] failed:', e);
-        return json({ error: 'Something went wrong loading the mailbox.' }, 500);
+        return json({ error: 'Something went wrong with the mailbox. Reload and try again; if it keeps happening, tell Claude the exact words you see here.' }, 500);
     }
 }
