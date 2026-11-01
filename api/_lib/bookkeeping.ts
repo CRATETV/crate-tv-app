@@ -7,6 +7,7 @@
 export const BOOKKEEPING_COLLECTION = 'bookkeeping_entries';
 export const TAX_DOCS_COLLECTION = 'tax_docs';
 export const PAYOUT_ENTRY_PREFIX = 'payout_';
+export const PARTNER_ENTRY_PREFIX = 'partner_';
 /** IRS: send a 1099-NEC to anyone paid this much or more in a year (2026 payments). */
 export const FORM_1099_THRESHOLD_CENTS = 200000;
 export const W9_LINK = 'https://www.irs.gov/pub/irs-pdf/fw9.pdf';
@@ -24,7 +25,7 @@ export interface BookkeepingEntry {
     film: string;
     reference: string;       // confirmation number, check number, etc.
     note: string;
-    source: 'payout' | 'manual';
+    source: 'payout' | 'partner' | 'manual';
     sourceId: string;
     void?: boolean;
     voidReason?: string;
@@ -67,6 +68,22 @@ export function entryFromPayout(requestId: string, req: any, completedIso: strin
         note: '',
         source: 'payout',
         sourceId: requestId,
+    };
+}
+
+/** The entry that "mark as paid" creates for a partner festival payout (amount in dollars, as the partner record stores it). */
+export function entryFromPartnerPayout(partnerId: string, partner: { name?: string; payeeName?: string }, paidAmountDollars: number, paidNote: string, paidIso: string): BookkeepingEntry {
+    return {
+        date: paidIso.slice(0, 10),
+        payee: line(partner.payeeName, 120) || line(partner.name, 120) || 'Partner',
+        amountCents: Math.round((Number(paidAmountDollars) || 0) * 100),
+        method: '',
+        category: 'partner',
+        film: line(partner.name, 200),
+        reference: '',
+        note: line(paidNote, 500),
+        source: 'partner',
+        sourceId: partnerId,
     };
 }
 

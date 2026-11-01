@@ -26,6 +26,7 @@ import { isMasterAdmin } from './_lib/adminAuth.js';
 import { logServerError } from './_lib/logError.js';
 import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup, loadScheduledScreenings, partnerOverlaps, deletePartnerFestival } from './_lib/partners.js';
 import { loadPartnerFees } from './_lib/partnerFees.js';
+import { BOOKKEEPING_COLLECTION, PARTNER_ENTRY_PREFIX, entryFromPartnerPayout } from './_lib/bookkeeping.js';
 import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
 import { sendPartnerInvite, notifyPartnerReviewed } from './_lib/partnerEmails.js';
 
@@ -214,6 +215,16 @@ export async function POST(request: Request) {
                 await db.collection(PARTNERS).doc(p.id).set({ payout }, { merge: true });
                 // merge:true can't remove nested keys, so rewrite the map when clearing.
                 if (body.clearPaid) await db.collection(PARTNERS).doc(p.id).update({ payout });
+                // Bookkeeping: marking paid records the payment; un-marking crosses it out (kept on record).
+                try {
+                    const entryRef = db.collection(BOOKKEEPING_COLLECTION).doc(`${PARTNER_ENTRY_PREFIX}${p.id}`);
+                    if (body.markPaid) {
+                        const entry = entryFromPartnerPayout(p.id, p as any, Number(payout.paidAmount), String(payout.paidNote || ''), String(payout.paidAt));
+                        if (entry.amountCents > 0) await entryRef.set({ ...entry, createdAt: FieldValue.serverTimestamp() });
+                    } else if (body.clearPaid && (await entryRef.get()).exists) {
+                        await entryRef.set({ void: true, voidReason: 'Marked as not paid in Partner festivals', voidedAt: FieldValue.serverTimestamp() }, { merge: true });
+                    }
+                } catch (e) { console.error('[admin-partners] bookkeeping entry failed:', e); }
                 return json({ success: true, payout });
             }
 

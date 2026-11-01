@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanEntry, dollarsToCents, entryFromPayout, totalsByPayee, entriesToCsv, payeeKey, FORM_1099_THRESHOLD_CENTS } from '../api/_lib/bookkeeping.js';
+import { entryFromPartnerPayout, cleanEntry, dollarsToCents, entryFromPayout, totalsByPayee, entriesToCsv, payeeKey, FORM_1099_THRESHOLD_CENTS } from '../api/_lib/bookkeeping.js';
 
 const NOW = '2026-10-31T20:00:00.000Z';
 
@@ -44,4 +44,9 @@ test('CSV quotes commas and neutralises spreadsheet formulas', () => {
     const csv = entriesToCsv([{ date: '2026-01-01', payee: '=HYPERLINK("x")', amountCents: 1050, method: 'PayPal', category: 'other', film: 'A, B', reference: '', note: '', source: 'manual', sourceId: '' }]);
     const [, row] = csv.split('\n');
     assert.ok(row.startsWith(`2026-01-01,"'=HYPERLINK(""x"")",10.50,PayPal,other,"A, B"`));
+});
+
+test('a partner festival payout becomes a partner entry in cents', () => {
+    const e = entryFromPartnerPayout('p1', { name: 'Island Film Fest', payeeName: 'Island Arts LLC' }, 123.45, 'Zelle', '2026-11-02T10:00:00.000Z');
+    assert.deepEqual([e.payee, e.amountCents, e.category, e.film, e.note, e.source, e.sourceId, e.date], ['Island Arts LLC', 12345, 'partner', 'Island Film Fest', 'Zelle', 'partner', 'p1', '2026-11-02']);
 });
