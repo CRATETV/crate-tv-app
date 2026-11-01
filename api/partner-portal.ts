@@ -23,6 +23,7 @@ import {
     HttpError, PARTNERS, PARTNER_INVITES, authenticatePartnerUser, requirePartnerMember, getPartnerSales, partnerView,
     planPartnerCleanup,
 } from './_lib/partners.js';
+import { loadPartnerFees } from './_lib/partnerFees.js';
 import { checkDraft, sanitizeDraft, computePayout, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
 import { notifyOwnerSubmitted, notifyOwnerPieceSubmitted } from './_lib/partnerEmails.js';
 import { sanitizePartnerPiece } from './_lib/zineRules.js';
@@ -192,8 +193,10 @@ export async function POST(request: Request) {
             case 'sales': {
                 const { partner } = await requirePartnerMember(db, idToken, partnerId);
                 const { sales } = await getPartnerSales(db, partner);
-                const payout = computePayout(sales.totals.gross, partner.payout?.deductions || 0, partner.crateSharePct);
-                return json({ sales, payout, payoutStatus: partner.payout || null, generatedAt: new Date().toISOString() });
+                const takeFees = partner.payout?.takeSquareFees !== false;
+                const fees = partner.id === PWFF_PARTNER_ID ? null : await loadPartnerFees(partner.id);
+                const payout = computePayout(sales.totals.gross, partner.payout?.deductions || 0, partner.crateSharePct, takeFees && fees ? fees.amount : 0);
+                return json({ sales, payout, squareFees: takeFees ? fees : null, payoutStatus: partner.payout || null, generatedAt: new Date().toISOString() });
             }
 
             default:

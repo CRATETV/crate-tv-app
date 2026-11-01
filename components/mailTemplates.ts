@@ -58,7 +58,7 @@ Thank you for your interest in hosting your festival on Crate TV. Here is how it
 
 1. We talk it through. Reply with your dates and the number of films, and we will confirm what works.
 2. We set it up. Crate TV builds your festival's page, schedule and watch parties, and handles ticketing and payments electronically so your audience can join from anywhere.
-3. Terms are set for your festival. We agree the share of ticket sales before anything goes live, and we send you a full sales and payout report when the festival ends.
+3. Terms are set for your festival. We agree the share of ticket sales before anything goes live. Square's card processing fees come off ticket sales first, before we split the rest, so both of us share them. When the festival ends we send you a full sales and payout report that shows every line, including the card fees.
 
 If you would like, we can arrange a short call, or you can answer any questions here by email.`,
     },

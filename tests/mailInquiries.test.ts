@@ -31,3 +31,8 @@ test('reply templates fill in the name, film and booking link with the real pric
     assert.doesNotMatch(f.body, /\{(name|film|link)\}/);
     assert.match(fillTemplate(t, {}).body, /^Hi there,/);
 });
+
+test('the festival template tells partners about the Square card fees', () => {
+    const t = MAIL_TEMPLATES.find(x => x.id === 'festival-how-it-works')!;
+    assert.match(fillTemplate(t, { name: 'Ann', film: 'Hilltop Film Fest' }).body, /card processing fees come off ticket sales first/);
+});

@@ -95,6 +95,8 @@ export interface PartnerPublished {
 
 export interface PartnerPayout {
     deductions: number;
+    /** Take Square's card fees off the top before the split. On unless set to false. */
+    takeSquareFees?: boolean;
     deductionsNote?: string;
     paidAt?: string;
     paidAmount?: number;
@@ -443,21 +445,24 @@ export function computeSales(
 export interface PayoutBreakdown {
     gross: number;
     deductions: number;
+    /** Square card fees taken off the top (0 when not counted). */
+    squareFees: number;
     net: number;
     crateSharePct: number;
     crateAmount: number;
     partnerAmount: number;
 }
 
-/** Same method used for PWFF: deductions come off first, then CRATE's % of
- *  what's left; the partner receives the remainder. */
-export function computePayout(gross: number, deductions: number, crateSharePct: number): PayoutBreakdown {
+/** Same method used for PWFF: deductions (and Square's card fees, when counted)
+ *  come off first, then CRATE's % of what's left; the partner receives the remainder. */
+export function computePayout(gross: number, deductions: number, crateSharePct: number, squareFees = 0): PayoutBreakdown {
     const g = round2(Math.max(0, gross || 0));
     const d = round2(Math.min(g, Math.max(0, deductions || 0)));
     const pct = Math.min(100, Math.max(0, crateSharePct || 0));
-    const net = round2(g - d);
+    const f = round2(Math.min(g - d, Math.max(0, squareFees || 0)));
+    const net = round2(g - d - f);
     const crateAmount = round2(net * pct / 100);
-    return { gross: g, deductions: d, net, crateSharePct: pct, crateAmount, partnerAmount: round2(net - crateAmount) };
+    return { gross: g, deductions: d, squareFees: f, net, crateSharePct: pct, crateAmount, partnerAmount: round2(net - crateAmount) };
 }
 
 // ─── Sanitising input from the browser ────────────────────────────────────

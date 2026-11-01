@@ -135,7 +135,8 @@ const Lineup: React.FC<{ p: AdminPartner }> = ({ p }) => {
 };
 
 const Sales: React.FC<{ p: AdminPartner; onSaved: () => void }> = ({ p, onSaved }) => {
-    const [data, setData] = useState<{ sales: SalesSummary; payout: PayoutBreakdown; payoutStatus: PartnerPayout | null; tickets: any[] } | null>(null);
+    const [data, setData] = useState<{ sales: SalesSummary; payout: PayoutBreakdown; payoutStatus: PartnerPayout | null; tickets: any[]; squareFees?: { amount: number; sales: number; pending: number } | null; takeSquareFees?: boolean } | null>(null);
+    const [takeFees, setTakeFees] = useState(p.payout?.takeSquareFees !== false);
     const [deductions, setDeductions] = useState(String(p.payout?.deductions ?? 0));
     const [deductionsNote, setDeductionsNote] = useState(p.payout?.deductionsNote || '');
     const [paidNote, setPaidNote] = useState('');
@@ -150,7 +151,7 @@ const Sales: React.FC<{ p: AdminPartner; onSaved: () => void }> = ({ p, onSaved 
         if (markPaid && !window.confirm(`Record ${money(data.payout.partnerAmount)} as paid to ${p.payeeName}?`)) return;
         setBusy(true); setErr('');
         try {
-            await callAdminPartners('setPayout', { partnerId: p.id, deductions: Number(deductions) || 0, deductionsNote, markPaid, clearPaid, paidAmount: data.payout.partnerAmount, paidNote });
+            await callAdminPartners('setPayout', { partnerId: p.id, deductions: Number(deductions) || 0, deductionsNote, takeSquareFees: takeFees, markPaid, clearPaid, paidAmount: data.payout.partnerAmount, paidNote });
             await load(); onSaved();
         } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
     };
@@ -185,11 +186,22 @@ const Sales: React.FC<{ p: AdminPartner; onSaved: () => void }> = ({ p, onSaved 
                 <div><label className={label}>What for (shown to partner)</label><input className={input} value={deductionsNote} onChange={e => setDeductionsNote(e.target.value)} placeholder="e.g. test purchases, refunds" /></div>
             </div>
             <div className="bg-black/30 rounded-xl p-4 text-sm space-y-1">
-                <p>Gross {money(payout.gross)} − deductions {money(payout.deductions)} = net <strong>{money(payout.net)}</strong></p>
+                <p>Gross {money(payout.gross)} − deductions {money(payout.deductions)}{payout.squareFees > 0 && <> − Square card fees {money(payout.squareFees)}</>} = net <strong>{money(payout.net)}</strong></p>
+                {p.id !== PWFF_PARTNER_ID && (
+                    data.squareFees
+                        ? <p className="text-gray-400 text-xs">Square took {money(data.squareFees.amount)} in card fees on {data.squareFees.sales} sale{data.squareFees.sales === 1 ? '' : 's'}{data.squareFees.pending > 0 ? `. ${data.squareFees.pending} recent sale${data.squareFees.pending === 1 ? '' : 's'} not reported by Square yet, so check again in a day or two` : ''}.</p>
+                        : <p className="text-gray-500 text-xs">Square fees could not be loaded just now.</p>
+                )}
                 <p>CRATE {payout.crateSharePct}% = <strong>{money(payout.crateAmount)}</strong> · {p.payeeName} receives <strong className="text-emerald-300">{money(payout.partnerAmount)}</strong></p>
                 {payoutStatus?.paidAt && <p className="text-emerald-400 font-bold">Paid {money(payoutStatus.paidAmount)} on {new Date(payoutStatus.paidAt).toLocaleDateString()}{payoutStatus.paidNote ? ` — ${payoutStatus.paidNote}` : ''}</p>}
             </div>
             <div className="flex gap-2 flex-wrap items-end">
+                {p.id !== PWFF_PARTNER_ID && (
+                    <label className="flex items-center gap-2 text-xs text-gray-300">
+                        <input type="checkbox" checked={takeFees} onChange={e => setTakeFees(e.target.checked)} className="accent-red-600" />
+                        Take Square card fees off the top (before the split)
+                    </label>
+                )}
                 <button className={btnGhost} disabled={busy} onClick={() => savePayout(false)}>Save deductions</button>
                 <button className={btnGhost} onClick={downloadCsv}>Download sales CSV</button>
                 {!payoutStatus?.paidAt ? (

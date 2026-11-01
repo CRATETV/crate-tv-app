@@ -107,7 +107,7 @@ test('sales are attributed to the right partner, block, pass and rentals', () =>
 });
 
 test('payout uses the PWFF method: deductions first, then CRATE %', () => {
-    assert.deepEqual(computePayout(1000, 50, 30), { gross: 1000, deductions: 50, net: 950, crateSharePct: 30, crateAmount: 285, partnerAmount: 665 });
+    assert.deepEqual(computePayout(1000, 50, 30), { gross: 1000, deductions: 50, squareFees: 0, net: 950, crateSharePct: 30, crateAmount: 285, partnerAmount: 665 });
     assert.equal(computePayout(100, 500, 30).net, 0); // deductions can't exceed sales
     const p = computePayout(33.33, 0, 30);
     assert.equal(p.crateAmount + p.partnerAmount, 33.33); // no cents lost to rounding
