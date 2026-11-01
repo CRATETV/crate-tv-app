@@ -3,7 +3,8 @@ import { sumShards, summarizeWatch } from './_lib/watchStats.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
 import { fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE, computeRevenueByFilm, fetchFilmDeals } from './_lib/filmmakerBalance.js';
-import { splitRevenue } from './_lib/revenueSplit.js';
+import { splitRevenue, filmmakerShareOf } from './_lib/revenueSplit.js';
+import { buildFilmBreakdown } from './_lib/filmFees.js';
 import { findAllCreditMatches, normalize } from './_lib/creditMatch.js';
 import { computeShopRevenueByFilmmaker } from './_lib/shopRevenue.js';
 
@@ -98,8 +99,12 @@ export async function POST(request: Request) {
 
         const filmmakerFilms = findAllCreditMatches(Object.values(allMovies), directorName);
 
+        // What buyers actually paid per film, so the breakdown can show Square's shared fees.
+        const paidByTitle = new Map<string, number>();
         const [revenueByFilm, deals] = await Promise.all([
-            computeRevenueByFilm(db, allPayments, Object.values(allMovies)),
+            computeRevenueByFilm(db, allPayments, Object.values(allMovies), (title, _field, _amount, payment) => {
+                paidByTitle.set(title, (paidByTitle.get(title) || 0) + payment.amount_money.amount);
+            }),
             fetchFilmDeals(db),
         ]);
         const me = normalize(directorName);
@@ -123,9 +128,18 @@ export async function POST(request: Request) {
             const viewEvents = await db.collection('traffic_events').where('movieKey', '==', film.key).get().catch(() => null);
             const countries = viewsByCountry(viewEvents ? viewEvents.docs.map(d => d.data() as any) : []);
 
+            const afterFees = rev.donations + rev.tickets + rev.vodRentals;
+            const filmSplit = splitRevenue(afterFees, film, deals[film.key]);
+            const breakdown = buildFilmBreakdown({
+                buyersPaid: paidByTitle.get(film.title) ?? paidByTitle.get((film.title || '').trim()) ?? afterFees, afterFees,
+                filmmakerPercent: Math.round(filmmakerShareOf(deals[film.key]) * 10000) / 100,
+                filmmakerSide: filmSplit.filmmakerAmount, crateShare: filmSplit.crateAmount,
+                yourShare: mine(film, afterFees),
+            });
             return {
                 key: film.key,
                 title: film.title,
+                breakdown,
                 views: viewCounts[film.key] || 0,
                 likes: film.likes || 0,
                 watchlistAdds: watchlistCounts[film.key] || 0,

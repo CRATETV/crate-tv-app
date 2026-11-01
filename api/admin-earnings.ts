@@ -133,7 +133,10 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
             const total = rev.donations + rev.tickets + rev.vodRentals;
             const deal = deals[m.key];
             const split = splitRevenue(total, m, deal);
+            const buyersPaid = filmLines.filter(l => l.title.trim() === (m.title || '').trim()).reduce((s, l) => s + l.gross, 0);
             return {
+                buyersPaid,
+                cardFees: Math.max(0, buyersPaid - total),   // Square's shared fees (sales from Oct 31, 2026)
                 key: m.key,
                 title: m.title,
                 poster: (m as any).poster || '',

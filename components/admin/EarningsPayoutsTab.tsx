@@ -16,6 +16,7 @@ import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
 interface FilmRow {
     key: string; title: string; poster: string; director: string; producers: string;
     revenue: { donations: number; tickets: number; rentals: number; total: number };
+    buyersPaid?: number; cardFees?: number;
     filmmakerPercent: number; customDeal: boolean; deal: { filmmakerShare?: number; payees?: { name: string; share: number }[]; notes?: string } | null;
     filmmakerAmount: number; crateAmount: number;
     payees: { name: string; percentOfFilmmakerSide: number; amount: number }[];
@@ -449,7 +450,7 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                             <thead>
                                 <tr className="text-left text-[#8A8A96] border-b border-white/[0.07]">
                                     <th className="px-5 py-3 font-semibold">Film</th>
-                                    <th className="px-3 py-3 font-semibold text-right">Revenue</th>
+                                    <th className="px-3 py-3 font-semibold text-right" title="What is left to split after Square's shared card fees">To split</th>
                                     <th className="px-3 py-3 font-semibold">Split</th>
                                     <th className="px-3 py-3 font-semibold text-right">Filmmakers</th>
                                     <th className="px-3 py-3 font-semibold text-right">CRATE</th>
@@ -464,7 +465,7 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                                                 {f.poster ? <img src={f.poster} alt="" className="w-8 h-11 rounded object-cover bg-white/5" loading="lazy" /> : <div className="w-8 h-11 rounded bg-white/5" />}
                                                 <div className="min-w-0">
                                                     <p className="text-white font-semibold truncate max-w-[220px]">{f.title}</p>
-                                                    <p className="text-xs text-[#8A8A96]">{[f.revenue.rentals && `Rentals ${money(f.revenue.rentals)}`, f.revenue.tickets && `Tickets ${money(f.revenue.tickets)}`, f.revenue.donations && `Tips ${money(f.revenue.donations)}`].filter(Boolean).join(' · ') || 'No sales yet'}</p>
+                                                    <p className="text-xs text-[#8A8A96]">{[f.revenue.rentals && `Rentals ${money(f.revenue.rentals)}`, f.revenue.tickets && `Tickets ${money(f.revenue.tickets)}`, f.revenue.donations && `Tips ${money(f.revenue.donations)}`].filter(Boolean).join(' · ') || 'No sales yet'}{(f.cardFees || 0) > 0 ? ` · Buyers paid ${money(f.buyersPaid)} − card fees ${money(f.cardFees)}` : ''}</p>
                                                 </div>
                                             </div>
                                         </td>

@@ -1,3 +1,4 @@
+import FilmMoneyBreakdown from './FilmMoneyBreakdown';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, FilmmakerFilmPerformance, SentimentPoint } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -258,21 +259,7 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-4">
                                             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Revenue Breakdown</h3>
-                                            <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-4 print:border-black/10">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Gross Revenue</span>
-                                                    <span className="text-sm font-black text-white print:text-black">{formatCurrency(performance.grossDonations + performance.grossAdRevenue)}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Platform Fee (30%)</span>
-                                                    <span className="text-sm font-black text-red-500/60">-{formatCurrency((performance.grossDonations + performance.grossAdRevenue) * 0.3)}</span>
-                                                </div>
-                                                <div className="h-px bg-white/5 print:bg-black/10"></div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-black text-emerald-500 uppercase">Net Entitlement (70%)</span>
-                                                    <span className="text-xl font-black text-emerald-500">{formatCurrency(performance.totalEarnings)}</span>
-                                                </div>
-                                            </div>
+                                            <FilmMoneyBreakdown breakdown={performance.breakdown} />
                                         </div>
 
                                         <div className="space-y-4">

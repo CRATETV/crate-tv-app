@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splittableCents, reportedFeeCents, feeIsShared, FILM_FEES_SHARED_FROM } from '../api/_lib/filmFees.js';
+import { buildFilmBreakdown, splittableCents, reportedFeeCents, feeIsShared, FILM_FEES_SHARED_FROM } from '../api/_lib/filmFees.js';
 
 const pay = (amount: number, created_at: string, fee?: number) => ({ amount_money: { amount }, created_at, processing_fee: fee === undefined ? [] : [{ amount_money: { amount: fee } }] });
 
@@ -20,4 +20,11 @@ test('the start date is exact', () => {
     assert.equal(feeIsShared(FILM_FEES_SHARED_FROM), true);
     assert.equal(feeIsShared('2026-10-31T23:59:59Z'), false);
     assert.equal(feeIsShared(undefined), false);
+});
+
+test('film breakdown: fees are buyers paid minus what is left; the pieces add up', () => {
+    const b = buildFilmBreakdown({ buyersPaid: 499, afterFees: 454, filmmakerPercent: 70, filmmakerSide: 318, crateShare: 136, yourShare: 159 });
+    assert.deepEqual([b.buyersPaid, b.cardFees, b.afterFees, b.filmmakerSide + b.crateShare, b.yourShare], [499, 45, 454, 454, 159]);
+    assert.equal(buildFilmBreakdown({ buyersPaid: 0, afterFees: 0, filmmakerPercent: 70, filmmakerSide: 0, crateShare: 0, yourShare: 0 }).cardFees, 0);
+    assert.equal(buildFilmBreakdown({ buyersPaid: 100, afterFees: 150, filmmakerPercent: 70, filmmakerSide: 0, crateShare: 0, yourShare: 0 }).cardFees, 0);
 });
