@@ -14,9 +14,30 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { verifyAdminPassword, isMasterAdmin } from './_lib/adminAuth.js';
-import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures } from './_lib/mailLog.js';
+import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord } from './_lib/mailLog.js';
 
 const HIDDEN_COLLECTION = 'mail_hidden';
+
+// Premiere / festival requests sent before the dashboard copy existed: add the
+// missing ones to the Received folder (once each; the newest 50 are checked).
+async function addMissingInquiries(db: FirebaseFirestore.Firestore) {
+    try {
+        const snap = await db.collection('inquiries').orderBy('createdAt', 'desc').limit(50).get();
+        if (snap.empty) return;
+        const refs = snap.docs.map(d => db.collection(MAIL_COLLECTION).doc(`${INQUIRY_MAIL_PREFIX}${d.id}`));
+        const existing = await db.getAll(...refs);
+        const batch = db.batch();
+        let n = 0;
+        existing.forEach((e, i) => {
+            if (e.exists) return;
+            const d: any = snap.docs[i].data();
+            const when = d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString();
+            batch.set(refs[i], { ...buildInquiryRecord(d, when), read: d.status === 'new' ? false : true });
+            n++;
+        });
+        if (n) await batch.commit();
+    } catch (e) { console.error('[admin-mail] inquiries copy failed:', e); }
+}
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -33,6 +54,7 @@ export async function POST(request: Request) {
             case 'list': {
                 const folder = body.folder === 'out' ? 'out' : 'in';
                 const limit = Math.min(Math.max(Number(body.limit) || 60, 1), 200);
+                if (folder === 'in') await addMissingInquiries(db);
                 // One sort on one field needs no special database index; the folder is picked here.
                 const snap = await db.collection(MAIL_COLLECTION).orderBy('createdAt', 'desc').limit(400).get();
                 const messages = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((m: any) => m.direction === folder).slice(0, limit);
@@ -60,6 +82,7 @@ export async function POST(request: Request) {
                 return json({ url });
             }
             case 'unread': {
+                await addMissingInquiries(db);
                 const snap = await db.collection(MAIL_COLLECTION).orderBy('createdAt', 'desc').limit(400).get();
                 return json({ count: snap.docs.filter(d => d.data().direction === 'in' && d.data().read === false).length });
             }

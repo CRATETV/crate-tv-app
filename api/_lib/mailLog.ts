@@ -235,3 +235,38 @@ export function renderSignatureHtml(sig: MailSignature): string {
     });
     return html.join('<br>');
 }
+
+// ─── Website request forms (/premiere and /host) ───────────────────────────
+// These were only emailed to the studio's regular inbox. Now each one also gets
+// a copy in the dashboard's Received folder, so it can be read and answered there.
+export const INQUIRY_MAIL_PREFIX = 'inq_';
+
+export interface InquiryLike {
+    kind?: string; name?: string; email?: string; message?: string; link?: string | null;
+    details?: Record<string, string> | [string, string][];
+}
+
+/** The saved Received record for one request-form submission. Pure, tested. */
+export function buildInquiryRecord(inq: InquiryLike, nowIso: string) {
+    const detailPairs: [string, string][] = Array.isArray(inq.details) ? inq.details : Object.entries(inq.details || {});
+    const first = detailPairs[0]?.[1] || '';
+    const festival = inq.kind === 'festival';
+    const lines = [
+        ...detailPairs.map(([k, v]) => `${k}: ${v}`),
+        ...(inq.link ? [`Link: ${inq.link}`] : []),
+        ...(inq.message ? ['', inq.message] : []),
+    ];
+    return {
+        direction: 'in' as const,
+        resendId: '',
+        fromName: String(inq.name || '').slice(0, 150),
+        fromEmail: String(inq.email || '').toLowerCase().slice(0, 200),
+        to: [],
+        subject: `${festival ? 'Festival hosting request' : 'Premiere request'}: ${first}`.slice(0, 200).trim(),
+        text: lines.join('\n').slice(0, 20_000),
+        attachments: [],
+        createdAt: nowIso,
+        read: false,
+        meta: { source: 'inquiry', kind: festival ? 'festival' : 'premiere', film: first.slice(0, 150) },
+    };
+}
