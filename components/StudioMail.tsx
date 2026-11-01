@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
 import LoadingSpinner from './LoadingSpinner';
+import { MAIL_TEMPLATES, fillTemplate, bookingLink } from './mailTemplates';
 
 // One row in either folder. Messages from the website forms, film submissions and
 // real emails all end up in this same shape.
@@ -17,6 +18,8 @@ interface MailItem {
     unread: boolean;
     attachments: { filename: string; size?: number }[];
     canOpenOriginal?: boolean;
+    /** Set for premiere / festival request forms: the film (or festival) named in the request. */
+    film?: string;
 }
 
 interface Signature { id: string; name: string; text: string; ownerOnly?: boolean; }
@@ -126,7 +129,7 @@ const StudioMail: React.FC = () => {
             const [inbox, outbox] = await Promise.all([callMail({ action: 'list', folder: 'in' }), callMail({ action: 'list', folder: 'out' })]);
             (inbox.messages || []).forEach((m: any) => incoming.push({
                 id: m.id, folder: 'in', kind: 'EMAIL', name: m.fromName || m.fromEmail || 'Unknown', email: m.fromEmail || '', subject: m.subject || '(no subject)',
-                text: m.text || '', when: toMs(m.createdAt), unread: m.read === false, attachments: m.attachments || [], canOpenOriginal: true,
+                text: m.text || '', when: toMs(m.createdAt), unread: m.read === false, attachments: m.attachments || [], canOpenOriginal: !!m.resendId, film: m.meta?.film || undefined,
             }));
             (outbox.messages || []).forEach((m: any) => outgoing.push({
                 id: m.id, folder: 'out', kind: 'SENT', name: (m.to || [])[0] || '', email: (m.to || [])[0] || '', subject: m.subject || '(no subject)',
@@ -400,6 +403,19 @@ const StudioMail: React.FC = () => {
                                                 <input value={recipient} onChange={e => setRecipient(e.target.value)} type="email" required className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-gray-200 flex-grow" />
                                             </div>
                                         )}
+                                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                                            <span className="font-bold uppercase tracking-widest">Template</span>
+                                            <select value="" onChange={e => {
+                                                const t = MAIL_TEMPLATES.find(x => x.id === e.target.value);
+                                                if (!t) return;
+                                                const film = selected?.film || '';
+                                                const f = fillTemplate(t, { name: selected?.name, film, link: bookingLink(film) });
+                                                setSubject(f.subject); setReplyText(f.body);
+                                            }} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-gray-200 flex-grow">
+                                                <option value="">Choose a ready-made reply…</option>
+                                                {MAIL_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                            </select>
+                                        </div>
                                         <div className="flex items-center justify-between">
                                             <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Your message</label>
                                             <button type="button" onClick={handleDraft} disabled={isDrafting} className="text-xs font-bold text-indigo-300 bg-indigo-600/10 border border-indigo-500/20 rounded-lg px-3 py-1.5 hover:bg-indigo-600/20">

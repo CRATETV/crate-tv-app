@@ -10,6 +10,7 @@ import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { escapeHtml } from './_lib/validation.js';
 import { cleanInquiry } from './_lib/inquiry.js';
+import { MAIL_COLLECTION, INQUIRY_MAIL_PREFIX, buildInquiryRecord } from './_lib/mailLog.js';
 
 const FROM_EMAIL = 'studio@cratetv.net';
 
@@ -32,10 +33,15 @@ export async function POST(request: Request) {
         if (!db) throw new Error('Database connection failed.');
 
         // Keep a copy first, so nothing is lost if the email has a problem.
-        await db.collection('inquiries').add({
+        const inquiryRef = await db.collection('inquiries').add({
             kind: q.kind, name: q.name, email: q.email, message: q.message, link: q.link || null,
             details: Object.fromEntries(q.details), status: 'new', createdAt: FieldValue.serverTimestamp(),
         });
+
+        // Also put it in the dashboard's Received folder (best effort).
+        await db.collection(MAIL_COLLECTION).doc(`${INQUIRY_MAIL_PREFIX}${inquiryRef.id}`)
+            .set(buildInquiryRecord({ kind: q.kind, name: q.name, email: q.email, message: q.message, link: q.link, details: q.details }, new Date().toISOString()))
+            .catch(e => console.error('[send-inquiry] dashboard copy failed:', e));
 
         const studioEmail = (await db.collection('content').doc('settings').get()).data()?.businessEmail || FROM_EMAIL;
         const label = q.kind === 'festival' ? 'Festival hosting request' : 'Premiere request';
