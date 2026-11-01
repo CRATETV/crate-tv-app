@@ -1,3 +1,4 @@
+import { isBlockedRequest, blockedResponse } from './_lib/blockedRegions.js';
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
 import { isPastAvailableUntil } from './_lib/filmAvailability.js';
@@ -180,6 +181,7 @@ export async function POST(request: Request) {
   let purchasePartnerId: string | null = null;
   let partnerPassBlocks: any[] | null = null;
   try {
+    if (isBlockedRequest(request)) return blockedResponse();   // US-sanctioned places: no card charges
     // No throttling existed on the endpoint that actually charges a card —
     // a script could otherwise hammer this with rapid repeated attempts
     // (e.g. testing many stolen card numbers). 6 attempts per 5 minutes per

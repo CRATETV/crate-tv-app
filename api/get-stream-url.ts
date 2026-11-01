@@ -7,9 +7,11 @@ import { findBlock } from './_lib/watchPartyLifecycle.js';
 import { checkBackstageKey } from './_lib/backstage.js';
 import { pickStreamSource } from './_lib/streamSource.js';
 import { liveStreamGate, partyTimingFor } from './_lib/streamTiming.js';
+import { isBlockedRequest, blockedResponse } from './_lib/blockedRegions.js';
 
 export async function POST(request: Request) {
     try {
+        if (isBlockedRequest(request)) return blockedResponse();   // US-sanctioned places: no playback
         if (!rateLimit(getIP(request), 60, 60_000)) {
             return new Response(JSON.stringify({ error: 'Too many requests.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
         }
