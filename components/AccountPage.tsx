@@ -162,7 +162,7 @@ const AccountPage: React.FC = () => {
                                             className="w-full flex items-center justify-between bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 rounded-xl px-5 py-4 transition-all"
                                         >
                                             <div className="text-left">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-1">Playhouse West Film Festival</p>
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-1">Playhouse West-Philadelphia Film Festival</p>
                                                 <p className="text-sm font-bold text-white">My Festival — screenings, tickets & what's live now</p>
                                             </div>
                                             <span className="text-red-400 text-lg flex-shrink-0">&rarr;</span>

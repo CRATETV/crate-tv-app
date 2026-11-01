@@ -352,7 +352,7 @@ const TeaserMode: React.FC<{
         <div className="relative z-10 max-w-2xl mx-auto space-y-8 pt-32 pb-16">
 
             <div>
-                <h1 className="text-fluid-title font-black uppercase tracking-tighter leading-none mb-3 break-words">{name || 'Playhouse West Film Festival - Philadelphia'}</h1>
+                <h1 className="text-fluid-title font-black uppercase tracking-tighter leading-none mb-3 break-words">{name || 'Playhouse West-Philadelphia Film Festival'}</h1>
                 <div className="w-16 h-1 bg-red-600 mx-auto rounded-full" />
             </div>
             {(tagline || true) && <p className="text-gray-500 text-sm uppercase tracking-widest font-bold">{tagline || <span>Presented by <span style={{color:'white'}}>Crate TV</span></span>}</p>}
@@ -555,7 +555,7 @@ const ProgrammeMode: React.FC = () => {
                     </div>
 
                     <h1 className="text-fluid-title font-black uppercase tracking-tighter leading-[0.9] mb-4 text-white break-words">
-                        {festivalConfig?.title || settings?.pwffFestivalName || 'Playhouse West Film Festival - Philadelphia'}
+                        {festivalConfig?.title || settings?.pwffFestivalName || 'Playhouse West-Philadelphia Film Festival'}
                     </h1>
 
                     {festivalConfig?.description && (

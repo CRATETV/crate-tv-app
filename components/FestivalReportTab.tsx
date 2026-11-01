@@ -145,7 +145,7 @@ const FestivalReportTab: React.FC = () => {
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-400 mb-1">Playhouse West Film Festival 2026</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-red-400 mb-1">Playhouse West-Philadelphia Film Festival 2026</p>
                     <h2 className="text-3xl font-black uppercase tracking-tight text-white italic">Viewership Report</h2>
                     <p className="text-[10px] text-gray-600 mt-1">Generated {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                 </div>

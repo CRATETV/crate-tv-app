@@ -242,7 +242,7 @@ const FestivalTicketFlow: React.FC<FestivalTicketFlowProps> = ({ block, blockMov
                                 {block.title}
                             </h2>
                             {block.price && block.price > 0 && (
-                                <p className="text-xs text-gray-400 mt-0.5">${block.price.toFixed(2)} · Playhouse West Film Festival</p>
+                                <p className="text-xs text-gray-400 mt-0.5">${block.price.toFixed(2)} · Playhouse West-Philadelphia Film Festival</p>
                             )}
                         </div>
                     </div>

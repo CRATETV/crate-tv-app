@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         if (!db) throw new Error('Database unavailable');
 
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const name = festivalName || 'Playhouse West Film Festival';
+        const name = festivalName || 'Playhouse West-Philadelphia Film Festival';
         const year = festivalYear || '2026';
         const results = { sent: 0, alreadyInvited: 0, errors: 0 };
 

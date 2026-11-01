@@ -139,7 +139,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     password: sessionStorage.getItem('adminPassword'),
-                    festivalName: 'Playhouse West Film Festival 2026', 
+                    festivalName: 'Playhouse West-Philadelphia Film Festival 2026', 
                     festivalUrl: 'https://cratetv.net/pwff-philly2026',
                     bannerImageUrl: notifyImageUrl || null
                 })
@@ -191,7 +191,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                 body: JSON.stringify({
                     password: sessionStorage.getItem('adminPassword'),
                     emails,
-                    festivalName: 'Playhouse West Film Festival',
+                    festivalName: 'Playhouse West-Philadelphia Film Festival',
                     festivalYear: '2026',
                     accessType,
                     blockId: blockId || null,
@@ -207,7 +207,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
     return (
         <div className="space-y-8 text-gray-200">
             <div>
-                <h2 className="text-2xl font-bold text-pink-400 mb-1">🎬 PWFF — Playhouse West Film Festival</h2>
+                <h2 className="text-2xl font-bold text-pink-400 mb-1">🎬 PWFF — Playhouse West-Philadelphia Film Festival</h2>
                 <p className="text-gray-400 text-sm">All content on <code className="text-pink-300 bg-white/5 px-1.5 py-0.5 rounded">cratetv.net/pwff</code> is controlled from here.</p>
             </div>
 
@@ -236,7 +236,7 @@ const PwffAdminTab: React.FC<PwffAdminTabProps> = ({
                         type="text"
                         value={pwffName}
                         onChange={e => onChangeName(e.target.value)}
-                        placeholder="e.g. Playhouse West Film Festival"
+                        placeholder="e.g. Playhouse West-Philadelphia Film Festival"
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500"
                     />
                     <p className="text-[10px] text-gray-600">Appears as the main title on the teaser and programme page</p>
