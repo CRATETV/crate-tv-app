@@ -2,6 +2,7 @@
 
 ## 2026-10 — Cast & crew codes, tighter festival pass, director's note on any film
 
+- **"Where they watched": views by country** in the film deep dive (admin) and on each film in the filmmaker dashboard. Country only, never names or emails; website and Roku views both counted. Only views recorded since the per-view log started are listed.
 - **Roku rows now follow the website's list.** The Roku skips the same rows the website skips (Now Streaming, Zine, Editorial, Vault, and Cratemas unless holiday mode is on), and changes reach the Roku within 20 seconds instead of a minute. `/api/roku-feed?why=<film>` now also says which rows the film is in and whether it is switched off in Roku settings. YouTube-only films still can't play on a Roku, so they stay off it.
 - **The Unpack, tighter and more premium** — new tagline "What's inside this week.", a small crate mark by "Crate TV presents", sections renamed "Just unpacked" and "From the crate"; removed the movie (cinema) row; the premiere countdown is now a slim black-and-gold band right under the title; smaller title, cover, cards and spacing so there is far less scrolling; "All stories" shows four across on wide screens.
 
