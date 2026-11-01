@@ -1,3 +1,4 @@
+import FilmMoneyBreakdown from './FilmMoneyBreakdown';
 import React, { useState, useEffect, useMemo } from 'react';
 import { FilmmakerAnalytics, Movie, FilmmakerFilmPerformance } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -95,6 +96,8 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                             <p className="text-xl md:text-2xl font-black text-green-500">{formatCurrency(film.netAdEarnings)}</p>
                          </div>
                     </div>
+
+                    <FilmMoneyBreakdown breakdown={film.breakdown} />
 
                     <WatchFunnel watch={film.watch} className="pt-4" />
                     <ViewCountries countries={film.countries} className="pt-4" />

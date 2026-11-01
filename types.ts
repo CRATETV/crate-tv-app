@@ -640,6 +640,8 @@ export interface ShopRequest {
 export interface FilmmakerFilmPerformance {
   key: string;
   title: string;
+  /** Where this film's money goes, in cents (see api/_lib/filmFees.ts). */
+  breakdown?: { buyersPaid: number; cardFees: number; afterFees: number; filmmakerPercent: number; filmmakerSide: number; crateShare: number; yourShare: number };
   views: number;
   likes: number;
   watchlistAdds: number;
