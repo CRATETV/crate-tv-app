@@ -29,6 +29,7 @@ export const TAB_META: Record<string, TabMeta> = {
 
     money:        { label: 'Earnings & payouts', icon: '💸', desc: 'What every film earned, the split, and who you owe.', keywords: 'money revenue payouts pay filmmakers split earnings' },
     refunds:      { label: 'Payments & refunds', icon: '💳', desc: 'Every payment, double-charge alerts, and two-click refunds.', keywords: 'refund refunds payments double charge square customer charged twice' },
+    bookkeeping:  { label: 'Bookkeeping', icon: '📒', desc: 'Every payment you made and every tax form (W-9), recorded for you.', keywords: 'bookkeeping books payments paid w9 w-9 1099 taxes accountant ledger records expenses' },
     contracts:    { label: 'Contracts', icon: '📜', desc: 'Send agreements, see who signed, keep signed copies.', keywords: 'contracts agreements sign legal w9' },
     vouchers:     { label: 'Promo codes', icon: '🏷️', desc: 'Discount and free-access codes.', keywords: 'promo vouchers discount coupon' },
     shop:         { label: 'Shop', icon: '🛍️', desc: 'Merch requests and shop revenue.', keywords: 'merch fourthwall store shop' },
@@ -45,11 +46,11 @@ export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] 
     { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels'] },
     { title: 'Live & festivals', accent: 'violet', ids: ['watchParty', 'pwff', 'partners', 'crateFestHub', 'ticketCodes'] },
     { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email'] },
-    { title: 'Money & legal', accent: 'green', ids: ['money', 'refunds', 'contracts', 'vouchers', 'shop'] },
+    { title: 'Money & legal', accent: 'green', ids: ['money', 'bookkeeping', 'refunds', 'contracts', 'vouchers', 'shop'] },
     { title: 'Platform', accent: 'sky', ids: ['analytics', 'roku', 'storage', 'system', 'permissions'] },
 ];
 
 export const groupOf = (id: string) => TAB_GROUPS.find(g => g.ids.includes(id));
 
 /** Tabs that draw their own page header. */
-export const SELF_HEADED = new Set(['pulse', 'money', 'refunds', 'contracts', 'actors', 'storage', 'bulkUpload']);
+export const SELF_HEADED = new Set(['pulse', 'money', 'bookkeeping', 'refunds', 'contracts', 'actors', 'storage', 'bulkUpload']);

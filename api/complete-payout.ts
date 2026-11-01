@@ -3,6 +3,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { BOOKKEEPING_COLLECTION, TAX_DOCS_COLLECTION, PAYOUT_ENTRY_PREFIX, entryFromPayout, payeeKey } from './_lib/bookkeeping.js';
 
 export async function POST(request: Request) {
   try {
@@ -52,6 +53,16 @@ export async function POST(request: Request) {
             status: 'completed',
             completionDate: FieldValue.serverTimestamp()
         });
+        // Bookkeeping: every completed payout is written to the ledger (once; same id every time).
+        try {
+            const data = existing.data() || {};
+            const entry = entryFromPayout(requestId, data, new Date().toISOString());
+            if (entry.amountCents > 0) {
+                await db.collection(BOOKKEEPING_COLLECTION).doc(`${PAYOUT_ENTRY_PREFIX}${requestId}`).set({ ...entry, createdAt: FieldValue.serverTimestamp() });
+            }
+            const tax = (await db.collection(TAX_DOCS_COLLECTION).doc(payeeKey(entry.payee).replace(/\//g, '-')).get()).data();
+            return new Response(JSON.stringify({ success: true, payee: entry.payee, w9: tax?.w9 || 'none' }), { status: 200 });
+        } catch (e) { console.error('[complete-payout] bookkeeping entry failed:', e); }
     }
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
