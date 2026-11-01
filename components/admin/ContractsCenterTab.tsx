@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Movie, MoviePipelineEntry, Category } from '../../types';
-import { CONTRACT_TEMPLATES, ContractTemplate, renderContract } from '../../api/_lib/contractTemplates';
+import { CONTRACT_TEMPLATES, ACTIVE_CONTRACT_TEMPLATES, ContractTemplate, renderContract } from '../../api/_lib/contractTemplates';
 import ContractText from '../ContractText';
 import ContractsTab from '../ContractsTab';
 import { Button, Card, EmptyState, Field, Modal, Notice, PageHeader, Pill, SectionTitle, StatTile, adminPost, copyText, inputClass, shortDate } from './ui';
@@ -74,7 +74,7 @@ const SendDialog: React.FC<{ template: ContractTemplate; movies: Movie[]; onClos
             <div className="space-y-4">
                 <Field label="Agreement">
                     <select className={inputClass} value={templateId} onChange={e => setTemplateId(e.target.value)}>
-                        {CONTRACT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                        {ACTIVE_CONTRACT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
                     </select>
                 </Field>
                 {template.needsFilm && (
@@ -85,7 +85,7 @@ const SendDialog: React.FC<{ template: ContractTemplate; movies: Movie[]; onClos
                                 {sortedMovies.map(m => <option key={m.key} value={m.key}>{m.title}</option>)}
                             </select>
                         </Field>
-                        {template.id === 'filmmaker-distribution' && (
+                        {template.id === 'filmmaker-master' && (
                             <Field label="Filmmaker share (%)" hint="Leave empty to use the film's current split from Earnings & Payouts (70% by default).">
                                 <input className={`${inputClass} w-32`} inputMode="decimal" value={percent} onChange={e => setPercent(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="70" />
                             </Field>
@@ -219,7 +219,7 @@ const ContractsCenterTab: React.FC<{ movies: Record<string, Movie>; pipeline?: M
     // Films on CRATE with a credited filmmaker but no distribution agreement sent or signed.
     // Public-domain classics are left out — there's nobody to sign for them.
     const classics = useMemo(() => new Set(categories.publicDomainIndie?.movieKeys || []), [categories]);
-    const covered = useMemo(() => new Set(requests.filter(r => r.templateId === 'filmmaker-distribution' && r.status !== 'void' && r.movieKey).map(r => r.movieKey!)), [requests]);
+    const covered = useMemo(() => new Set(requests.filter(r => ['filmmaker-master', 'filmmaker-distribution'].includes(r.templateId) && r.status !== 'void' && r.movieKey).map(r => r.movieKey!)), [requests]);
     const missing = useMemo(() => Object.values(movies)
         .filter(m => m.key && (m.director || '').trim() && !classics.has(m.key) && !covered.has(m.key))
         .sort((a, b) => (a.title || '').localeCompare(b.title || '')), [movies, classics, covered]);
@@ -235,7 +235,7 @@ const ContractsCenterTab: React.FC<{ movies: Record<string, Movie>; pipeline?: M
                 title="Contracts & Signatures"
                 subtitle="Send agreements to filmmakers and actors, see who has signed, and keep every signed copy in one place."
                 accent="violet"
-                actions={<Button variant="primary" accent="violet" onClick={() => setSending(CONTRACT_TEMPLATES[0])}>+ Send an agreement</Button>}
+                actions={<Button variant="primary" accent="violet" onClick={() => setSending(ACTIVE_CONTRACT_TEMPLATES[0])}>+ Send an agreement</Button>}
             />
             {toast && <Notice tone="success">{toast}</Notice>}
             {error && <Notice tone="error">{error}</Notice>}
@@ -244,7 +244,7 @@ const ContractsCenterTab: React.FC<{ movies: Record<string, Movie>; pipeline?: M
                 <StatTile label="Waiting for a signature" icon="✍️" accent="amber" value={awaiting.length} onClick={() => setFilter('sent')} />
                 <StatTile label="Signed through links" icon="✅" accent="green" value={requests.filter(r => r.status === 'signed').length} onClick={() => setFilter('signed')} />
                 <StatTile label="Actor agreements" icon="🎭" accent="violet" value={otherSignatures.filter(s => s.context === 'actor-signup').length} hint="Accepted at profile signup" />
-                <StatTile label="Agreement templates" icon="📚" accent="sky" value={CONTRACT_TEMPLATES.length} />
+                <StatTile label="Agreement templates" icon="📚" accent="sky" value={ACTIVE_CONTRACT_TEMPLATES.length} />
             </div>
 
             <Notice tone="warn">These agreements are plain-English templates written for how CRATE works. Have a lawyer review them before you rely on them. Philadelphia Volunteer Lawyers for the Arts (pvla.org) helps artists for free or at low cost.</Notice>
@@ -275,7 +275,7 @@ const ContractsCenterTab: React.FC<{ movies: Record<string, Movie>; pipeline?: M
             <section>
                 <SectionTitle title="Agreements" hint="Preview one, or send it for signature." />
                 <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {CONTRACT_TEMPLATES.map(t => (
+                    {ACTIVE_CONTRACT_TEMPLATES.map(t => (
                         <Card key={t.id}>
                             <div className="flex items-center justify-between gap-2">
                                 <Pill accent={AUDIENCE_LABEL[t.audience].accent}>{AUDIENCE_LABEL[t.audience].label}</Pill>

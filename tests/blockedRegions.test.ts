@@ -33,3 +33,15 @@ test('master filmmaker agreement exists, fills in names and covers music', () =>
     assert.match(out, /Ada/); assert.match(out, /Test Film/); assert.match(out, /70%/); assert.match(out, /Music\./);
     assert.doesNotMatch(out, /\{\{/);
 });
+
+test('only the Master Filmmaker Agreement is offered to filmmakers; retired ones still open', async () => {
+    const { ACTIVE_CONTRACT_TEMPLATES } = await import('../api/_lib/contractTemplates.js');
+    const { FILM_ONBOARDING_TEMPLATES } = await import('../api/_lib/contracts.js');
+    assert.equal(ACTIVE_CONTRACT_TEMPLATES[0].id, 'filmmaker-master');
+    assert.deepEqual(ACTIVE_CONTRACT_TEMPLATES.filter(t => t.audience === 'filmmaker').map(t => t.id), ['filmmaker-master', 'festival-submission']);
+    assert.deepEqual(FILM_ONBOARDING_TEMPLATES, ['filmmaker-master']);
+    for (const id of ['filmmaker-distribution', 'rights-warranty', 'payee-information']) {
+        assert.ok(getTemplate(id), id);
+        assert.ok(!ACTIVE_CONTRACT_TEMPLATES.some(t => t.id === id), id);
+    }
+});
