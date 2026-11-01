@@ -64,6 +64,21 @@ If you would like, we can arrange a short call, or you can answer any questions 
     },
 ];
 
+MAIL_TEMPLATES.push({
+    id: 'invite-code',
+    label: 'Invite request: here is your code',
+    subject: 'Your invite to {film}',
+    body: `Hi {name},
+
+Thank you for asking to join us. Your invite code is:
+
+   PASTE-CODE-HERE
+
+To use it, open the screening page on Crate TV, press "Enter Invite Code" and type it in. The code is just for you, so please don't share it.
+
+If anything doesn't work, reply to this email and we'll sort it out.`,
+});
+
 export function fillTemplate(t: MailTemplate, values: { name?: string; film?: string; link?: string }) {
     const first = (values.name || '').trim().split(/\s+/)[0] || 'there';
     const film = (values.film || '').trim() || 'your film';
