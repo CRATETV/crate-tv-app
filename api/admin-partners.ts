@@ -25,6 +25,7 @@ import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { isMasterAdmin } from './_lib/adminAuth.js';
 import { logServerError } from './_lib/logError.js';
 import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPartnerSales, planPartnerCleanup, loadScheduledScreenings, partnerOverlaps, deletePartnerFestival } from './_lib/partners.js';
+import { loadPartnerFees } from './_lib/partnerFees.js';
 import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
 import { sendPartnerInvite, notifyPartnerReviewed } from './_lib/partnerEmails.js';
 
@@ -185,8 +186,10 @@ export async function POST(request: Request) {
             case 'sales': {
                 const p = await load();
                 const { sales, tickets } = await getPartnerSales(db, p);
-                const payout = computePayout(sales.totals.gross, p.payout?.deductions || 0, p.crateSharePct);
-                return json({ sales, tickets, payout, payoutStatus: p.payout || null, generatedAt: new Date().toISOString() });
+                const takeFees = p.payout?.takeSquareFees !== false;
+                const fees = p.id === PWFF_PARTNER_ID ? null : await loadPartnerFees(p.id);
+                const payout = computePayout(sales.totals.gross, p.payout?.deductions || 0, p.crateSharePct, takeFees && fees ? fees.amount : 0);
+                return json({ sales, tickets, payout, squareFees: fees, takeSquareFees: takeFees, payoutStatus: p.payout || null, generatedAt: new Date().toISOString() });
             }
 
             case 'setPayout': {
@@ -197,6 +200,7 @@ export async function POST(request: Request) {
                     ...(p.payout || {}),
                     deductions: Math.round(deductions * 100) / 100,
                     deductionsNote: String(body.deductionsNote || '').slice(0, 500),
+                    ...(typeof body.takeSquareFees === 'boolean' ? { takeSquareFees: body.takeSquareFees } : {}),
                 };
                 if (body.markPaid) {
                     const amount = Number(body.paidAmount);

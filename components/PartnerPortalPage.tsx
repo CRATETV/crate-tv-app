@@ -392,7 +392,7 @@ const SalesTab: React.FC<{ partner: PartnerSummary }> = ({ partner }) => {
             <div className={card}>
                 <p className={label}>Payout</p>
                 <div className="text-sm text-gray-300 space-y-1">
-                    <p>Ticket sales {money(payout.gross)}{payout.deductions > 0 && <> − deductions {money(payout.deductions)}{payoutStatus?.deductionsNote ? ` (${payoutStatus.deductionsNote})` : ''}</>} = <strong className="text-white">{money(payout.net)}</strong></p>
+                    <p>Ticket sales {money(payout.gross)}{payout.deductions > 0 && <> − deductions {money(payout.deductions)}{payoutStatus?.deductionsNote ? ` (${payoutStatus.deductionsNote})` : ''}</>}{payout.squareFees > 0 && <> − card processing fees {money(payout.squareFees)}</>} = <strong className="text-white">{money(payout.net)}</strong></p>
                     <p>Crate TV share {payout.crateSharePct}%: {money(payout.crateAmount)} · <strong className="text-white">Paid to {partner.payeeName}: {money(payout.partnerAmount)}</strong></p>
                     {payoutStatus?.paidAt
                         ? <p className="text-emerald-400 font-bold">Paid {money(payoutStatus.paidAmount)} on {new Date(payoutStatus.paidAt).toLocaleDateString()}{payoutStatus.paidNote ? ` — ${payoutStatus.paidNote}` : ''}</p>
