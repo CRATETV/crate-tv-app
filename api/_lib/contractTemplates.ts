@@ -38,7 +38,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
     {
         id: 'filmmaker-distribution',
         title: 'Filmmaker Distribution Agreement',
-        version: '1.0',
+        version: '1.1',
         audience: 'filmmaker',
         summary: 'Lets CRATE stream a film; sets the revenue split and how payouts work.',
         needsFilm: true,
@@ -57,7 +57,8 @@ CRATE may also use the Film's title, poster, stills, trailer and up to 2 minutes
 
 ## 3. Money
 - **Your share:** **{{filmmakerPercent}}%** of the money CRATE receives for the Film (rentals, watch party tickets and tips). **CRATE keeps {{cratePercent}}%** to pay for hosting, streaming and distribution.
-- If more than one person is credited as director or producer, your share is divided between them equally unless you tell us in writing how to divide it.
+- **One person is paid.** CRATE pays the filmmaker share to one person only, the approved filmmaker for the Film. If others worked on the Film, it is up to the approved filmmaker to share the money with them. CRATE does not divide payments between people.
+- **Card fees are shared.** Square's card fee on each sale comes off first, and the split is figured on what is left.
 - Refunded or failed payments don't count.
 - Festival passes and festival block tickets follow the festival's own terms, not this split. A festival film's individual rentals count toward your share once the festival has ended.
 - **Payouts:** once your balance is at least $5.00 you can request a payout from your dashboard, and CRATE will send it within 30 days using the payout method you choose (PayPal, Cash App, Venmo, Zelle or check). CRATE may also pay you without a request.
@@ -109,7 +110,7 @@ ${GENERAL}`,
     {
         id: 'filmmaker-master',
         title: 'Master Filmmaker Agreement (all-in-one)',
-        version: '1.0',
+        version: '1.1',
         audience: 'filmmaker',
         summary: 'One agreement covering the licence, money, music and other rights, takedowns and payee/tax info. Send this instead of the separate ones.',
         needsFilm: true,
@@ -130,7 +131,8 @@ CRATE may choose not to show the Film in certain countries or regions (for examp
 
 ## 3. Money
 - **Your share:** **{{filmmakerPercent}}%** of the money CRATE receives for the Film (rentals, watch party tickets and tips). **CRATE keeps {{cratePercent}}%** to pay for hosting, streaming and distribution.
-- If more than one person is credited as director or producer, your share is divided between them equally unless you tell us in writing how to divide it.
+- **One person is paid.** CRATE pays the filmmaker share to one person only, the approved filmmaker for the Film. If others worked on the Film, it is up to the approved filmmaker to share the money with them. CRATE does not divide payments between people.
+- **Card fees are shared.** Square's card fee on each sale comes off first, and the split is figured on what is left.
 - Refunded or failed payments don't count.
 - Festival passes and festival block tickets follow the festival's own terms, not this split. A festival film's individual rentals count toward your share once the festival has ended.
 - **Payouts:** once your balance is at least $5.00 you can request a payout from your dashboard, and CRATE will send it within 30 days using the payout method you choose (PayPal, Cash App, Venmo, Zelle or check). CRATE may also pay you without a request.

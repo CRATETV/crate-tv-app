@@ -8,11 +8,11 @@
 // purpose: the movie editor saves whole movie objects and would otherwise
 // overwrite a split set elsewhere.
 //
-// The filmmaker side is then divided among the people who get paid:
-//   • If the deal lists payees with shares, those shares are used.
-//   • Otherwise it's divided EQUALLY among everyone credited as director or
-//     producer. (Before Oct 2026 each credited person was given the full
-//     filmmaker share, so a film with two credits showed 140% being owed.)
+// The filmmaker side is paid to ONE person (Oct 31 2026 decision: CRATE does no
+// splitting between filmmakers; that person shares it with their co-creators):
+//   • If the deal names a payee, that person is paid.
+//   • Otherwise the first credited director (else the first producer).
+//   (A deal that lists several payees with shares still works, but isn't used.)
 //
 // Pure functions only — no database — so they can be tested directly.
 
@@ -72,8 +72,11 @@ export function payeeFractions(
         const result = merge(custom.map(p => ({ name: p.name, weight: Number(p.share) })));
         if (result.length) return result;
     }
+    // No dividing: the whole filmmaker side goes to ONE person, the first credited director
+    // (else the first producer), who shares it with their co-creators themselves. To pay
+    // someone else, set them as the payee in the film's deal (Earnings & payouts).
     const credited = [...splitCredits(credits.director), ...splitCredits(credits.producers)];
-    return merge(credited.map(name => ({ name, weight: 1 })));
+    return merge(credited.slice(0, 1).map(name => ({ name, weight: 1 })));
 }
 
 export interface SplitResult {
