@@ -79,6 +79,25 @@ export function payeeFractions(
     return merge(credited.slice(0, 1).map(name => ({ name, weight: 1 })));
 }
 
+/**
+ * Adds "the person who signed the film's agreement" as the payee for films whose deal does not
+ * already name one. A payee named on purpose in the deal always wins. Pure, tested.
+ */
+export function applySignedPayees(
+    deals: Record<string, FilmDeal>,
+    signed: Record<string, { name?: string } | undefined>,
+): Record<string, FilmDeal> {
+    const out: Record<string, FilmDeal> = { ...deals };
+    for (const [movieKey, s] of Object.entries(signed)) {
+        const name = typeof s?.name === 'string' ? s.name.trim() : '';
+        if (!name) continue;
+        const existing = out[movieKey];
+        if (existing?.payees?.some(p => p && typeof p.name === 'string' && Number(p.share) > 0)) continue;
+        out[movieKey] = { ...(existing || {}), payees: [{ name, share: 100 }] };
+    }
+    return out;
+}
+
 export interface SplitResult {
     gross: number;
     filmmakerShare: number;
