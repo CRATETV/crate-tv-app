@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ sent: 0, message: 'No emails to send' }), { status: 200 });
         }
 
-        const name = festivalName || 'Playhouse West Film Festival 2026';
+        const name = festivalName || 'Playhouse West-Philadelphia Film Festival 2026';
         const url = festivalUrl || 'https://cratetv.net/pwff-philly2026';
 
         let sent = 0;
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
                         html: renderBrandedEmail({
                             title: `${name} is now streaming`,
                             bodyHtml,
-                            footerTagline: 'Playhouse West Film Festival — Philadelphia',
+                            footerTagline: 'Playhouse West-Philadelphia Film Festival',
                         }),
                     });
                     sent++;

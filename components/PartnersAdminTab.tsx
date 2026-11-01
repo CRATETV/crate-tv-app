@@ -73,7 +73,7 @@ const SetUpPwffCommittee: React.FC<{ onCreated: () => void }> = ({ onCreated }) 
     const create = async () => {
         setBusy(true); setErr('');
         try {
-            await callAdminPartners('create', { linkPwff: true, name: 'Playhouse West Film Festival', payeeName: 'Playhouse West Arts Foundation, Inc.', crateSharePct: 30 });
+            await callAdminPartners('create', { linkPwff: true, name: 'Playhouse West-Philadelphia Film Festival', payeeName: 'Playhouse West Arts Foundation, Inc.', crateSharePct: 30 });
             onCreated();
         } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
     };
