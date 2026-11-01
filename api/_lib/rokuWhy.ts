@@ -71,3 +71,29 @@ export function findFilm(movies: Record<string, any>, query: string): any | null
         || all.find(m => String(m.title || '').toLowerCase().includes(q))
         || null;
 }
+
+// Rows the website never shows as an ordinary row. The Roku follows the same list
+// (Now Streaming, Public Square and the Vault have their own places on each).
+export const NON_ROW_CATEGORY_KEYS = ['featured', 'nowStreaming', 'zine', 'editorial', 'vault'];
+
+/** True when this category is held back from the ordinary rows on both the website and the Roku. */
+export function isHeldBackCategory(key: string, title: string | undefined, holidayModeOn: boolean): boolean {
+    if (NON_ROW_CATEGORY_KEYS.includes(key)) return true;
+    if ((key === 'cratemas' || (title || '').toLowerCase() === 'cratemas') && !holidayModeOn) return true;
+    return false;
+}
+
+/** Plain-words notes about where a film sits in the rows (used by ?why=). */
+export function explainPlacement(filmKey: string, categories: Record<string, any>, config: any, holidayModeOn: boolean): string[] {
+    const notes: string[] = [];
+    const inRows = Object.entries(categories || {}).filter(([, c]: [string, any]) => Array.isArray(c?.movieKeys) && c.movieKeys.includes(filmKey));
+    if (inRows.length === 0) notes.push('The film is not in any row (category) yet, so it only shows in search and Top Ten. Add it to a row in Categories.');
+    for (const [key, c] of inRows as [string, any][]) {
+        const label = `"${c.title || key}"`;
+        if ((config?.categories?.hidden || []).includes(key)) notes.push(`It is in the row ${label}, but that row is switched off for the Roku (Roku settings > hidden rows).`);
+        else if (isHeldBackCategory(key, c.title, holidayModeOn)) notes.push(`It is in ${label}, which is not shown as a normal row on the website or the Roku${key === 'cratemas' ? ' (Cratemas only shows while holiday mode is on)' : ''}.`);
+        else notes.push(`It is in the row ${label}.`);
+    }
+    if ((config?.content?.hiddenMovies || []).includes(filmKey)) notes.push('The film is switched off for the Roku (Roku settings > hidden films), so it shows on the website but not on the Roku. Switch it back on there.');
+    return notes;
+}
