@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeSales, findDroppedViewers, activePin, PIN_MAX_AGE_MS } from '../api/_lib/controlRoom';
+import { splitSales, summarizeSales, findDroppedViewers, activePin, PIN_MAX_AGE_MS } from '../api/_lib/controlRoom';
 
 const NOW = Date.parse('2027-03-20T20:30:00Z');
 const MIN = 60_000;
@@ -80,4 +80,12 @@ test('pin: shown when fresh, hidden when old, empty or malformed', () => {
     assert.equal(activePin({ text: 'x' }, NOW), null);
     assert.equal(activePin(undefined, NOW), null);
     assert.equal(activePin('hi', NOW), null);
+});
+
+test('money split: card fees come out of CRATE\u2019s part, free seats pay no fee, unreported fees are counted', () => {
+    const r = splitSales(30, [{ amount: 10, fee: 0.59 }, { amount: 10, fee: 0.59 }, { amount: 10, fee: null }, { amount: 0, fee: null }], 0.7);
+    assert.deepEqual(r, { squareFees: 1.18, feesPending: 1, filmmakerShare: 0.7, filmmakerAmount: 21, crateKeeps: 7.82 });
+    assert.equal(splitSales(0, [], 0.7).crateKeeps, 0);
+    assert.equal(splitSales(10, [], 0.5).filmmakerAmount, 5);
+    assert.equal(splitSales(10, [], 5).filmmakerShare, 1);
 });

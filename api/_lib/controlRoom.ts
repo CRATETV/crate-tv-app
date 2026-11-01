@@ -24,6 +24,33 @@ export interface TicketRecord {
     purchasedAtMs?: number | null;
 }
 
+export interface MoneySplit {
+    /** Square's card fees on the tickets Square has reported, in dollars. */
+    squareFees: number;
+    /** Paid tickets whose fee Square has not reported yet (usually the last day or so). */
+    feesPending: number;
+    /** The filmmaker's share as a fraction, 0 to 1. */
+    filmmakerShare: number;
+    filmmakerAmount: number;
+    crateKeeps: number;
+}
+
+/**
+ * Where the money goes. The filmmaker's share is taken from what buyers paid (that is how
+ * CRATE counts every film's earnings), so Square's card fees come out of CRATE's part.
+ * Pure, tested.
+ */
+export function splitSales(revenue: number, fees: { amount: number; fee: number | null }[], filmmakerShare: number): MoneySplit {
+    let squareFees = 0, feesPending = 0;
+    for (const f of fees) {
+        if (!(f.amount > 0)) continue;                       // free seats pay no fee
+        if (f.fee === null) feesPending++; else squareFees += f.fee;
+    }
+    const share = Math.min(1, Math.max(0, Number.isFinite(filmmakerShare) ? filmmakerShare : 0.7));
+    const filmmakerAmount = money(revenue * share);
+    return { squareFees: money(squareFees), feesPending, filmmakerShare: share, filmmakerAmount, crateKeeps: money(revenue - squareFees - filmmakerAmount) };
+}
+
 export interface SalesSummary {
     tickets: number;
     revenue: number;           // dollars, before Square fees
@@ -31,6 +58,7 @@ export interface SalesSummary {
     withPromo: number;
     last15Min: number;
     recent: { email: string; amount: number; atMs: number | null; type: string }[];
+    split?: MoneySplit;
 }
 
 const money = (n: number) => Math.round(n * 100) / 100;

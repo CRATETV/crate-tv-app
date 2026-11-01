@@ -12,7 +12,9 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { verifyAdminPassword, isMasterAdmin } from './_lib/adminAuth.js';
 import { computeWatchPartyStats } from './_lib/watchPartyStats.js';
 import { cleanLine } from './_lib/validation.js';
-import { summarizeSales, findDroppedViewers, PIN_MAX_LENGTH } from './_lib/controlRoom.js';
+import { summarizeSales, splitSales, findDroppedViewers, PIN_MAX_LENGTH } from './_lib/controlRoom.js';
+import { loadAllPayments, ticketFees } from './_lib/partnerFees.js';
+import { filmmakerShareOf } from './_lib/revenueSplit.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -43,7 +45,18 @@ export async function POST(request: Request) {
                 const x = d.data();
                 return { amountPaid: x.amountPaid, paymentType: x.paymentType, email: x.email, promoCode: x.promoCode, purchasedAtMs: ms(x.purchasedAt) };
             });
-            return json(summarizeSales(records, now));
+            const summary = summarizeSales(records, now);
+            // Square's fees and the split. If Square can't be reached the money lines are left out, never guessed.
+            try {
+                const payments = await loadAllPayments();
+                if (payments) {
+                    const feeRows = ticketFees(snap.docs.map(d => { const x = d.data(); return { id: d.id, squarePaymentId: x.squarePaymentId || null, purchasedAt: null }; }), payments);
+                    const byId = new Map(feeRows.map(f => [f.id, f.fee]));
+                    const deal = (await db.collection('film_deals').doc(blockId).get()).data();
+                    summary.split = splitSales(summary.revenue, snap.docs.map(d => ({ amount: Number(d.data().amountPaid) || 0, fee: byId.get(d.id) ?? null })), filmmakerShareOf(deal as any));
+                }
+            } catch (e) { console.error('[watch-party-stats] split failed:', e); }
+            return json(summary);
         }
 
         if (action === 'dropped') {
