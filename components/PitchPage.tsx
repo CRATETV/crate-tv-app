@@ -150,7 +150,7 @@ const PitchLayout: React.FC<{
                         <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-[0.95]">{p.title}</h1>
                         <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto mt-6 leading-relaxed">{p.intro}</p>
                         <button onClick={scrollToForm} className="mt-9 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-sm px-9 py-4 rounded-xl shadow-[0_10px_40px_rgba(220,38,38,0.35)] transition-all">{p.cta}</button>
-                        <p className="text-gray-500 text-xs uppercase tracking-[0.25em] mt-6">Home of the Playhouse West Film Festival online</p>
+                        <p className="text-gray-500 text-xs uppercase tracking-[0.25em] mt-6">Home of the Playhouse West-Philadelphia Film Festival Online</p>
                     </div>
                 </section>
 
