@@ -86,10 +86,10 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
 
     // Film revenue, payment by payment, using the exact rules behind every filmmaker's balance.
     const counted = new Set<SquarePayment>();
-    const filmLines: { title: string; field: string; amount: number; at?: string }[] = [];
+    const filmLines: { title: string; field: string; amount: number; gross: number; at?: string }[] = [];
     const revenueByFilm = await computeRevenueByFilm(db, payments, movies, (title, field, amount, payment) => {
         counted.add(payment);
-        filmLines.push({ title, field, amount, at: payment.created_at });
+        filmLines.push({ title, field, amount, gross: payment.amount_money.amount, at: payment.created_at });   // amount: after shared card fees; gross: what the buyer paid
     });
 
     let filmGross = 0, filmmakerTotal = 0, crateFromFilms = 0;
@@ -97,10 +97,10 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
         const movie = movieByTitle.get(line.title.trim());
         const split = splitRevenue(line.amount, movie || { director: '' }, movie ? deals[movie.key] : undefined);
         const row = monthRow(monthOf(line.at));
-        row.gross += line.amount;
+        row.gross += line.gross;
         row.filmmakers += split.filmmakerAmount;
         row.crate += split.crateAmount;
-        filmGross += line.amount;
+        filmGross += line.gross;
         filmmakerTotal += split.filmmakerAmount;
         crateFromFilms += split.crateAmount;
     }

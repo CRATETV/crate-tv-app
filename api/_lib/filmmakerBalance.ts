@@ -1,3 +1,4 @@
+import { splittableCents } from './filmFees.js';
 import { Firestore } from 'firebase-admin/firestore';
 import { Movie } from '../../types.js';
 import { normalize } from './creditMatch.js';
@@ -132,7 +133,7 @@ export async function computeRevenueByFilm(
     allPayments: SquarePayment[],
     movies: Movie[],
     /** Optional: told about every payment that counts toward a film (admin Earnings page). */
-    onCounted?: (title: string, field: keyof FilmRevenue, amount: number, payment: SquarePayment) => void,
+    onCounted?: (title: string, field: keyof FilmRevenue, amount: number, payment: SquarePayment) => void,   // amount = what the split is figured on (after shared card fees)
 ): Promise<Record<string, FilmRevenue>> {
     const festivalConclusionTime = await getFestivalConclusionTime(db);
     // Trimmed both sides — see matching note in revenueAttribution.ts.
@@ -150,11 +151,13 @@ export async function computeRevenueByFilm(
         current = p;
         const details = parseNote(p.note);
         if (!details.title) continue;
+        // Square's card fee is shared from FILM_FEES_SHARED_FROM on (api/_lib/filmFees.ts).
+        const countable = splittableCents(p as any);
 
         if (details.type === 'donation') {
-            add(details.title, 'donations', p.amount_money.amount);
+            add(details.title, 'donations', countable);
         } else if (details.type === 'watchPartyTicket') {
-            add(details.title, 'tickets', p.amount_money.amount);
+            add(details.title, 'tickets', countable);
         } else if (details.type === 'vodRental') {
             const movie = movieByTitle.get(details.title);
             // Other partner festivals' films are settled with the partner
@@ -167,7 +170,7 @@ export async function computeRevenueByFilm(
                 const paidAtMs = p.created_at ? new Date(p.created_at).getTime() : 0;
                 if (paidAtMs < festivalConclusionTime.getTime()) continue;
             }
-            add(details.title, 'vodRentals', p.amount_money.amount);
+            add(details.title, 'vodRentals', countable);
         }
     }
 

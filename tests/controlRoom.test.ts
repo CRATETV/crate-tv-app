@@ -82,10 +82,12 @@ test('pin: shown when fresh, hidden when old, empty or malformed', () => {
     assert.equal(activePin('hi', NOW), null);
 });
 
-test('money split: card fees come out of CRATE\u2019s part, free seats pay no fee, unreported fees are counted', () => {
-    const r = splitSales(30, [{ amount: 10, fee: 0.59 }, { amount: 10, fee: 0.59 }, { amount: 10, fee: null }, { amount: 0, fee: null }], 0.7);
-    assert.deepEqual(r, { squareFees: 1.18, feesPending: 1, filmmakerShare: 0.7, filmmakerAmount: 21, crateKeeps: 7.82 });
+test('money split: shared fees come off the top; older tickets keep fees on CRATE; free seats pay no fee; unreported fees are counted', () => {
+    const r = splitSales(30, [{ amount: 10, fee: 0.59, shared: true }, { amount: 10, fee: 0.59, shared: true }, { amount: 10, fee: null, shared: true }, { amount: 0, fee: null }], 0.7);
+    assert.deepEqual(r, { squareFees: 1.18, feesPending: 1, filmmakerShare: 0.7, filmmakerAmount: 20.17, crateKeeps: 8.65 });
+    // Not shared (sold before the cutover): filmmaker keeps 70% of the full price, the fee is CRATE's.
+    const old = splitSales(10, [{ amount: 10, fee: 0.59 }], 0.7);
+    assert.deepEqual([old.filmmakerAmount, old.crateKeeps], [7, 2.41]);
     assert.equal(splitSales(0, [], 0.7).crateKeeps, 0);
-    assert.equal(splitSales(10, [], 0.5).filmmakerAmount, 5);
     assert.equal(splitSales(10, [], 5).filmmakerShare, 1);
 });

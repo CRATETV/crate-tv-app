@@ -36,18 +36,19 @@ export interface MoneySplit {
 }
 
 /**
- * Where the money goes. The filmmaker's share is taken from what buyers paid (that is how
- * CRATE counts every film's earnings), so Square's card fees come out of CRATE's part.
- * Pure, tested.
+ * Where the money goes. Square's card fees on tickets sold from FILM_FEES_SHARED_FROM on
+ * come off the top before the split (shared); on older tickets they come out of CRATE's
+ * part. Pure, tested.
  */
-export function splitSales(revenue: number, fees: { amount: number; fee: number | null }[], filmmakerShare: number): MoneySplit {
-    let squareFees = 0, feesPending = 0;
+export function splitSales(revenue: number, fees: { amount: number; fee: number | null; shared?: boolean }[], filmmakerShare: number): MoneySplit {
+    let squareFees = 0, feesPending = 0, sharedFees = 0;
     for (const f of fees) {
         if (!(f.amount > 0)) continue;                       // free seats pay no fee
-        if (f.fee === null) feesPending++; else squareFees += f.fee;
+        if (f.fee === null) feesPending++;
+        else { squareFees += f.fee; if (f.shared) sharedFees += f.fee; }
     }
     const share = Math.min(1, Math.max(0, Number.isFinite(filmmakerShare) ? filmmakerShare : 0.7));
-    const filmmakerAmount = money(revenue * share);
+    const filmmakerAmount = money((revenue - sharedFees) * share);
     return { squareFees: money(squareFees), feesPending, filmmakerShare: share, filmmakerAmount, crateKeeps: money(revenue - squareFees - filmmakerAmount) };
 }
 

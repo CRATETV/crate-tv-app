@@ -463,7 +463,7 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
                             <div className="flex justify-between"><span className="text-gray-400">Square card fees{sales.split.feesPending > 0 ? ` (${sales.split.feesPending} not reported yet)` : ''}</span><span className="text-red-300 font-bold tabular-nums">−${sales.split.squareFees.toFixed(2)}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Filmmaker gets ({Math.round(sales.split.filmmakerShare * 100)}%)</span><span className="text-white font-bold tabular-nums">${sales.split.filmmakerAmount.toFixed(2)}</span></div>
                             <div className="flex justify-between border-t border-white/10 pt-1.5"><span className="text-gray-300 font-semibold">CRATE keeps</span><span className="text-green-400 font-black tabular-nums">${sales.split.crateKeeps.toFixed(2)}</span></div>
-                            <p className="text-[11px] text-gray-500 pt-1">The filmmaker’s share is figured on what buyers paid, so Square’s fees come out of CRATE’s part. A film with its own deal uses that split.</p>
+                            <p className="text-[11px] text-gray-500 pt-1">From Oct 31, 2026 on, Square’s fees come off the top and the filmmaker and CRATE split what’s left. Tickets sold before that are split on the full price. A film with its own deal uses that split.</p>
                         </div>
                     )}
                     {sales.recent.length > 0 && (

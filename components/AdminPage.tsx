@@ -82,6 +82,16 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 );
 
 const AdminPage: React.FC = () => {
+    // A number box that has the cursor changes its value when you scroll over it (a price of
+    // $4.99 became $4.74 after 25 small scrolls). Let go of the box as soon as you scroll.
+    useEffect(() => {
+        const letGo = (e: WheelEvent) => {
+            const el = document.activeElement;
+            if (el instanceof HTMLInputElement && el.type === 'number' && e.target === el) el.blur();
+        };
+        document.addEventListener('wheel', letGo, { passive: true });
+        return () => document.removeEventListener('wheel', letGo);
+    }, []);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState('viewer');
     const [assignedJobTitle, setAssignedJobTitle] = useState('');
