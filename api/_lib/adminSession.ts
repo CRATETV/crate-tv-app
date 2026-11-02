@@ -25,7 +25,7 @@
 // or revoke that record in Permissions and their pass stops working on the
 // next request, even before it expires.
 
-import { createHmac, createHash, timingSafeEqual } from 'crypto';
+import { createHmac, createHash, timingSafeEqual, randomBytes } from 'crypto';
 import { getAdminDb } from './firebaseAdmin.js';
 
 const PREFIX = 'cs1';
@@ -38,7 +38,29 @@ export interface AdminSessionPayload {
     via: 'password' | 'account';
     iat: number;
     exp: number;
+    // Single-active-session for staff logins (collab:<docId> only — see
+    // "Log out other devices" below). Omitted for env:*/pay:* subs, which
+    // don't have this check applied.
+    nonce?: string;
 }
+
+// STAFF SINGLE-ACTIVE-SESSION ("log out other devices")
+//
+// Every staff sign-in (admin-login.ts) stamps a fresh random nonce onto the
+// collaborator_access doc AND into the signed pass it hands back. On each
+// later request, resolveAdminCredential compares the pass's nonce against
+// whatever's CURRENTLY on the doc — a mismatch means a newer sign-in (or an
+// explicit "sign out other devices" re-stamp) happened since this pass was
+// issued, so it's treated the same as an expired/forged one. Same mechanism
+// regular viewer accounts already have (contexts/AuthContext.tsx's
+// writeSessionToken); staff didn't, until now — a stolen or merely-forgotten
+// pass on another device had no way to be killed early otherwise (12h wait).
+//
+// Deliberately NOT applied to env:*/pay:* subs: those aren't tied to a
+// per-person Firestore record (env:* is a password several people may
+// legitimately share; pay:* is a one-time festival/payout terminal key), so
+// there's nowhere natural to hang a "this person's current session" marker.
+export const newSessionNonce = (): string => b64url(randomBytes(12));
 
 // Use a dedicated secret if you set one (recommended: Vercel env var
 // ADMIN_SESSION_SECRET, any long random string). Otherwise derive one from
@@ -114,6 +136,13 @@ export async function resolveAdminCredential(value: unknown): Promise<string> {
             const doc = await db.collection('collaborator_access').doc(id).get();
             const data = doc.data();
             if (!doc.exists || !data || data.status === 'revoked') return '';
+            // Single-active-session: a doc with no sessionNonce yet (set
+            // before this feature shipped) isn't enforced, so existing
+            // passes already in the wild keep working until they next log
+            // in. Once a doc has one, a pass whose embedded nonce doesn't
+            // match the CURRENT one was superseded by a later sign-in (or
+            // an explicit "sign out other devices") — treat it as revoked.
+            if (data.sessionNonce && session.nonce !== data.sessionNonce) return '';
             return String(data.accessKey || '');
         }
         if (kind === 'pay') {

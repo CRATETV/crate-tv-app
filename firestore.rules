@@ -222,10 +222,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ── Watch sessions (viewership heartbeat, admin dashboard aggregation) ──
+    // ── Watch sessions (viewership heartbeat) ───────────────────────────
+    // Used to allow any signed-in user to read EVERY session doc — userId,
+    // which watch party they're in, when, for how long, what device — with
+    // the justification that "the admin dashboard needs to aggregate across
+    // all users". That stopped being true once the admin panel moved to
+    // /api/admin-watch-party-stats (see watchPartyAdminStats.ts): the admin
+    // panel signs in with the admin password, not a real Firestore account,
+    // so it was never actually using this client read rule either way — it
+    // reads with the Admin SDK, which bypasses rules entirely. Nothing
+    // current relies on a signed-in user reading anyone else's session, so
+    // this now matches festival_tickets' pattern: your own rows only.
     match /watchSessions/{sessionId} {
-      // Anyone signed in can read (admin dashboard needs to aggregate across all users)
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
 
       // A user can only create/update a session doc that has their own userId on it
       allow create: if isSignedIn()
