@@ -57,6 +57,7 @@ import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
 import SubmissionTermsPage from './components/SubmissionTermsPage';
+import UnsubscribePage from './components/UnsubscribePage';
 import SignPage from './components/SignPage';
 import ZinePage from './components/ZinePage';
 import LibraryPage from './components/LibraryPage';
@@ -263,6 +264,8 @@ const AppRouter: React.FC = () => {
       return <SignPage />;
     case '/submission-terms':
       return <SubmissionTermsPage />;
+    case '/unsubscribe':
+      return <UnsubscribePage />;
     case '/portal': {
       if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
       if (user && (user.isActor || user.isFilmmaker || user.isIndustryPro)) {

@@ -1,5 +1,5 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { signAdminSession, verifyAdminSession, SESSION_TTL_MS } from './_lib/adminSession.js';
+import { signAdminSession, verifyAdminSession, newSessionNonce, SESSION_TTL_MS } from './_lib/adminSession.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
 import { logServerError } from './_lib/logError.js';
@@ -39,6 +39,49 @@ export async function POST(request: Request) {
                 return new Response(JSON.stringify({ success: false }), { status: 401, headers: { 'Content-Type': 'application/json' } });
             }
             return new Response(JSON.stringify({ success: true, role: session.role, operatorName: session.name, expiresAt: session.exp }), {
+                status: 200, headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        // "Log out other devices" for staff — see adminSession.ts. Re-stamps
+        // this collaborator's own session with a fresh nonce (killing any
+        // other pass issued to them, on any other device) and hands back a
+        // matching fresh pass so THIS device stays signed in. Only works for
+        // a currently-valid collab:<docId> pass — can't be used to target
+        // anyone else's session, and doesn't apply to env:*/pay:* subs
+        // (nothing to re-stamp: see the comment on newSessionNonce).
+        if (action === 'claim-session') {
+            const session = verifyAdminSession(__raw_password);
+            if (!session) {
+                return new Response(JSON.stringify({ success: false, error: 'Your session already expired — sign in again.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (!session.sub.startsWith('collab:')) {
+                return new Response(JSON.stringify({ success: false, error: "This sign-in method doesn't support logging out other devices." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
+            const initError = getInitializationError();
+            const db = !initError ? getAdminDb() : null;
+            if (!db) throw new Error('Database terminal offline.');
+            const docId = session.sub.slice('collab:'.length);
+            const doc = await db.collection('collaborator_access').doc(docId).get();
+            const docData = doc.data();
+            if (!doc.exists || !docData || docData.status === 'revoked') {
+                return new Response(JSON.stringify({ success: false, error: 'This access has been revoked.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            // Without this, a pass that's ALREADY been superseded by a newer
+            // sign-in elsewhere (but hasn't hit its 12h expiry) could call
+            // this endpoint to re-stamp itself back to current — exactly the
+            // takeover this feature exists to prevent. Only the canonical
+            // (not-yet-superseded) pass may claim. A doc with no
+            // sessionNonce yet (nobody's logged in since this shipped) has
+            // no canonical pass to defer to, so that case is let through —
+            // same bootstrap allowance as resolveAdminCredential.
+            if (docData.sessionNonce && session.nonce !== docData.sessionNonce) {
+                return new Response(JSON.stringify({ success: false, error: 'This session was already replaced by a newer sign-in.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            const nonce = newSessionNonce();
+            await doc.ref.set({ sessionNonce: nonce }, { merge: true });
+            const sessionToken = signAdminSession({ sub: session.sub, role: session.role, name: session.name, via: session.via, nonce });
+            return new Response(JSON.stringify({ success: true, sessionToken, expiresAt: Date.now() + SESSION_TTL_MS }), {
                 status: 200, headers: { 'Content-Type': 'application/json' },
             });
         }
@@ -162,7 +205,15 @@ export async function POST(request: Request) {
             });
 
             const operatorName = displayName || targetDirector || 'ADMIN';
-            const sessionToken = signAdminSession({ sub, role, name: operatorName, via });
+            // Staff sign-ins get a fresh single-active-session nonce — this
+            // sign-in immediately supersedes (kicks) any pass issued to the
+            // same collaborator on another device. See adminSession.ts.
+            let nonce: string | undefined;
+            if (sub.startsWith('collab:')) {
+                nonce = newSessionNonce();
+                await db.collection('collaborator_access').doc(sub.slice('collab:'.length)).set({ sessionNonce: nonce }, { merge: true });
+            }
+            const sessionToken = signAdminSession({ sub, role, name: operatorName, via, nonce });
 
             return new Response(JSON.stringify({ 
                 success: true, 

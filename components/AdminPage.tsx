@@ -42,6 +42,7 @@ import AdminSidebar from './admin/AdminSidebar';
 import AdminOverview from './admin/AdminOverview';
 import type { FilmGroup } from '../api/_lib/filmStatus';
 import EarningsPayoutsTab from './admin/EarningsPayoutsTab';
+import SubscribersTab from './admin/SubscribersTab';
 import ContractsCenterTab from './admin/ContractsCenterTab';
 import BookkeepingTab from './admin/BookkeepingTab';
 import ActorApprovalsTab from './admin/ActorApprovalsTab';
@@ -480,6 +481,33 @@ const AdminPage: React.FC = () => {
         window.location.reload();
     }
 
+    // "Log out other devices" — staff logins only (see adminSession.ts).
+    // Re-stamps this collaborator's session, which invalidates any other
+    // pass issued to them, then swaps in the fresh matching pass so THIS
+    // device stays signed in without re-entering anything.
+    const [deviceLogoutMsg, setDeviceLogoutMsg] = useState('');
+    const handleLogoutOtherDevices = async () => {
+        const token = sessionStorage.getItem('adminPassword');
+        if (!token) return;
+        setDeviceLogoutMsg('Working…');
+        try {
+            const res = await fetch('/api/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: token, action: 'claim-session' }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Could not sign out other devices.');
+            sessionStorage.setItem('adminPassword', data.sessionToken);
+            setSessionExpiresAt(Number(data.expiresAt) || 0);
+            setDeviceLogoutMsg('Done — other devices are signed out.');
+        } catch (e) {
+            setDeviceLogoutMsg(e instanceof Error ? e.message : 'Something went wrong.');
+        } finally {
+            setTimeout(() => setDeviceLogoutMsg(''), 4000);
+        }
+    };
+
     const handleSaveData = async (type: string, dataToSave: any) => {
         setIsSaving(true);
         const pass = sessionStorage.getItem('adminPassword');
@@ -601,6 +629,9 @@ const AdminPage: React.FC = () => {
             operatorName={operatorName}
             jobTitle={assignedJobTitle}
             onLogout={handleLogout}
+            canLogoutOtherDevices={role.startsWith('collaborator:')}
+            onLogoutOtherDevices={handleLogoutOtherDevices}
+            deviceLogoutMsg={deviceLogoutMsg}
         />
     );
 
@@ -679,6 +710,7 @@ const AdminPage: React.FC = () => {
                             <section><SectionTitle>Bulk email to your audience</SectionTitle><CommunicationsTerminal movies={movies} /></section>
                         </div>
                     )}
+                    {activeTab === 'subscribers' && <SubscribersTab />}
                     {activeTab === 'users' && (
                         <div className="space-y-16">
                             <UserIntelligenceTab movies={movies} />

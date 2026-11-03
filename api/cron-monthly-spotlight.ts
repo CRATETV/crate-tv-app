@@ -73,8 +73,15 @@ export async function GET(request: Request) {
         db.collection('zine_subscriptions').get(),
     ]);
     const emailSet = new Set<string>();
-    subSnap.docs.forEach(d  => emailSet.add(d.id));
-    zineSnap.docs.forEach(d => emailSet.add(d.id));
+    // Skip account holders who've unsubscribed (optedOut: true) — see
+    // api/unsubscribe-newsletter.ts. Everything written before that existed
+    // has no optedOut field and still counts as subscribed.
+    subSnap.docs.forEach(d => { if (d.data().optedOut !== true) emailSet.add(d.id); });
+    // Skip zine subscribers who've unsubscribed (status: 'cancelled') —
+    // this link used to point at the homepage with no real opt-out behind
+    // it, so cancelled is a brand-new status; everything written before it
+    // existed has no status field and still counts as subscribed.
+    zineSnap.docs.forEach(d => { if (d.data().status !== 'cancelled') emailSet.add(d.id); });
     const emails = Array.from(emailSet).filter(e => e.includes('@'));
 
     if (emails.length === 0) {
@@ -136,7 +143,7 @@ export async function GET(request: Request) {
 
       <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
         You're receiving this because you subscribed to CrateTV updates.<br/>
-        <a href="https://cratetv.net" style="color:#6b7280;text-decoration:none;">Unsubscribe</a>
+        <a href="https://cratetv.net/unsubscribe" style="color:#6b7280;text-decoration:none;">Unsubscribe</a>
       </p>
     </td>
   </tr>

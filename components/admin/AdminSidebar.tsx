@@ -12,9 +12,14 @@ interface Props {
     operatorName: string;
     jobTitle?: string;
     onLogout: () => void;
+    /** Staff logins only — env/shared-password sign-ins have no per-person
+     * session to kick (see api/_lib/adminSession.ts). */
+    canLogoutOtherDevices?: boolean;
+    onLogoutOtherDevices?: () => void;
+    deviceLogoutMsg?: string;
 }
 
-const AdminSidebar: React.FC<Props> = ({ allowedTabs, activeTab, onNavigate, badges, operatorName, jobTitle, onLogout }) => {
+const AdminSidebar: React.FC<Props> = ({ allowedTabs, activeTab, onNavigate, badges, operatorName, jobTitle, onLogout, canLogoutOtherDevices, onLogoutOtherDevices, deviceLogoutMsg }) => {
     const [query, setQuery] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -124,13 +129,24 @@ const AdminSidebar: React.FC<Props> = ({ allowedTabs, activeTab, onNavigate, bad
                 })}
             </nav>
 
-            <div className="border-t border-white/[0.07] p-4 flex items-center gap-3">
-                <span className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-bold text-white">{(operatorName || 'A').charAt(0).toUpperCase()}</span>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{operatorName || 'Admin'}</p>
-                    <p className="text-xs text-[#8A8A96] truncate">{jobTitle || 'Signed in'}</p>
+            <div className="border-t border-white/[0.07] p-4">
+                <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-bold text-white">{(operatorName || 'A').charAt(0).toUpperCase()}</span>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{operatorName || 'Admin'}</p>
+                        <p className="text-xs text-[#8A8A96] truncate">{jobTitle || 'Signed in'}</p>
+                    </div>
+                    <button onClick={onLogout} className="text-xs font-bold text-[#A1A1AD] hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5">Sign out</button>
                 </div>
-                <button onClick={onLogout} className="text-xs font-bold text-[#A1A1AD] hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5">Sign out</button>
+                {canLogoutOtherDevices && (
+                    <button
+                        onClick={onLogoutOtherDevices}
+                        className="mt-2 w-full text-left text-[11px] font-semibold text-[#8A8A96] hover:text-white px-1 py-1 rounded-lg hover:bg-white/5"
+                        title="Signs this account out everywhere except this device"
+                    >
+                        {deviceLogoutMsg || 'Log out other devices'}
+                    </button>
+                )}
             </div>
         </div>
     );

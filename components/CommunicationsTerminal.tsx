@@ -3,6 +3,16 @@ import { Movie, EditorialStory, UserRecord } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 
+// Subscriber and user counts used to come straight from the client with the
+// Firestore SDK (db.collection('zine_subscriptions').get(), db.collection
+// ('users').get()). firestore.rules has no rule granting either collection
+// to anyone — admin or not — everything else in it is "deny by default", so
+// those reads were silently rejected and these counts never reflected real
+// data. Routed through the existing Admin-SDK endpoints instead, same
+// pattern as every other admin tab (get-subscribers.ts, get-user-
+// intelligence.ts) — and get-subscribers.ts also excludes cancelled
+// subscribers, so Dispatch never emails someone who unsubscribed.
+
 interface CommunicationsTerminalProps {
     movies: Record<string, Movie>;
 }
@@ -28,7 +38,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-        
+
         db.collection('editorial_stories').orderBy('publishedAt', 'desc').limit(20).get().then(snap => {
             const fetched: EditorialStory[] = [];
             snap.forEach(doc => { if (doc.data().status !== 'draft') fetched.push({ id: doc.id, ...doc.data() } as EditorialStory); });
@@ -36,17 +46,23 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ movies 
             if (fetched.length > 0) setSelectedStoryId(fetched[0].id);
         });
 
-        db.collection('zine_subscriptions').get().then(snap => {
-            const fetched: { email: string }[] = [];
-            snap.forEach(doc => fetched.push({ email: doc.id }));
-            setSubscribers(fetched);
-        });
+        const password = sessionStorage.getItem('adminPassword');
 
-        db.collection('users').get().then(snap => {
-            const fetched: UserRecord[] = [];
-            snap.forEach(doc => fetched.push({ uid: doc.id, ...doc.data() } as UserRecord));
-            setAllUsers(fetched);
-        });
+        fetch('/api/get-subscribers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, action: 'list' }),
+        }).then(res => res.json()).then(data => {
+            const active = (data.subscribers || []).filter((s: { status: string }) => s.status !== 'cancelled');
+            setSubscribers(active.map((s: { email: string }) => ({ email: s.email })));
+        }).catch(err => console.warn('Subscriber fetch failed', err));
+
+        fetch('/api/get-user-intelligence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        }).then(res => res.json()).then(data => setAllUsers(data.users || []))
+          .catch(err => console.warn('User fetch failed', err));
     }, []);
 
     const targetCounts = useMemo(() => ({

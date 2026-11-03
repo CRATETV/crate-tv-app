@@ -111,6 +111,12 @@ const PayDialog: React.FC<{ payee: PayeeRow; request?: Summary['pendingRequests'
     const link = payoutLink(method, handle, cents, `CRATE TV payout – ${payee.films.slice(0, 2).join(', ')}`);
 
     const record = async () => {
+        // This writes a real financial record (lowers the filmmaker's balance
+        // everywhere it's shown) and can't be undone from the UI — a single
+        // misclick here used to be all it took. Same confirmation wording as
+        // the legacy payouts tool (AdminPayoutsTab.tsx), for one consistent
+        // "are you sure" across both.
+        if (!window.confirm(`Record ${money(cents)} to ${payee.name} via ${PAYOUT_METHOD_LABELS[method]}?\n\nOnly confirm once you've actually sent the money. This can't be undone.`)) return;
         setSaving(true); setError('');
         try {
             if (handle !== (payee.pref?.handle || '') || method !== payee.pref?.method) {

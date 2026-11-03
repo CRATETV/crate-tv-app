@@ -32,7 +32,10 @@ export async function POST(request: Request) {
 
         if (audience === 'subscribers') {
             const snap = await db.collection('zine_subscriptions').get();
-            allEmails = snap.docs.map(doc => doc.id);
+            // Skip anyone who's unsubscribed (status: 'cancelled') — a
+            // missing status means an older row written before that field
+            // existed, which is still an active subscriber.
+            allEmails = snap.docs.filter(doc => doc.data().status !== 'cancelled').map(doc => doc.id);
         } else if (audience === 'creators') {
             const snap = await db.collection('users').where('isActor', '==', true).get();
             const snap2 = await db.collection('users').where('isFilmmaker', '==', true).get();
@@ -97,6 +100,12 @@ export async function POST(request: Request) {
                                                 Official Dispatch // Crate TV Infrastructure
                                             </td>
                                         </tr>
+                                        ${audience === 'subscribers' ? `
+                                        <tr>
+                                            <td align="center" style="padding-top: 20px; color: #555555; font-size: 10px;">
+                                                <a href="https://cratetv.net/unsubscribe" style="color: #888888;">Unsubscribe from this newsletter</a>
+                                            </td>
+                                        </tr>` : ''}
                                     </table>
                                 </td>
                             </tr>
