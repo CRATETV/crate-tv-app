@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
+import { TAB_GROUPS } from './admin/tabMeta';
 
 interface Collaborator {
     id: string;
@@ -189,6 +190,11 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
     };
     
     const assignableTabs = Object.entries(allTabs).filter(([key]) => key !== 'permissions' && key !== 'security' && key !== 'fallback');
+    // Tabs grouped the same way as the admin menu, each shown with its full name.
+    const assignableIds = new Set(assignableTabs.map(([id]) => id));
+    const tabGroups = TAB_GROUPS
+        .map(g => ({ title: g.title, tabs: g.ids.filter(id => assignableIds.has(id)).map(id => [id, allTabs[id]] as [string, string]) }))
+        .filter(g => g.tabs.length > 0);
 
     return (
         <div className="space-y-16 animate-[fadeIn_0.5s_ease-out] pb-24">
@@ -226,71 +232,77 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                     </form>
                 </div>
 
-                <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                            <thead className="bg-white/5 text-gray-500 uppercase font-black">
-                                <tr>
-                                    <th className="p-5">Name / Identity</th>
-                                    <th className="p-5">Job Function</th>
-                                    <th className="p-5">Sign-in</th>
-                                    <th className="p-5">Permitted Sectors</th>
-                                    <th className="p-5 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {isCollabLoading ? (
-                                    <tr><td colSpan={5} className="p-10 text-center"><LoadingSpinner /></td></tr>
-                                ) : collaborators.length === 0 ? (
-                                    <tr><td colSpan={5} className="p-10 text-center text-gray-600 font-black uppercase tracking-widest">No Active Personnel</td></tr>
-                                ) : collaborators.map(c => (
-                                    <tr key={c.id} className="hover:bg-white/[0.01] transition-colors group">
-                                        <td className="p-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                                <span className="text-sm font-black text-white uppercase">{c.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-5">
-                                            <input 
-                                                type="text" 
-                                                defaultValue={c.jobTitle} 
+                <div className="space-y-5">
+                    {isCollabLoading ? (
+                        <div className="p-10 text-center"><LoadingSpinner /></div>
+                    ) : collaborators.length === 0 ? (
+                        <div className="p-10 text-center text-gray-600 font-black uppercase tracking-widest">No Active Personnel</div>
+                    ) : collaborators.map(c => {
+                        const granted = normalizeTabs(c.assignedTabs).filter(id => assignableIds.has(id));
+                        return (
+                            <div key={c.id} className="bg-black border border-white/10 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl">
+                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                                    <div className="flex items-center gap-3 min-w-[160px]">
+                                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                        <span className="text-lg font-black text-white uppercase">{c.name}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 flex-1">
+                                        <div>
+                                            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Job function</p>
+                                            <input
+                                                type="text"
+                                                defaultValue={c.jobTitle}
                                                 onBlur={(e) => handleUpdateJobTitle(c.id, e.target.value)}
-                                                className="bg-transparent border-b border-transparent focus:border-indigo-500 text-indigo-400 font-bold outline-none transition-all w-full max-w-[150px]"
+                                                className="bg-transparent border-b border-white/10 focus:border-indigo-500 text-indigo-400 font-bold outline-none transition-all w-full"
                                             />
-                                        </td>
-                                        <td className="p-5">
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Sign-in email</p>
                                             <input
                                                 type="email"
                                                 defaultValue={c.email || ''}
                                                 placeholder="add Crate email…"
                                                 onBlur={(e) => handleUpdateEmail(c.id, e.target.value)}
-                                                className="bg-transparent border-b border-white/10 focus:border-indigo-500 text-gray-200 outline-none w-full max-w-[200px] mb-2"
+                                                className="bg-transparent border-b border-white/10 focus:border-indigo-500 text-gray-200 outline-none w-full"
                                             />
-                                            <p className="text-[9px] text-gray-600 uppercase tracking-widest">Backup key</p>
-                                            <code className="bg-white/5 px-2 py-1 rounded text-red-500 font-mono text-[10px] select-all">{c.accessKey}</code>
-                                        </td>
-                                        <td className="p-5">
-                                            <div className="flex flex-wrap gap-1 max-w-md">
-                                                {assignableTabs.map(([tid, tlabel]) => (
-                                                    <button 
-                                                        key={tid}
-                                                        onClick={() => handleCollabTabToggle(c.id, tid)}
-                                                        className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-tighter transition-all ${normalizeTabs(c.assignedTabs).includes(tid) ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-700 hover:text-gray-400'}`}
-                                                    >
-                                                        {(tlabel as string).split(' ')[1]}
-                                                    </button>
-                                                ))}
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Backup key</p>
+                                            <code className="bg-white/5 px-2 py-1 rounded text-red-500 font-mono text-[11px] select-all">{c.accessKey}</code>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleDeleteCollab(c.id)} className="text-[10px] font-black uppercase text-gray-600 hover:text-red-500 transition-colors self-start">Revoke Access</button>
+                                </div>
+
+                                <div className="border-t border-white/5 pt-5 space-y-4">
+                                    <div className="flex items-baseline justify-between gap-4">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">Can open these tabs</p>
+                                        <p className="text-[11px] text-gray-500">{granted.length} of {assignableTabs.length} on. Click a tab to turn it on or off.</p>
+                                    </div>
+                                    {tabGroups.map(g => (
+                                        <div key={g.title}>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2">{g.title}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {g.tabs.map(([tid, tlabel]) => {
+                                                    const on = granted.includes(tid);
+                                                    return (
+                                                        <button
+                                                            key={tid}
+                                                            onClick={() => handleCollabTabToggle(c.id, tid)}
+                                                            aria-pressed={on}
+                                                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${on ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-500 hover:text-gray-200 hover:bg-white/10'}`}
+                                                        >
+                                                            {on ? '✓ ' : ''}{tlabel}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
-                                        </td>
-                                        <td className="p-5 text-right">
-                                            <button onClick={() => handleDeleteCollab(c.id)} className="text-[9px] font-black uppercase text-gray-700 hover:text-red-500 transition-colors">Revoke Access</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
             {error && <p className="text-red-500 text-center font-black uppercase text-[10px] tracking-widest">{error}</p>}
