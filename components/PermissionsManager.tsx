@@ -271,16 +271,20 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                                             <code className="bg-white/5 px-2 py-1 rounded text-red-500 font-mono text-[10px] select-all">{c.accessKey}</code>
                                         </td>
                                         <td className="p-5">
-                                            <div className="flex flex-wrap gap-1 max-w-md">
-                                                {assignableTabs.map(([tid, tlabel]) => (
-                                                    <button 
-                                                        key={tid}
-                                                        onClick={() => handleCollabTabToggle(c.id, tid)}
-                                                        className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-tighter transition-all ${normalizeTabs(c.assignedTabs).includes(tid) ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-700 hover:text-gray-400'}`}
-                                                    >
-                                                        {(tlabel as string).split(' ')[1]}
-                                                    </button>
-                                                ))}
+                                            <div className="flex flex-wrap gap-1.5 max-w-lg">
+                                                {assignableTabs.map(([tid, tlabel]) => {
+                                                    const granted = normalizeTabs(c.assignedTabs).includes(tid);
+                                                    return (
+                                                        <button
+                                                            key={tid}
+                                                            onClick={() => handleCollabTabToggle(c.id, tid)}
+                                                            title={granted ? `Revoke access to ${tlabel}` : `Grant access to ${tlabel}`}
+                                                            className={`px-2.5 py-1 rounded-[4px] text-[9px] font-black uppercase tracking-tight whitespace-nowrap transition-all ${granted ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-600 hover:text-gray-300 hover:bg-white/10'}`}
+                                                        >
+                                                            {tlabel as string}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </td>
                                         <td className="p-5 text-right">
