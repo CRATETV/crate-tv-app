@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { lineupProblems } from '../../api/_lib/lineupCheck';
 import { ACCENT, AccentName, Card, PageHeader, SectionTitle, StatTile, adminPost, money } from './ui';
 import { TAB_META } from './tabMeta';
-import PremiereChecklist from './PremiereChecklist';
+import { PremiereSummary } from './PremiereChecklist';
 import BackupCard from './BackupCard';
 import { filmStatus, groupCounts, type FilmGroup } from '../../api/_lib/filmStatus';
 
@@ -101,12 +101,11 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
 
             {nextPremiere && (can('movies') || can('watchParty')) && (
                 <section>
-                    <SectionTitle title="Next premiere" hint="Everything that has to be right before the watch party."
-                        right={<div className="flex gap-4">
-                            {can('watchParty') && <button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('watchParty')}>Watch parties →</button>}
-                            {can('movies') && <button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>Films →</button>}
+                    <PremiereSummary movie={nextPremiere} title={nextPremiere.title || 'Untitled'}
+                        actions={<div className="flex gap-3 ml-auto">
+                            {can('watchParty') && <button className="text-xs font-bold text-white/80 hover:text-white" onClick={() => onNavigate('watchParty')}>Watch parties →</button>}
+                            {can('movies') && <button className="text-xs font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>Films →</button>}
                         </div>} />
-                    <PremiereChecklist movie={nextPremiere} title={nextPremiere.title || 'Untitled'} />
                 </section>
             )}
 
