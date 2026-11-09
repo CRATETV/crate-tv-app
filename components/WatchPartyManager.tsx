@@ -1,4 +1,5 @@
 import { isLobbyViewerActive } from '../api/_lib/lobbyPresence';
+import { splitSchedule } from '../api/_lib/scheduleList';
 import WatchPartyPollControls from './admin/WatchPartyPollControls';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FestivalDay, CrateFestConfig, FilmBlock } from '../types';
@@ -1595,6 +1596,10 @@ const WatchPartyManager: React.FC<{
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [filter, setFilter] = useState('');
     const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
+    const [showAllRows, setShowAllRows] = useState(false);
+    // Rows you just changed stay on screen even if the change moves them out of
+    // "upcoming" (e.g. switching one off), so a row never vanishes under your finger.
+    const [touchedIds, setTouchedIds] = useState<Set<string>>(new Set());
     const { user } = useAuth();
 
     // Local state for items to allow editing before saving
@@ -1912,10 +1917,20 @@ const WatchPartyManager: React.FC<{
         }
     };
 
-    const filteredItems = watchableItems
+    // Typing in the filter searches EVERY film and block. With the box empty we
+    // show only what's switched on or coming up, and the rest sits behind an arrow.
+    const searching = filter.trim().length > 0;
+    const matching = watchableItems
         .filter(item => item.title.toLowerCase().includes(filter.toLowerCase()))
-        .filter(item => !showOnlyEnabled || item.isWatchPartyEnabled)
-        .sort((a, b) => a.title.localeCompare(b.title));
+        .filter(item => !showOnlyEnabled || item.isWatchPartyEnabled);
+    const { upcoming, rest: allRest } = splitSchedule(matching, Date.now());
+    const keep = upcoming.concat(allRest.filter(i => touchedIds.has(i.id)));
+    const rest = allRest.filter(i => !touchedIds.has(i.id));
+    // Expanded or searching: A to Z, so rows never jump around while you edit them.
+    // Collapsed: soonest first.
+    const filteredItems = searching || showAllRows
+        ? [...matching].sort((a, b) => a.title.localeCompare(b.title))
+        : keep;
 
     const hasUnsavedChanges = JSON.stringify(allMovies) !== JSON.stringify(localMovies) || 
                              JSON.stringify(festivalData) !== JSON.stringify(localFestivalData) || 
@@ -1986,12 +2001,29 @@ const WatchPartyManager: React.FC<{
                                     partyState={partyStates[item.id]}
                                     isSelected={currentSelectedItem?.id === item.id}
                                     onSelect={() => setSelectedItemKey(item.id)}
-                                    onChange={(updates) => handleItemChange(item.id, updates)} 
+                                    onChange={(updates) => { setTouchedIds(prev => new Set(prev).add(item.id)); handleItemChange(item.id, updates); }} 
                                  />
                             ))}
                         </tbody>
                     </table>
                 </div>
+
+                {!searching && rest.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => setShowAllRows(v => !v)}
+                        aria-expanded={showAllRows}
+                        className="mt-4 w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black uppercase tracking-widest text-gray-300 transition-colors"
+                    >
+                        <span className={`inline-block transition-transform ${showAllRows ? 'rotate-180' : ''}`}>▾</span>
+                        {showAllRows ? 'Hide the others' : `Show all ${rest.length} other film${rest.length === 1 ? '' : 's'} and blocks`}
+                    </button>
+                )}
+                {filteredItems.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-6">
+                        {searching ? 'Nothing matches that. Clear the box to see the upcoming list.' : 'Nothing is switched on or scheduled yet. Use the arrow below to find a film.'}
+                    </p>
+                )}
 
                 <div className="mt-6 pt-6 border-t border-gray-700 flex items-center gap-4">
                     <button
