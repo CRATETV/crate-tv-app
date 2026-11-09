@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { lineupProblems } from '../../api/_lib/lineupCheck';
 import { ACCENT, AccentName, Card, PageHeader, SectionTitle, StatTile, adminPost, money } from './ui';
 import { TAB_META } from './tabMeta';
 import PremiereChecklist from './PremiereChecklist';
@@ -64,6 +65,12 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
     if (counts.actors && can('actors')) attention.push({ id: 'actors', icon: '🎭', text: `${counts.actors} actor profile${counts.actors === 1 ? '' : 's'} waiting for approval`, accent: 'magenta' });
     if (counts.payouts && can('money')) attention.push({ id: 'money', icon: '💸', text: `${counts.payouts} filmmaker${counts.payouts === 1 ? ' has' : 's have'} asked to be paid`, accent: 'green' });
     if (counts.contracts && can('contracts')) attention.push({ id: 'contracts', icon: '✍️', text: `${counts.contracts} agreement${counts.contracts === 1 ? '' : 's'} not signed yet`, accent: 'violet' });
+    // Festival lineup: a film that was deleted/re-added, or has no streaming video, would break the night.
+    const lineup = React.useMemo(() => lineupProblems(festivalData as any[], movies as any, Date.now()), [festivalData, movies]);
+    if (lineup.length && (can('pwff') || can('watchParty'))) {
+        const first = lineup[0];
+        attention.push({ id: can('pwff') ? 'pwff' : 'watchParty', icon: '🎬', text: `Festival lineup: ${lineup.length} film problem${lineup.length === 1 ? '' : 's'}. ${first.text}`, accent: 'coral' });
+    }
     if (spotlightMissing && can('spotlight')) attention.push({ id: 'spotlight', icon: '🌟', text: 'Pick this month’s spotlight film', accent: 'amber' });
 
     const quick = ['movies', 'watchParty', 'contracts', 'email', 'money', 'roku'].filter(can).slice(0, 6);

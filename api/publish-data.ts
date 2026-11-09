@@ -8,6 +8,7 @@ import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { Movie, EditorialStory } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { resetForNewSchedule } from './_lib/watchPartyRules.js';
+import { deleteGuard } from './_lib/filmDeleteGuard.js';
 
 const getRoleFromPassword = (password: string | null) => {
     if (!password) return 'unknown';
@@ -168,6 +169,11 @@ export async function POST(request: Request) {
         let auditDetails = `Mutated ${type} resource.`;
 
         if (type === 'delete_movie') {
+            // Never delete a film a festival block or an upcoming watch party still uses.
+            const guard = await deleteGuard(db, data.key, Date.now());
+            if (!guard.ok) {
+                return new Response(JSON.stringify({ error: `Not deleted: this film is ${guard.why}. Take it out of the schedule or wait until it's done, then try again.` }), { status: 409 });
+            }
             // Look up the video URL BEFORE deleting the catalog entry — the
             // whole point of deleting a film when storage is the concern is
             // to actually reclaim the space, and removing just the Firestore
@@ -179,6 +185,12 @@ export async function POST(request: Request) {
 
             // IRREVERSIBLE PURGE: Remove document from DB
             batch.delete(db.collection('movies').doc(data.key));
+            // Leave nothing behind that a film re-added later could inherit or trip over:
+            // its watch-party state, its public watch-party fields, and its place in rows.
+            batch.delete(db.collection('watch_parties').doc(data.key));
+            batch.set(db.collection('data').doc('movies'), { [data.key]: FieldValue.delete() }, { merge: true });
+            const cats = await db.collection('categories').get();
+            cats.forEach(c => { if ((c.data()?.movieKeys || []).includes(data.key)) batch.update(c.ref, { movieKeys: FieldValue.arrayRemove(data.key) }); });
             auditDetails = `PURGE: Deleted movie [${data.key}].`;
 
             // Best-effort — only for files actually hosted on our own S3
