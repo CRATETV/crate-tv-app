@@ -2,6 +2,7 @@
 //
 // Fixes the common problems on the spot (see api/festival-help.ts) and sends
 // everything else to CRATE with the viewer's ticket details attached.
+import { useHelpDock } from './helpDock';
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -53,6 +54,7 @@ const SignInFirst: React.FC = () => (
 /** placement 'top' keeps the button clear of video controls and chat on the watch party page. On phones it sits low, above the chat box, so it never covers the film. */
 const FestivalHelpButton: React.FC<{ blocks?: FilmBlock[]; placement?: 'bottom' | 'top' }> = ({ blocks, placement = 'bottom' }) => {
     const { user, getUserIdToken, hasFestivalAllAccess, unlockedFestivalBlockIds } = useAuth();
+    const inLobby = useHelpDock() === 'lobby';
     const { pwffFestivalData } = useFestival();
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<View>('menu');
@@ -113,11 +115,13 @@ const FestivalHelpButton: React.FC<{ blocks?: FilmBlock[]; placement?: 'bottom' 
     return (
         <>
             <button type="button" onClick={() => { setOpen(o => !o); if (open) reset(); }}
-                className={placement === 'top'
+                className={placement === 'top' && inLobby
+                    ? 'fixed right-3 bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] z-[600] flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur border border-white/20 text-white text-sm font-black opacity-80 hover:opacity-100 md:w-auto md:h-auto md:px-3 md:py-2 md:gap-1.5 md:text-[10px] md:uppercase md:tracking-widest md:top-[calc(env(safe-area-inset-top,0px)+4.75rem)] md:bottom-auto'
+                    : placement === 'top'
                     ? 'fixed right-3 z-[600] flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/70 backdrop-blur border border-white/20 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black/90 bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] md:bottom-auto md:top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'
                     : 'fixed bottom-24 md:bottom-20 right-4 z-[600] flex items-center gap-2 px-4 py-3 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-transform'}
                 aria-expanded={open} aria-label="Need help?">
-                <span aria-hidden>?</span> {open ? 'Close' : placement === 'top' ? 'Help' : 'Need help?'}
+                <span aria-hidden>?</span>{inLobby && placement === 'top' && !open ? <span className="sr-only md:not-sr-only md:ml-1.5">Help</span> : <span className="ml-1.5">{open ? 'Close' : placement === 'top' ? 'Help' : 'Need help?'}</span>}
             </button>
             {open && (
                 <div role="dialog" aria-label="Festival help"
