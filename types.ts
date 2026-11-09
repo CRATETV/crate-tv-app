@@ -507,6 +507,9 @@ export interface FilmmakerPayout {
 
 export interface SiteSettings {
   isHolidayModeActive: boolean;
+  /** Automatic thank-you email the morning after a watch party (api/send-watchparty-thanks.ts). */
+  thankYouEnabled?: boolean;
+  thankYouMessage?: string;
   holidayName?: string;
   holidayTagline?: string;
   holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
