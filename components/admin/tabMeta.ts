@@ -37,12 +37,13 @@ export const TAB_META: Record<string, TabMeta> = {
     roku:         { label: 'Roku', icon: '📺', desc: 'The Roku channel: rows, hero, announcements and stats.', keywords: 'roku tv channel' },
     storage:      { label: 'Storage clean-up', icon: '🧹', desc: 'Video files CRATE no longer uses: keep or delete them.', keywords: 's3 bucket storage cleanup clean up delete videos files aws cost' },
     system:       { label: 'Logs & security', icon: '🛡️', desc: 'Activity log, errors and security checks.', keywords: 'audit logs errors security' },
+    share:        { label: 'Share a film', icon: '📸', desc: 'Make an Instagram picture and caption for any film.', keywords: 'instagram share social publication poster synopsis post story promote marketing' },
     permissions:  { label: 'Team & permissions', icon: '🔑', desc: 'Who on your team can open which tabs.', keywords: 'permissions team staff access roles' },
 };
 
 export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] = [
     { title: 'Home', accent: 'coral', ids: ['pulse'] },
-    { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels'] },
+    { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels', 'share'] },
     { title: 'Live & festivals', accent: 'violet', ids: ['watchParty', 'pwff', 'partners', 'crateFestHub', 'ticketCodes'] },
     { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email', 'subscribers'] },
     { title: 'Money & legal', accent: 'green', ids: ['money', 'contracts', 'vouchers', 'shop'] },
@@ -52,4 +53,4 @@ export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] 
 export const groupOf = (id: string) => TAB_GROUPS.find(g => g.ids.includes(id));
 
 /** Tabs that draw their own page header. */
-export const SELF_HEADED = new Set(['pulse', 'money', 'contracts', 'actors', 'storage', 'bulkUpload', 'subscribers']);
+export const SELF_HEADED = new Set(['pulse', 'share', 'money', 'contracts', 'actors', 'storage', 'bulkUpload', 'subscribers']);
