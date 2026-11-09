@@ -71,7 +71,7 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
         const first = lineup[0];
         attention.push({ id: can('pwff') ? 'pwff' : 'watchParty', icon: '🎬', text: `Festival lineup: ${lineup.length} film problem${lineup.length === 1 ? '' : 's'}. ${first.text}`, accent: 'coral' });
     }
-    if (spotlightMissing && can('spotlight')) attention.push({ id: 'spotlight', icon: '🌟', text: 'Pick this month’s spotlight film', accent: 'amber' });
+    if (spotlightMissing && can('spotlight')) attention.push({ id: 'spotlight', icon: '🌟', text: 'Pick the next monthly spotlight film', accent: 'amber' });
 
     const quick = ['movies', 'watchParty', 'contracts', 'email', 'money', 'roku'].filter(can).slice(0, 6);
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });

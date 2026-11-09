@@ -1,5 +1,6 @@
 // components/MonthlySpotlightTab.tsx
 import React, { useState, useEffect } from 'react';
+import { nextSendDate, spotlightStatus } from '../api/_lib/spotlightRules';
 import { Movie } from '../types';
 
 interface Props {
@@ -20,18 +21,18 @@ const MonthlySpotlightTab: React.FC<Props> = ({ allMovies }) => {
     const now = new Date();
     const monthName = now.toLocaleString('en-US', { month: 'long' });
 
-    // Find next first Monday
-    const nextFirstMonday = (() => {
-        const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
-        return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    })();
+    // The real next send date, from what is saved (not always "next month").
+    const [doc, setDoc] = useState<any>(null);
+    const [previewTo, setPreviewTo] = useState(() => { try { return localStorage.getItem('crate-spotlight-preview-to') || ''; } catch { return ''; } });
+    const nextFirstMonday = nextSendDate(doc, now).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const state = spotlightStatus(doc, now);
 
     useEffect(() => {
         const password = sessionStorage.getItem('adminPassword') || '';
         fetch('/api/set-monthly-spotlight')
             .then(r => r.json())
             .then(data => {
+                setDoc(data);
                 if (data.movieKey) {
                     setCurrentKey(data.movieKey);
                     setSelectedKey(data.movieKey);
@@ -60,6 +61,7 @@ const MonthlySpotlightTab: React.FC<Props> = ({ allMovies }) => {
             });
             if (res.ok) {
                 setCurrentKey(selectedKey);
+                setDoc((d: any) => ({ ...(d || {}), movieKey: selectedKey, setAt: new Date() }));
                 setMessage(`✅ "${allMovies[selectedKey]?.title}" set as the monthly spotlight.`);
             } else {
                 setMessage('❌ Failed to save. Try again.');
@@ -69,24 +71,22 @@ const MonthlySpotlightTab: React.FC<Props> = ({ allMovies }) => {
         }
     };
 
-    const handleTestSend = async () => {
-        if (!selectedKey) return;
+    // Sends the email to YOUR address only, so you can see what subscribers will get.
+    const handlePreview = async () => {
+        if (!currentKey) return;
         setTesting(true);
         setMessage('');
-        const password = sessionStorage.getItem('adminPassword') || '';
-        // Trigger the cron manually
+        try { localStorage.setItem('crate-spotlight-preview-to', previewTo); } catch { /* none */ }
         try {
-            const res = await fetch('/api/cron-monthly-spotlight', {
-                headers: { Authorization: `Bearer ${process.env.CRON_SECRET || ''}` }
+            const res = await fetch('/api/set-monthly-spotlight', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: sessionStorage.getItem('adminPassword') || '', action: 'preview', to: previewTo, movieKey: currentKey }),
             });
-            const data = await res.json();
-            if (data.success) {
-                setMessage(`✅ Test sent to ${data.sentTo} subscribers!`);
-            } else {
-                setMessage(`ℹ️ ${data.reason || 'Check server logs.'}`);
-            }
+            const data = await res.json().catch(() => ({}));
+            setMessage(res.ok ? `✅ Preview sent to ${data.sentTo}. Check your inbox (and spam).` : `❌ ${data.error || 'Could not send the preview.'}`);
         } catch {
-            setMessage('❌ Test send failed. Check server logs.');
+            setMessage('❌ Could not send the preview. Try again.');
         } finally {
             setTesting(false);
         }
@@ -179,16 +179,28 @@ const MonthlySpotlightTab: React.FC<Props> = ({ allMovies }) => {
                     >
                         {saving ? 'Saving…' : 'Set as Spotlight'}
                     </button>
-                    <button
-                        onClick={handleTestSend}
-                        disabled={!currentKey || testing}
-                        className="px-6 bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-40 text-gray-400 hover:text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all"
-                        title="Force-send the spotlight email now (ignores first-Monday check)"
-                    >
-                        {testing ? 'Sending…' : 'Test Send'}
-                    </button>
                 </div>
-                <p className="text-gray-700 text-[10px]">Test Send forces the email out immediately — use sparingly.</p>
+
+                <div className="border-t border-white/5 pt-4 space-y-2">
+                    <p className="text-gray-400 text-xs">Want to see the email first? Send a preview to yourself. It never goes to subscribers.</p>
+                    <div className="flex gap-3">
+                        <input
+                            type="email"
+                            value={previewTo}
+                            onChange={e => setPreviewTo(e.target.value)}
+                            placeholder="your@email.com"
+                            className="flex-1 min-w-0 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30"
+                        />
+                        <button
+                            onClick={handlePreview}
+                            disabled={!currentKey || testing || !previewTo.trim()}
+                            className="px-6 bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-40 text-gray-300 hover:text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all"
+                        >
+                            {testing ? 'Sending…' : 'Email me a preview'}
+                        </button>
+                    </div>
+                    {!currentKey && <p className="text-gray-600 text-[10px]">Press “Set as Spotlight” first, then you can preview it.</p>}
+                </div>
             </div>
         </div>
     );
