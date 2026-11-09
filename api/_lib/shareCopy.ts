@@ -33,15 +33,51 @@ export function wrapLines(text: string, maxWidth: number, measure: (s: string) =
     return lines;
 }
 
+export type ShareKind = 'premiere' | 'streaming';
+export interface ShareFilm { title: string; director?: string; synopsis?: string; isWatchPartyEnabled?: boolean; watchPartyStartTime?: string; isWatchPartyPaid?: boolean; watchPartyPayWhatYouWant?: boolean; watchPartyPrice?: number }
+
+/** A film with a watch party that has not finished yet is a premiere. */
+export function detectKind(f: ShareFilm, nowMs = Date.now()): ShareKind {
+    const t = f.watchPartyStartTime ? Date.parse(f.watchPartyStartTime) : NaN;
+    return f.isWatchPartyEnabled && Number.isFinite(t) && t > nowMs - 3 * 3600_000 ? 'premiere' : 'streaming';
+}
+
+/** "Friday, November 13 · 7:30 PM ET" (always Eastern time, the festival's clock). */
+export function premiereWhen(iso?: string): string {
+    const t = iso ? Date.parse(iso) : NaN;
+    if (!Number.isFinite(t)) return '';
+    const d = new Date(t);
+    const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+    return `${day} · ${time} ET`;
+}
+
+export function ticketLine(f: ShareFilm): string {
+    if (!f.isWatchPartyPaid) return 'Free to watch';
+    if (f.watchPartyPayWhatYouWant) return 'Pay what you want · from $3';
+    return f.watchPartyPrice ? `Tickets $${Number(f.watchPartyPrice).toFixed(2).replace(/\.00$/, '')}` : '';
+}
+
+/** What the graphic says: badge, a line under the title, and the call to action. */
+export function shareWording(f: ShareFilm, kind: ShareKind) {
+    if (kind === 'premiere') {
+        return { badge: 'LIVE PREMIERE', when: premiereWhen(f.watchPartyStartTime), price: ticketLine(f), cta: 'Watch live in the Premieres section on Crate TV' };
+    }
+    return { badge: 'NOW STREAMING', when: '', price: '', cta: 'Watch free on Crate TV' };
+}
+
 /** Ready-to-paste Instagram caption. */
-export function instagramCaption(f: { title: string; director?: string; synopsis?: string }, link: string): string {
+export function instagramCaption(f: ShareFilm, link: string, kind: ShareKind = detectKind(f)): string {
+    const w = shareWording(f, kind);
+    const head = kind === 'premiere' ? `🎬 PREMIERE — ${f.title}` : `🎬 ${f.title}`;
     return [
-        `🎬 ${f.title}${f.director ? ` — directed by ${f.director}` : ''}`,
+        `${head}${f.director ? ` — directed by ${f.director}` : ''}`,
+        kind === 'premiere' && w.when ? `📅 ${w.when}${w.price ? ` · ${w.price}` : ''}` : '',
         '',
         trimSynopsis(f.synopsis || '', 300),
         '',
-        `Watch it free on Crate TV. Link in bio: ${link}`,
+        kind === 'premiere' ? `${w.cta}. Link in bio: ${link}` : `Watch it free on Crate TV. Link in bio: ${link}`,
         '',
         '#indiefilm #shortfilm #independentfilm #cratetv',
-    ].join('\n');
+    ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').replace(/\n{3,}/g, '\n\n');
 }

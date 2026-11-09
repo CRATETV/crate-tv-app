@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Movie } from '../../types';
 import { Button, Card, EmptyState, Notice, PageHeader, copyText, inputClass } from './ui';
-import { instagramCaption, shareLink, trimSynopsis, wrapLines } from '../../api/_lib/shareCopy';
+import { ShareKind, detectKind, instagramCaption, shareLink, shareWording, trimSynopsis, wrapLines } from '../../api/_lib/shareCopy';
 
 // "Share a film": pick a film, get a ready-to-post Instagram graphic (post or story size) with the
 // poster, title and synopsis, plus a caption with a tagged link. Drawn in the browser — nothing is stored.
@@ -21,75 +21,71 @@ const loadPoster = (url: string) => new Promise<HTMLImageElement | null>(resolve
     img.src = `/api/proxy-image?url=${encodeURIComponent(url)}&w=1000`;
 });
 
-const roundRect = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
-    c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
-    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
-};
+const SERIF = 'Georgia, "Times New Roman", serif';
+const GOLD = '#C9A45C';
 
-function sparkle(c: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number) {
-    c.save(); c.globalAlpha = alpha; c.fillStyle = '#fff'; c.translate(x, y); c.beginPath();
-    for (let i = 0; i < 4; i++) { c.rotate(Math.PI / 2); c.moveTo(0, 0); c.quadraticCurveTo(r * 0.12, r * 0.12, 0, r); c.quadraticCurveTo(-r * 0.12, r * 0.12, 0, 0); }
-    c.fill(); c.restore();
+/** Letter-spaced text (canvas letterSpacing is not in every browser, so space it by hand). */
+function spaced(c: CanvasRenderingContext2D, text: string, cx: number, y: number, gap: number) {
+    const chars = [...text];
+    const widths = chars.map(ch => c.measureText(ch).width);
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (chars.length - 1);
+    let x = cx - total / 2; const prev = c.textAlign; c.textAlign = 'left';
+    chars.forEach((ch, i) => { c.fillText(ch, x, y); x += widths[i] + gap; });
+    c.textAlign = prev;
 }
 
-export function drawShareGraphic(canvas: HTMLCanvasElement, film: Movie, poster: HTMLImageElement | null, format: Format) {
+export function drawShareGraphic(canvas: HTMLCanvasElement, film: Movie, poster: HTMLImageElement | null, format: Format, kind: ShareKind) {
     const { w, h } = SIZES[format];
     canvas.width = w; canvas.height = h;
     const c = canvas.getContext('2d'); if (!c) return;
-    // Background: deep ink with coral / magenta / violet glows.
-    c.fillStyle = '#0B0B0D'; c.fillRect(0, 0, w, h);
-    const glow = (x: number, y: number, r: number, col: string) => {
-        const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(11,11,13,0)');
-        c.fillStyle = g; c.fillRect(0, 0, w, h);
-    };
-    glow(w * 0.15, h * 0.12, w * 0.9, 'rgba(255,59,92,0.55)');
-    glow(w * 0.95, h * 0.45, w * 0.9, 'rgba(123,77,255,0.5)');
-    glow(w * 0.2, h * 0.95, w * 0.9, 'rgba(255,154,60,0.4)');
-    // Sparkles (fixed pattern so the picture is the same every time).
-    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 26; i++) sparkle(c, rnd() * w, rnd() * h, 14 + rnd() * 34, 0.25 + rnd() * 0.6);
+    const wording = shareWording(film, kind);
+    // Matte black with one soft warm light behind the poster and a gold hairline frame.
+    c.fillStyle = '#0A0A0C'; c.fillRect(0, 0, w, h);
+    const g = c.createRadialGradient(w / 2, h * 0.3, 0, w / 2, h * 0.3, w * 0.95);
+    g.addColorStop(0, 'rgba(201,164,92,0.20)'); g.addColorStop(1, 'rgba(10,10,12,0)');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(201,164,92,0.55)'; c.lineWidth = 2; c.strokeRect(36, 36, w - 72, h - 72);
 
-    // Poster card, tilted a little.
-    const pw = format === 'story' ? 640 : 360, ph = Math.round(pw * 1.5);
-    const px = (w - pw) / 2, py = format === 'story' ? 190 : 80;
-    c.save(); c.translate(w / 2, py + ph / 2); c.rotate(-0.035); c.translate(-w / 2, -(py + ph / 2));
-    c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 60; c.shadowOffsetY = 24;
-    roundRect(c, px, py, pw, ph, 28); c.fillStyle = '#1b1b22'; c.fill(); c.shadowColor = 'transparent';
-    c.save(); roundRect(c, px, py, pw, ph, 28); c.clip();
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    // Top label.
+    c.fillStyle = GOLD; c.font = `700 28px ${FONT}`;
+    spaced(c, wording.badge, w / 2, format === 'story' ? 150 : 108, 9);
+
+    // Poster, straight, with a soft shadow.
+    const pw = format === 'story' ? 600 : 340, ph = Math.round(pw * 1.5);
+    const px = (w - pw) / 2, py = format === 'story' ? 200 : 135;
+    c.save(); c.shadowColor = 'rgba(0,0,0,0.7)'; c.shadowBlur = 50; c.shadowOffsetY = 20;
+    c.fillStyle = '#17171c'; c.fillRect(px, py, pw, ph); c.restore();
     if (poster) {
-        const s = Math.max(pw / poster.width, ph / poster.height);
-        c.drawImage(poster, px + (pw - poster.width * s) / 2, py + (ph - poster.height * s) / 2, poster.width * s, poster.height * s);
+        c.save(); c.beginPath(); c.rect(px, py, pw, ph); c.clip();
+        const sc = Math.max(pw / poster.width, ph / poster.height);
+        c.drawImage(poster, px + (pw - poster.width * sc) / 2, py + (ph - poster.height * sc) / 2, poster.width * sc, poster.height * sc);
+        c.restore();
     }
-    c.restore();
-    roundRect(c, px, py, pw, ph, 28); c.lineWidth = 4; c.strokeStyle = 'rgba(255,255,255,0.85)'; c.stroke();
-    c.restore();
+    c.strokeStyle = 'rgba(255,255,255,0.18)'; c.lineWidth = 2; c.strokeRect(px, py, pw, ph);
 
-    // Badge.
-    const badge = 'NOW STREAMING FREE';
-    c.font = `800 30px ${FONT}`;
-    const bw = c.measureText(badge).width + 56, bx = (w - bw) / 2, by = py + ph + 48;
-    roundRect(c, bx, by, bw, 62, 31); c.fillStyle = '#FF3B5C'; c.fill();
-    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(badge, w / 2, by + 33);
+    // Title (serif), director, gold rule.
+    let y = py + ph + (format === 'story' ? 110 : 80);
+    c.fillStyle = '#fff'; c.font = `700 ${format === 'story' ? 76 : 64}px ${SERIF}`;
+    const size = format === 'story' ? 76 : 64;
+    const tl = wrapLines(film.title || '', w - 200, t => c.measureText(t).width, 2);
+    tl.forEach(l => { c.fillText(l, w / 2, y); y += size * 1.08; });
+    y += 4;
+    if (film.director) { c.fillStyle = 'rgba(255,255,255,0.72)'; c.font = `500 28px ${FONT}`; spaced(c, `DIRECTED BY ${film.director.toUpperCase()}`, w / 2, y, 3); y += 34; }
+    if (wording.when) { y += 14; c.fillStyle = GOLD; c.font = `700 36px ${FONT}`; c.fillText(wording.when, w / 2, y); y += 40; }
+    if (wording.price) { c.fillStyle = 'rgba(255,255,255,0.8)'; c.font = `500 28px ${FONT}`; c.fillText(wording.price, w / 2, y); y += 30; }
+    y += 18; c.fillStyle = GOLD; c.fillRect(w / 2 - 40, y, 80, 2); y += 46;
 
-    // Title, director, synopsis.
-    let y = by + 62 + 40;
-    c.fillStyle = '#fff'; c.textBaseline = 'top';
-    const titleSize = format === 'story' ? 84 : 72;
-    c.font = `900 ${titleSize}px ${FONT}`;
-    const tl = wrapLines((film.title || '').toUpperCase(), w - 160, s => c.measureText(s).width, 2);
-    tl.forEach(l => { c.fillText(l, w / 2, y); y += titleSize * 1.05; });
-    y += 10;
-    if (film.director) { c.font = `600 34px ${FONT}`; c.fillStyle = '#FFC53D'; c.fillText(`Directed by ${film.director}`, w / 2, y); y += 56; }
-    c.font = `400 34px ${FONT}`; c.fillStyle = 'rgba(255,255,255,0.88)';
-    const room = Math.max(2, Math.floor((h - 150 - y) / 46));
-    wrapLines(trimSynopsis(film.synopsis || '', 260), w - 200, s => c.measureText(s).width, Math.min(room, format === 'story' ? 7 : 3))
-        .forEach(l => { c.fillText(l, w / 2, y); y += 46; });
+    // Synopsis: as many lines as fit above the footer.
+    c.fillStyle = 'rgba(255,255,255,0.84)'; c.font = `400 31px ${SERIF}`;
+    const room = Math.floor((h - 190 - y) / 44);
+    if (room >= 2) wrapLines(trimSynopsis(film.synopsis || '', 230), w - 220, t => c.measureText(t).width, Math.min(room, format === 'story' ? 6 : 3))
+        .forEach(l => { c.fillText(l, w / 2, y); y += 44; });
 
-    // Footer.
-    c.font = `900 40px ${FONT}`; c.fillStyle = '#fff'; c.textBaseline = 'alphabetic';
-    c.fillText('CRATE TV', w / 2, h - 72);
-    c.font = `500 26px ${FONT}`; c.fillStyle = 'rgba(255,255,255,0.7)';
-    c.fillText('Link in bio · cratetv.net', w / 2, h - 32);
+    // Footer: wordmark and where to watch.
+    c.fillStyle = '#fff'; c.font = `800 34px ${FONT}`; spaced(c, 'CRATE TV', w / 2, h - 118, 10);
+    c.fillStyle = GOLD; c.font = `600 24px ${FONT}`; c.fillText(wording.cta, w / 2, h - 84);
+    c.fillStyle = 'rgba(255,255,255,0.55)'; c.font = `500 22px ${FONT}`; c.fillText('cratetv.net · link in bio', w / 2, h - 52);
 }
 
 const ShareFilmTab: React.FC<{ movies: Record<string, Movie> }> = ({ movies }) => {
@@ -97,19 +93,21 @@ const ShareFilmTab: React.FC<{ movies: Record<string, Movie> }> = ({ movies }) =
     const [q, setQ] = useState('');
     const [key, setKey] = useState('');
     const [format, setFormat] = useState<Format>('post');
+    const [kindPick, setKindPick] = useState<ShareKind | 'auto'>('auto');
     const [note, setNote] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const film = films.find(f => f.key === key) || null;
     const shown = films.filter(f => f.title.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 40);
+    const kind: ShareKind = film ? (kindPick === 'auto' ? detectKind(film) : kindPick) : 'streaming';
     const link = film ? shareLink(window.location.origin, film.key) : '';
-    const caption = film ? instagramCaption(film, link) : '';
+    const caption = film ? instagramCaption(film, link, kind) : '';
 
     useEffect(() => {
         if (!film) return;
         let cancelled = false;
-        loadPoster(film.poster).then(img => { if (!cancelled && canvasRef.current) drawShareGraphic(canvasRef.current, film, img, format); });
+        loadPoster(film.poster).then(img => { if (!cancelled && canvasRef.current) drawShareGraphic(canvasRef.current, film, img, format, kind); });
         return () => { cancelled = true; };
-    }, [film, format]);
+    }, [film, format, kind]);
 
     const blobOf = () => new Promise<Blob | null>(res => canvasRef.current ? canvasRef.current.toBlob(b => res(b), 'image/png') : res(null));
     const fileName = () => `${(film?.title || 'film').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${format}.png`;
@@ -148,6 +146,12 @@ const ShareFilmTab: React.FC<{ movies: Record<string, Movie> }> = ({ movies }) =
                     <div className="grid gap-6 md:grid-cols-[minmax(0,360px)_1fr] items-start">
                         <canvas ref={canvasRef} className="w-full rounded-2xl border border-white/10" style={{ aspectRatio: `${SIZES[format].w} / ${SIZES[format].h}` }} />
                         <div className="space-y-4 min-w-0">
+                            <div className="flex gap-2 flex-wrap items-center">
+                                {([['auto', 'Auto'], ['premiere', 'Premiere'], ['streaming', 'Now streaming']] as const).map(([k, label]) => (
+                                    <button key={k} onClick={() => setKindPick(k)} className={`rounded-full px-4 py-2 text-sm font-bold border ${kindPick === k ? 'bg-white text-black border-white' : 'bg-[#131318] text-[#A1A1AD] border-white/[0.07]'}`}>{label}</button>
+                                ))}
+                                <span className="text-xs text-[#8A8A96]">Showing: {kind === 'premiere' ? 'Premiere' : 'Now streaming'}</span>
+                            </div>
                             <div className="flex gap-2 flex-wrap">
                                 {(Object.keys(SIZES) as Format[]).map(f => (
                                     <button key={f} onClick={() => setFormat(f)} className={`rounded-full px-4 py-2 text-sm font-bold border ${format === f ? 'bg-white text-black border-white' : 'bg-[#131318] text-[#A1A1AD] border-white/[0.07]'}`}>{SIZES[f].label}</button>
