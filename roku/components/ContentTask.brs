@@ -826,6 +826,11 @@ Function CreateMovieNode(data as Object) as Object
     movieId = movieId.Trim()
     node.id = movieId
     node.movieKey = movieId
+
+    ' Where this viewer stopped on their phone / the website (seconds), if they started it there.
+    ' The player picks it up when there is nothing further along saved on this Roku.
+    node.AddField("resumePosition", "integer", false)
+    If data.resumePosition <> Invalid Then node.resumePosition = Int(data.resumePosition)
     
     node.AddField("posterUrl", "string", false)
     

@@ -162,6 +162,10 @@ Sub OnContentChange()
     ' Get last watch position (only if not live sync or watch party)
     If Not m.isLiveSync
         lastPosition = GetLastWatchPosition(m.contentId)
+        ' Started on the phone / website? Pick up there if that is further along than this Roku's own spot.
+        If content.HasField("resumePosition")
+            If content.resumePosition > lastPosition Then lastPosition = content.resumePosition
+        End If
         If lastPosition > 0
             m.resumePosition = lastPosition
         Else

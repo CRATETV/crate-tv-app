@@ -1,3 +1,4 @@
+import { annotateResume } from './_lib/rokuResume.js';
 import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_lib/filmAvailability.js';
@@ -892,6 +893,19 @@ export async function GET(request: Request) {
         } catch (e) {
             console.warn('[roku-feed] streak summary skipped:', e);
         }
+    }
+
+    // Phone/web -> Roku: tell the channel where this viewer stopped in each film they started,
+    // so the Roku can pick up there (see roku/components/CrateVideoPlayer.brs).
+    if (deviceIdParam) {
+        try {
+            const db = getAdminDb();
+            const linked = db ? await loadLinked(db, deviceIdParam) : null;
+            if (linked?.userData?.playbackProgress) {
+                const rows: any[] = [...heroItems, ...categories.flatMap(c => c.children || []), ...publicSquare.flatMap(c => c.children || []), ...liveNow];
+                annotateResume(rows, linked.userData.playbackProgress, linked.userData.watchedMovies || []);
+            }
+        } catch (e) { console.warn('[roku-feed] resume positions skipped:', e); }
     }
 
     const response: RokuFeed = {
