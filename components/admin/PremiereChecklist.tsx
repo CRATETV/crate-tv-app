@@ -37,7 +37,7 @@ export const PremiereSummary: React.FC<{ movie: any; title: string; actions?: Re
         <div className="rounded-2xl bg-[#131318] border border-white/[0.07] px-4 py-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span aria-hidden className="text-lg">🍿</span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[11rem] flex-1">
                     <p className="text-sm font-black text-white truncate">
                         <span className="text-[#8A8A96] font-bold uppercase text-[10px] tracking-widest mr-2">Next premiere</span>{title}
                     </p>
