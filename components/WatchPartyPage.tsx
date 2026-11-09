@@ -2043,12 +2043,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
         });
-        const heartbeat = setInterval(() => {
-            if (document.visibilityState === 'hidden') return;
-            viewerRef.set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
-        }, LOBBY_HEARTBEAT_MS);
-        return () => { clearInterval(heartbeat); viewerRef.delete(); };
-    }, [shouldShowLobby, hasAccess, user, movieKey]);
+        const beat = () => { viewerRef.set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {}); };
+        const heartbeat = setInterval(beat, LOBBY_HEARTBEAT_MS);
+        const onVisible = () => { if (document.visibilityState === 'visible') beat(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearInterval(heartbeat); document.removeEventListener('visibilitychange', onVisible); viewerRef.delete(); };
+        // Primitives, so a rebuilt user object doesn't delete and re-add the viewer.
+    }, [shouldShowLobby, hasAccess, user?.uid, user?.name, user?.avatar, movieKey]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────
     const isPaidContent = !!(movie?.isWatchPartyPaid && hasAccess);

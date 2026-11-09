@@ -5,7 +5,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
 import { activePin } from '../api/_lib/controlRoom';
-import { isLobbyViewerActive, LOBBY_HEARTBEAT_MS } from '../api/_lib/lobbyPresence';
+import { isLobbyViewerActive, clockSkewMs, LOBBY_HEARTBEAT_MS } from '../api/_lib/lobbyPresence';
 import WatchPartyPoll from './WatchPartyPoll';
 import { setHelpDock } from './helpDock';
 import type { PartyPoll } from '../api/_lib/watchPartyPoll';
@@ -150,11 +150,13 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             lastSeen: firebase.firestore.FieldValue.serverTimestamp()
         });
         // Check in every 30s so a locked phone or dropped signal stops counting
-        // after ~90s instead of staying in the lobby forever (api/_lib/lobbyPresence.ts).
-        const heartbeat = setInterval(() => {
-            if (document.visibilityState === 'hidden') return;
-            viewerRef.set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
-        }, LOBBY_HEARTBEAT_MS);
+        // after a few minutes instead of staying in the lobby forever
+        // (api/_lib/lobbyPresence.ts). Keeps going while the tab is in the
+        // background, and checks in again the moment they come back.
+        const beat = () => { viewerRef.set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {}); };
+        const heartbeat = setInterval(beat, LOBBY_HEARTBEAT_MS);
+        const onVisible = () => { if (document.visibilityState === 'visible') beat(); };
+        document.addEventListener('visibilitychange', onVisible);
 
         // Permanently log this viewer to festival_viewers for reporting
         // This is separate from lobby_viewers — it persists after the party ends
@@ -171,9 +173,12 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         // Remove presence on disconnect (but log persists)
         return () => {
             clearInterval(heartbeat);
+            document.removeEventListener('visibilitychange', onVisible);
             viewerRef.delete();
         };
-    }, [user, movie.key]);
+        // Primitives, not the whole user object: if the object is rebuilt (a sign-in
+        // token refresh, say) this must NOT run its clean-up, which deletes the viewer.
+    }, [user?.uid, user?.name, user?.avatar, user?.email, movie.key]);
 
     // Listen to lobby viewers
     useEffect(() => {
@@ -186,9 +191,15 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             .limit(50)
             .onSnapshot(snapshot => {
                 const v: LobbyViewer[] = [];
+                // Use the server's clock, worked out from our own check-in, so a
+                // phone with a fast clock doesn't think everyone has left.
+                const nowMs = Date.now();
+                const own = user?.uid ? snapshot.docs.find(d => d.id === user.uid) : undefined;
+                const skew = own && !own.metadata.hasPendingWrites ? clockSkewMs(own.data().lastSeen, nowMs) : 0;
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (!isLobbyViewerActive(data, Date.now())) return; // ghost: no check-in for 90s
+                    // ghost: no check-in for 3 minutes. You always count yourself.
+                    if (doc.id !== user?.uid && !isLobbyViewerActive(data, nowMs + skew)) return;
                     v.push({
                         id: doc.id,
                         name: data.name,
@@ -200,7 +211,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
             });
 
         return () => unsub();
-    }, [movie.key]);
+    }, [movie.key, user?.uid]);
 
     // Listen for director welcome message
     useEffect(() => {
