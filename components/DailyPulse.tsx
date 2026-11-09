@@ -116,7 +116,8 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <PulseMetric label="Nodes Online" value={liveNodes} color="text-red-500" live={true} sub="NOW" />
                 <PulseMetric label="Global Reach" value={totalViews} sub="Views" trend="+196%" />
-                <PulseMetric label="Roku Reach" value={analytics?.rokuEngagement?.totalRokuViews || 0} color="text-purple-500" sub="Streams" />
+                {/* The Roku channel does not report views back yet (see roku/components/ContentTask.brs), so "streams" would always read 0. Linked TVs is the number we can stand behind. */}
+                <PulseMetric label="Roku TVs" value={analytics?.rokuEngagement?.totalDevices || 0} color="text-purple-500" sub="Linked" />
                 <PulseMetric label="User Base" value={totalUsers} sub="Accounts" />
                 <PulseMetric label="Pipeline" value={pendingPipeline.length} color="text-amber-500" sub="Pending" />
             </div>
