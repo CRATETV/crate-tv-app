@@ -750,7 +750,7 @@ const AdminPage: React.FC = () => {
                             <EarningsPayoutsTab onOpenTab={navigateTo} />
                             <section className="rounded-3xl border border-white/[0.07] bg-[#131318]">
                                 <button onClick={() => setShowMoneyTools(v => !v)} className="w-full flex items-center justify-between px-6 py-5 text-left">
-                                    <span><span className="block text-white font-bold">More tools</span><span className="block text-sm text-[#8A8A96]">Payout requests with decline option, payout keys, and festival revenue flow.</span></span>
+                                    <span><span className="block text-white font-bold">More tools</span><span className="block text-sm text-[#8A8A96]">Payout keys for filmmakers, the older payout list, and where festival revenue came from.</span></span>
                                     <span className="text-[#A1A1AD]">{showMoneyTools ? '▾' : '▸'}</span>
                                 </button>
                                 {showMoneyTools && (
