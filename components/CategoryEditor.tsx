@@ -12,7 +12,7 @@ interface MovieSelectorModalProps {
   title?: string;
 }
 
-const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, excludedKeys = [], onSave, onClose, title = "Select Films" }) => {
+export const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, excludedKeys = [], onSave, onClose, title = "Select Films" }) => {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set(initialSelectedKeys));
   const [searchTerm, setSearchTerm] = useState('');
 

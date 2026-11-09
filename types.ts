@@ -510,6 +510,8 @@ export interface SiteSettings {
   holidayName?: string;
   holidayTagline?: string;
   holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
+  /** Dated seasonal collections (see api/_lib/seasons.ts). */
+  seasons?: import('./api/_lib/seasons').Season[];
   maintenanceMode?: boolean;
   businessEmail?: string;
   technicalEmail?: string;
