@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Movie } from '../../types';
 import { Button, Card, Notice, PageHeader, Pill } from './ui';
+import FilmIntakeList from './FilmIntakeList';
 import { guessFilm } from '../../api/_lib/filmFileMatch';
 import { uploadAndConvert, videoApi, type JobStatus } from '../../services/videoUpload';
 
@@ -158,6 +159,8 @@ const BulkFilmUploadTab: React.FC<{ movies: Record<string, Movie>; onRefresh: ()
         <div className="space-y-6">
             <PageHeader title="Bulk upload films" accent="orange"
                 subtitle="Upload many films at once, like a whole festival. Each one is converted for streaming and its video fills in by itself." />
+
+            <FilmIntakeList movies={movies} />
 
             <Card>
                 <ol className="text-sm text-[#A1A1AD] space-y-1.5 list-decimal pl-5">
