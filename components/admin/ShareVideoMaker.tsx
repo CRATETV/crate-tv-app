@@ -77,6 +77,18 @@ const ShareVideoMaker: React.FC<{ film: Movie; kind: ShareKind }> = ({ film, kin
     useEffect(() => () => { if (done) URL.revokeObjectURL(done.url); }, [done]);
     useEffect(() => { setDone(null); setMsg(null); setSource(isPlainVideoUrl(film.trailer) ? 'trailer' : 'film'); }, [film.key, kind]);
 
+    const [dl, setDl] = useState<'idle' | 'busy'>('idle');
+    const downloadFilm = async () => {
+        setMsg(null); setDl('busy');
+        try {
+            const r = await adminPost<{ url: string }>('/api/admin-clip-source', { movieKey: film.key, download: true });
+            window.location.href = r.url; // the link tells the browser to save the file
+            setMsg({ tone: 'good', text: 'Your download is starting. A full film is a big file, so give it a minute.' });
+        } catch (e) {
+            setMsg({ tone: 'bad', text: (e as Error).message || "Couldn't get the film's file." });
+        } finally { setDl('idle'); }
+    };
+
     const make = async () => {
         setMsg(null); setDone(null);
         const rec = pickRecorderType(t => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t));
@@ -206,6 +218,10 @@ const ShareVideoMaker: React.FC<{ film: Movie; kind: ShareKind }> = ({ film, kin
                     <button key={n} disabled={busy} onClick={() => setLen(n)} className={chip(len === n)}>{n} sec</button>
                 ))}
                 <Button variant="primary" accent="magenta" onClick={make} disabled={busy}>{busy ? `Recording… ${len}s, please wait` : '🎬 Make video'}</Button>
+            </div>
+            <div className="flex gap-2 flex-wrap items-center mb-3 pt-3 border-t border-white/[0.07]">
+                <Button onClick={downloadFilm} disabled={busy || dl === 'busy'}>{dl === 'busy' ? 'Getting the file…' : '⬇ Download the full film'}</Button>
+                <span className="text-xs text-[#8A8A96]">Saves the whole film to your computer so you can cut a trailer in your editor.</span>
             </div>
             {msg && <p className={`text-sm mb-3 ${msg.tone === 'good' ? 'text-emerald-300' : 'text-amber-300'}`}>{msg.text}</p>}
             <canvas ref={canvasRef} className={`rounded-xl border border-white/10 ${busy ? 'w-48' : 'hidden'}`} style={{ aspectRatio: `${W} / ${H}` }} />
