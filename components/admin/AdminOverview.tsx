@@ -127,11 +127,10 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
             {isMaster && (
                 <section>
                     <SectionTitle title="Money" hint="Live from Square. Full detail in Earnings & payouts." right={<button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('money')}>Open →</button>} />
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <StatTile label="This month" icon="📅" accent="sky" value={snapshot ? money(snapshot.month) : snapError ? '—' : '…'} />
                         <StatTile label="CRATE kept this month" icon="🏠" accent="coral" value={snapshot ? money(snapshot.monthCrate) : snapError ? '—' : '…'} />
                         <StatTile label="Owed to filmmakers" icon="⏳" accent="amber" value={snapshot ? money(snapshot.owed) : snapError ? '—' : '…'} onClick={() => onNavigate('money')} />
-                        <StatTile label="All-time revenue" icon="💵" accent="green" value={snapshot ? money(snapshot.gross) : snapError ? '—' : '…'} />
                     </div>
                 </section>
             )}

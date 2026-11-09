@@ -347,6 +347,21 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
     }, []);
     useEffect(() => { load(); }, [load]);
 
+    const declineRequest = async (requestId: string, name: string, amount: number) => {
+        const reason = window.prompt(`Decline ${name}'s request for ${money(amount)}?\n\nOptional: add a short note they'll see in their dashboard.`, '');
+        if (reason === null) return; // cancelled
+        try {
+            const res = await fetch('/api/complete-payout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId, password: sessionStorage.getItem('adminPassword'), action: 'decline', declineReason: reason }),
+            });
+            if (!res.ok) throw new Error('Could not decline that request.');
+            setToast(`Declined ${name}'s request.`); setTimeout(() => setToast(''), 4000); load();
+        } catch (e) {
+            setToast(e instanceof Error ? e.message : 'Could not decline that request.'); setTimeout(() => setToast(''), 4000);
+        }
+    };
     const done = (msg: string) => { setPaying(null); setEditingPayee(null); setEditingFilm(null); setToast(msg); setTimeout(() => setToast(''), 4000); load(); };
 
     const owed = useMemo(() => (data?.payees || []).filter(p => p.balance > 0), [data]);
@@ -372,15 +387,14 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
             {toast && <Notice tone="success">{toast}</Notice>}
             {!data.squareConnected && <Notice tone="warn">Square isn't connected in this environment, so sales show as $0. On the live site this fills in automatically.</Notice>}
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatTile label="Total revenue" icon="💵" accent="sky" value={money(t.gross)} hint={`Since May 2025 · Square fees ${money(t.fees)}`} />
-                <StatTile label="Earned by filmmakers" icon="🎬" accent="green" value={money(t.filmmakerShare + t.shopFilmmaker)} hint={`${money(t.paidOutAllTime)} paid out so far`} />
-                <StatTile label="CRATE keeps" icon="🏠" accent="coral" value={money(t.crateKeeps)} hint="Your share of films + passes & subscriptions" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <StatTile label="You owe right now" icon="⏳" accent="amber" value={money(t.owedNow)} hint={`${owed.length} ${owed.length === 1 ? 'person' : 'people'}${data.pendingRequests.length ? ` · ${data.pendingRequests.length} asked to be paid` : ''}`} />
+                <StatTile label="CRATE keeps" icon="🏠" accent="coral" value={money(t.crateKeeps)} hint="Your share of films + passes & subscriptions" />
+                <StatTile label="Earned by filmmakers" icon="🎬" accent="green" value={money(t.filmmakerShare + t.shopFilmmaker)} hint={`${money(t.paidOutAllTime)} paid out so far`} />
             </div>
 
             <Card>
-                <SectionTitle title="Where the money went" hint="All revenue since May 2025, by who it belongs to." />
+                <SectionTitle title="Where the money went" hint={`Everything that came in since May 2025 (${money(t.gross)} in all), split by who it belongs to. Most of it is not CRATE's money.`} />
                 <SplitBar height={22} parts={[
                     { label: 'Filmmakers', value: t.filmmakerShare, accent: 'green' },
                     { label: 'CRATE (film share)', value: t.crateFromFilms, accent: 'coral' },
@@ -428,6 +442,7 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                                     </div>
                                     <div className="flex gap-2 mt-4">
                                         <Button variant="primary" accent="green" className="flex-1" onClick={() => setPaying({ payee: p, request: req })}>Pay {money(req?.amount || p.balance)}</Button>
+                                        {req && <Button onClick={() => declineRequest(req.id, p.name, req.amount)}>Decline</Button>}
                                         <Button onClick={() => setEditingPayee(p)}>Details</Button>
                                     </div>
                                 </Card>
