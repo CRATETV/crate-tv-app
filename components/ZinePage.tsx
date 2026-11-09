@@ -9,6 +9,7 @@ import { EditorialStory, Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import UnpackCountdown from './UnpackCountdown';
 import ZineArticleBody, { zineImg, SERIF } from './zine/ZineArticleBody';
+import CardImage from './zine/CardImage';
 import { isPublishedStory, readingMinutes, typeLabel } from '../api/_lib/zineRules';
 
 // THE UNPACK: Crate TV's magazine. Light "paper" look, serif headlines,
@@ -32,8 +33,8 @@ const Byline: React.FC<{ story: EditorialStory; light?: boolean }> = ({ story, l
 
 const CoverStory: React.FC<{ story: EditorialStory; onOpen: () => void }> = ({ story, onOpen }) => (
     <article onClick={onOpen} className="group cursor-pointer grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
-        <div className="lg:col-span-7 overflow-hidden bg-zinc-200 aspect-[16/10] lg:aspect-[16/9]">
-            <img src={zineImg(story.heroImage, 1400)} alt="" className="w-full h-full object-cover transition-transform duration-[1400ms] group-hover:scale-105" />
+        <div className="lg:col-span-7 relative overflow-hidden bg-zinc-200 aspect-[16/10] lg:aspect-[16/9]">
+            <CardImage src={story.heroImage} width={1400} zoom="duration-[1400ms] group-hover:scale-105" />
         </div>
         <div className="lg:col-span-5 space-y-3 md:space-y-4">
             <div className="flex items-center gap-3">
@@ -50,8 +51,8 @@ const CoverStory: React.FC<{ story: EditorialStory; onOpen: () => void }> = ({ s
 
 const StoryCard: React.FC<{ story: EditorialStory; onOpen: () => void }> = ({ story, onOpen }) => (
     <article onClick={onOpen} className="group cursor-pointer flex flex-col gap-3">
-        <div className="overflow-hidden bg-zinc-200 aspect-[16/10]">
-            <img src={zineImg(story.heroImage, 800)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+        <div className="relative overflow-hidden bg-zinc-200 aspect-[16/10]">
+            <CardImage src={story.heroImage} width={800} lazy zoom="duration-700 group-hover:scale-105" />
         </div>
         <div className="space-y-1.5">
             <Kicker story={story} />
@@ -74,8 +75,8 @@ const Shelf: React.FC<{ title: string; blurb: string; stories: EditorialStory[];
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8">
                     {stories.slice(0, 3).map(s => (
                         <article key={s.id} onClick={() => onOpen(s.id)} className="group cursor-pointer flex flex-col gap-3">
-                            <div className="overflow-hidden aspect-[16/10] bg-zinc-800">
-                                <img src={zineImg(s.heroImage, 800)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <div className="relative overflow-hidden aspect-[16/10] bg-zinc-800">
+                                <CardImage src={s.heroImage} width={800} lazy zoom="duration-700 group-hover:scale-105" />
                             </div>
                             <h3 style={{ fontFamily: SERIF }} className={`text-xl font-bold leading-tight ${dark ? 'text-white group-hover:text-red-300' : 'text-zinc-900 group-hover:text-red-700'} transition-colors`}>{s.title}</h3>
                             {s.subtitle && <p className={`text-[15px] line-clamp-2 ${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{s.subtitle}</p>}
@@ -293,7 +294,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                         {activeStory.heroImage && (
                             <figure className="max-w-[1200px] mx-auto px-0 md:px-6 mt-10">
-                                <img src={zineImg(activeStory.heroImage, 1800)} alt="" className="w-full h-auto" />
+                                {/* Tall posters used to fill the whole width and push the story off the screen; now the picture never takes more than about half the height. */}
+                                <img src={zineImg(activeStory.heroImage, 1800)} alt="" className="block mx-auto w-auto h-auto max-w-full max-h-[52vh] object-contain" />
                             </figure>
                         )}
 
