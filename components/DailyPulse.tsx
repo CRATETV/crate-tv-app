@@ -34,7 +34,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     const { viewCounts: liveViewCounts } = useFestival();
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
     const [recentAudits, setRecentAudits] = useState<AuditEntry[]>([]);
-    const [aiStatus, setAiStatus] = useState<'nominal' | 'throttled'>('nominal');
     const [catalogSearch, setCatalogSearch] = useState('');
     const [showAllCatalog, setShowAllCatalog] = useState(false);
 
@@ -67,19 +66,11 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                 setRecentAudits(audits);
             });
 
-        const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
-        const unsubHealth = db.collection('system_health')
-            .where('type', '==', 'AI_QUOTA_BREACH')
-            .where('timestamp', '>=', fifteenMinsAgo)
-            .onSnapshot(snap => {
-                setAiStatus(snap.empty ? 'nominal' : 'throttled');
-            });
 
         return () => {
             unsubscribePresence();
             clearInterval(refreshInterval);
             unsubAudit();
-            unsubHealth();
         };
     }, []);
 
@@ -229,21 +220,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                 Top {auditView.shown.length - auditView.broken} by views{auditView.broken ? ` + ${auditView.broken} with a missing video` : ''}. Search to find any film.
                             </p>
                         )}
-                    </div>
-
-                    <div className={`bg-[#0f0f0f] border ${aiStatus === 'throttled' ? 'border-red-600/50 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-white/5'} p-8 rounded-[2.5rem] relative overflow-hidden transition-all duration-700`}>
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${aiStatus === 'nominal' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-600 animate-pulse shadow-[0_0_10px_#ef4444]'}`}></div>
-                                <h3 className="text-xl font-black uppercase tracking-tighter text-white">Intelligence Core Health</h3>
-                            </div>
-                        </div>
-                        <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status Report</p>
-                            <p className={`text-lg font-bold ${aiStatus === 'nominal' ? 'text-white' : 'text-red-500'}`}>
-                                {aiStatus === 'nominal' ? 'NOMINAL // READY' : 'THROTTLED // LIMIT_BREACH'}
-                            </p>
-                        </div>
                     </div>
                 </div>
 
