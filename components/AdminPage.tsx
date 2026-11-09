@@ -12,6 +12,7 @@ import StudioMail from './StudioMail';
 import CommunicationsTerminal from './CommunicationsTerminal';
 import SaveStatusToast from './SaveStatusToast';
 import LaurelManager from './LaurelManager';
+import ThankYouEmailCard from './admin/ThankYouEmailCard';
 import ShareFilmTab from './admin/ShareFilmTab';
 import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
@@ -715,6 +716,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'watchParty' && (
+                        <div className="space-y-16">
                         <WatchPartyManager 
                             allMovies={movies} 
                             festivalData={festivalData}
@@ -723,6 +725,8 @@ const AdminPage: React.FC = () => {
                             onSaveFestival={async (d) => handleSaveData('festival', { config: festivalConfig, data: d })}
                             onSaveCrateFest={async (c) => handleSaveData('settings', { crateFestConfig: c })}
                         />
+                        <ThankYouEmailCard />
+                        </div>
                     )}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} categories={categories} festivalData={festivalData} initialFilter={filmsFilter} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'submissions' && (
