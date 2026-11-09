@@ -472,6 +472,9 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
                     <div className="w-16 h-0.5 bg-red-600 mb-8"></div>
 
+                    {/* Poll sits at the top so it is the first thing people see. */}
+                    {poll && <div className="mb-10 w-full"><WatchPartyPoll poll={poll} movieKey={movie.key} signedIn={!!user?.uid} /></div>}
+
                     {/* Countdown */}
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4">Screening Begins In</p>
                     <div className="flex items-center gap-3 mb-12">
@@ -494,8 +497,6 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             <p className="text-gray-700 text-[10px] mt-2">— {movie.director}</p>
                         </div>
                     )}
-
-                    {poll && <div className="mb-10 w-full"><WatchPartyPoll poll={poll} movieKey={movie.key} signedIn={!!user?.uid} /></div>}
 
                     {/* Admission prompt */}
                     {!hasAccess && onBuyTicket && (
@@ -632,6 +633,9 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         )}
                     </div>
 
+                    {/* Poll sits near the top so it is the first thing people see. */}
+                    {poll && <WatchPartyPoll poll={poll} movieKey={movie.key} signedIn={!!user?.uid} />}
+
                     {/* Announcement pinned from the Control Room. */}
                     {(() => {
                         const pin = activePin(partyState?.pinnedMessage, Date.now());
@@ -691,8 +695,6 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             <p className="text-gray-600 text-xs mt-2">— {movie.director}</p>
                         </div>
                     )}
-
-                    {poll && <WatchPartyPoll poll={poll} movieKey={movie.key} signedIn={!!user?.uid} />}
 
                     {/* Ticket/RSVP prompt for unadmitted users.
                         FIX (user report): this used to always show "Get Ticket —

@@ -17,6 +17,38 @@ const StatCard: React.FC<{ title: string; value: string | number; color?: string
     </div>
 );
 
+// One tap gives the filmmaker the link to their film's page on Crate, with the
+// poster and title showing in the link preview. They send this to people.
+const CopyFilmLinkButton: React.FC<{ movieKey: string; title: string }> = ({ movieKey, title }) => {
+    const [copied, setCopied] = useState(false);
+    const url = `${window.location.origin}/movie/${movieKey}`;
+    const onClick = async () => {
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: `${title} on Crate TV`, text: `Watch "${title}" on Crate TV`, url });
+                return;
+            }
+        } catch (e: any) {
+            if (e?.name === 'AbortError') return; // they closed the share sheet
+        }
+        try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+        } catch {
+            window.prompt('Copy this link:', url);
+        }
+    };
+    return (
+        <button
+            onClick={onClick}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+        >
+            {copied ? 'Link copied!' : 'Share my film link'}
+        </button>
+    );
+};
+
 const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Movie }> = ({ film, movie }) => {
     // Extract sentiment highlights (peaks in engagement)
     const sentimentHighlights = useMemo(() => {
@@ -60,6 +92,7 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                             <div className="flex items-center gap-3">
                                 <p className="text-[9px] text-red-500/60 font-black uppercase tracking-widest">{movie.durationInMinutes} MINS</p>
                             </div>
+                            <div className="pt-2"><CopyFilmLinkButton movieKey={film.key} title={film.title} /></div>
                         </div>
                         <div className="flex gap-2">
                              <div className="bg-red-600/10 border border-red-600/20 px-3 py-1 rounded-full flex items-center gap-2">
