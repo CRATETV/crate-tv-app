@@ -75,19 +75,51 @@ export const SectionTitle: React.FC<{ title: string; hint?: string; right?: Reac
     </div>
 );
 
-export const StatTile: React.FC<{ label: string; value: React.ReactNode; hint?: React.ReactNode; accent?: AccentName; icon?: React.ReactNode; onClick?: () => void }> = ({ label, value, hint, accent = 'coral', icon, onClick }) => {
+// A section that folds away behind an arrow. The title and a one-line summary stay visible when it is closed,
+// so nothing is hidden, just tucked. Open/closed is remembered on this computer. Closed contents are not rendered
+// at all, so a heavy live panel inside costs nothing until it is opened.
+export const Disclosure: React.FC<{
+    id: string; title: string; summary?: React.ReactNode; accent?: AccentName; defaultOpen?: boolean; right?: React.ReactNode; children: React.ReactNode;
+}> = ({ id, title, summary, accent, defaultOpen = false, right, children }) => {
+    const key = `crate-dash-open:${id}`;
+    const [open, setOpen] = React.useState<boolean>(() => {
+        try { const v = localStorage.getItem(key); if (v === '1') return true; if (v === '0') return false; } catch { /* none */ }
+        return defaultOpen;
+    });
+    const toggle = () => setOpen(v => { const n = !v; try { localStorage.setItem(key, n ? '1' : '0'); } catch { /* none */ } return n; });
+    const panel = `${id}-panel`;
+    return (
+        <section className="rounded-2xl bg-[#131318] border border-white/[0.07]">
+            <div className="flex items-center gap-3 px-4 md:px-5 py-3.5">
+                <button type="button" onClick={toggle} aria-expanded={open} aria-controls={panel} className="flex items-center gap-3 min-w-0 flex-1 text-left">
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`} style={{ color: accent ? ACCENT[accent] : '#A1A1AD' }}>
+                        <path d="M4.5 2.5 9.5 7l-5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-3">
+                        <span className="text-[15px] font-bold text-white shrink-0">{title}</span>
+                        {summary && <span className="text-sm text-[#8A8A96] sm:truncate min-w-0">{summary}</span>}
+                    </span>
+                </button>
+                {right}
+            </div>
+            {open && <div id={panel} className="px-4 md:px-5 pb-5 pt-1">{children}</div>}
+        </section>
+    );
+};
+
+export const StatTile: React.FC<{ label: string; value: React.ReactNode; hint?: React.ReactNode; accent?: AccentName; icon?: React.ReactNode; onClick?: () => void; compact?: boolean }> = ({ label, value, hint, accent = 'coral', icon, onClick, compact }) => {
     const Tag: any = onClick ? 'button' : 'div';
     return (
         <Tag
             onClick={onClick}
-            className={`text-left relative overflow-hidden rounded-3xl bg-[#131318] border border-white/[0.07] p-5 ${onClick ? 'hover:border-white/20 hover:-translate-y-0.5 transition-all' : ''}`}
+            className={`text-left relative overflow-hidden ${compact ? 'rounded-2xl p-4' : 'rounded-3xl p-5'} bg-[#131318] border border-white/[0.07] ${onClick ? 'hover:border-white/20 hover:-translate-y-0.5 transition-all' : ''}`}
         >
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl opacity-25" style={{ background: ACCENT[accent] }} />
             <div className="relative flex items-center gap-2 text-[13px] font-semibold text-[#A1A1AD]">
                 {icon && <span className="text-base" aria-hidden>{icon}</span>}
                 {label}
             </div>
-            <div className="relative text-2xl md:text-3xl font-black text-white mt-2 tracking-tight">{value}</div>
+            <div className={`relative font-black text-white tracking-tight ${compact ? 'text-2xl mt-1.5' : 'text-2xl md:text-3xl mt-2'}`}>{value}</div>
             {hint && <div className="relative text-xs text-[#8A8A96] mt-1">{hint}</div>}
         </Tag>
     );

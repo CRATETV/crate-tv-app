@@ -1,14 +1,15 @@
 import RecentPayments from './RecentPayments';
 import React, { useEffect, useState } from 'react';
 import { lineupProblems } from '../../api/_lib/lineupCheck';
-import { ACCENT, AccentName, Card, PageHeader, SectionTitle, StatTile, adminPost, money } from './ui';
+import { ACCENT, AccentName, Disclosure, PageHeader, SectionTitle, StatTile, adminPost, money } from './ui';
 import { TAB_META } from './tabMeta';
 import { PremiereSummary } from './PremiereChecklist';
 import BackupCard from './BackupCard';
 import { filmStatus, groupCounts, type FilmGroup } from '../../api/_lib/filmStatus';
 
-// Overview: what needs attention, quick actions, and a money snapshot.
-// The detailed live dashboard (DailyPulse) is passed in as children below it.
+// Overview (Nov 2026 redesign): jump links first, then what needs attention, the next premiere, the films and
+// the money at a glance. Anything that is detail rather than a decision folds behind an arrow (Disclosure).
+// The detailed live dashboard (DailyPulse) is passed in as children and only loads when opened.
 
 interface Props {
     operatorName: string;
@@ -74,18 +75,38 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
     }
     if (spotlightMissing && can('spotlight')) attention.push({ id: 'spotlight', icon: '🌟', text: 'Pick the next monthly spotlight film', accent: 'amber' });
 
-    const quick = ['movies', 'watchParty', 'contracts', 'email', 'money', 'roku'].filter(can).slice(0, 6);
+    const quick = ['movies', 'watchParty', 'share', 'money', 'email', 'contracts', 'roku'].filter(can).slice(0, 7);
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
 
-    return (
-        <div className="space-y-10">
-            <PageHeader title={`${greeting()}, ${operatorName || 'there'}`} subtitle={`${today} · ${filmCount} films on CRATE`} accent="coral" />
+    const filmSummary = filmCounts
+        ? [`${filmCounts.live} live`, filmCounts.hidden ? `${filmCounts.hidden} hidden` : '', filmCounts.soon ? `${filmCounts.soon} coming soon` : '', filmCounts.premiere ? `${filmCounts.premiere} premiere${filmCounts.premiere === 1 ? '' : 's'}` : '', filmCounts.festival ? `${filmCounts.festival} in a festival` : '', filmCounts.norow ? `${filmCounts.norow} not in a row` : ''].filter(Boolean).join(' · ')
+        : '';
 
-            <section>
-                <SectionTitle title="Needs your attention" />
-                {attention.length === 0 ? (
-                    <Card><p className="text-white font-semibold">✨ All clear. Nothing is waiting on you right now.</p></Card>
-                ) : (
+    return (
+        <div className="space-y-6 md:space-y-7 max-w-[1200px]">
+            <div>
+                <PageHeader title={`${greeting()}, ${operatorName || 'there'}`} subtitle={`${today} · ${filmCount} films on CRATE`} accent="coral" />
+                {quick.length > 0 && (
+                    <nav aria-label="Jump to" className="-mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#8A8A96] mr-1 w-full sm:w-auto">Jump to</span>
+                        {quick.map(id => (
+                            <button key={id} onClick={() => onNavigate(id)} title={TAB_META[id].desc}
+                                className="inline-flex items-center gap-2 rounded-full bg-[#131318] border border-white/[0.09] hover:border-white/30 hover:bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white transition-colors">
+                                <span aria-hidden>{TAB_META[id].icon}</span>{TAB_META[id].label}
+                            </button>
+                        ))}
+                    </nav>
+                )}
+            </div>
+
+            {attention.length === 0 ? (
+                <div className="flex items-center gap-3 rounded-2xl border border-[#1FCB7A]/25 bg-[#1FCB7A]/[0.06] px-4 py-3">
+                    <span aria-hidden>✨</span>
+                    <p className="text-sm text-white"><strong className="font-bold">All clear.</strong> <span className="text-[#A1A1AD]">Nothing is waiting on you right now.</span></p>
+                </div>
+            ) : (
+                <section>
+                    <SectionTitle title="Needs your attention" />
                     <div className="grid md:grid-cols-2 gap-3">
                         {attention.map(a => (
                             <button key={a.id} onClick={() => onNavigate(a.id)}
@@ -97,68 +118,53 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
                             </button>
                         ))}
                     </div>
-                )}
-            </section>
-
-            {nextPremiere && (can('movies') || can('watchParty')) && (
-                <section>
-                    <PremiereSummary movie={nextPremiere} title={nextPremiere.title || 'Untitled'}
-                        actions={<div className="flex gap-3 ml-auto">
-                            {can('watchParty') && <button className="text-xs font-bold text-white/80 hover:text-white" onClick={() => onNavigate('watchParty')}>Watch parties →</button>}
-                            {can('movies') && <button className="text-xs font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>Films →</button>}
-                        </div>} />
                 </section>
             )}
 
+            {nextPremiere && (can('movies') || can('watchParty')) && (
+                <PremiereSummary movie={nextPremiere} title={nextPremiere.title || 'Untitled'}
+                    actions={<div className="flex gap-3 ml-auto">
+                        {can('watchParty') && <button className="text-xs font-bold text-white/80 hover:text-white" onClick={() => onNavigate('watchParty')}>Watch parties →</button>}
+                        {can('movies') && <button className="text-xs font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>Films →</button>}
+                    </div>} />
+            )}
+
             {filmCounts && onOpenFilms && can('movies') && (
-                <section>
-                    <SectionTitle title="Your films at a glance" hint="Tap a tile to see those films and why each one is where it is." right={<button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('movies')}>All films →</button>} />
-                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                        <StatTile label="Live on CRATE" icon="✅" accent="green" value={filmCounts.live} onClick={() => onOpenFilms('live')} />
-                        <StatTile label="Hidden" icon="🙈" accent="amber" value={filmCounts.hidden} hint="Unlisted or waiting" onClick={() => onOpenFilms('hidden')} />
-                        <StatTile label="Coming soon" icon="🗓️" accent="sky" value={filmCounts.soon} onClick={() => onOpenFilms('soon')} />
-                        <StatTile label="Premieres" icon="🍿" accent="coral" value={filmCounts.premiere} hint="Scheduled" onClick={() => onOpenFilms('premiere')} />
-                        <StatTile label="In a festival" icon="🎬" accent="violet" value={filmCounts.festival} onClick={() => onOpenFilms('festival')} />
-                        <StatTile label="Not in any row" icon="🧭" accent="orange" value={filmCounts.norow} hint="Not on the home page" onClick={() => onOpenFilms('norow')} />
+                <Disclosure id="films" title="Your films" summary={filmSummary} defaultOpen
+                    right={<button className="text-sm font-bold text-white/80 hover:text-white whitespace-nowrap shrink-0" onClick={() => onNavigate('movies')}>All films →</button>}>
+                    <p className="text-xs text-[#8A8A96] mb-3">Tap a tile to see those films and why each one is where it is.</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                        <StatTile compact label="Live" icon="✅" accent="green" value={filmCounts.live} onClick={() => onOpenFilms('live')} />
+                        <StatTile compact label="Hidden" icon="🙈" accent="amber" value={filmCounts.hidden} onClick={() => onOpenFilms('hidden')} />
+                        <StatTile compact label="Coming soon" icon="🗓️" accent="sky" value={filmCounts.soon} onClick={() => onOpenFilms('soon')} />
+                        <StatTile compact label="Premieres" icon="🍿" accent="coral" value={filmCounts.premiere} onClick={() => onOpenFilms('premiere')} />
+                        <StatTile compact label="In a festival" icon="🎬" accent="violet" value={filmCounts.festival} onClick={() => onOpenFilms('festival')} />
+                        <StatTile compact label="Not in a row" icon="🧭" accent="orange" value={filmCounts.norow} onClick={() => onOpenFilms('norow')} />
                     </div>
-                </section>
+                </Disclosure>
             )}
 
             {isMaster && (
                 <section>
-                    <SectionTitle title="Money" hint="Live from Square. Full detail in Earnings & payouts." right={<button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('money')}>Open →</button>} />
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <StatTile label="This month" icon="📅" accent="sky" value={snapshot ? money(snapshot.month) : snapError ? '—' : '…'} />
-                        <StatTile label="CRATE kept this month" icon="🏠" accent="coral" value={snapshot ? money(snapshot.monthCrate) : snapError ? '—' : '…'} />
-                        <StatTile label="Owed to filmmakers" icon="⏳" accent="amber" value={snapshot ? money(snapshot.owed) : snapError ? '—' : '…'} onClick={() => onNavigate('money')} />
+                    <SectionTitle title="Money" hint="Live from Square." right={<button className="text-sm font-bold text-white/80 hover:text-white" onClick={() => onNavigate('money')}>Open Money →</button>} />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                        <StatTile compact label="This month" icon="📅" accent="sky" value={snapshot ? money(snapshot.month) : snapError ? '—' : '…'} />
+                        <StatTile compact label="CRATE kept this month" icon="🏠" accent="coral" value={snapshot ? money(snapshot.monthCrate) : snapError ? '—' : '…'} />
+                        <StatTile compact label="Owed to filmmakers" icon="⏳" accent="amber" value={snapshot ? money(snapshot.owed) : snapError ? '—' : '…'} onClick={() => onNavigate('money')} />
                     </div>
+                    <RecentPayments onOpenMoney={() => onNavigate('money')} />
                 </section>
             )}
 
-            {isMaster && <RecentPayments onOpenMoney={() => onNavigate('money')} />}
-
-            {isMaster && <BackupCard />}
-
-            {quick.length > 0 && (
-                <section>
-                    <SectionTitle title="Jump to" />
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-                        {quick.map(id => (
-                            <button key={id} onClick={() => onNavigate(id)} className="rounded-2xl bg-[#131318] border border-white/[0.07] hover:border-white/20 p-4 text-left transition-all hover:-translate-y-0.5">
-                                <span className="text-2xl" aria-hidden>{TAB_META[id].icon}</span>
-                                <p className="text-white font-bold mt-2 text-sm">{TAB_META[id].label}</p>
-                                <p className="text-xs text-[#8A8A96] mt-0.5 line-clamp-2">{TAB_META[id].desc}</p>
-                            </button>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {children && (
-                <section>
-                    <SectionTitle title="Live on CRATE" hint="Real-time activity, views and recent changes." />
-                    {children}
-                </section>
+            {(isMaster || children) && (
+                <div className="space-y-3">
+                    {isMaster && <BackupCard />}
+                    {children && (
+                        <Disclosure id="live" title="Live on CRATE" summary="Real-time activity, views and recent changes">
+                            {children}
+                        </Disclosure>
+                    )}
+                </div>
             )}
         </div>
     );

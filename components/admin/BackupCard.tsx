@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, SectionTitle, adminPost } from './ui';
+import { Disclosure, adminPost } from './ui';
 import { backupHealth, type BackupStatus } from '../../api/_lib/backup';
 
 const TONE = { good: 'text-emerald-400', warn: 'text-amber-400', bad: 'text-red-400' } as const;
@@ -19,28 +19,28 @@ const BackupCard: React.FC = () => {
         setBusy(false);
     };
     const h = state ? backupHealth(state.configured, state.status, Date.now()) : null;
+    // Only unfolds by itself when something needs a look.
+    const accent = h?.tone === 'bad' ? 'coral' : h?.tone === 'warn' ? 'amber' : undefined;
     return (
-        <section>
-            <SectionTitle title="Backups" hint="A weekly copy of your database and catalog, kept in a private place. Newest 8 are kept." />
-            <Card>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div role="status">
-                        {h ? (
-                            <>
-                                <p className={`font-bold ${TONE[h.tone]}`}><span aria-hidden="true">{ICON[h.tone]} </span>{h.headline}</p>
-                                <p className="text-sm text-[#8A8A96] mt-1">{h.detail}</p>
-                            </>
-                        ) : <p className="text-[#8A8A96]">{err || 'Checking…'}</p>}
-                        {err && h && <p className="text-sm text-red-400 mt-1">{err}</p>}
-                    </div>
-                    {state?.configured && (
-                        <button onClick={run} disabled={busy} className="shrink-0 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold disabled:opacity-60">
-                            {busy ? 'Backing up…' : 'Back up now'}
-                        </button>
-                    )}
+        <Disclosure key={h ? h.tone : 'loading'} id="backups" title="Backups" summary={h ? `${ICON[h.tone]} ${h.headline}` : (err || 'Checking…')} accent={accent} defaultOpen={!!h && h.tone !== 'good'}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div role="status">
+                    {h ? (
+                        <>
+                            <p className={`font-bold ${TONE[h.tone]}`}><span aria-hidden="true">{ICON[h.tone]} </span>{h.headline}</p>
+                            <p className="text-sm text-[#8A8A96] mt-1">{h.detail}</p>
+                            <p className="text-xs text-[#8A8A96] mt-1">A weekly copy of your database and catalog, kept in a private place. The newest 8 are kept.</p>
+                        </>
+                    ) : <p className="text-[#8A8A96]">{err || 'Checking…'}</p>}
+                    {err && h && <p className="text-sm text-red-400 mt-1">{err}</p>}
                 </div>
-            </Card>
-        </section>
+                {state?.configured && (
+                    <button onClick={run} disabled={busy} className="shrink-0 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold disabled:opacity-60">
+                        {busy ? 'Backing up…' : 'Back up now'}
+                    </button>
+                )}
+            </div>
+        </Disclosure>
     );
 };
 export default BackupCard;
