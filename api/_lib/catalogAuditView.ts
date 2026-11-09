@@ -2,7 +2,7 @@
 // plus ANY film whose video is missing. The audit exists to catch broken films,
 // so a broken one must never hide just because nobody has watched it yet.
 
-export const AUDIT_TOP_N = 10;
+export const AUDIT_TOP_N = 3;
 
 interface Row { views: number; hasStream: boolean }
 
