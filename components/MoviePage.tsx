@@ -1,4 +1,5 @@
 
+import { getTrafficSource } from '../services/trafficSource';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -656,7 +657,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 fetch('/api/track-view', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ movieKey: movie.key }),
+                    body: JSON.stringify({ movieKey: movie.key, source: getTrafficSource() }),
                 }).catch(() => {});
             }).catch(() => {});
         }
@@ -712,7 +713,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               fetch('/api/track-view', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify({ movieKey: movie.key }),
+                  body: JSON.stringify({ movieKey: movie.key, source: getTrafficSource() }),
               }).catch(() => {});
           }).catch(() => {});
       }
