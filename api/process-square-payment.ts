@@ -12,6 +12,8 @@ import { FESTIVAL_BLOCK_VISIBILITY_WINDOW_MS } from '../types.js';
 import { isFestivalPassActive, laterExpiry, festivalPassOnSale, festivalPassExpiryFor, blockSaleClosed, partnerPassIsCurrent } from './_lib/festivalPass.js';
 import { getPwffBlocks } from './_lib/festivalTiming.js';
 import { escapeHtml } from './_lib/validation.js';
+import { saleAlertRecipients, shouldAlertSale, saleAlertSubject } from './_lib/saleAlert.js';
+import { ownerEmails } from './_lib/partnerEmails.js';
 import { promoProblem, priceAfterPromo, promoMakesFree, payWhatYouWantCents, PWYW_MIN_DOLLARS, PREMIERE_PRICES_CENTS, PREMIERE_LABELS, isPremierePayment } from './_lib/paymentRules.js';
 import { cleanLine } from './_lib/validation.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
@@ -809,19 +811,21 @@ export async function POST(request: Request) {
     // needs to stay focused on). Fire-and-forget: a missed notification
     // email is a minor inconvenience, not worth adding retry complexity
     // or delay to the actual purchase flow for.
-    if (db) {
+    if (db && shouldAlertSale(amountInCents)) {
         (async () => {
             try {
                 const settingsDoc = await db.collection('content').doc('settings').get();
                 const technicalEmail = settingsDoc.data()?.technicalEmail || 'cratetiv@gmail.com';
+                // Everyone with owner access hears about every payment (tickets, tips, rentals,
+                // passes) so a missed Square notification never means a missed sale.
                 await resend.emails.send({
                     from: `Crate TV Sales <${fromEmail}>`,
-                    to: [technicalEmail],
-                    subject: `🎟️ Ticket sold: ${note} — $${(amountInCents / 100).toFixed(2)}`,
+                    to: saleAlertRecipients(technicalEmail, ownerEmails()),
+                    subject: saleAlertSubject(note, amountInCents),
                     html: renderBrandedEmail({
-                        title: 'New Ticket Sale',
+                        title: 'You got paid',
                         bodyHtml: `
-                            <p style="margin:0 0 16px;font-size:14px;">Someone just bought a ticket.</p>
+                            <p style="margin:0 0 16px;font-size:14px;">Someone just paid on Crate TV.</p>
                             <div style="padding:16px;background:rgba(255,255,255,0.03);border-left:3px solid #22c55e;">
                                 <p style="margin:0 0 4px;"><strong>Item:</strong> ${escapeHtml(note)}</p>
                                 <p style="margin:0 0 4px;"><strong>Amount:</strong> $${(amountInCents / 100).toFixed(2)}</p>
