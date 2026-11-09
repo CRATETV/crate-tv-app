@@ -1,3 +1,4 @@
+import { isLobbyViewerActive } from '../api/_lib/lobbyPresence';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FestivalDay, CrateFestConfig, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -372,7 +373,7 @@ const LiveViewerCount: React.FC<{ itemId: string }> = ({ itemId }) => {
         const db = getDbInstance();
         if (!db) return;
         const unsub = db.collection('watch_parties').doc(itemId).collection('lobby_viewers')
-            .onSnapshot(snap => setEmails(snap.docs.map(d => String(d.data().name || 'Viewer'))));
+            .onSnapshot(snap => setEmails(snap.docs.filter(d => isLobbyViewerActive(d.data(), Date.now())).map(d => String(d.data().name || 'Viewer'))));
         return () => unsub();
     }, [itemId]);
     if (emails === null) return null;
