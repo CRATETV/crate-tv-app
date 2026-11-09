@@ -7,6 +7,7 @@ import { avatars } from './avatars';
 import { activePin } from '../api/_lib/controlRoom';
 import { isLobbyViewerActive, LOBBY_HEARTBEAT_MS } from '../api/_lib/lobbyPresence';
 import WatchPartyPoll from './WatchPartyPoll';
+import { setHelpDock } from './helpDock';
 import type { PartyPoll } from '../api/_lib/watchPartyPoll';
 
 // Auto-transitions into the party after 1.5s — fixes "Starting Now" getting stuck on slow devices
@@ -39,6 +40,8 @@ interface LobbyViewer {
 }
 
 const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice, blockFilms }) => {
+    // While the lobby shows, the Help button tucks into the corner instead of floating over the poll.
+    useEffect(() => { setHelpDock('lobby'); return () => setHelpDock('default'); }, []);
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
@@ -610,27 +613,21 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 </div>
 
                 {/* Center content */}
-                <div className="text-center w-full max-w-2xl mx-auto space-y-10 md:space-y-12">
-                    {/* Film poster - slowly revealing */}
-                    <div className="relative mx-auto w-48 md:w-64">
-                        <div className="absolute -inset-4 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />
-                        <img 
-                            src={movie.poster} 
-                            alt={movie.title} 
-                            className="relative w-full rounded-xl shadow-2xl border border-white/10"
-                        />
-                    </div>
-
-                    {/* Title */}
-                    <div className="space-y-3">
-                        <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight leading-none">{movie.title}</h1>
-                        {movie.director && <p className="text-red-500 font-black uppercase tracking-[0.3em] text-xs">Directed by {movie.director}</p>}
-                        {/* What the film is about, so people can decide before it starts. */}
-                        {movie.synopsis && (
-                            <p className="text-gray-400 text-sm md:text-base leading-relaxed max-w-xl mx-auto line-clamp-4">
-                                {movie.synopsis.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '')}
-                            </p>
-                        )}
+                <div className="text-center w-full max-w-2xl mx-auto space-y-5 md:space-y-12">
+                    {/* On phones: small poster beside the title so the poll and countdown fit on the first screen. */}
+                    <div className="flex items-center gap-4 text-left md:block md:text-center md:space-y-12">
+                        <div className="relative shrink-0 w-24 md:mx-auto md:w-64">
+                            <div className="absolute -inset-4 bg-gradient-to-br from-red-500/20 to-transparent rounded-2xl blur-xl opacity-50" />
+                            <img
+                                src={movie.poster}
+                                alt={movie.title}
+                                className="relative w-full rounded-xl shadow-2xl border border-white/10"
+                            />
+                        </div>
+                        <div className="space-y-2 md:space-y-3 min-w-0">
+                            <h1 className="text-2xl sm:text-3xl md:text-6xl font-black uppercase tracking-tight leading-none">{movie.title}</h1>
+                            {movie.director && <p className="text-red-500 font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-xs">Directed by {movie.director}</p>}
+                        </div>
                     </div>
 
                     {/* Poll sits near the top so it is the first thing people see. */}
@@ -694,6 +691,13 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             <p className="text-gray-300 italic">"{directorMessage}"</p>
                             <p className="text-gray-600 text-xs mt-2">— {movie.director}</p>
                         </div>
+                    )}
+
+                    {/* What the film is about, so people can decide before it starts. Full text, below the poll and countdown. */}
+                    {movie.synopsis && (
+                        <p className="text-gray-400 text-sm md:text-base leading-relaxed max-w-xl mx-auto">
+                            {movie.synopsis.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '')}
+                        </p>
                     )}
 
                     {/* Ticket/RSVP prompt for unadmitted users.
