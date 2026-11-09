@@ -1,3 +1,4 @@
+import RecentPayments from './RecentPayments';
 import React, { useEffect, useState } from 'react';
 import { lineupProblems } from '../../api/_lib/lineupCheck';
 import { ACCENT, AccentName, Card, PageHeader, SectionTitle, StatTile, adminPost, money } from './ui';
@@ -133,6 +134,8 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
                     </div>
                 </section>
             )}
+
+            {isMaster && <RecentPayments onOpenMoney={() => onNavigate('money')} />}
 
             {isMaster && <BackupCard />}
 

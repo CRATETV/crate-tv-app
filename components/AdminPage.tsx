@@ -13,6 +13,7 @@ import CommunicationsTerminal from './CommunicationsTerminal';
 import SaveStatusToast from './SaveStatusToast';
 import LaurelManager from './LaurelManager';
 import SeasonsManager from './admin/SeasonsManager';
+import ShareFilmTab from './admin/ShareFilmTab';
 import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
 import SubmissionsTab from './SubmissionsTab';
@@ -48,6 +49,7 @@ import SubscribersTab from './admin/SubscribersTab';
 import ContractsCenterTab from './admin/ContractsCenterTab';
 import BookkeepingTab from './admin/BookkeepingTab';
 import ActorApprovalsTab from './admin/ActorApprovalsTab';
+import MoneyHub from './admin/MoneyHub';
 import PaymentsRefundsTab from './admin/PaymentsRefundsTab';
 import StorageCleanupTab from './admin/StorageCleanupTab';
 import BulkFilmUploadTab from './admin/BulkFilmUploadTab';
@@ -66,7 +68,7 @@ const LEGACY_TAB_MAP: Record<string, string> = {
     hero: 'homepage', heroSpotlight: 'homepage',
     mail: 'email', dispatch: 'email',
     intel: 'users', accountLookup: 'users',
-    payouts: 'money', revenueFlow: 'money',
+    payouts: 'money', revenueFlow: 'money', refunds: 'money', bookkeeping: 'money',
     shopRequests: 'shop', shopRevenue: 'shop',
     rokuControl: 'roku', rokuAnalytics: 'roku',
     audit: 'system', errorLog: 'system', security: 'system',
@@ -129,7 +131,6 @@ const AdminPage: React.FC = () => {
     // Which filter chip the Films list opens on (set by the Overview tiles).
     const [filmsFilter, setFilmsFilter] = useState<FilmGroup | 'all'>('all');
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
-    const [showMoneyTools, setShowMoneyTools] = useState(false);
     // Sidebar badges / Overview "needs attention".
     const [counts, setCounts] = useState({ submissions: 0, actors: 0, payouts: 0, contracts: 0, email: 0 });
     const [spotlightReady, setSpotlightReady] = useState(true); // true = no reminder needed
@@ -734,28 +735,23 @@ const AdminPage: React.FC = () => {
                             onMarkAllViewed={markAllSubmissionsViewed}
                         />
                     )}
-                    {activeTab === 'refunds' && <PaymentsRefundsTab />}
                     {activeTab === 'storage' && <StorageCleanupTab />}
                     {activeTab === 'bulkUpload' && <BulkFilmUploadTab movies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!, true)} />}
-                    {activeTab === 'bookkeeping' && <BookkeepingTab onOpenTab={navigateTo} />}
                     {activeTab === 'contracts' && <ContractsCenterTab movies={movies} pipeline={pipeline} categories={categories} />}
                     {activeTab === 'partners' && <PartnersAdminTab allMovies={movies} />}
                     {activeTab === 'money' && (
-                        <div className="space-y-10">
-                            <EarningsPayoutsTab onOpenTab={navigateTo} />
-                            <section className="rounded-3xl border border-white/[0.07] bg-[#131318]">
-                                <button onClick={() => setShowMoneyTools(v => !v)} className="w-full flex items-center justify-between px-6 py-5 text-left">
-                                    <span><span className="block text-white font-bold">More tools</span><span className="block text-sm text-[#8A8A96]">Payout keys for filmmakers, the older payout list, and where festival revenue came from.</span></span>
-                                    <span className="text-[#A1A1AD]">{showMoneyTools ? '▾' : '▸'}</span>
-                                </button>
-                                {showMoneyTools && (
-                                    <div className="px-6 pb-6 space-y-16">
-                                        <AdminPayoutsTab />
-                                        <section><SectionTitle>Where festival revenue came from</SectionTitle><AdminRevenueFlowTab /></section>
-                                    </div>
-                                )}
-                            </section>
-                        </div>
+                        <MoneyHub render={{
+                            earnings: () => <EarningsPayoutsTab onOpenTab={navigateTo} />,
+                            payments: () => <PaymentsRefundsTab />,
+                            books: () => <BookkeepingTab onOpenTab={navigateTo} />,
+                            tools: () => (
+                                <div className="space-y-16">
+                                    <p className="text-sm text-[#8A8A96]">Payout keys for filmmakers, the older payout list, and where festival revenue came from.</p>
+                                    <AdminPayoutsTab />
+                                    <section><SectionTitle>Where festival revenue came from</SectionTitle><AdminRevenueFlowTab /></section>
+                                </div>
+                            ),
+                        }} />
                     )}
                     {activeTab === 'shop' && (
                         <div className="space-y-16">
@@ -831,6 +827,7 @@ const AdminPage: React.FC = () => {
                             <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />
                         </div>
                     )}
+                    {activeTab === 'share' && <ShareFilmTab movies={movies as Record<string, Movie>} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'roku' && (
                         <div className="space-y-16">

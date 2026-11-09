@@ -28,9 +28,7 @@ export const TAB_META: Record<string, TabMeta> = {
     email:        { label: 'Email', icon: '✉️', desc: 'Reply to messages and email your audience.', keywords: 'mail inbox newsletter blast' },
     subscribers:  { label: 'Subscribers', icon: '📰', desc: 'Everyone on the Zine newsletter — active up front, cancelled in their own tab.', keywords: 'subscribers newsletter zine unsubscribe cancelled active list' },
 
-    money:        { label: 'Earnings & payouts', icon: '💸', desc: 'What every film earned, the split, and who you owe.', keywords: 'money revenue payouts pay filmmakers split earnings' },
-    refunds:      { label: 'Payments & refunds', icon: '💳', desc: 'Every payment, double-charge alerts, and two-click refunds.', keywords: 'refund refunds payments double charge square customer charged twice' },
-    bookkeeping:  { label: 'Bookkeeping', icon: '📒', desc: 'Every payment you made and every tax form (W-9), recorded for you.', keywords: 'bookkeeping books payments paid w9 w-9 1099 taxes accountant ledger records expenses' },
+    money:        { label: 'Money', icon: '💸', desc: 'Earnings, who you owe, every payment and refund, and bookkeeping — all in one place.', keywords: 'money revenue payouts pay filmmakers split earnings refund refunds payments double charge square customer charged twice bookkeeping books w9 w-9 1099 taxes accountant ledger records expenses' },
     contracts:    { label: 'Contracts', icon: '📜', desc: 'Send agreements, see who signed, keep signed copies.', keywords: 'contracts agreements sign legal w9' },
     vouchers:     { label: 'Promo codes', icon: '🏷️', desc: 'Discount and free-access codes.', keywords: 'promo vouchers discount coupon' },
     shop:         { label: 'Shop', icon: '🛍️', desc: 'Merch requests and shop revenue.', keywords: 'merch fourthwall store shop' },
@@ -39,19 +37,20 @@ export const TAB_META: Record<string, TabMeta> = {
     roku:         { label: 'Roku', icon: '📺', desc: 'The Roku channel: rows, hero, announcements and stats.', keywords: 'roku tv channel' },
     storage:      { label: 'Storage clean-up', icon: '🧹', desc: 'Video files CRATE no longer uses: keep or delete them.', keywords: 's3 bucket storage cleanup clean up delete videos files aws cost' },
     system:       { label: 'Logs & security', icon: '🛡️', desc: 'Activity log, errors and security checks.', keywords: 'audit logs errors security' },
+    share:        { label: 'Share a film', icon: '📸', desc: 'Make an Instagram picture and caption for any film.', keywords: 'instagram share social publication poster synopsis post story promote marketing' },
     permissions:  { label: 'Team & permissions', icon: '🔑', desc: 'Who on your team can open which tabs.', keywords: 'permissions team staff access roles' },
 };
 
 export const TAB_GROUPS: { title: string; accent: AccentName; ids: string[] }[] = [
     { title: 'Home', accent: 'coral', ids: ['pulse'] },
-    { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels'] },
+    { title: 'Films & content', accent: 'orange', ids: ['movies', 'bulkUpload', 'submissions', 'homepage', 'categories', 'spotlight', 'editorial', 'laurels', 'share'] },
     { title: 'Live & festivals', accent: 'violet', ids: ['watchParty', 'pwff', 'partners', 'crateFestHub', 'ticketCodes'] },
     { title: 'People', accent: 'magenta', ids: ['users', 'actors', 'email', 'subscribers'] },
-    { title: 'Money & legal', accent: 'green', ids: ['money', 'bookkeeping', 'refunds', 'contracts', 'vouchers', 'shop'] },
+    { title: 'Money & legal', accent: 'green', ids: ['money', 'contracts', 'vouchers', 'shop'] },
     { title: 'Platform', accent: 'sky', ids: ['analytics', 'roku', 'storage', 'system', 'permissions'] },
 ];
 
 export const groupOf = (id: string) => TAB_GROUPS.find(g => g.ids.includes(id));
 
 /** Tabs that draw their own page header. */
-export const SELF_HEADED = new Set(['pulse', 'money', 'bookkeeping', 'refunds', 'contracts', 'actors', 'storage', 'bulkUpload', 'subscribers']);
+export const SELF_HEADED = new Set(['pulse', 'share', 'money', 'contracts', 'actors', 'storage', 'bulkUpload', 'subscribers']);
