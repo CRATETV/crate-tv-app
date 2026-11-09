@@ -6,6 +6,8 @@ import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
 import { activePin } from '../api/_lib/controlRoom';
 import { isLobbyViewerActive, LOBBY_HEARTBEAT_MS } from '../api/_lib/lobbyPresence';
+import WatchPartyPoll from './WatchPartyPoll';
+import type { PartyPoll } from '../api/_lib/watchPartyPoll';
 
 // Auto-transitions into the party after 1.5s — fixes "Starting Now" getting stuck on slow devices
 const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onPartyStart }) => {
@@ -40,6 +42,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
     const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [directorMessage, setDirectorMessage] = useState<string | null>(null);
+    const [poll, setPoll] = useState<PartyPoll | null>(null);
     const [showFinalCountdown, setShowFinalCountdown] = useState(false);
     const [ambientPhase, setAmbientPhase] = useState(0);
     const [autoStartTriggered, setAutoStartTriggered] = useState(false);
@@ -208,6 +211,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 if (data?.directorWelcome) {
                     setDirectorMessage(data.directorWelcome);
                 }
+                setPoll((data?.poll as PartyPoll) || null);
             }
         });
 
@@ -491,6 +495,8 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                         </div>
                     )}
 
+                    {poll && <div className="mb-10 w-full"><WatchPartyPoll poll={poll} movieKey={movie.key} signedIn={!!user?.uid} /></div>}
+
                     {/* Admission prompt */}
                     {!hasAccess && onBuyTicket && (
                         <button
@@ -685,6 +691,8 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                             <p className="text-gray-600 text-xs mt-2">— {movie.director}</p>
                         </div>
                     )}
+
+                    {poll && <WatchPartyPoll poll={poll} movieKey={movie.key} signedIn={!!user?.uid} />}
 
                     {/* Ticket/RSVP prompt for unadmitted users.
                         FIX (user report): this used to always show "Get Ticket —

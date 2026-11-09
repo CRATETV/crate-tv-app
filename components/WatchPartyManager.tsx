@@ -1,4 +1,5 @@
 import { isLobbyViewerActive } from '../api/_lib/lobbyPresence';
+import WatchPartyPollControls from './admin/WatchPartyPollControls';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FestivalDay, CrateFestConfig, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -1373,6 +1374,8 @@ const WatchPartyControlRoom: React.FC<{
                                         </button>
                                     )}
                                     
+                                    <WatchPartyPollControls movieKey={item.id} poll={partyState?.poll} />
+
                                     {filmsMissingRuntime.length > 0 && (
                                         <span className="text-[10px] font-black uppercase tracking-widest text-red-300 bg-red-900/20 border border-red-500/30 rounded-xl py-3 px-4">
                                             Missing runtime: {filmsMissingRuntime.join(', ')} — set it in the Movie Editor or the block will wait for "Next Film"
