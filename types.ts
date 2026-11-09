@@ -122,6 +122,8 @@ export interface RokuMovie extends Movie {
   minBandwidth?: number;
   maxBandwidth?: number;
   preferredCaptions?: string;
+  /** Seconds in where this linked viewer stopped (phone/web or Roku), so the Roku can pick up there. */
+  resumePosition?: number;
 }
 
 export interface RokuFeed {

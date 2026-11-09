@@ -10,6 +10,7 @@ Function GetApiConfig() as Object
         LINK_CODE_ENDPOINT: "/get-roku-link-code"
         POLL_AUTH_ENDPOINT: "/roku/poll-auth"
         MARK_WATCHED_ENDPOINT: "/roku-mark-watched"
+        SAVE_PROGRESS_ENDPOINT: "/roku-save-progress"
         AUTH_POLL_INTERVAL: 5
         AUTH_POLL_TIMEOUT: 300
         REQUEST_TIMEOUT: 30000
@@ -31,6 +32,11 @@ End Function
 Function BuildPollAuthUrl(deviceId as String) as String
     config = GetApiConfig()
     return config.BASE_URL + config.POLL_AUTH_ENDPOINT + "?device_code_id=" + deviceId
+End Function
+
+Function GetSaveProgressUrl() as String
+    config = GetApiConfig()
+    return config.BASE_URL + config.SAVE_PROGRESS_ENDPOINT
 End Function
 
 Function GetMarkWatchedUrl() as String
