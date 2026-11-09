@@ -5,6 +5,7 @@
 // admin) the same kind of signed link for one film, so the browser can cut a few seconds out of it.
 //
 //   { password, movieKey } → { url, expiresAt, hls }
+//   { password, movieKey, download: true } → a link that saves the film's file to the computer (not for streaming films)
 import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { signStreamUrl } from './_lib/signStreamUrl.js';
 import { pickStreamSource } from './_lib/streamSource.js';
@@ -25,7 +26,12 @@ export async function POST(request: Request) {
         const raw = pickStreamSource(movie, undefined).url;
         if (!raw) return json({ error: 'This film has no video file yet.' }, 404);
 
-        const signed = await signStreamUrl(raw);
+        const wantsDownload = body.download === true;
+        const isHls = /\.m3u8(\?|$)/i.test(raw);
+        if (wantsDownload && isHls) return json({ error: "This film is stored as a streaming version (many small pieces), so there's no single file to download. Use the original film file from your editor." }, 409);
+        const ext = (raw.split('?')[0].match(/\.([a-z0-9]{2,4})$/i)?.[1] || 'mp4').toLowerCase();
+        const base = String(movie?.title || 'film').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'film';
+        const signed = await signStreamUrl(raw, wantsDownload ? { downloadName: `${base}.${ext}` } : {});
         if (!signed) return json({ error: "Couldn't get a link to the film's file." }, 500);
         return json({ ...signed, hls: /\.m3u8(\?|$)/i.test(signed.url) });
     } catch (e) {

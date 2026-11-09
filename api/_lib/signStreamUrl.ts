@@ -19,7 +19,7 @@ const signedCache = new Map<string, { value: { url: string; expiresAt: string };
  * bucket, or if AWS credentials aren't configured — callers should treat a null
  * result as "cannot serve this stream" rather than falling back to the raw URL.
  */
-export async function signStreamUrl(rawUrl: string): Promise<{ url: string; expiresAt: string } | null> {
+export async function signStreamUrl(rawUrl: string, opts: { downloadName?: string } = {}): Promise<{ url: string; expiresAt: string } | null> {
     if (!rawUrl) return null;
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -37,23 +37,29 @@ export async function signStreamUrl(rawUrl: string): Promise<{ url: string; expi
     // viewer (Tobago, and everywhere else) instead of one region in the US. The
     // pieces were already loaded without a signature (they sit next to the playlist),
     // so nothing becomes more public. Off until HLS_VIA_CLOUDFRONT=1 is set in Vercel.
-    if (process.env.HLS_VIA_CLOUDFRONT === '1' && /\.m3u8$/i.test(key)) {
+    if (!opts.downloadName && process.env.HLS_VIA_CLOUDFRONT === '1' && /\.m3u8$/i.test(key)) {
         const domain = process.env.CLOUDFRONT_VIDEO_DOMAIN || 'd2sbutzk4qyhiw.cloudfront.net';
         return { url: `https://${domain}/${key.split('/').map(encodeURIComponent).join('/')}`, expiresAt: new Date(Date.now() + STREAM_URL_TTL_SECONDS * 1000).toISOString() };
     }
 
     // The Roku feed signs the same film several times per request (once per row it
     // appears in). A signed link lasts 8 hours, so reuse one for up to 30 minutes.
-    const hit = signedCache.get(key);
+    const hit = opts.downloadName ? undefined : signedCache.get(key);
     if (hit && Date.now() - hit.madeAt < SIGN_REUSE_MS) return hit.value;
 
     s3Client ??= new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
-    const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+    const command = new GetObjectCommand({
+        Bucket: bucketName, Key: key,
+        // A "save this file" link (admin download): the browser saves it instead of playing it.
+        ...(opts.downloadName ? { ResponseContentDisposition: `attachment; filename="${opts.downloadName}"` } : {}),
+    });
     const url = await s3GetSignedUrl(s3Client, command, { expiresIn: STREAM_URL_TTL_SECONDS });
 
     const value = { url, expiresAt: new Date(Date.now() + STREAM_URL_TTL_SECONDS * 1000).toISOString() };
-    signedCache.set(key, { value, madeAt: Date.now() });
-    if (signedCache.size > 500) signedCache.clear();
+    if (!opts.downloadName) {
+        signedCache.set(key, { value, madeAt: Date.now() });
+        if (signedCache.size > 500) signedCache.clear();
+    }
     return value;
 }
 
