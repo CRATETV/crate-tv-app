@@ -5,6 +5,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { avatars } from './avatars';
 import { activePin } from '../api/_lib/controlRoom';
+import { isLobbyViewerActive, LOBBY_HEARTBEAT_MS } from '../api/_lib/lobbyPresence';
 
 // Auto-transitions into the party after 1.5s — fixes "Starting Now" getting stuck on slow devices
 const StartingNowTransition: React.FC<{ onPartyStart: () => void }> = ({ onPartyStart }) => {
@@ -139,8 +140,15 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
         viewerRef.set({
             name: user.name || 'Film Lover',
             avatar: user.avatar || 'fox',
-            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
         });
+        // Check in every 30s so a locked phone or dropped signal stops counting
+        // after ~90s instead of staying in the lobby forever (api/_lib/lobbyPresence.ts).
+        const heartbeat = setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
+            viewerRef.set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+        }, LOBBY_HEARTBEAT_MS);
 
         // Permanently log this viewer to festival_viewers for reporting
         // This is separate from lobby_viewers — it persists after the party ends
@@ -156,6 +164,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
 
         // Remove presence on disconnect (but log persists)
         return () => {
+            clearInterval(heartbeat);
             viewerRef.delete();
         };
     }, [user, movie.key]);
@@ -173,6 +182,7 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 const v: LobbyViewer[] = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    if (!isLobbyViewerActive(data, Date.now())) return; // ghost: no check-in for 90s
                     v.push({
                         id: doc.id,
                         name: data.name,
