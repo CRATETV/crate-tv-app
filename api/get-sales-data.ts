@@ -1,4 +1,5 @@
 
+import { roleCounts } from './_lib/roleCounts.js';
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig, AdminPayout, BillSavingsTransaction } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -239,6 +240,7 @@ export async function POST(request: Request) {
             }
         });
 
+        const roles = roleCounts(usersSnapshot.docs.map(d => d.data() as any));
         const analyticsData: AnalyticsData = {
             totalRevenue, 
             totalCrateTvRevenue, 
@@ -250,6 +252,7 @@ export async function POST(request: Request) {
             watchlistCounts, 
             filmmakerPayouts, 
             allUsers: [], actorUsers: [], filmmakerUsers: [],
+            filmmakerCount: roles.filmmakers, actorCount: roles.actors,
             totalDonations, 
             totalSales, 
             totalMerchRevenue: 0, 

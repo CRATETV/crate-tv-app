@@ -865,6 +865,8 @@ export interface AnalyticsData {
   allUsers: { email: string }[];
   actorUsers: { email: string }[];
   filmmakerUsers: { email: string }[];
+  filmmakerCount?: number; // approved filmmakers (the lists above are not filled in)
+  actorCount?: number;     // approved talent
   merchSales: Record<string, number>;
   crateTvMerchCut: number;
   festivalUsers: string[];

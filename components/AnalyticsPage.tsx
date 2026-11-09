@@ -87,11 +87,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                             </div>
                              <div className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
                                 <span className="text-sm font-bold text-gray-400">Verified Filmmakers</span>
-                                <span className="text-xl font-black text-red-500">{analyticsData.filmmakerUsers.length}</span>
+                                <span className="text-xl font-black text-red-500">{analyticsData.filmmakerCount ?? analyticsData.filmmakerUsers.length}</span>
                             </div>
                              <div className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
                                 <span className="text-sm font-bold text-gray-400">Verified Talent</span>
-                                <span className="text-xl font-black text-purple-500">{analyticsData.actorUsers.length}</span>
+                                <span className="text-xl font-black text-purple-500">{analyticsData.actorCount ?? analyticsData.actorUsers.length}</span>
                             </div>
                         </div>
                      </div>
