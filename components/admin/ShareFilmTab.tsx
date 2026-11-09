@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Movie } from '../../types';
 import { Button, Card, EmptyState, Notice, PageHeader, copyText, inputClass } from './ui';
+import { FONT, GOLD, RED, SERIF, spaced } from './shareCanvas';
+import ShareVideoMaker from './ShareVideoMaker';
 import { ShareKind, detectKind, instagramCaption, shareLink, shareWording, trimSynopsis, wrapLines } from '../../api/_lib/shareCopy';
 
 // "Share a film": pick a film, get a ready-to-post Instagram graphic (post or story size) with the
@@ -10,7 +12,6 @@ const SIZES: Record<Format, { w: number; h: number; label: string }> = {
     post: { w: 1080, h: 1350, label: 'Post (4:5)' },
     story: { w: 1080, h: 1920, label: 'Story / Reel (9:16)' },
 };
-const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
 const loadPoster = (url: string) => new Promise<HTMLImageElement | null>(resolve => {
     if (!url) return resolve(null);
@@ -20,20 +21,6 @@ const loadPoster = (url: string) => new Promise<HTMLImageElement | null>(resolve
     img.onerror = () => resolve(null);
     img.src = `/api/proxy-image?url=${encodeURIComponent(url)}&w=1000`;
 });
-
-const SERIF = 'Georgia, "Times New Roman", serif';
-const GOLD = '#C9A45C';
-const RED = '#E5304F';
-
-/** Letter-spaced text (canvas letterSpacing is not in every browser, so space it by hand). */
-function spaced(c: CanvasRenderingContext2D, text: string, cx: number, y: number, gap: number) {
-    const chars = [...text];
-    const widths = chars.map(ch => c.measureText(ch).width);
-    const total = widths.reduce((a, b) => a + b, 0) + gap * (chars.length - 1);
-    let x = cx - total / 2; const prev = c.textAlign; c.textAlign = 'left';
-    chars.forEach((ch, i) => { c.fillText(ch, x, y); x += widths[i] + gap; });
-    c.textAlign = prev;
-}
 
 export function drawShareGraphic(canvas: HTMLCanvasElement, film: Movie, poster: HTMLImageElement | null, format: Format, kind: ShareKind) {
     const { w, h } = SIZES[format];
@@ -164,6 +151,7 @@ const ShareFilmTab: React.FC<{ movies: Record<string, Movie> }> = ({ movies }) =
                                 <Button variant="primary" accent="magenta" onClick={download}>⬇ Download picture</Button>
                                 <Button onClick={share}>📲 Share from phone</Button>
                             </div>
+                            <ShareVideoMaker film={film} kind={kind} />
                             <Card>
                                 <p className="text-xs font-bold text-[#8A8A96] mb-2">CAPTION</p>
                                 <pre className="whitespace-pre-wrap text-sm text-white/90 font-sans">{caption}</pre>
