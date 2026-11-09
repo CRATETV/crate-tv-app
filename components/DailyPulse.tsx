@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { auditDefaultView } from '../api/_lib/catalogAuditView';
 import { Movie, AnalyticsData, MoviePipelineEntry, Category, AuditEntry } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
@@ -35,6 +36,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     const [recentAudits, setRecentAudits] = useState<AuditEntry[]>([]);
     const [aiStatus, setAiStatus] = useState<'nominal' | 'throttled'>('nominal');
     const [catalogSearch, setCatalogSearch] = useState('');
+    const [showAllCatalog, setShowAllCatalog] = useState(false);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -94,14 +96,20 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         })).sort((a, b) => b.views - a.views);
     }, [movies, liveViewCounts, analytics]);
 
+    // Searching looks through every film. Otherwise show the top performers
+    // (plus any film with a missing video), with an arrow for the rest.
+    const searching = catalogSearch.trim().length > 0;
+    const auditView = useMemo(() => auditDefaultView(catalogAudit), [catalogAudit]);
     const filteredCatalogAudit = useMemo(() => {
-        if (!catalogSearch.trim()) return catalogAudit;
-        const query = catalogSearch.toLowerCase();
-        return catalogAudit.filter(film => 
-            film.title.toLowerCase().includes(query) ||
-            film.key.toLowerCase().includes(query)
-        );
-    }, [catalogAudit, catalogSearch]);
+        if (searching) {
+            const query = catalogSearch.toLowerCase();
+            return catalogAudit.filter(film =>
+                film.title.toLowerCase().includes(query) ||
+                film.key.toLowerCase().includes(query)
+            );
+        }
+        return showAllCatalog ? catalogAudit : auditView.shown;
+    }, [catalogAudit, catalogSearch, searching, showAllCatalog, auditView]);
 
     const totalViews = useMemo(() => {
         // Use live counts if available, otherwise fallback to analytics
@@ -205,6 +213,22 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                 </tbody>
                             </table>
                         </div>
+                        {!searching && (showAllCatalog || auditView.hidden > 0) && (
+                            <button
+                                type="button"
+                                onClick={() => setShowAllCatalog(v => !v)}
+                                aria-expanded={showAllCatalog}
+                                className="mt-6 w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest text-gray-300 transition-colors"
+                            >
+                                <span className={`inline-block transition-transform ${showAllCatalog ? 'rotate-180' : ''}`}>▾</span>
+                                {showAllCatalog ? 'Show only the top films' : `Show ${auditView.hidden} more film${auditView.hidden === 1 ? '' : 's'}`}
+                            </button>
+                        )}
+                        {!searching && !showAllCatalog && (
+                            <p className="mt-3 text-center text-[9px] uppercase tracking-widest text-gray-700">
+                                Top {auditView.shown.length - auditView.broken} by views{auditView.broken ? ` + ${auditView.broken} with a missing video` : ''}. Search to find any film.
+                            </p>
+                        )}
                     </div>
 
                     <div className={`bg-[#0f0f0f] border ${aiStatus === 'throttled' ? 'border-red-600/50 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-white/5'} p-8 rounded-[2.5rem] relative overflow-hidden transition-all duration-700`}>
