@@ -13,6 +13,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './firebaseAdmin.js';
 import { resolveAdminCredential } from './adminSession.js';
+import { grantAllows } from './tabAccess.js';
 
 // Hash first so the comparison is constant-time regardless of length.
 const digest = (value: string) => createHash('sha256').update(value).digest();
@@ -69,4 +70,50 @@ export async function isValidAdminKey(value: unknown, _db?: Firestore | null): P
     const password = await resolveAdminCredential(value);
     const festival = process.env.FESTIVAL_ADMIN_PASSWORD;
     return !!password && !!festival && safeEqual(password, festival);
+}
+
+/**
+ * "Is this key allowed to use THESE tabs' data?" — the server-side half of the
+ * Team & permissions page. verifyAdminPassword only proves the key is some
+ * valid staff key; this also checks the tabs the owner actually switched on.
+ *
+ *   • owner / master passwords, and the legacy ADMIN_PASSWORD_* keys → always yes
+ *   • staff (collaborator_access) → only if one of `tabs` is in their grant
+ *   • festival admin → only if one of `tabs` is in the festival_admin role
+ *   • anything else → no. Fails closed.
+ *
+ * Pass every tab that legitimately uses the endpoint (e.g. an endpoint shared
+ * by Email and Subscribers passes both).
+ */
+export async function canUseTab(value: unknown, tabs: string[]): Promise<boolean> {
+    const password = await resolveAdminCredential(value);
+    if (!password.trim()) return false;
+
+    const owners: (string | undefined)[] = [process.env.ADMIN_PASSWORD, process.env.ADMIN_MASTER_PASSWORD];
+    for (const [key, v] of Object.entries(process.env)) {
+        if (key.startsWith('ADMIN_PASSWORD_')) owners.push(v);
+    }
+    if (owners.some(o => o && safeEqual(password, o))) return true;
+
+    if (getInitializationError()) return false;
+    const db = getAdminDb();
+    if (!db) return false;
+
+    try {
+        const festival = process.env.FESTIVAL_ADMIN_PASSWORD;
+        if (festival && safeEqual(password, festival)) {
+            const doc = await db.collection('admin_permissions').doc('festival_admin').get();
+            return grantAllows(doc.data()?.allowedTabs, tabs);
+        }
+        const snap = await db.collection('collaborator_access')
+            .where('accessKey', '==', password.trim())
+            .limit(1)
+            .get();
+        if (snap.empty) return false;
+        const data = snap.docs[0].data();
+        if (data.status === 'revoked') return false;
+        return grantAllows(data.assignedTabs, tabs);
+    } catch {
+        return false;
+    }
 }

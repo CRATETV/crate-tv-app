@@ -3,7 +3,7 @@
 // Body: { password, submissionId } to mark one, or { password, all: true } to mark every unseen one.
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const json = (body: unknown, status = 200) =>
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     try {
         const { password, submissionId, all } = await request.json();
 
-        if (!(await verifyAdminPassword(password))) {
+        if (!(await verifyAdminPassword(password)) || !(await canUseTab(password, ['submissions']))) {
             return json({ error: 'Unauthorized' }, 401);
         }
 

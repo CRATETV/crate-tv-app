@@ -348,7 +348,7 @@ const AdminPage: React.FC = () => {
     // loaded yet. The check reads a single document (see get-pipeline-data `latestOnly`),
     // and only pulls the full list when something new has actually arrived.
     useEffect(() => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || !allowedTabs.includes('submissions')) return;
         const checkForNewSubmissions = async () => {
             if (document.visibilityState !== 'visible') return;
             const pass = sessionStorage.getItem('adminPassword');
@@ -366,7 +366,7 @@ const AdminPage: React.FC = () => {
         };
         const timer = setInterval(checkForNewSubmissions, 60_000);
         return () => clearInterval(timer);
-    }, [isAuthenticated, refreshPipeline]);
+    }, [isAuthenticated, allowedTabs, refreshPipeline]);
 
     // ── SIGN-IN ─────────────────────────────────────────────────────────
     // The server returns a signed, 12-hour session pass (api/_lib/adminSession.ts).
@@ -700,7 +700,8 @@ const AdminPage: React.FC = () => {
                             onOpenFilms={(g) => { setFilmsFilter(g); navigateTo('movies'); }}
                             onNavigate={navigateTo}
                         >
-                            <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />
+                            {/* Live viewers, audit stream, system health: owner-only. Staff only see what they were given. */}
+                            {isMaster && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                         </AdminOverview>
                     )}
                     {activeTab === 'actors' && <ActorApprovalsTab onCountChange={(n) => setCounts(c => ({ ...c, actors: n }))} />}

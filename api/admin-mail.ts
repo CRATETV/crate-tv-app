@@ -13,7 +13,7 @@
 //   getSignatures / saveSignatures → the signatures you can pick when writing (saving: owner only)
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword, isMasterAdmin } from './_lib/adminAuth.js';
+import { verifyAdminPassword, isMasterAdmin, canUseTab } from './_lib/adminAuth.js';
 import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord } from './_lib/mailLog.js';
 
 const HIDDEN_COLLECTION = 'mail_hidden';
@@ -48,7 +48,7 @@ const json = (body: unknown, status = 200) =>
 export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
-        if (!(await verifyAdminPassword(body?.password))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await verifyAdminPassword(body?.password)) || !(await canUseTab(body?.password, ['email']))) return json({ error: 'Unauthorized' }, 401);
         if (getInitializationError()) return json({ error: 'Database unavailable.' }, 503);
         const db = getAdminDb();
         if (!db) return json({ error: 'Database unavailable.' }, 503);

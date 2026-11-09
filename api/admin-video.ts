@@ -23,7 +23,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { CreateJobCommand } from '@aws-sdk/client-mediaconvert';
 import { awsConfig, mediaConvert, refreshJob } from './_lib/videoJobs.js';
 import { FieldValue } from 'firebase-admin/firestore';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { safeFileName, slugFor, isAllowedVideoName, partCount, PART_SIZE, MAX_PARTS, hlsOutput, jobSettings } from './_lib/videoPipeline.js';
 
@@ -41,7 +41,7 @@ const plainAwsError = (e: any): string => {
 export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
-        if (!(await verifyAdminPassword(body.password))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await verifyAdminPassword(body.password)) || !(await canUseTab(body.password, ['movies', 'bulkUpload']))) return json({ error: 'Unauthorized' }, 401);
         const cfg = awsConfig();
         if (!cfg) return json({ error: 'Storage is not set up on the server.' }, 500);
         const s3 = new S3Client({ region: cfg.region, credentials: cfg.credentials });
