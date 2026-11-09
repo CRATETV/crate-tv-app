@@ -12,6 +12,7 @@ import StudioMail from './StudioMail';
 import CommunicationsTerminal from './CommunicationsTerminal';
 import SaveStatusToast from './SaveStatusToast';
 import LaurelManager from './LaurelManager';
+import SeasonsManager from './admin/SeasonsManager';
 import ShareFilmTab from './admin/ShareFilmTab';
 import AuditTerminal from './AuditTerminal';
 import ErrorLogTab from './ErrorLogTab';
@@ -820,7 +821,12 @@ const AdminPage: React.FC = () => {
                             targetBlocks={festivalData.flatMap(d => d.blocks || [])}
                         />
                     )}
-                    {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
+                    {activeTab === 'categories' && (
+                        <div className="space-y-16">
+                            <SeasonsManager allMovies={Object.values(movies) as Movie[]} />
+                            <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />
+                        </div>
+                    )}
                     {activeTab === 'share' && <ShareFilmTab movies={movies as Record<string, Movie>} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'roku' && (

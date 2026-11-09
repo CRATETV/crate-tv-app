@@ -1,4 +1,6 @@
 
+import SeasonShowcase from './components/SeasonShowcase';
+import { currentSeason, legacyCratemasKeys } from './api/_lib/seasons';
 import { getTrafficSource } from './services/trafficSource';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './components/Header';
@@ -321,6 +323,10 @@ const App: React.FC = () => {
 
     const [catalogBlockPurchase, setCatalogBlockPurchase] = useState<any>(null);
     const [showAllAccessPurchase, setShowAllAccessPurchase] = useState(false);
+
+    // Today's seasonal collection (Cratemas, Valentine's…), if there is one.
+    const season = useMemo(() => currentSeason(settings as any, legacyCratemasKeys(categories as any)), [settings, categories]);
+    const seasonMovies = useMemo(() => (season?.movieKeys || []).map(k => movies[k]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m)), [season, movies]);
 
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -927,12 +933,13 @@ const App: React.FC = () => {
                                     }}
                                 />
                             )}
+                            {season && <SeasonShowcase season={season} movies={seasonMovies} onSelect={handlePlayMovie} />}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handlePlayMovie} onShowDetails={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} categoryKey="comingSoon" />}
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial', 'vault'].includes(key)) return null;
-                                if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
+                                if (key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') return null; // shown as the seasonal showcase above
                                 
                                 const categoryMovies = (typedCategory.movieKeys || [])
                                     .map((movieKey: string) => movies[movieKey])
