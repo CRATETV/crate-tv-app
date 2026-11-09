@@ -1,4 +1,5 @@
 
+import { getTrafficSource } from './services/trafficSource';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -108,7 +109,7 @@ const App: React.FC = () => {
     
     useEffect(() => {
         // Track general site visit
-        fetch('/api/track-visit', { method: 'POST' }).catch(() => {});
+        fetch('/api/track-visit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: getTrafficSource() }) }).catch(() => {});
         
         const db = getDbInstance();
         if (!db || !user) return;

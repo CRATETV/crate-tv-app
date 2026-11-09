@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
+import AudienceInsightsCard from './admin/AudienceInsightsCard';
 
 const formatCurrency = (amountInCents: number) => `$${((amountInCents || 0) / 100).toFixed(2)}`;
 
@@ -66,6 +67,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             </div>
 
             {activeTab === 'overview' && (
+                <div className="space-y-12">
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
                     <StatCard title="Gross Platform Yield" value={formatCurrency(analyticsData.totalRevenue)} />
                     <StatCard title="Total Account Nodes" value={analyticsData.totalUsers} />
@@ -73,6 +75,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <StatCard title="Total Film views" value={(Object.values(analyticsData.viewCounts) as number[]).reduce((a, b) => a + b, 0)} />
                     <StatCard title="Total Applauds" value={(Object.values(analyticsData.movieLikes || {}) as number[]).reduce((a, b) => a + b, 0)} className="bg-red-600/5 border-red-500/20" />
                     <StatCard title="Total Watchlist Adds" value={(Object.values(analyticsData.watchlistCounts || {}) as number[]).reduce((a, b) => a + b, 0)} className="bg-amber-600/5 border-amber-500/20" />
+                </div>
+                <AudienceInsightsCard />
                 </div>
             )}
 

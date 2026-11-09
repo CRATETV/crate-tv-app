@@ -1,4 +1,5 @@
 
+import { normalizeSource } from './_lib/trafficSource.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
     if (!rateLimit(`track-view:${getIP(request)}`, 60, 10 * 60_000)) {
         return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
-    const { movieKey } = await request.json();
+    const { movieKey, source: rawSource } = await request.json();
     if (!movieKey) {
       return new Response(JSON.stringify({ error: "movieKey is required." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
         movieKey,
         country,
         referrer,
+        source: normalizeSource(rawSource),
+        // Who watched (account id only), so we can tell how many come back.
+        ...(uid ? { uid } : {}),
         platform: 'WEB',
         timestamp,
         type: 'VIEW'

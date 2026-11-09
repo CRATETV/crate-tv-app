@@ -1,4 +1,5 @@
 
+import { normalizeSource } from './_lib/trafficSource.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, getIP } from './_lib/rateLimit.js';
@@ -18,6 +19,9 @@ export async function POST(request: Request) {
     
     const country = request.headers.get('x-vercel-ip-country') || 'unknown';
     const referrer = request.headers.get('referer') || 'direct';
+    // The real source comes from the browser (the Referer header above is our own page).
+    let source = 'direct';
+    try { source = normalizeSource((await request.json())?.source); } catch { /* no body */ }
     const timestamp = FieldValue.serverTimestamp();
     
     const batch = db.batch();
@@ -27,6 +31,7 @@ export async function POST(request: Request) {
     batch.set(eventRef, {
         country,
         referrer,
+        source,
         platform: 'WEB',
         timestamp,
         type: 'VISIT'
