@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Movie } from '../../types';
-import { Button, Card } from './ui';
+import { Button, Card, adminPost } from './ui';
 import { ShareKind, shareWording, wrapLines } from '../../api/_lib/shareCopy';
-import { clipStart, isPlainVideoUrl, pickRecorderType } from '../../api/_lib/shareVideo';
+import { clipStart, formatTimecode, isPlainVideoUrl, parseTimecode, pickRecorderType } from '../../api/_lib/shareVideo';
 import { FONT, GOLD, RED, SERIF, spaced } from './shareCanvas';
 
-// "Make a video": a short piece of the film's trailer, set inside the same premium frame as the picture
+// "Make a video": a short piece of the film's trailer (or of the film itself), set inside the same premium frame as the picture
 // (badge, title, date, price, Crate TV). Recorded in the browser — nothing is uploaded or stored.
 const W = 1080, H = 1920;
 // Story/Reel screens hide roughly the top and bottom 250px behind Instagram's own buttons, so the words sit inside that.
@@ -42,32 +42,84 @@ function drawFrameLayer(c: CanvasRenderingContext2D, film: Movie, kind: ShareKin
 }
 
 const LENGTHS = [8, 10, 15] as const;
+type Source = 'trailer' | 'film';
+const FILM_START_DEFAULT = 60; // past the opening titles
+
+const waitFor = (target: HTMLVideoElement, event: string, ms: number) => new Promise<boolean>(resolve => {
+    const done = (ok: boolean) => { clearTimeout(timer); target.removeEventListener(event, onEvent); resolve(ok); };
+    const onEvent = () => done(true);
+    const timer = setTimeout(() => done(false), ms);
+    target.addEventListener(event, onEvent, { once: true });
+});
+
+/** Streaming films (HLS) need hls.js in most browsers; the same pinned copy the film pages use. */
+const loadHls = () => new Promise<any>(resolve => {
+    const w = window as any;
+    if (w.Hls) return resolve(w.Hls);
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+    script.onload = () => resolve(w.Hls);
+    script.onerror = () => resolve(null);
+    document.head.appendChild(script);
+});
 
 const ShareVideoMaker: React.FC<{ film: Movie; kind: ShareKind }> = ({ film, kind }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const hasTrailer = isPlainVideoUrl(film.trailer);
     const [len, setLen] = useState<number>(10);
+    const [source, setSource] = useState<Source>(hasTrailer ? 'trailer' : 'film');
+    const [startText, setStartText] = useState(formatTimecode(FILM_START_DEFAULT));
     const [busy, setBusy] = useState(false);
     const [done, setDone] = useState<{ url: string; ext: string } | null>(null);
     const [msg, setMsg] = useState<{ tone: 'good' | 'bad'; text: string } | null>(null);
 
     // A new film or style means the old video no longer matches.
     useEffect(() => () => { if (done) URL.revokeObjectURL(done.url); }, [done]);
-    useEffect(() => { setDone(null); setMsg(null); }, [film.key, kind]);
+    useEffect(() => { setDone(null); setMsg(null); setSource(isPlainVideoUrl(film.trailer) ? 'trailer' : 'film'); }, [film.key, kind]);
 
     const make = async () => {
         setMsg(null); setDone(null);
-        if (!isPlainVideoUrl(film.trailer)) return setMsg({ tone: 'bad', text: "This film doesn't have a trailer file I can use (it's missing, or it's a YouTube/Vimeo link)." });
         const rec = pickRecorderType(t => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t));
         const canvas = canvasRef.current;
         if (!rec || !canvas || !(canvas as any).captureStream) return setMsg({ tone: 'bad', text: "This browser can't record video. Try Chrome on a computer." });
+
+        // Where the pictures come from.
+        let src = film.trailer, isHls = false, start = film.trailerStart || 0;
+        if (source === 'film') {
+            const t = parseTimecode(startText);
+            if (t === null) return setMsg({ tone: 'bad', text: 'Type the start like 12:30 (minutes:seconds).' });
+            start = t;
+            try {
+                const r = await adminPost<{ url: string; hls: boolean }>('/api/admin-clip-source', { movieKey: film.key });
+                src = r.url; isHls = r.hls;
+            } catch (e) {
+                return setMsg({ tone: 'bad', text: (e as Error).message || "Couldn't get the film's file." });
+            }
+        } else if (!isPlainVideoUrl(film.trailer)) {
+            return setMsg({ tone: 'bad', text: "This film doesn't have a trailer file I can use. Choose \"From the film\" instead." });
+        }
+
         setBusy(true);
         let actx: AudioContext | null = null;
+        let hls: any = null;
         const v = document.createElement('video');
         try {
-            v.crossOrigin = 'anonymous'; v.playsInline = true; v.preload = 'auto'; v.src = film.trailer;
-            await new Promise<void>((res, rej) => { v.onloadedmetadata = () => res(); v.onerror = () => rej(new Error('cors')); });
-            v.currentTime = clipStart(film.trailerStart, v.duration, len);
-            await new Promise<void>(res => { v.onseeked = () => res(); });
+            v.crossOrigin = 'anonymous'; v.playsInline = true; v.preload = 'auto';
+            if (isHls && !v.canPlayType('application/vnd.apple.mpegurl')) {
+                const Hls = await loadHls();
+                if (!Hls?.isSupported()) throw new Error('hls');
+                hls = new Hls({ maxBufferLength: 20, startPosition: start });
+                hls.loadSource(src); hls.attachMedia(v);
+            } else {
+                v.src = src;
+            }
+            const meta = await new Promise<boolean>(res => {
+                v.onloadedmetadata = () => res(true); v.onerror = () => res(false); setTimeout(() => res(false), 30000);
+            });
+            if (!meta) throw new Error(isHls ? 'hls' : 'cors');
+            v.currentTime = clipStart(start, v.duration, len);
+            await waitFor(v, 'seeked', 8000);
+            for (let i = 0; i < 40 && v.readyState < 2; i++) await new Promise(r => setTimeout(r, 200));
 
             canvas.width = W; canvas.height = H;
             const c = canvas.getContext('2d')!;
@@ -116,25 +168,42 @@ const ShareVideoMaker: React.FC<{ film: Movie; kind: ShareKind }> = ({ film, kin
             setDone({ url: URL.createObjectURL(blob), ext });
             setMsg({ tone: 'good', text: ext === 'mp4' ? 'Your video is ready.' : "Your video is ready. It's a WebM file — if Instagram won't take it, tell me and I'll add a converter." });
         } catch (e) {
-            const cors = (e as Error)?.message === 'cors';
-            setMsg({ tone: 'bad', text: cors
-                ? "Your browser won't let me copy this trailer from storage (a permission on the video storage). Tell me and I'll fix it."
-                : 'The video could not be made. Try again, or try another film.' });
+            const why = (e as Error)?.message;
+            setMsg({ tone: 'bad', text: why === 'cors'
+                ? "Your browser won't let me copy this video from storage (a permission on the video storage). Tell me and I'll fix it."
+                : why === 'hls'
+                    ? "This film is a streaming-format file and this browser couldn't open it. Try Chrome on a computer."
+                    : 'The video could not be made. Try again, or try another film.' });
         } finally {
-            try { v.pause(); v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
+            try { hls?.destroy(); v.pause(); v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
             try { await actx?.close(); } catch { /* ignore */ }
             setBusy(false);
         }
     };
 
     const name = `${(film.title || 'film').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-clip.${done?.ext || 'mp4'}`;
+    const chip = (on: boolean, off?: boolean) => `rounded-full px-4 py-2 text-sm font-bold border ${on ? 'bg-white text-black border-white' : 'bg-[#131318] text-[#A1A1AD] border-white/[0.07]'} ${off ? 'opacity-40 cursor-not-allowed' : ''}`;
     return (
         <Card>
             <p className="text-xs font-bold text-[#8A8A96] mb-2">SHORT VIDEO (STORY / REEL)</p>
-            <p className="text-sm text-white/80 mb-3">A clip of the trailer inside the same frame, with the title{kind === 'premiere' ? ', date and price' : ''}.</p>
+            <p className="text-sm text-white/80 mb-3">A clip inside the same frame, with the title{kind === 'premiere' ? ', date and price' : ''}.</p>
+            <div className="flex gap-2 flex-wrap items-center mb-3">
+                <span className="text-xs font-bold text-[#8A8A96]">FROM</span>
+                <button disabled={busy || !hasTrailer} onClick={() => setSource('trailer')} className={chip(source === 'trailer', !hasTrailer)}>The trailer</button>
+                <button disabled={busy} onClick={() => setSource('film')} className={chip(source === 'film')}>The film</button>
+                {!hasTrailer && <span className="text-xs text-[#8A8A96]">No trailer file for this film.</span>}
+            </div>
+            {source === 'film' && (
+                <div className="flex gap-2 flex-wrap items-center mb-3">
+                    <label className="text-xs font-bold text-[#8A8A96]" htmlFor="clip-start">START AT</label>
+                    <input id="clip-start" value={startText} onChange={e => setStartText(e.target.value)} disabled={busy} placeholder="1:00"
+                        className="w-24 rounded-xl bg-[#131318] border border-white/[0.07] px-3 py-2 text-sm text-white outline-none focus:border-white/30" />
+                    <span className="text-xs text-[#8A8A96]">minutes:seconds into the film. Pick a good moment, past the opening titles.</span>
+                </div>
+            )}
             <div className="flex gap-2 flex-wrap items-center mb-3">
                 {LENGTHS.map(n => (
-                    <button key={n} disabled={busy} onClick={() => setLen(n)} className={`rounded-full px-4 py-2 text-sm font-bold border ${len === n ? 'bg-white text-black border-white' : 'bg-[#131318] text-[#A1A1AD] border-white/[0.07]'}`}>{n} sec</button>
+                    <button key={n} disabled={busy} onClick={() => setLen(n)} className={chip(len === n)}>{n} sec</button>
                 ))}
                 <Button variant="primary" accent="magenta" onClick={make} disabled={busy}>{busy ? `Recording… ${len}s, please wait` : '🎬 Make video'}</Button>
             </div>

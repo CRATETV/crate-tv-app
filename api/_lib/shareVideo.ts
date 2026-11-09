@@ -24,3 +24,19 @@ export function isPlainVideoUrl(url?: string): boolean {
     const u = (url || '').trim();
     return /^https?:\/\//i.test(u) && !/youtube\.com|youtu\.be|vimeo\.com/i.test(u);
 }
+
+/** "1:30", "01:05:10" or "90" → seconds. Anything else → null. */
+export function parseTimecode(text: string): number | null {
+    const t = (text || '').trim();
+    if (!t) return null;
+    const parts = t.split(':');
+    if (parts.length > 3 || parts.some(p => !/^\d+(\.\d+)?$/.test(p))) return null;
+    return parts.reduce((total, p) => total * 60 + Number(p), 0);
+}
+
+/** 90 → "1:30". */
+export function formatTimecode(seconds: number): string {
+    const s = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    return h ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`;
+}
