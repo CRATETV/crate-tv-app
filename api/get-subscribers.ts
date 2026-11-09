@@ -16,7 +16,7 @@
 // get-payouts.ts.
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { isValidEmail } from './_lib/validation.js';
 
 const json = (body: unknown, status = 200) =>
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
         const { password, action = 'list' } = body || {};
-        if (!(await verifyAdminPassword(password))) {
+        if (!(await verifyAdminPassword(password)) || !(await canUseTab(password, ['subscribers', 'email']))) {
             return json({ error: 'Unauthorized' }, 401);
         }
 

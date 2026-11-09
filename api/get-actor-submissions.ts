@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { isValidAdminKey } from './_lib/adminAuth.js';
+import { isValidAdminKey, canUseTab } from './_lib/adminAuth.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error("DB connection failed");
 
-        if (!(await isValidAdminKey(password, db))) {
+        if (!(await isValidAdminKey(password, db)) || !(await canUseTab(password, ['actors', 'submissions']))) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 

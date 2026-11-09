@@ -1,5 +1,5 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { isValidAdminKey } from './_lib/adminAuth.js';
+import { isValidAdminKey, canUseTab } from './_lib/adminAuth.js';
 import { Movie, ActorProfile } from '../types.js';
 import { Resend } from 'resend';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     // Authentication check
     if (getInitializationError()) throw new Error(getInitializationError()!);
-    if (!(await isValidAdminKey(password, getAdminDb()))) {
+    if (!(await isValidAdminKey(password, getAdminDb())) || !(await canUseTab(password, ['actors', 'submissions']))) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
     

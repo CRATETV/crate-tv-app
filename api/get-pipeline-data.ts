@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     try {
         const { password, latestOnly } = await request.json();
 
-        if (!(await verifyAdminPassword(password))) {
+        if (!(await verifyAdminPassword(password)) || !(await canUseTab(password, ['submissions', 'crateFestHub']))) {
             return json({ error: 'Unauthorized' }, 401);
         }
 

@@ -11,7 +11,7 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
 import { storyChecklist, pieceToDraftStory, sanitizePartnerPiece, isPublishedStory } from './_lib/zineRules.js';
 import { notifyPartnerPiece } from './_lib/partnerEmails.js';
@@ -60,7 +60,7 @@ async function partnerEmailsFor(db: FirebaseFirestore.Firestore, partnerId?: str
 export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
-        if (!(await verifyAdminPassword(body?.password))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await verifyAdminPassword(body?.password)) || !(await canUseTab(body?.password, ['editorial']))) return json({ error: 'Unauthorized' }, 401);
         if (getInitializationError()) return json({ error: 'Database unavailable.' }, 503);
         const db = getAdminDb();
         if (!db) return json({ error: 'Database unavailable.' }, 503);
