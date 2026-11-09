@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clipStart, pickRecorderType, isPlainVideoUrl } from '../api/_lib/shareVideo';
+import { clipStart, pickRecorderType, isPlainVideoUrl, parseTimecode, formatTimecode } from '../api/_lib/shareVideo';
 
 test('clipStart uses the trailer start but keeps the clip inside the trailer', () => {
     assert.equal(clipStart(12, 90, 10), 12);
@@ -21,4 +21,15 @@ test('isPlainVideoUrl rejects youtube, vimeo and blanks', () => {
     assert.equal(isPlainVideoUrl('https://vimeo.com/123'), false);
     assert.equal(isPlainVideoUrl(''), false);
     assert.equal(isPlainVideoUrl(undefined), false);
+});
+test('timecodes read and print the way people type them', () => {
+    assert.equal(parseTimecode('1:30'), 90);
+    assert.equal(parseTimecode('90'), 90);
+    assert.equal(parseTimecode(' 01:02:03 '), 3723);
+    assert.equal(parseTimecode(''), null);
+    assert.equal(parseTimecode('abc'), null);
+    assert.equal(parseTimecode('1:2:3:4'), null);
+    assert.equal(formatTimecode(90), '1:30');
+    assert.equal(formatTimecode(3723), '1:02:03');
+    assert.equal(formatTimecode(-5), '0:00');
 });
