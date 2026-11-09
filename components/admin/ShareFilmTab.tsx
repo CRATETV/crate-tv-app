@@ -23,6 +23,7 @@ const loadPoster = (url: string) => new Promise<HTMLImageElement | null>(resolve
 
 const SERIF = 'Georgia, "Times New Roman", serif';
 const GOLD = '#C9A45C';
+const RED = '#E5304F';
 
 /** Letter-spaced text (canvas letterSpacing is not in every browser, so space it by hand). */
 function spaced(c: CanvasRenderingContext2D, text: string, cx: number, y: number, gap: number) {
@@ -39,16 +40,18 @@ export function drawShareGraphic(canvas: HTMLCanvasElement, film: Movie, poster:
     canvas.width = w; canvas.height = h;
     const c = canvas.getContext('2d'); if (!c) return;
     const wording = shareWording(film, kind);
+    const accent = kind === 'premiere' ? GOLD : RED;
+    const accentRgb = kind === 'premiere' ? '201,164,92' : '229,48,79';
     // Matte black with one soft warm light behind the poster and a gold hairline frame.
     c.fillStyle = '#0A0A0C'; c.fillRect(0, 0, w, h);
     const g = c.createRadialGradient(w / 2, h * 0.3, 0, w / 2, h * 0.3, w * 0.95);
-    g.addColorStop(0, 'rgba(201,164,92,0.20)'); g.addColorStop(1, 'rgba(10,10,12,0)');
+    g.addColorStop(0, `rgba(${accentRgb},0.20)`); g.addColorStop(1, 'rgba(10,10,12,0)');
     c.fillStyle = g; c.fillRect(0, 0, w, h);
-    c.strokeStyle = 'rgba(201,164,92,0.55)'; c.lineWidth = 2; c.strokeRect(36, 36, w - 72, h - 72);
+    c.strokeStyle = `rgba(${accentRgb},0.6)`; c.lineWidth = 2; c.strokeRect(36, 36, w - 72, h - 72);
 
     c.textAlign = 'center'; c.textBaseline = 'alphabetic';
     // Top label.
-    c.fillStyle = GOLD; c.font = `700 28px ${FONT}`;
+    c.fillStyle = accent; c.font = `700 28px ${FONT}`;
     spaced(c, wording.badge, w / 2, format === 'story' ? 150 : 108, 9);
 
     // Poster, straight, with a soft shadow.
@@ -72,9 +75,9 @@ export function drawShareGraphic(canvas: HTMLCanvasElement, film: Movie, poster:
     tl.forEach(l => { c.fillText(l, w / 2, y); y += size * 1.08; });
     y += 4;
     if (film.director) { c.fillStyle = 'rgba(255,255,255,0.72)'; c.font = `500 28px ${FONT}`; spaced(c, `DIRECTED BY ${film.director.toUpperCase()}`, w / 2, y, 3); y += 34; }
-    if (wording.when) { y += 14; c.fillStyle = GOLD; c.font = `700 36px ${FONT}`; c.fillText(wording.when, w / 2, y); y += 40; }
+    if (wording.when) { y += 14; c.fillStyle = accent; c.font = `700 36px ${FONT}`; c.fillText(wording.when, w / 2, y); y += 40; }
     if (wording.price) { c.fillStyle = 'rgba(255,255,255,0.8)'; c.font = `500 28px ${FONT}`; c.fillText(wording.price, w / 2, y); y += 30; }
-    y += 18; c.fillStyle = GOLD; c.fillRect(w / 2 - 40, y, 80, 2); y += 46;
+    y += 18; c.fillStyle = accent; c.fillRect(w / 2 - 40, y, 80, 2); y += 46;
 
     // Synopsis: as many lines as fit above the footer.
     c.fillStyle = 'rgba(255,255,255,0.84)'; c.font = `400 31px ${SERIF}`;
@@ -84,7 +87,7 @@ export function drawShareGraphic(canvas: HTMLCanvasElement, film: Movie, poster:
 
     // Footer: wordmark and where to watch.
     c.fillStyle = '#fff'; c.font = `800 34px ${FONT}`; spaced(c, 'CRATE TV', w / 2, h - 118, 10);
-    c.fillStyle = GOLD; c.font = `600 24px ${FONT}`; c.fillText(wording.cta, w / 2, h - 84);
+    c.fillStyle = accent; c.font = `600 24px ${FONT}`; c.fillText(wording.cta, w / 2, h - 84);
     c.fillStyle = 'rgba(255,255,255,0.55)'; c.font = `500 22px ${FONT}`; c.fillText('cratetv.net · link in bio', w / 2, h - 52);
 }
 
