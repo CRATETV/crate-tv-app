@@ -28,6 +28,7 @@ import AdminShopRevenueTab from './AdminShopRevenueTab';
 import PwffAdminTab from './PwffAdminTab';
 import UserIntelligenceTab from './UserIntelligenceTab';
 import AnalyticsPage from './AnalyticsPage';
+import { spotlightStatus } from '../api/_lib/spotlightRules';
 import RokuManagementTab from './RokuManagementTab';
 import RokuAnalyticsTab from './RokuAnalyticsTab';
 import FestivalReportTab from './FestivalReportTab';
@@ -237,15 +238,8 @@ const AdminPage: React.FC = () => {
                 const spotRes = await fetch('/api/set-monthly-spotlight');
                 if (spotRes.ok) {
                     const spotData = await spotRes.json();
-                    const now = new Date();
-                    // Show reminder if no movie set, or if it was sent already this month (needs refreshing for next month)
-                    const alreadySentThisMonth = spotData.sentAt && (() => {
-                        const sent = spotData.sentAt._seconds
-                            ? new Date(spotData.sentAt._seconds * 1000)
-                            : new Date(spotData.sentAt);
-                        return sent.getMonth() === now.getMonth() && sent.getFullYear() === now.getFullYear();
-                    })();
-                    setSpotlightReady(!!(spotData.movieKey && !alreadySentThisMonth));
+                    // Only nag when nothing is lined up for the next email (see api/_lib/spotlightRules.ts).
+                    setSpotlightReady(spotlightStatus(spotData, new Date()) !== 'needs-pick');
                 }
             } catch { /* non-fatal */ }
 
