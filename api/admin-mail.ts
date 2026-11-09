@@ -14,7 +14,7 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { verifyAdminPassword, isMasterAdmin, canUseTab } from './_lib/adminAuth.js';
-import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord } from './_lib/mailLog.js';
+import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord, inboundBodyText, explainReceiveFailure } from './_lib/mailLog.js';
 
 const HIDDEN_COLLECTION = 'mail_hidden';
 const DELETED_COLLECTION = 'mail_deleted';   // ids of website-request copies that were deleted on purpose
@@ -83,6 +83,22 @@ export async function POST(request: Request) {
                 const url = full?.raw?.download_url;
                 if (!url) return json({ error: 'No original file is available for this email.' }, 404);
                 return json({ url });
+            }
+            // Loads the message text for a received email that was saved without it.
+            case 'refetch': {
+                const id = typeof body.id === 'string' ? body.id : '';
+                const ref = id ? db.collection(MAIL_COLLECTION).doc(id) : null;
+                const doc = ref ? await ref.get() : null;
+                const resendId = doc?.data()?.resendId;
+                if (!ref || !doc?.exists || doc.data()?.direction !== 'in' || !resendId) return json({ error: 'That email was not found.' }, 404);
+                const res = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(resendId)}`, {
+                    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY || ''}` },
+                });
+                if (!res.ok) return json({ error: explainReceiveFailure(res.status) }, 502);
+                const text = inboundBodyText(await res.json()).slice(0, 60_000);
+                if (!text) return json({ text: '', empty: true });
+                await ref.set({ text }, { merge: true });
+                return json({ text });
             }
             case 'unread': {
                 await addMissingInquiries(db);

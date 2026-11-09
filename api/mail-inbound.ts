@@ -7,7 +7,7 @@
 // and put its signing secret in Vercel as RESEND_WEBHOOK_SECRET.
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { MAIL_COLLECTION, verifyWebhookSignature, parseInboundEvent, buildInboundRecord } from './_lib/mailLog.js';
+import { MAIL_COLLECTION, verifyWebhookSignature, parseInboundEvent, buildInboundRecord, explainReceiveFailure } from './_lib/mailLog.js';
 import { notifyOwnerMailReceived } from './_lib/partnerEmails.js';
 
 const json = (body: unknown, status = 200) =>
@@ -38,12 +38,14 @@ export async function POST(request: Request) {
 
         // Fetch the full email (body text, real sender name, attachment sizes).
         let full: any = null;
+        let fetchStatus = 0;
         try {
             const res = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(event.emailId)}`, {
                 headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY || ''}` },
             });
+            fetchStatus = res.status;
             if (res.ok) full = await res.json();
-            else console.error('[mail-inbound] could not fetch email', event.emailId, res.status);
+            else console.error('[mail-inbound] could not fetch email', event.emailId, res.status, explainReceiveFailure(res.status));
         } catch (e) {
             console.error('[mail-inbound] fetch failed:', e);
         }
@@ -57,6 +59,10 @@ export async function POST(request: Request) {
         if (!alreadySaved) {
             notifyOwnerMailReceived(record.fromName || record.fromEmail, record.subject, record.text).catch(e => console.error('[mail-inbound] owner alert failed', e));
         }
+        // The envelope is saved, but without the message text. Say so, so Resend tries again later
+        // (the repeat fills the text in; it will not make a duplicate or a second alert). The inbox also
+        // has a button that fetches the text on demand.
+        if (!full) return json({ error: `Saved the email but could not read its text (status ${fetchStatus || 'none'}).` }, 500);
         return json({ success: true });
     } catch (e) {
         console.error('[mail-inbound] failed:', e);

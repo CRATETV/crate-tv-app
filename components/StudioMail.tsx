@@ -63,6 +63,9 @@ const StudioMail: React.FC = () => {
     const [mailboxNote, setMailboxNote] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [selected, setSelected] = useState<MailItem | null>(null);
+    // Received emails saved without their text get it fetched when opened.
+    const [body, setBody] = useState<{ id: string; state: 'loading' | 'failed' | 'empty'; error?: string } | null>(null);
+    const bodyTried = useRef<Set<string>>(new Set());
     const [isNewCompose, setIsNewCompose] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
     const [isSending, setIsSending] = useState(false);
@@ -266,6 +269,25 @@ const StudioMail: React.FC = () => {
         catch (err) { setNotice({ ok: false, text: err instanceof Error ? err.message : 'Could not open the original.' }); }
     };
 
+    const loadBody = useCallback(async (m: MailItem) => {
+        setBody({ id: m.id, state: 'loading' });
+        try {
+            const r = await callMail({ action: 'refetch', id: m.id });
+            if (!r.text) { setBody({ id: m.id, state: 'empty' }); return; }
+            setReceived(list => list.map(x => x.id === m.id ? { ...x, text: r.text } : x));
+            setSelected(cur => cur && cur.id === m.id ? { ...cur, text: r.text } : cur);
+            setBody(null);
+        } catch (err) {
+            setBody({ id: m.id, state: 'failed', error: err instanceof Error ? err.message : 'Could not load the message.' });
+        }
+    }, [callMail]);
+    useEffect(() => {
+        if (selected && selected.kind === 'EMAIL' && selected.folder === 'in' && !selected.text && selected.canOpenOriginal && !bodyTried.current.has(selected.id)) {
+            bodyTried.current.add(selected.id);
+            loadBody(selected);
+        }
+    }, [selected, loadBody]);
+
     const showComposer = isNewCompose || (selected && selected.folder === 'in');
 
     return (
@@ -382,7 +404,19 @@ const StudioMail: React.FC = () => {
                             <div className="flex-grow overflow-y-auto p-6 space-y-6">
                                 {selected && (
                                     <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
-                                        <p className="text-gray-200 whitespace-pre-wrap leading-relaxed text-sm">{selected.text || '(No message text.)'}</p>
+                                        {selected.text ? (
+                                            <p className="text-gray-200 whitespace-pre-wrap leading-relaxed text-sm">{selected.text}</p>
+                                        ) : body && body.id === selected.id && body.state === 'loading' ? (
+                                            <p className="text-gray-400 text-sm">Loading the message…</p>
+                                        ) : body && body.id === selected.id && body.state === 'failed' ? (
+                                            <div className="text-sm space-y-3">
+                                                <p className="text-amber-300">The message text didn't come through. {body.error}</p>
+                                                <button type="button" onClick={() => loadBody(selected)} className="text-xs font-bold text-red-400 hover:text-red-300 underline">Try again</button>
+                                                {selected.canOpenOriginal && <button type="button" onClick={openOriginal} className="ml-4 text-xs font-bold text-red-400 hover:text-red-300 underline">Download the original email instead</button>}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-400 text-sm">{selected.kind === 'EMAIL' ? 'This email has no message text (it may be only an attachment or a picture).' : '(No message text.)'}</p>
+                                        )}
                                         {selected.attachments.length > 0 && (
                                             <div className="mt-5 pt-4 border-t border-white/10">
                                                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Attachments</p>
