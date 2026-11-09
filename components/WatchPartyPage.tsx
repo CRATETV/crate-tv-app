@@ -1,5 +1,6 @@
 
 import { toast } from './Toast';
+import { LOBBY_HEARTBEAT_MS } from '../api/_lib/lobbyPresence';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -2040,8 +2041,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             name: user.name || 'Film Lover',
             avatar: user.avatar || 'fox',
             joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
         });
-        return () => { viewerRef.delete(); };
+        const heartbeat = setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
+            viewerRef.set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+        }, LOBBY_HEARTBEAT_MS);
+        return () => { clearInterval(heartbeat); viewerRef.delete(); };
     }, [shouldShowLobby, hasAccess, user, movieKey]);
 
     // ── SESSION GUARD — prevents password sharing ───────────────────────────

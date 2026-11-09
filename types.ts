@@ -384,6 +384,8 @@ export interface WatchPartyState {
   type: 'movie' | 'block';
   activePoll?: Poll;
   directorWelcome?: string;
+  /** Pre-show lobby poll (api/watch-party-poll.ts). */
+  poll?: { id: string; question: string; options: string[]; status: 'open' | 'closed'; showResults: boolean; results?: number[] };
   directorThankYou?: string;
   applauseCount?: number;
   pinnedMessage?: { text: string; at: number }; // Control Room announcement shown at the top of the chat
