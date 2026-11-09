@@ -131,13 +131,26 @@ export function parseInboundEvent(body: any): InboundEvent | null {
     };
 }
 
+/** The message text out of Resend's "retrieve received email" answer: the plain text, or the HTML with its tags removed. */
+export function inboundBodyText(answer: any): string {
+    const full = answer && typeof answer === 'object' && answer.data && typeof answer.data === 'object' && !('text' in answer) && !('html' in answer) ? answer.data : answer;
+    if (typeof full?.text === 'string' && full.text.trim()) return full.text.trim();
+    return typeof full?.html === 'string' ? stripHtml(full.html) : '';
+}
+
+/** Plain words for why Resend would not hand over a received email's text. */
+export function explainReceiveFailure(status: number): string {
+    if (status === 401 || status === 403) return "Resend wouldn't let CRATE read this email's text (status " + status + "). The Resend key CRATE uses probably only has permission to send. In Resend, make a key with Full access and put it in Vercel as RESEND_API_KEY.";
+    if (status === 404) return "Resend no longer has this email (it may be too old), so its text can't be loaded.";
+    if (status === 429) return 'Resend is busy right now. Try again in a minute.';
+    return "Resend didn't send the text back (status " + status + "). Try again in a minute.";
+}
+
 /** The saved record for one received email. `full` is Resend's "retrieve received email" answer (may be null). */
 export function buildInboundRecord(event: InboundEvent, full: any, nowIso: string) {
     const headerFrom = full?.headers?.from ?? full?.headers?.From;
     const who = parseAddress(headerFrom || event.from);
-    const text = typeof full?.text === 'string' && full.text.trim()
-        ? full.text.trim()
-        : typeof full?.html === 'string' ? stripHtml(full.html) : '';
+    const text = inboundBodyText(full);
     const sizes = new Map<string, number>((Array.isArray(full?.attachments) ? full.attachments : []).map((a: any) => [String(a?.id), Number(a?.size) || 0]));
     return {
         direction: 'in' as const,

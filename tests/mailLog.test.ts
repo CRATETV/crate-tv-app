@@ -131,3 +131,18 @@ test('signatures: shown as bold name, clickable site and email, nothing injected
     assert.ok(!html.includes('<b>'));
     assert.equal((html.match(/<a /g) || []).length, 2);
 });
+
+import { inboundBodyText, explainReceiveFailure } from '../api/_lib/mailLog.js';
+test('inboundBodyText prefers text, falls back to html, and copes with a wrapped answer', () => {
+    assert.equal(inboundBodyText({ text: '  Hello there  ', html: '<p>ignored</p>' }), 'Hello there');
+    assert.equal(inboundBodyText({ text: '', html: '<p>Hi</p><p>You</p>' }), 'Hi\nYou');
+    assert.equal(inboundBodyText({ data: { text: 'wrapped' } }), 'wrapped');
+    assert.equal(inboundBodyText(null), '');
+    assert.equal(inboundBodyText({}), '');
+});
+test('explainReceiveFailure says what to do for a refused key', () => {
+    assert.match(explainReceiveFailure(401), /Full access/);
+    assert.match(explainReceiveFailure(403), /RESEND_API_KEY/);
+    assert.match(explainReceiveFailure(404), /no longer has/);
+    assert.match(explainReceiveFailure(500), /status 500/);
+});
