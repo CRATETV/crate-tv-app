@@ -856,10 +856,12 @@ Sub MarkContentWatched(content as Object)
     movieKey = SafeString(content.id)
     If movieKey = "" And content.HasField("movieKey") Then movieKey = SafeString(content.movieKey)
     If movieKey = "" Then Return
-    task = CreateObject("roSGNode", "ContentTask")
-    task.taskType = "markWatched"
-    If m.global <> Invalid And m.global.HasField("deviceId") Then task.deviceId = m.global.deviceId
-    task.control = "run"
+    ' Kept on m so the task is not thrown away before it finishes.
+    m.watchedTask = CreateObject("roSGNode", "ContentTask")
+    m.watchedTask.taskType = "markWatched"
+    m.watchedTask.movieKey = movieKey
+    If m.global <> Invalid And m.global.HasField("deviceId") Then m.watchedTask.deviceId = m.global.deviceId
+    m.watchedTask.control = "run"
 End Sub
 
 ' =============================================================================

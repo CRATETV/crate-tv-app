@@ -29,6 +29,10 @@ Sub ExecuteTask()
         PollAuth()
     Else If taskType = "getJson"
         GetJson()
+    Else If taskType = "markWatched"
+        PostToCrate(GetMarkWatchedUrl(), "deviceId=" + UrlEncode(m.top.deviceId) + "&movieKey=" + UrlEncode(m.top.movieKey))
+    Else If taskType = "saveProgress"
+        PostToCrate(GetSaveProgressUrl(), "deviceId=" + UrlEncode(m.top.deviceId) + "&movieKey=" + UrlEncode(m.top.movieKey) + "&seconds=" + Str(m.top.seconds).Trim())
     Else
         m.top.errorMessage = "Unknown task type: " + taskType
         m.top.taskStatus = "error"
@@ -295,6 +299,34 @@ End Sub
 ' =============================================================================
 ' HTTP REQUEST
 ' =============================================================================
+' Sends a small form to CRATE and waits for the answer. Used by markWatched and saveProgress.
+' Quiet on failure: a missed progress ping is not worth bothering the viewer.
+Sub PostToCrate(url as String, body as String)
+    If m.top.deviceId = "" Or m.top.movieKey = ""
+        m.top.taskStatus = "error"
+        Return
+    End If
+    request = CreateObject("roUrlTransfer")
+    port = CreateObject("roMessagePort")
+    request.SetMessagePort(port)
+    request.SetUrl(url)
+    request.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    request.InitClientCertificates()
+    request.AddHeader("Content-Type", "application/x-www-form-urlencoded")
+    If request.AsyncPostFromString(body)
+        event = Wait(15000, port)
+        If event = Invalid
+            request.AsyncCancel()
+            m.top.taskStatus = "error"
+            Return
+        End If
+        Print "CrateTV [Task]: POST " + url + " -> HTTP " + Str(event.GetResponseCode()).Trim()
+        m.top.taskStatus = "success"
+    Else
+        m.top.taskStatus = "error"
+    End If
+End Sub
+
 Function MakeGetRequest(url as String) as Dynamic
     request = CreateObject("roUrlTransfer")
     port = CreateObject("roMessagePort")

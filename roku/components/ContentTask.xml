@@ -5,6 +5,8 @@
     - fetchFeed: Fetches and parses VOD feed
     - getLinkCode: Fetches device link code from API
     - pollAuth: Polls for device authentication status
+    - markWatched: tells CRATE a linked viewer finished a film (counts the view)
+    - saveProgress: tells CRATE where a linked viewer stopped (so the phone can pick up there)
 -->
 <component name="ContentTask" extends="Task">
     <interface>
@@ -13,6 +15,8 @@
         <field id="taskType" type="string" value="fetchFeed" />
         <field id="feedUrl" type="string" value="" />
         <field id="deviceId" type="string" value="" />
+        <field id="movieKey" type="string" value="" />
+        <field id="seconds" type="integer" value="0" />
         <field id="feedData" type="node" />
         <field id="linkCode" type="string" value="" />
         <field id="isLinked" type="boolean" value="false" />

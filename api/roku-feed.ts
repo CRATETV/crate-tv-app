@@ -1,4 +1,5 @@
 import { annotateResume } from './_lib/rokuResume.js';
+import { showAsRokuParty } from './_lib/rokuParties.js';
 import { getApiData } from './_lib/data.js';
 import { paidFestivalFilmKeys, isFreeForEveryone } from './_lib/paidRules.js';
 import { isPastAvailableUntil, isWatchPartyListable, filmHoldReason } from './_lib/filmAvailability.js';
@@ -326,11 +327,14 @@ export async function GET(request: Request) {
         viewsSnap.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count || 0); });
         
         const activeParties: Record<string, any> = {};
+        const allPartyStates: Record<string, any> = {};
         partiesSnap.forEach(doc => {
             const data = doc.data();
+            allPartyStates[doc.id] = data;
             if (data.status === 'live') activeParties[doc.id] = data;
         });
         (config as any).activeParties = activeParties;
+        (config as any).allPartyStates = allPartyStates;
         
         console.log(`Found ${moviesSnap.size} movies and ${categoriesSnap.size} categories in Firestore.`);
 
@@ -582,9 +586,9 @@ export async function GET(request: Request) {
         const partyFilms = (Object.values(moviesObj) as Movie[])
             .filter(m => {
                 if (!m || m.isWatchPartyEnabled !== true || !m.watchPartyStartTime) return false;
-                const start = Date.parse(m.watchPartyStartTime);
                 const live = !!(config as any).activeParties?.[m.key] && !isStaleLive((config as any).activeParties[m.key], Date.parse(m.watchPartyStartTime || ''));
-                if (!live && !(Number.isFinite(start) && start > nowMs - 6 * 3600_000 && start < nowMs + 30 * 86400_000)) return false;
+                // Same rule as the website: a party that already ended for this run is not "upcoming".
+                if (!showAsRokuParty(m, (config as any).allPartyStates?.[m.key], live, nowMs)) return false;
                 // A premiere film kept hidden from the catalog still gets its party row.
                 return isWatchPartyListable(m, nowMs) && isValidForRoku({ ...m, isUnlisted: false } as Movie, true);
             })

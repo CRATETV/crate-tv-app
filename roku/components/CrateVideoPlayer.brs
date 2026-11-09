@@ -41,6 +41,8 @@ Sub Init()
     m.isLiveSync = false
     m.actualStartTime = 0
     m.contentId = ""
+    m.cloudSaveTick = 0
+    m.forceCloudSave = false
     
     ' Live chat overlay (watch party only)
     m.chatOverlay = m.top.FindNode("chatOverlay")
@@ -450,8 +452,26 @@ Sub SaveProgress()
         If (duration - position) > 120
             SaveWatchPosition(m.contentId, position)
             Print "CrateTV: Progress saved - " + Str(position).Trim() + "s"
+            ' Every third save (about 30 seconds), and on Back, also tell CRATE so the phone can pick up here.
+            m.cloudSaveTick = m.cloudSaveTick + 1
+            If m.cloudSaveTick >= 3 Or m.forceCloudSave
+                m.cloudSaveTick = 0
+                SaveProgressToCloud(position)
+            End If
         End If
     End If
+End Sub
+
+Sub SaveProgressToCloud(position as Integer)
+    If m.global = Invalid Or Not m.global.HasField("deviceId") Then Return
+    If m.global.deviceId = Invalid Or m.global.deviceId = "" Then Return
+    ' Kept on m so the task is not thrown away before it finishes.
+    m.cloudTask = CreateObject("roSGNode", "ContentTask")
+    m.cloudTask.taskType = "saveProgress"
+    m.cloudTask.deviceId = m.global.deviceId
+    m.cloudTask.movieKey = m.contentId
+    m.cloudTask.seconds = position
+    m.cloudTask.control = "run"
 End Sub
 
 Sub OnPlaybackFinished()
@@ -700,7 +720,9 @@ Function OnKeyEvent(key as String, press as Boolean) as Boolean
     
     If key = "back"
         m.isPlaying = false
+        m.forceCloudSave = true
         SaveProgress()
+        m.forceCloudSave = false
         m.videoNode.control = "stop"
         m.progressTimer.control = "stop"
         m.syncTimer.control = "stop"

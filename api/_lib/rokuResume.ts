@@ -25,3 +25,9 @@ export function annotateResume(items: any[], progress: Record<string, number> | 
     }
     return n;
 }
+
+/** What a Roku may save: a plain whole number of seconds, or null if it is nonsense. */
+export function cleanProgress(raw: unknown): number | null {
+    const n = Math.round(Number(raw));
+    return Number.isFinite(n) && n >= 0 && n <= 24 * 3600 ? n : null;
+}
