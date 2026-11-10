@@ -806,17 +806,24 @@ Sub InjectMovie(rootNode as Object, data as Object)
     node = CreateMovieNode(data)
     If node = Invalid Then Return
     
-    ' Try to add to first non-hero row
+    ' Try to add to first non-hero row. Never the Watch Parties row: that row is only for films that
+    ' have a party (the app joins whatever party it finds there), so a free film added to it showed up as one.
     For ri = 0 To rootNode.GetChildCount() - 1
         row = rootNode.GetChild(ri)
-        If row.HasField("rowType") And row.rowType <> "hero"
-            row.AppendChild(node)
-            Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
-            Return
-        Else If Not row.HasField("rowType")
-            row.AppendChild(node)
-            Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
-            Return
+        isPartyRow = false
+        If row.HasField("categoryType")
+            If row.categoryType = "watchParty" Then isPartyRow = true
+        End If
+        If Not isPartyRow
+            If row.HasField("rowType") And row.rowType <> "hero"
+                row.AppendChild(node)
+                Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
+                Return
+            Else If Not row.HasField("rowType")
+                row.AppendChild(node)
+                Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
+                Return
+            End If
         End If
     End For
     

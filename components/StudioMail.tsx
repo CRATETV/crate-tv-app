@@ -58,6 +58,7 @@ const KIND_LABEL: Record<MailItem['kind'], string> = {
 const StudioMail: React.FC = () => {
     const { settings } = useFestival();
     const [folder, setFolder] = useState<'in' | 'out'>('in');
+    const [replying, setReplying] = useState(false); // the reply form stays hidden until you press Reply
     const [received, setReceived] = useState<MailItem[]>([]);
     const [sent, setSent] = useState<MailItem[]>([]);
     const [mailboxNote, setMailboxNote] = useState('');
@@ -177,7 +178,7 @@ const StudioMail: React.FC = () => {
     const resetComposer = () => { setReplyText(''); setFiles([]); if (fileInput.current) fileInput.current.value = ''; };
 
     const openMessage = (m: MailItem) => {
-        setIsNewCompose(false); setNotice(null); setSelected(m);
+        setIsNewCompose(false); setReplying(false); setNotice(null); setSelected(m);
         setRecipient(m.folder === 'in' ? m.email : ''); setSubject(m.folder === 'in' ? (/^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`) : '');
         resetComposer();
         if (m.kind === 'EMAIL' && m.unread) {
@@ -186,7 +187,7 @@ const StudioMail: React.FC = () => {
         }
     };
 
-    const startCompose = () => { setFolder('out'); setSelected(null); setIsNewCompose(true); setNotice(null); setRecipient(''); setSubject(''); resetComposer(); };
+    const startCompose = () => { setReplying(false); setFolder('out'); setSelected(null); setIsNewCompose(true); setNotice(null); setRecipient(''); setSubject(''); resetComposer(); };
 
     const addFiles = (picked: FileList | null) => {
         if (!picked) return;
@@ -288,7 +289,7 @@ const StudioMail: React.FC = () => {
         }
     }, [selected, loadBody]);
 
-    const showComposer = isNewCompose || (selected && selected.folder === 'in');
+    const showComposer = isNewCompose || (!!selected && selected.folder === 'in' && replying);
 
     return (
         <div className="flex flex-col h-[calc(100vh-280px)] min-h-[650px]">
@@ -394,7 +395,10 @@ const StudioMail: React.FC = () => {
                                     <div>
                                         <div className="flex items-start justify-between gap-4">
                                             <h2 className="text-2xl font-black text-white">{selected.subject}</h2>
-                                            <button type="button" onClick={() => removeItems([selected])} className="text-xs font-bold text-gray-500 hover:text-red-400 whitespace-nowrap border border-white/10 rounded-lg px-3 py-1.5">🗑 Delete</button>
+                                            <div className="flex gap-2 shrink-0">
+                                                {selected.folder === 'in' && !replying && <button type="button" onClick={() => setReplying(true)} className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 whitespace-nowrap rounded-lg px-4 py-1.5">↩ Reply</button>}
+                                                <button type="button" onClick={() => removeItems([selected])} className="text-xs font-bold text-gray-500 hover:text-red-400 whitespace-nowrap border border-white/10 rounded-lg px-3 py-1.5">🗑 Delete</button>
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-400 mt-1">{selected.folder === 'in' ? 'From' : 'To'} {selected.name && selected.name !== selected.email ? `${selected.name} · ` : ''}{selected.email} · {selected.when ? new Date(selected.when).toLocaleString() : ''}</p>
                                     </div>
@@ -405,7 +409,7 @@ const StudioMail: React.FC = () => {
                                 {selected && (
                                     <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
                                         {selected.text ? (
-                                            <p className="text-gray-200 whitespace-pre-wrap leading-relaxed text-sm">{selected.text}</p>
+                                            <p className="text-gray-100 whitespace-pre-wrap leading-relaxed text-base">{selected.text}</p>
                                         ) : body && body.id === selected.id && body.state === 'loading' ? (
                                             <p className="text-gray-400 text-sm">Loading the message…</p>
                                         ) : body && body.id === selected.id && body.state === 'failed' ? (
@@ -486,7 +490,7 @@ const StudioMail: React.FC = () => {
                                         </select>
                                     </label>
                                     <div className="flex gap-3">
-                                        <button type="button" onClick={() => { setSelected(null); setIsNewCompose(false); resetComposer(); }} className="px-5 py-3 text-xs font-bold text-gray-500 hover:text-white">Discard</button>
+                                        <button type="button" onClick={() => { if (isNewCompose) { setSelected(null); setIsNewCompose(false); } setReplying(false); resetComposer(); }} className="px-5 py-3 text-xs font-bold text-gray-500 hover:text-white">Discard</button>
                                         <button type="submit" disabled={isSending || !replyText || !recipient} className="bg-red-600 hover:bg-red-700 disabled:opacity-30 text-white font-black px-8 py-3 rounded-xl text-xs uppercase tracking-widest">
                                             {isSending ? 'Sending…' : 'Send email'}
                                         </button>
