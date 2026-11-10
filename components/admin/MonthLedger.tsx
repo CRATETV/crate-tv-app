@@ -10,18 +10,29 @@ const KIND: Record<string, string> = { ticket: 'Watch party ticket', rental: 'Re
 const monthName = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const c = (cents: number) => money(cents);
 
-const MonthLedger: React.FC<{ months: string[]; tieOuts: Record<string, TieOut> }> = ({ months, tieOuts }) => {
+type Closed = { closedAt: string | null; tieOut: TieOut; changedSince: boolean; grossChangedBy: number };
+const MonthLedger: React.FC<{ months: string[]; tieOuts: Record<string, TieOut>; closed?: Record<string, Closed>; onChanged?: () => void }> = ({ months, tieOuts, closed = {}, onChanged }) => {
     const list = [...months].sort().reverse();
     const [month, setMonth] = useState(list[0] || '');
     const [lines, setLines] = useState<LedgerLine[] | null>(null);
     const [tie, setTie] = useState<TieOut | null>(null);
     const [err, setErr] = useState<string | null>(null);
     const [showAll, setShowAll] = useState(false);
+    const [closing, setClosing] = useState(false);
+    const [confirm, setConfirm] = useState(false);
+    const thisMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
+    const closeInfo = closed[month];
+    const closeIt = async () => {
+        setClosing(true); setErr(null);
+        try { await adminPost('/api/admin-earnings', { action: 'close-month', month }); setConfirm(false); onChanged?.(); }
+        catch (e) { setErr((e as Error).message || "Couldn't close this month."); }
+        finally { setClosing(false); }
+    };
 
     useEffect(() => {
         if (!month) return;
         let live = true;
-        setLines(null); setErr(null); setShowAll(false);
+        setLines(null); setErr(null); setShowAll(false); setConfirm(false);
         adminPost<any>('/api/admin-earnings', { action: 'month-ledger', month })
             .then(d => { if (!live) return; setLines(d.ledger || []); setTie(d.monthTieOuts?.[month] || null); })
             .catch(e => live && setErr((e as Error).message || "Couldn't load this month."));
@@ -48,6 +59,22 @@ const MonthLedger: React.FC<{ months: string[]; tieOuts: Record<string, TieOut> 
                 <Button size="sm" onClick={download} disabled={!lines || !lines.length}>⬇ Download for a spreadsheet</Button>
             </div>
             {err && <Notice tone="warn">{err}</Notice>}
+            {closeInfo ? (
+                <div className="mb-4 space-y-3">
+                    <Notice tone="info">🔒 Closed on {closeInfo.closedAt ? new Date(closeInfo.closedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }) : 'an earlier date'}. These are the numbers as they stood that day: {c(closeInfo.tieOut.gross)} came in, {c(closeInfo.tieOut.filmmakers)} to filmmakers, {c(closeInfo.tieOut.crate)} to CRATE.</Notice>
+                    {closeInfo.changedSince && <Notice tone="warn">Square now shows this month {closeInfo.grossChangedBy === 0 ? 'with different amounts' : `${closeInfo.grossChangedBy < 0 ? c(Math.abs(closeInfo.grossChangedBy)) + ' lower' : c(closeInfo.grossChangedBy) + ' higher'}`} than when you closed it (for example a refund that came in later). The closed numbers above did not change.</Notice>}
+                </div>
+            ) : month < thisMonth && t && t.balanced && (
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                    {!confirm
+                        ? <Button size="sm" onClick={() => setConfirm(true)}>🔒 Close {monthName(month)}</Button>
+                        : <>
+                            <span className="text-sm text-white/90">Save {monthName(month)} as final? It can't be reopened.</span>
+                            <Button size="sm" variant="primary" accent="green" onClick={closeIt} disabled={closing}>{closing ? 'Saving…' : 'Yes, close it'}</Button>
+                            <Button size="sm" onClick={() => setConfirm(false)} disabled={closing}>Not yet</Button>
+                        </>}
+                </div>
+            )}
             {t && (
                 <div className="space-y-4">
                     {t.balanced

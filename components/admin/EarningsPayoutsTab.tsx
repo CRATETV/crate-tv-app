@@ -31,6 +31,7 @@ interface Summary {
     generatedAt: string; squareConnected: boolean; minimumPayoutCents: number;
     totals: { gross: number; fees: number; filmGross: number; filmmakerShare: number; crateFromFilms: number; festival: number; partner: number; heldDuringFestival: number; crateOnly: number; shopFilmmaker: number; crateKeeps: number; owedNow: number; paidOutAllTime: number };
     monthTieOuts?: Record<string, TieOut>;
+    closedMonths?: Record<string, { closedAt: string | null; tieOut: TieOut; changedSince: boolean; grossChangedBy: number }>;
     months: { month: string; gross: number; filmmakers: number; crate: number; festival: number; partner: number; fees: number }[];
     films: FilmRow[];
     payees: PayeeRow[];
@@ -417,7 +418,7 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                 <MonthChart months={data.months} />
             </Card>
 
-            <MonthLedger months={data.months.map(m => m.month)} tieOuts={data.monthTieOuts || {}} />
+            <MonthLedger months={data.months.map(m => m.month)} tieOuts={data.monthTieOuts || {}} closed={data.closedMonths || {}} onChanged={load} />
 
             <FilmmakerClaimsPanel />
 
