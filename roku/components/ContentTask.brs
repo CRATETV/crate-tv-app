@@ -666,27 +666,7 @@ Sub OverrideRokuStreams(rootNode as Object)
         })
     End If
     
-    ' The Cook
-    If foundTitles["the cook"] = Invalid
-        Print "CrateTV [Roku]: The Cook not in feed -- injecting"
-        InjectMovie(rootNode, {
-            title: "The Cook"
-            id: "thecook"
-            key: "thecook"
-            description: "A public domain classic."
-            synopsis: "A public domain classic."
-            director: ""
-            fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/Ruko+compatible+movies+/TheCook_1080p.mp4"
-            streamUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/Ruko+compatible+movies+/TheCook_1080p.mp4"
-            poster: ""
-            hdPosterUrl: ""
-            tvPoster: ""
-            heroImage: ""
-            streamFormat: "mp4"
-            isFree: true
-            isUnlocked: true
-        })
-    End If
+    ' (The Cook was removed from the catalog, so it is no longer added back.)
     
     ' Autumn
     If foundTitles["autumn"] = Invalid
@@ -786,6 +766,7 @@ Sub OverrideRokuStreams(rootNode as Object)
             description: "The 1902 science fiction film by Georges Méliès."
             synopsis: "The 1902 science fiction film by Georges Méliès."
             director: "Georges Méliès"
+            targetCategory: "publicDomainIndie"
             fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ATripToTheMoon_roku.mp4"
             streamUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ATripToTheMoon_roku.mp4"
             poster: ""
@@ -806,17 +787,41 @@ Sub InjectMovie(rootNode as Object, data as Object)
     node = CreateMovieNode(data)
     If node = Invalid Then Return
     
-    ' Try to add to first non-hero row
+    ' A film can name the row it belongs in (targetCategory). Only that row will do: if it is not there,
+    ' the film is left out rather than dropped into some other row.
+    If data.targetCategory <> Invalid
+        For ri = 0 To rootNode.GetChildCount() - 1
+            row = rootNode.GetChild(ri)
+            If row.HasField("categoryType")
+                If row.categoryType = data.targetCategory
+                    row.AppendChild(node)
+                    Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
+                    Return
+                End If
+            End If
+        End For
+        Print "CrateTV [Roku]: '" + data.title + "' has no '" + data.targetCategory + "' row to go in -- not added"
+        Return
+    End If
+
+    ' Try to add to first non-hero row. Never the Watch Parties row: that row is only for films that
+    ' have a party (the app joins whatever party it finds there), so a free film added to it showed up as one.
     For ri = 0 To rootNode.GetChildCount() - 1
         row = rootNode.GetChild(ri)
-        If row.HasField("rowType") And row.rowType <> "hero"
-            row.AppendChild(node)
-            Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
-            Return
-        Else If Not row.HasField("rowType")
-            row.AppendChild(node)
-            Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
-            Return
+        isPartyRow = false
+        If row.HasField("categoryType")
+            If row.categoryType = "watchParty" Then isPartyRow = true
+        End If
+        If Not isPartyRow
+            If row.HasField("rowType") And row.rowType <> "hero"
+                row.AppendChild(node)
+                Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
+                Return
+            Else If Not row.HasField("rowType")
+                row.AppendChild(node)
+                Print "CrateTV [Roku]: Injected '" + data.title + "' into row '" + row.title + "'"
+                Return
+            End If
         End If
     End For
     
