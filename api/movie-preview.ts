@@ -28,7 +28,7 @@ const escapeHtml = (str: unknown) =>
 
 const shell = async (origin: string) => {
     const res = await fetch(`${origin}/index.html`);
-    return new Response(await res.text(), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(await res.text(), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Vary': 'User-Agent' } });
 };
 
 export async function GET(request: Request) {
@@ -97,7 +97,11 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+                // Not cached at the edge: the same address returns the bare preview page to
+                // link-preview robots and the real app to people. A shared cache that ignored
+                // that could hand the robots' bare page to a real person (it did, Nov 10 2026).
+                'Cache-Control': 'private, no-store',
+                'Vary': 'User-Agent',
             },
         });
     } catch (error) {
