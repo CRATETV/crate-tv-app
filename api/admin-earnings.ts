@@ -25,6 +25,7 @@ import { normalize } from './_lib/creditMatch.js';
 import { splitRevenue, cleanDeal, filmmakerShareOf, PAYOUT_METHOD_LABELS, PayoutMethod } from './_lib/revenueSplit.js';
 import { cleanLine, cleanText, isValidEmail, escapeHtml } from './_lib/validation.js';
 import { renderBrandedEmail } from './_lib/emailBranding.js';
+import { LedgerLine, LedgerKind, tieOut, phillyMonth, linesForMonth } from './_lib/moneyLedger.js';
 import { Movie } from '../types.js';
 
 const json = (body: unknown, status = 200) =>
@@ -61,7 +62,7 @@ function classifyOther(p: SquarePayment): 'festival' | 'partner' | 'crate' {
     return 'crate';
 }
 
-async function buildSummary(db: FirebaseFirestore.Firestore) {
+async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: string) {
     const { accessToken, locationId } = getSquareCredentials();
     const [payments, moviesSnap, deals, payeeSnap, completedSnap, pendingSnap, shopByName] = await Promise.all([
         accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([] as SquarePayment[]),
@@ -86,10 +87,11 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
 
     // Film revenue, payment by payment, using the exact rules behind every filmmaker's balance.
     const counted = new Set<SquarePayment>();
-    const filmLines: { title: string; field: string; amount: number; gross: number; at?: string }[] = [];
+    const filmLines: { id: string; title: string; field: string; amount: number; gross: number; at?: string }[] = [];
+    const ledger: LedgerLine[] = [];
     const revenueByFilm = await computeRevenueByFilm(db, payments, movies, (title, field, amount, payment) => {
         counted.add(payment);
-        filmLines.push({ title, field, amount, gross: payment.amount_money.amount, at: payment.created_at });   // amount: after shared card fees; gross: what the buyer paid
+        filmLines.push({ id: payment.id || '', title, field, amount, gross: payment.amount_money.amount, at: payment.created_at });   // amount: after shared card fees; gross: what the buyer paid
     });
 
     let filmGross = 0, filmmakerTotal = 0, crateFromFilms = 0;
@@ -103,6 +105,16 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
         filmGross += line.gross;
         filmmakerTotal += split.filmmakerAmount;
         crateFromFilms += split.crateAmount;
+        const noCredit = !!movie && split.payees.length === 0;
+        ledger.push({
+            id: line.id, at: line.at || null,
+            kind: line.field === 'donations' ? 'donation' : line.field === 'tickets' ? 'ticket' : 'rental',
+            label: line.title, gross: line.gross,
+            filmmakers: split.filmmakerAmount, crate: split.crateAmount, festival: 0, partner: 0,
+            cardFees: line.gross - line.amount,   // shared card fee, taken off before the split
+            owedTo: split.payees.filter(x => x.amount > 0).map(x => x.name),
+            ...(noCredit ? { flag: 'no-credit' } : !movie ? { flag: 'film-not-found' } : {}),
+        });
     }
 
     let gross = 0, fees = 0, festival = 0, partner = 0, crateOnly = 0, heldDuringFestival = 0;
@@ -116,6 +128,14 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
         if (counted.has(p)) continue;
         const kind = classifyOther(p);
         row.gross += amt;
+        const held = kind === 'crate' && /VOD Rental:/.test(p.note || '');
+        ledger.push({
+            id: p.id || '', at: p.created_at || null,
+            kind: (kind === 'crate' ? (held ? 'held-festival' : 'other') : kind) as LedgerKind,
+            label: (p.note || '').replace(/\s+/g, ' ').trim().slice(0, 90) || 'Payment with no note',
+            gross: amt, filmmakers: 0, crate: kind === 'crate' ? amt : 0,
+            festival: kind === 'festival' ? amt : 0, partner: kind === 'partner' ? amt : 0, cardFees: 0, owedTo: [],
+        });
         if (kind === 'festival') { festival += amt; row.festival += amt; }
         else if (kind === 'partner') { partner += amt; row.partner += amt; }
         else {
@@ -219,6 +239,10 @@ async function buildSummary(db: FirebaseFirestore.Firestore) {
             crateKeeps: crateFromFilms + crateOnly + heldDuringFestival,
             owedNow, paidOutAllTime,
         },
+        // Proof that the lines add up, per month and overall (api/_lib/moneyLedger.ts).
+        tieOut: tieOut(ledger),
+        monthTieOuts: Object.fromEntries([...new Set(ledger.map(l => phillyMonth(l.at)))].filter(m => m !== 'unknown').map(m => [m, tieOut(linesForMonth(ledger, m))])),
+        ledger: ledgerMonth ? linesForMonth(ledger, ledgerMonth).sort((a, b) => (b.at || '').localeCompare(a.at || '')) : undefined,
         months: [...months.values()].filter(m => m.month !== 'unknown').sort((a, b) => a.month.localeCompare(b.month)).slice(-12),
         films,
         payees: [...payees.values()].sort((a, b) => b.balance - a.balance || b.earned - a.earned),
@@ -245,6 +269,10 @@ export async function POST(request: Request) {
         const action = String(body.action || 'summary');
 
         if (action === 'summary') return json(await buildSummary(db));
+        if (action === 'month-ledger') {
+            const month = /^\d{4}-\d{2}$/.test(String(body.month || '')) ? String(body.month) : phillyMonth(new Date().toISOString());
+            return json(await buildSummary(db, month));
+        }
 
         if (action === 'set-deal' || action === 'clear-deal') {
             const movieKey = cleanLine(body.movieKey, 200);
