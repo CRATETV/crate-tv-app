@@ -5,6 +5,8 @@ import {
 } from './ui';
 import { PAYOUT_METHOD_LABELS, PayoutMethod, payoutLink } from '../../api/_lib/revenueSplit';
 import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
+import MonthLedger from './MonthLedger';
+import type { TieOut } from '../../api/_lib/moneyLedger';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Earnings & Payouts — every dollar, who it belongs to, and who CRATE owes.
@@ -28,6 +30,7 @@ interface PayeeRow {
 interface Summary {
     generatedAt: string; squareConnected: boolean; minimumPayoutCents: number;
     totals: { gross: number; fees: number; filmGross: number; filmmakerShare: number; crateFromFilms: number; festival: number; partner: number; heldDuringFestival: number; crateOnly: number; shopFilmmaker: number; crateKeeps: number; owedNow: number; paidOutAllTime: number };
+    monthTieOuts?: Record<string, TieOut>;
     months: { month: string; gross: number; filmmakers: number; crate: number; festival: number; partner: number; fees: number }[];
     films: FilmRow[];
     payees: PayeeRow[];
@@ -413,6 +416,8 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                 <SectionTitle title="Month by month" hint="The last 12 months. Hover a month for the numbers." />
                 <MonthChart months={data.months} />
             </Card>
+
+            <MonthLedger months={data.months.map(m => m.month)} tieOuts={data.monthTieOuts || {}} />
 
             <FilmmakerClaimsPanel />
 
