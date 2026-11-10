@@ -3,6 +3,7 @@ import { roleCounts } from './_lib/roleCounts.js';
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig, AdminPayout, BillSavingsTransaction } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
+import { fetchAllRelevantPayments } from './_lib/filmmakerBalance.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
@@ -45,29 +46,11 @@ const parseNote = (note: string | undefined, crateFestBlocks: string[]): { type:
     return { type: 'other' };
 };
 
-async function fetchAllSquarePayments(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
-    const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
-    let allPayments: SquarePayment[] = [];
-    let cursor: string | undefined = undefined;
-
-    do {
-        const url = new URL(`${squareUrlBase}/v2/payments`);
-        url.searchParams.append('begin_time', SYSTEM_RESET_DATE);
-        if (locationId) url.searchParams.append('location_id', locationId);
-        if (cursor) url.searchParams.append('cursor', cursor);
-
-        const response = await fetch(url.toString(), {
-            method: 'GET',
-            headers: { 'Square-Version': '2024-05-15', 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch payments from Square.');
-        const data = await response.json();
-        if (data.payments) allPayments.push(...data.payments);
-        cursor = data.cursor;
-    } while (cursor);
-    return allPayments;
-}
+// Same payment list every other money screen uses: only payments that really went through, with
+// refunds taken back out. (This file used to keep its own copy of the fetch that counted failed,
+// cancelled and refunded payments as money, so this screen ran higher than Earnings & Payouts.)
+const fetchAllSquarePayments = (accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> =>
+    fetchAllRelevantPayments(accessToken, locationId) as Promise<SquarePayment[]>;
 
 export async function POST(request: Request) {
     const errors: { square: string | null, firebase: string | null, critical: string | null } = { square: null, firebase: null, critical: null };
