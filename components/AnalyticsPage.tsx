@@ -3,6 +3,7 @@ import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 import AudienceInsightsCard from './admin/AudienceInsightsCard';
+import LedgerNumbers from './admin/LedgerNumbers';
 
 const formatCurrency = (amountInCents: number) => `$${((amountInCents || 0) / 100).toFixed(2)}`;
 
@@ -68,8 +69,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
 
             {activeTab === 'overview' && (
                 <div className="space-y-12">
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
-                    <StatCard title="Gross Platform Yield" value={formatCurrency(analyticsData.totalRevenue)} />
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                    
                     <StatCard title="Total Account Nodes" value={analyticsData.totalUsers} />
                     <StatCard title="Live Stream Density" value={analyticsData.liveNodes} />
                     <StatCard title="Total Film views" value={(Object.values(analyticsData.viewCounts) as number[]).reduce((a, b) => a + b, 0)} />
@@ -110,11 +111,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
 
             {activeTab === 'financials' && (
                 <div className="space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <StatCard title="Direct Donations" value={formatCurrency(analyticsData.totalDonations)} className="bg-emerald-600/5 border-emerald-500/20" />
-                        <StatCard title="VOD / Ticket Sales" value={formatCurrency(analyticsData.totalSales)} className="bg-blue-600/5 border-blue-500/20" />
-                        <StatCard title="Platform Earnings" value={formatCurrency(analyticsData.totalCrateTvRevenue)} className="bg-red-600/5 border-red-500/20" />
-                    </div>
+                    <LedgerNumbers />
                 </div>
             )}
 

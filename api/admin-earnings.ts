@@ -74,6 +74,7 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
         computeShopRevenueByFilmmaker(db, SYSTEM_RESET_DATE).catch(() => new Map<string, { directorName: string; cents: number }>()),
     ]);
 
+    const closedSnap = await db.collection('money_months').get().catch(() => null);
     const movies: Movie[] = moviesSnap.docs.map(d => ({ key: d.id, ...d.data() } as Movie));
     const movieByTitle = new Map(movies.map(m => [(m.title || '').trim(), m]));
 
@@ -241,6 +242,14 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
         },
         // Proof that the lines add up, per month and overall (api/_lib/moneyLedger.ts).
         tieOut: tieOut(ledger),
+        // Months you have closed: the totals as they were the day you closed them, and whether anything has moved since.
+        closedMonths: Object.fromEntries((closedSnap?.docs || []).map(d => {
+            const x: any = d.data();
+            const now = tieOut(linesForMonth(ledger, d.id));
+            const was = x.tieOut || {};
+            const moved = now.gross - (was.gross || 0);
+            return [d.id, { closedAt: toIso(x.closedAt), closedBy: x.closedBy || '', tieOut: was, changedSince: moved !== 0 || now.filmmakers !== was.filmmakers || now.crate !== was.crate, grossChangedBy: moved }];
+        })),
         monthTieOuts: Object.fromEntries([...new Set(ledger.map(l => phillyMonth(l.at)))].filter(m => m !== 'unknown').map(m => [m, tieOut(linesForMonth(ledger, m))])),
         ledger: ledgerMonth ? linesForMonth(ledger, ledgerMonth).sort((a, b) => (b.at || '').localeCompare(a.at || '')) : undefined,
         months: [...months.values()].filter(m => m.month !== 'unknown').sort((a, b) => a.month.localeCompare(b.month)).slice(-12),
@@ -269,6 +278,21 @@ export async function POST(request: Request) {
         const action = String(body.action || 'summary');
 
         if (action === 'summary') return json(await buildSummary(db));
+        if (action === 'close-month') {
+            const month = String(body.month || '');
+            if (!/^\d{4}-\d{2}$/.test(month)) return json({ error: 'Pick a month to close.' }, 400);
+            if (month >= phillyMonth(new Date().toISOString())) return json({ error: "A month can only be closed after it's over." }, 400);
+            const ref = db.collection('money_months').doc(month);
+            if ((await ref.get()).exists) return json({ error: 'That month is already closed.' }, 409);
+            const summary: any = await buildSummary(db, month);
+            const t = summary.monthTieOuts?.[month];
+            if (!t || t.lineCount === 0) return json({ error: 'There are no payments in that month.' }, 400);
+            if (!t.balanced) return json({ error: `That month doesn't add up yet (off by ${(Math.abs(t.difference) / 100).toFixed(2)} dollars), so it can't be closed. Fix that first.` }, 409);
+            const lines = (summary.ledger || []).slice(0, 3000);
+            await ref.set({ month, closedAt: FieldValue.serverTimestamp(), closedBy: 'ADMIN', tieOut: t, lines });
+            await audit(db, 'MONTH_CLOSED', `${month}: ${(t.gross / 100).toFixed(2)} dollars in, ${t.lineCount} payments, filmmakers ${(t.filmmakers / 100).toFixed(2)}, CRATE ${(t.crate / 100).toFixed(2)}`);
+            return json({ success: true });
+        }
         if (action === 'month-ledger') {
             const month = /^\d{4}-\d{2}$/.test(String(body.month || '')) ? String(body.month) : phillyMonth(new Date().toISOString());
             return json(await buildSummary(db, month));
