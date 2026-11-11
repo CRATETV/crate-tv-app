@@ -4,7 +4,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    PromoPage, PromoSide, PromoMedia, PROMO_FONTS, PROMO_LOOK_PRESETS, PromoFont, promoSlugify, slugProblem,
+    PromoPage, PromoSide, PromoMedia, PROMO_FONTS, PROMO_LOOK_PRESETS, PromoFont, promoSlugify, slugProblem, theChampExample,
 } from '../../api/_lib/promoRules';
 import FightNightTemplate from '../promo/FightNightTemplate';
 import PromoPartnersView from '../promo/PromoPartnersView';
@@ -501,6 +501,16 @@ const PromoEditor: React.FC<{ initial: PromoPage; onBack: () => void; onChanged:
                 <Card>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
+                            <p className="text-white font-bold">Fill with The Champ</p>
+                            <p className="text-sm text-[#8A8A96]">Replaces everything on this page with The Champ's words, photos and stats. Nothing changes until you press Save.</p>
+                        </div>
+                        <Button onClick={() => setPage(p => ({ ...theChampExample(p.slug), title: p.title, published: p.published }))}>Fill with The Champ</Button>
+                    </div>
+                </Card>
+
+                <Card>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
                             <p className="text-white font-bold">Delete this page</p>
                             <p className="text-sm text-[#8A8A96]">Removes this film's page, votes and sign-ups. The Fight Night design stays for the next film.</p>
                         </div>
@@ -584,7 +594,7 @@ const PromoPagesTab: React.FC = () => {
                 actions={<Button variant="primary" accent="orange" onClick={() => setCreating(true)}>+ New promo page</Button>} />
             {err && <div className="mb-4"><Notice tone="error">{err}</Notice></div>}
             {!list ? <p className="text-[#8A8A96]">Loading…</p> : !list.length ? (
-                <EmptyState icon="🥊" title="No promo pages yet" text="Start one for a film. You can begin from The Champ's words and swap in your own." action={<Button variant="primary" accent="orange" onClick={() => setCreating(true)}>+ New promo page</Button>} />
+                <EmptyState icon="🥊" title="No promo pages yet" text="Start one for a film. Start from The Champ — words, photos and stats all filled in — or start blank." action={<Button variant="primary" accent="orange" onClick={() => setCreating(true)}>+ New promo page</Button>} />
             ) : (
                 <div className="grid md:grid-cols-2 gap-4">
                     {list.map(p => (
@@ -619,7 +629,7 @@ const PromoPagesTab: React.FC = () => {
                         <Field label="Start from">
                             <select className={inputClass} value={form.start} onChange={e => setForm(f => ({ ...f, start: e.target.value }))}>
                                 <option value="blank">Blank Fight Night page</option>
-                                <option value="champ">The Champ (all the words filled in — you add photos)</option>
+                                <option value="champ">The Champ (everything: words, photos, stats)</option>
                                 {(list || []).map(p => <option key={p.slug} value={`copy:${p.slug}`}>A copy of “{p.title}”</option>)}
                             </select>
                         </Field>

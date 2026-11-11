@@ -145,7 +145,10 @@ export function blankPromo(slug: string, title: string): PromoPage {
     };
 }
 
-// ── The Champ example (fills every word; you upload the photos) ─────────────
+// ── The Champ (every word, photo and stat from the original promo site) ─────
+// Photos ship with CRATE in public/promo/the-champ/. Swap them in the editor
+// any time; uploads replace these links.
+const CHAMP_IMG = '/promo/the-champ';
 export function theChampExample(slug: string): PromoPage {
     const p = blankPromo(slug, 'The Champ');
     return {
@@ -153,12 +156,16 @@ export function theChampExample(slug: string): PromoPage {
         hero: {
             title: 'The Champ', kicker: 'Ace · vs · Beast',
             ringText: 'Ace Broadus · vs · Beast Johnson · Empire Arena · Saturday February 20 · Heavyweight · 12 rounds · ',
-            topMeta: 'Empire Arena · Sat Feb 20', footLeft: 'Ace · vs · Beast', footRight: 'Empire Arena · Feb 20', media: [],
+            topMeta: 'Empire Arena · Sat Feb 20', footLeft: 'Ace · vs · Beast', footRight: 'Empire Arena · Feb 20',
+            media: [
+                { type: 'image', src: `${CHAMP_IMG}/ace-face.jpg`, pos: '50% 40%' },
+                { type: 'image', src: `${CHAMP_IMG}/beast-face.jpg`, pos: '50% 40%' },
+            ],
         },
-        sideA: { first: 'Ace', last: 'Broadus', nickname: '', corner: 'Red corner', photo: '',
-            tape: [['Record', ''], ['KOs', ''], ['Height', ''], ['Weight', ''], ['Reach', ''], ['Stance', ''], ['From', '']] },
-        sideB: { first: 'Beast', last: 'Johnson', nickname: '', corner: 'Blue corner', photo: '',
-            tape: [['Record', ''], ['KOs', ''], ['Height', ''], ['Weight', ''], ['Reach', ''], ['Stance', ''], ['From', '']] },
+        sideA: { first: 'Ace', last: 'Broadus', nickname: '', corner: 'Red corner', photo: `${CHAMP_IMG}/ace.jpg`,
+            tape: [['Record', '24-1'], ['KOs', '19'], ['Height', `6'2"`], ['Weight', '224 lb'], ['Reach', '78"'], ['Stance', 'Orthodox'], ['From', 'North Philly']] },
+        sideB: { first: 'Beast', last: 'Johnson', nickname: '', corner: 'Blue corner', photo: `${CHAMP_IMG}/beast.jpg`,
+            tape: [['Record', '21-0'], ['KOs', '20'], ['Height', `6'4"`], ['Weight', '238 lb'], ['Reach', '81"'], ['Stance', 'Southpaw'], ['From', '']] },
         marquee: 'Ace Broadus · VS · Beast Johnson · Empire Arena · Saturday Feb 20',
         countdown: {
             date: '2027-02-20T20:00:00-05:00', forceReveal: false,
