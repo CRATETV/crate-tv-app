@@ -18,8 +18,8 @@ const PromoPartnersView: React.FC<{ page: PromoPage }> = ({ page }) => {
 
     const pp = page.partnerPage;
     const title = page.hero.title || page.title;
-    const faceA = page.sideA.photo || page.hero.media[0]?.src || '';
-    const faceB = page.sideB.photo || page.hero.media[1]?.src || '';
+    const faceA = page.hero.media[0]?.src || page.sideA.photo || '';
+    const faceB = page.hero.media[1]?.src || page.sideB.photo || '';
     let n = 0;
     const num = () => String(++n).padStart(2, '0');
 

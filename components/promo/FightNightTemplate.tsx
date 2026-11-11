@@ -166,7 +166,8 @@ const FightNightTemplate: React.FC<{
     };
 
     const tape = (s: typeof sideA) => s.tape.filter(r => (r[0] || '').trim() && (r[1] || '').trim());
-    const faceOf = (s: typeof sideA, fallbackIdx: number) => s.photo || hero.media[fallbackIdx]?.src || '';
+    // Close-ups from the circle make the best vote faces; fall back to the tall photo.
+    const faceOf = (s: typeof sideA, idx: number) => (hero.media[idx]?.type === 'image' && hero.media[idx]?.src) || s.photo || '';
 
     return (
         <div ref={rootRef} className={promoRootClass(page, ready)} style={promoVars(page)}>

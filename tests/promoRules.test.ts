@@ -89,3 +89,12 @@ test('reveal: by date, or switched on early', () => {
     p.countdown.forceReveal = true;
     assert.equal(isRevealed(p), true);
 });
+
+test("The Champ comes with its photos and stats, and they survive saving", () => {
+    const out = cleanPromo(theChampExample('the-champ'), 'the-champ', false);
+    assert.equal(out.sideA.photo, '/promo/the-champ/ace.jpg');
+    assert.equal(out.sideB.photo, '/promo/the-champ/beast.jpg');
+    assert.deepEqual(out.hero.media.map(m => m.src), ['/promo/the-champ/ace-face.jpg', '/promo/the-champ/beast-face.jpg']);
+    assert.deepEqual(out.sideA.tape[0], ['Record', '24-1']);
+    assert.equal(out.countdown.date, '2027-02-20T20:00:00-05:00');
+});
