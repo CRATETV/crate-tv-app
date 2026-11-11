@@ -5,8 +5,9 @@
 //   POST /api/promo { slug, email, side? }    → sign up for updates, and vote if side is 'a' or 'b'.
 //        One entry per email: voting again moves the vote, it doesn't add one.
 //   POST /api/promo { action:'interest', slug, name, business, phone, email, pack, message }
-//        → the partners page's "I'm interested" form. Emailed to the page's contact email
-//          (reply goes to the business). NOT saved anywhere in CRATE.
+//        → the partners page's "I'm interested" form. Emailed to the page's contact email.
+//          Reply goes to the business (or back to the film's inbox if they left no email).
+//          CRATE only carries it: NOT saved anywhere in CRATE, never sent to a CRATE inbox.
 //
 // Unpublished pages answer 404 here; the admin panel previews them itself.
 
@@ -124,7 +125,9 @@ async function interest(request: Request, body: any): Promise<Response> {
     const sent = await new Resend(apiKey).emails.send({
         from: `${title.replace(/[<>"]/g, '')} <${process.env.FROM_EMAIL || 'studio@cratetv.net'}>`,
         to: [to],
-        ...(checked.value.email ? { reply_to: checked.value.email } : {}),
+        // Reply goes to the business; with no email from them, back to the film's own inbox.
+        // Either way nothing ever lands in a CRATE inbox.
+        reply_to: checked.value.email || to,
         subject: mail.subject, html: mail.html, text: mail.text,
     });
     if ((sent as any)?.error) {
