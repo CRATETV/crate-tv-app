@@ -19,6 +19,7 @@
 // that has ended, touch refunded tickets or rentals, refund anything, or
 // change the schedule or the site.
 
+import { friendlyTicketLabel, collapseTickets } from './_lib/helpTicketLabels.js';
 import { Resend } from 'resend';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
                     tickets: results.map(r => {
                         const block = catalog.blocks.get(r.itemId);
                         const status = statusOf(r, fixed);
-                        return { label: r.label, status, statusText: STATUS_TEXT[status], startsAt: block?.screeningStartTime || null, link: block?.link || catalog.links.get(r.itemId) || null };
+                        return { label: friendlyTicketLabel(r.label), status, statusText: STATUS_TEXT[status], startsAt: block?.screeningStartTime || null, link: block?.link || catalog.links.get(r.itemId) || null };
                     }),
                 });
             }
@@ -175,11 +176,11 @@ export async function POST(request: Request) {
                 const page = String(body.page || '').slice(0, 300);
                 const userAgent = String(body.userAgent || request.headers.get('user-agent') || '').slice(0, 300);
 
-                let tickets: { label: string; status: string }[] = [];
+                let tickets: { label: string; status: string; count?: number }[] = [];
                 if (who) {
                     try {
                         const { results } = await diagnose(db, who.uid, who.matchEmail);
-                        tickets = results.map(r => ({ label: r.label, status: statusOf(r, new Set()) }));
+                        tickets = collapseTickets(results.map(r => ({ label: friendlyTicketLabel(r.label), status: statusOf(r, new Set()) })));
                     } catch (e) { console.error('[festival-help] diagnose for report failed:', e); }
                 }
                 const ref = await db.collection('help_requests').add({
@@ -188,7 +189,7 @@ export async function POST(request: Request) {
                 });
                 const reference = ref.id.slice(0, 6).toUpperCase();
                 const ticketList = tickets.length
-                    ? tickets.map(t => `<li>${escapeHtml(t.label)} — ${escapeHtml(STATUS_TEXT[t.status] || t.status)}</li>`).join('')
+                    ? tickets.map(t => `<li>${escapeHtml(t.label)}${(t.count || 1) > 1 ? ` ×${t.count}` : ''} — ${escapeHtml(STATUS_TEXT[t.status] || t.status)}</li>`).join('')
                     : `<li>${who ? 'No tickets on this account' : 'Not signed in'}</li>`;
                 try {
                     await resend.emails.send({
