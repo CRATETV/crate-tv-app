@@ -308,13 +308,13 @@ const FightNightTemplate: React.FC<{
                             {page.crowdfund.tiers.map((t, i) => {
                                 // Tapping a level goes to its own payment link, else the main one. CRATE never takes the money.
                                 const href = t.link || page.crowdfund.link;
-                                const inner = <><b>{t.amount}</b><h4>{t.name}</h4><p>{t.text}</p>{href && <span className="pp-tiergo">Back this level →</span>}</>;
+                                const inner = <><b>{t.amount}</b><h4>{t.name}</h4><p>{t.text}</p>{href && <span className="pp-tiergo">Join this corner →</span>}</>;
                                 return href
                                     ? <a key={i} className="pp-tier go" href={href} target="_blank" rel="noreferrer">{inner}</a>
                                     : <div key={i} className="pp-tier">{inner}</div>;
                             })}
                         </div>
-                        {page.crowdfund.link && <p style={{ marginTop: 40 }}><a className="pp-btn" href={page.crowdfund.link} target="_blank" rel="noreferrer">Back {title} →</a></p>}
+                        {page.crowdfund.link && <p style={{ marginTop: 40 }}><a className="pp-btn" href={page.crowdfund.link} target="_blank" rel="noreferrer">Join the corner →</a></p>}
                     </section>
                 )}
 
