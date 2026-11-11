@@ -24,6 +24,7 @@ const AdminPage = lazy(() => import('./components/AdminPage'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const PartnerPortalPage = lazy(() => import('./components/PartnerPortalPage'));
 const PartnerFestivalPage = lazy(() => import('./components/PartnerFestivalPage'));
+const PromoPage = lazy(() => import('./components/promo/PromoPage'));
 import PublicSquarePage from './components/PublicSquarePage';
 import CratemasPage from './components/CratemasPage';
 import SubmitPage from './components/SubmitPage';
@@ -69,6 +70,7 @@ import RedCarpetPage from './components/RedCarpetPage';
 import FaqPage from './components/FaqPage';
 import FestivalHelpButton from './components/FestivalHelpButton';
 import { isOutsidePartner } from './api/_lib/partnerRules';
+import { promoRouteFor } from './api/_lib/promoRules';
 import { installContentProtection } from './services/contentProtection';
 
 installContentProtection();
@@ -165,6 +167,12 @@ const AppRouter: React.FC = () => {
     }, []);
     return <LoginPage />;
   };
+
+  // Promo Pages (Admin → Promo pages): cratetv.net/p/<slug>[/partners] and <slug>.cratetv.net
+  const promoRoute = promoRouteFor(window.location.hostname, route);
+  if (promoRoute) {
+    return <PromoPage slug={promoRoute.slug} view={promoRoute.view} />;
+  }
 
   const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
   if (movieMatch && movieMatch[1]) {
