@@ -104,7 +104,8 @@ export const FIGHT_NIGHT_CSS = `
 .pp-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--accent);margin-bottom:22px;display:flex;align-items:center;gap:14px}
 .pp-eyebrow::before{content:"";width:34px;height:1px;background:var(--accent)}
 .pp-center{text-align:center}.pp-center .pp-eyebrow{justify-content:center}
-.pp h2{font-family:var(--display);font-weight:400;font-size:clamp(48px,8vw,128px);line-height:.88;text-transform:uppercase}
+.pp h2{font-family:var(--display);font-weight:400;font-size:clamp(48px,8vw,128px);line-height:.88;text-transform:uppercase;text-wrap:balance}
+.pp-psec h2{font-size:clamp(40px,5.6vw,96px)}
 .pp .o{color:transparent;-webkit-text-stroke:1px var(--ink)}
 .pp-lede{max-width:560px;color:var(--dim);line-height:1.6;margin-top:22px;font-size:16px}
 .pp-center .pp-lede{margin-left:auto;margin-right:auto}
@@ -172,7 +173,7 @@ export const FIGHT_NIGHT_CSS = `
 
 /* partners page */
 .pp-phero{min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:5vw;padding:120px 6vw 80px}
-.pp h1{font-family:var(--display);font-weight:400;font-size:clamp(64px,9vw,150px);line-height:.86;text-transform:uppercase}
+.pp h1{font-family:var(--display);font-weight:400;font-size:clamp(64px,9vw,150px);line-height:.86;text-transform:uppercase;text-wrap:balance}
 .pp-duo{position:relative;aspect-ratio:1;width:100%;max-width:560px;justify-self:center}
 .pp-duo .c{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.8);background:#141414 center/cover}
 .pp-duo .c{filter:contrast(1.18) saturate(.75) brightness(.85)}
