@@ -68,7 +68,8 @@ export async function POST(request: Request) {
 
             case 'get': {
                 const { page } = await load(body.slug);
-                return json({ page });
+                // Fill in anything an older page is missing (new settings get their defaults).
+                return json({ page: { ...cleanPromo(page, page.slug, !!page.published), updatedAt: page.updatedAt } });
             }
 
             case 'create': {

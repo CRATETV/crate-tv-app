@@ -2,14 +2,67 @@
 // Not linked from the public page; you send the link to companies.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { PromoPage } from '../../api/_lib/promoRules';
+import { PromoPage, PromoInterest, DEFAULT_INTEREST_FORM, NOT_SURE } from '../../api/_lib/promoRules';
 import { usePromoAssets, promoVars, promoRootClass, useReveal } from './FightNightTemplate';
 
 const Title: React.FC<{ text: string; o?: string }> = ({ text, o }) => (
     <h2>{text}{o ? <> <span className="o">{o}</span></> : null}</h2>
 );
 
-const PromoPartnersView: React.FC<{ page: PromoPage }> = ({ page }) => {
+/** Sends the "I'm interested" form. The default emails it to the film's contact email (nothing saved). */
+const sendInterest = async (slug: string, answer: PromoInterest & { website: string }) => {
+    const r = await fetch('/api/promo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'interest', slug, ...answer }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Something went wrong. Try again.');
+};
+
+const InterestForm: React.FC<{ page: PromoPage; pick: string; setPick: (p: string) => void; onSend: (a: PromoInterest & { website: string }) => Promise<void> }> = ({ page, pick, setPick, onSend }) => {
+    const pp = page.partnerPage;
+    const form = pp.form || DEFAULT_INTEREST_FORM;
+    const [f, setF] = useState({ name: '', business: '', phone: '', email: '', message: '', website: '' });
+    const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+    const [err, setErr] = useState('');
+    const packs = [...pp.packs.map(p => p.name).filter(Boolean), NOT_SURE];
+    const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF(x => ({ ...x, [k]: e.target.value }));
+
+    if (state === 'sent') {
+        return (
+            <div className="pp-ifdone rv in">
+                <h3>Got it, {f.name.split(' ')[0] || 'thank you'}.</h3>
+                <p>We'll reach out within two days{f.phone ? ` at ${f.phone}` : ''}. Talk soon.</p>
+            </div>
+        );
+    }
+    return (
+        <form className="pp-if rv" onSubmit={async e => {
+            e.preventDefault(); setErr(''); setState('sending');
+            try { await onSend({ ...f, pack: pick || NOT_SURE }); setState('sent'); }
+            catch (x: any) { setErr(x?.message || 'Something went wrong. Try again.'); setState('idle'); }
+        }}>
+            <p className="pp-iflabel">Which package?</p>
+            <div className="pp-ifpacks">
+                {packs.map(n => <button type="button" key={n} className={pick === n ? 'on' : ''} onClick={() => setPick(n)}>{n}</button>)}
+            </div>
+            <div className="pp-ifgrid">
+                <label><span>Your name</span><input required value={f.name} onChange={set('name')} autoComplete="name" /></label>
+                <label><span>Business</span><input required value={f.business} onChange={set('business')} autoComplete="organization" /></label>
+                <label><span>Phone</span><input type="tel" value={f.phone} onChange={set('phone')} autoComplete="tel" /></label>
+                <label><span>Email</span><input type="email" value={f.email} onChange={set('email')} autoComplete="email" /></label>
+            </div>
+            <label className="pp-ifmsg"><span>Anything we should know? (optional)</span><textarea value={f.message} onChange={set('message')} rows={3} /></label>
+            <input className="pp-ifhp" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} aria-hidden="true" />
+            <div className="pp-ifsend">
+                <button className="pp-btn" type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : (form.button || 'Send')} →</button>
+                <span>Phone or email, whichever you'd rather we use.</span>
+            </div>
+            {err && <p className="pp-iferr">{err}</p>}
+        </form>
+    );
+};
+
+const PromoPartnersView: React.FC<{ page: PromoPage; onInterest?: (a: PromoInterest & { website: string }) => Promise<void> }> = ({ page, onInterest }) => {
+    const [pick, setPick] = useState('');
+    const formRef = useRef<HTMLElement>(null);
     usePromoAssets(page);
     const rootRef = useRef<HTMLDivElement>(null);
     const [ready, setReady] = useState(false);
@@ -18,6 +71,8 @@ const PromoPartnersView: React.FC<{ page: PromoPage }> = ({ page }) => {
 
     const pp = page.partnerPage;
     const title = page.hero.title || page.title;
+    const form = pp.form || DEFAULT_INTEREST_FORM;
+    const showForm = !!form.enabled && !!pp.contactEmail;
     const faceA = page.hero.media[0]?.src || page.sideA.photo || '';
     const faceB = page.hero.media[1]?.src || page.sideB.photo || '';
     let n = 0;
@@ -72,10 +127,21 @@ const PromoPartnersView: React.FC<{ page: PromoPage }> = ({ page }) => {
                                 <div key={i} className={`pp-pack${p.top ? ' top' : ''}`}>
                                     <span className="tag">{p.tag}</span><h3>{p.name}</h3><div className="price">{p.price}</div><div className="spots">{p.spots}</div>
                                     <ul>{p.perks.filter(Boolean).map((x, j) => <li key={j}>{x}</li>)}</ul>
+                                    {showForm && <button type="button" className="pp-choose" onClick={() => { setPick(p.name); formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>I want this →</button>}
                                 </div>
                             ))}
                         </div>
                         {pp.packsNote && <p className="pp-lede rv" style={{ maxWidth: 760 }}>{pp.packsNote}</p>}
+                    </section>
+                )}
+
+                {showForm && (
+                    <section className="pp-psec" ref={formRef}>
+                        <div className="rv">
+                            <p className="pp-num">{num()}</p><Title text={form.headline} o={form.outlined} />
+                            {form.text && <p className="pp-lede">{form.text}</p>}
+                        </div>
+                        <InterestForm page={page} pick={pick} setPick={setPick} onSend={onInterest || (a => sendInterest(page.slug, a))} />
                     </section>
                 )}
 

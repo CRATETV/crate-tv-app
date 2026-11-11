@@ -463,6 +463,20 @@ const PromoEditor: React.FC<{ initial: PromoPage; onBack: () => void; onChanged:
                             <Text label="Contact email" value={page.partnerPage.contactEmail} onChange={v => up('partnerPage', { contactEmail: v })} />
                             <Text label="Contact phone (optional)" value={page.partnerPage.contactPhone} onChange={v => up('partnerPage', { contactPhone: v })} />
                         </div>
+                        <Card>
+                            <p className="text-white font-bold mb-1">"I'm interested" form</p>
+                            <p className="text-sm text-[#8A8A96] mb-4">Businesses pick a package and leave their name, business and phone or email. Each answer is <b className="text-white">emailed to the Contact email above</b>, and hitting Reply writes back to them. Nothing is saved in CRATE.</p>
+                            <div className="space-y-3">
+                                <Toggle label="Show the form" on={page.partnerPage.form.enabled} onChange={v => up('partnerPage', { form: { ...page.partnerPage.form, enabled: v } })} />
+                                {page.partnerPage.form.enabled && !page.partnerPage.contactEmail.trim() && <Notice tone="warn">Add the Contact email above. The form stays hidden until there's somewhere to send it.</Notice>}
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <Text label="Headline" value={page.partnerPage.form.headline} onChange={v => up('partnerPage', { form: { ...page.partnerPage.form, headline: v } })} />
+                                    <Text label="Outlined words" value={page.partnerPage.form.outlined} onChange={v => up('partnerPage', { form: { ...page.partnerPage.form, outlined: v } })} />
+                                    <Text label="Button" value={page.partnerPage.form.button} onChange={v => up('partnerPage', { form: { ...page.partnerPage.form, button: v } })} />
+                                </div>
+                                <Text label="Line under the headline" value={page.partnerPage.form.text} onChange={v => up('partnerPage', { form: { ...page.partnerPage.form, text: v } })} />
+                            </div>
+                        </Card>
                         <Button type="button" onClick={() => setPreview('partners')}>👁 Preview partners page</Button>
                     </div>
                 </Disclosure>
@@ -542,7 +556,7 @@ const PromoEditor: React.FC<{ initial: PromoPage; onBack: () => void; onChanged:
                     </div>
                     <div ref={setScroller} className="absolute inset-0 overflow-y-auto overflow-x-hidden">
                         {preview === 'partners'
-                            ? <PromoPartnersView key="pv" page={previewPage} />
+                            ? <PromoPartnersView key="pv" page={previewPage} onInterest={async () => { throw new Error('This is a preview, so nothing was sent. The form works once the page is live.'); }} />
                             : <FightNightTemplate key={preview} page={previewPage} scroller={scroller} counts={{ votesA: 0, votesB: 0 }}
                                 actions={{ submit: async () => { throw new Error('This is a preview — votes work once the page is live.'); } }} />}
                     </div>

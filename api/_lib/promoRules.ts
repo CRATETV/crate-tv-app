@@ -58,6 +58,8 @@ export interface PromoPage {
         steps: PromoStep[]; places: PromoPlace[]; packs: PromoPack[]; packsNote: string;
         team: PromoPerson[]; stats: PromoStat[];
         contactEmail: string; contactPhone: string;
+        /** "I'm interested" form. Each answer is emailed to contactEmail and never stored. */
+        form: { enabled: boolean; headline: string; outlined: string; text: string; button: string };
     };
     createdAt?: string;
     updatedAt?: string;
@@ -118,6 +120,12 @@ export function promoRouteFor(hostname: string, pathname: string): { slug: strin
     return null;
 }
 
+export const DEFAULT_INTEREST_FORM = {
+    enabled: true, headline: "I'm", outlined: 'interested',
+    text: "Pick a package and leave your details. We'll call you within two days.",
+    button: 'Send',
+};
+
 // ── Blank page (what "Start blank" gives you) ───────────────────────────────
 export function blankPromo(slug: string, title: string): PromoPage {
     return {
@@ -141,6 +149,7 @@ export function blankPromo(slug: string, title: string): PromoPage {
         partnerPage: {
             enabled: true, headline: 'Put your name', outlined: 'on the film', intro: '',
             steps: [], places: [], packs: [], packsNote: '', team: [], stats: [], contactEmail: '', contactPhone: '',
+            form: { ...DEFAULT_INTEREST_FORM },
         },
     };
 }
@@ -231,6 +240,7 @@ export function theChampExample(slug: string): PromoPage {
                 { n: '', label: 'Email list', note: 'Fans signed up for the reveal' },
             ],
             contactEmail: '', contactPhone: '',
+            form: { ...DEFAULT_INTEREST_FORM },
         },
     };
 }
@@ -343,3 +353,50 @@ export function countChange(prev: { side?: PromoSideKey | null } | null, side: P
 }
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+// ── "I'm interested" form (partners page) ───────────────────────────────────
+// Answers are emailed to the page's contact email. Nothing is saved.
+
+export interface PromoInterest { name: string; business: string; phone: string; email: string; pack: string; message: string }
+
+/** Tidy and check a form answer. Returns the clean answer, or an error a visitor can read. */
+export function cleanInterest(input: any, packNames: string[]): { ok: true; value: PromoInterest } | { ok: false; error: string } {
+    const s = (v: unknown, max: number) => String(v ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, max);
+    const value: PromoInterest = {
+        name: s(input?.name, 100), business: s(input?.business, 120), phone: s(input?.phone, 40),
+        email: s(input?.email, 200).toLowerCase(), pack: s(input?.pack, 80),
+        message: String(input?.message ?? '').trim().slice(0, 1000),
+    };
+    if (!value.name) return { ok: false, error: 'Please add your name.' };
+    if (!value.business) return { ok: false, error: 'Please add your business name.' };
+    const digits = value.phone.replace(/\D/g, '');
+    if (value.phone && (digits.length < 7 || digits.length > 15)) return { ok: false, error: 'That phone number looks too short.' };
+    if (value.email && !EMAIL_RE.test(value.email)) return { ok: false, error: 'That email address looks wrong.' };
+    if (!value.phone && !value.email) return { ok: false, error: 'Leave a phone number or an email so we can reach you.' };
+    if (value.pack && value.pack !== NOT_SURE && !packNames.includes(value.pack)) value.pack = NOT_SURE;
+    if (!value.pack) value.pack = NOT_SURE;
+    return { ok: true, value };
+}
+export const NOT_SURE = 'Not sure yet';
+
+const esc = (t: string) => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+/** The email that lands in the film's inbox. Plain, so it reads like a note, not a CRATE email. */
+export function interestEmail(filmTitle: string, i: PromoInterest): { subject: string; html: string; text: string } {
+    const rows: [string, string][] = [
+        ['Package', i.pack], ['Name', i.name], ['Business', i.business],
+        ['Phone', i.phone || '—'], ['Email', i.email || '—'],
+    ];
+    const subject = `${filmTitle}: ${i.business} is interested (${i.pack})`;
+    const text = `${i.business} wants to talk about partnering on ${filmTitle}.\n\n` +
+        rows.map(([k, v]) => `${k}: ${v}`).join('\n') + (i.message ? `\n\nMessage:\n${i.message}` : '') +
+        `\n\nCall or reply within two days, while they're still warm.`;
+    const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;color:#14110d">` +
+        `<p style="font-size:16px"><b>${esc(i.business)}</b> wants to talk about partnering on <b>${esc(filmTitle)}</b>.</p>` +
+        `<table style="border-collapse:collapse;font-size:15px">` +
+        rows.map(([k, v]) => `<tr><td style="padding:6px 16px 6px 0;color:#6b665c">${k}</td><td style="padding:6px 0"><b>${esc(v)}</b></td></tr>`).join('') +
+        `</table>` +
+        (i.message ? `<p style="font-size:15px;margin-top:18px;white-space:pre-wrap">${esc(i.message)}</p>` : '') +
+        `<p style="font-size:13px;color:#6b665c;margin-top:24px">Call or reply within two days, while they're still warm.</p></div>`;
+    return { subject, html, text };
+}
