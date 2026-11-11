@@ -121,6 +121,7 @@ export const FIGHT_NIGHT_CSS = `
 .pp-notify button:hover,.pp-btn:hover{background:var(--accent)}
 .pp-notify button:disabled{opacity:.5}
 .pp-btn{display:inline-flex;align-items:center;padding:18px 28px;border-radius:999px;text-decoration:none}
+.pp a.pp-btn{color:var(--bg)}
 .pp-ok{margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.1em;min-height:1em}
 
 .pp-tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:60px}
@@ -128,6 +129,10 @@ export const FIGHT_NIGHT_CSS = `
 .pp-tier b{font-family:var(--display);font-weight:400;font-size:52px;display:block}
 .pp-tier h4{font-family:var(--mono);font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--accent);margin:6px 0 14px}
 .pp-tier p{font-size:14px;color:var(--dim);line-height:1.5}
+a.pp-tier{display:flex;flex-direction:column;text-decoration:none;color:var(--ink);transition:border-color .25s,transform .25s,background .25s}
+a.pp-tier:hover{border-color:var(--accent);transform:translateY(-4px);background:color-mix(in srgb,var(--accent) 7%,var(--bg))}
+.pp-tier p{flex:1}
+.pp-tiergo{margin-top:18px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
 
 .pp-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:3vw;align-items:center;max-width:1000px;margin:60px auto 0}
 .pp-side{border:1px solid var(--line);border-radius:999px;aspect-ratio:1;display:grid;place-items:center;cursor:pointer;transition:.3s;background:#0c0c0c;position:relative;overflow:hidden;color:#fff}

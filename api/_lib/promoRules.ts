@@ -18,7 +18,8 @@ export type PromoFont = 'anton' | 'bebas' | 'oswald' | 'playfair' | 'archivo';
 
 export interface PromoMedia { type: 'image' | 'video'; src: string; pos: string }
 export interface PromoSide { first: string; last: string; nickname: string; corner: string; photo: string; tape: string[][] }
-export interface PromoTier { amount: string; name: string; text: string }
+/** A backer level. link = where tapping it goes to pay (the filmmaker's page); empty = the main crowdfund link. */
+export interface PromoTier { amount: string; name: string; text: string; link: string }
 export interface PromoSlot { name: string; logo: string; link: string }
 export interface PromoStep { when: string; title: string; text: string; key: boolean }
 export interface PromoPlace { title: string; text: string }
@@ -49,6 +50,7 @@ export interface PromoPage {
     };
     vote: { eyebrow: string; headline: string; outlined: string };
     partnersBlock: { eyebrow: string; headline: string; outlined: string; text: string; email: string; slots: PromoSlot[] };
+    /** link = the main payment page (a crowdfund, or the filmmaker's own). Money never goes through CRATE. */
     crowdfund: { eyebrow: string; headline: string; outlined: string; text: string; link: string; tiers: PromoTier[] };
     instagram: { handle: string; url: string; posts: string[] };
     footer: { line1: string; line2: string; pressEmail: string; credit: string };
@@ -192,11 +194,11 @@ export function theChampExample(slug: string): PromoPage {
             text: 'The Champ was shot in Philadelphia in January. Help us finish it: editing, sound, music and festival fees. Every backer gets their name in the credits.',
             link: '',
             tiers: [
-                { amount: '$10', name: 'Ringside', text: 'Your name in the credits.' },
-                { amount: '$25', name: 'Fight Card', text: 'Credits + the fight poster and the movie poster as downloads, sent to you before we post them anywhere.' },
-                { amount: '$60', name: 'Fight Tee', text: 'Official The Champ t-shirt + credits.' },
-                { amount: '$150', name: 'The Gloves', text: 'Gloves signed by Ace & Beast + tee + credits.' },
-                { amount: '$500', name: 'Corner Team', text: 'Producer thanks credit, plus every reward from the other levels.' },
+                { amount: '$10', name: 'Ringside', text: 'Your name in the credits.', link: '' },
+                { amount: '$25', name: 'Fight Card', text: 'Credits + the fight poster and the movie poster as downloads, sent to you before we post them anywhere.', link: '' },
+                { amount: '$60', name: 'Fight Tee', text: 'Official The Champ t-shirt + credits.', link: '' },
+                { amount: '$150', name: 'The Gloves', text: 'Gloves signed by Ace & Beast + tee + credits.', link: '' },
+                { amount: '$500', name: 'Corner Team', text: 'Producer thanks credit, plus every reward from the other levels.', link: '' },
             ],
         },
         footer: { line1: 'Ace Broadus vs Beast Johnson', line2: 'Empire Arena · Saturday, February 20', pressEmail: '', credit: 'A CRATE TV promotion for The Champ' },
@@ -254,7 +256,7 @@ const ITEM_TEMPLATES: Record<string, unknown> = {
     'hero.media': { type: 'image', src: '', pos: '50% 40%' },
     'sideA.tape': ['', ''], 'sideB.tape': ['', ''],
     'partnersBlock.slots': { name: '', logo: '', link: '' },
-    'crowdfund.tiers': { amount: '', name: '', text: '' },
+    'crowdfund.tiers': { amount: '', name: '', text: '', link: '' },
     'instagram.posts': '',
     'partnerPage.steps': { when: '', title: '', text: '', key: false },
     'partnerPage.places': { title: '', text: '' },
