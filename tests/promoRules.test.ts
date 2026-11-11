@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    cleanPromo, blankPromo, theChampExample, promoRouteFor, slugProblem, promoSlugify, countChange, isRevealed, safeUrl, instagramPostUrl,
+    cleanPromo, blankPromo, cleanInterest, interestEmail, theChampExample, promoRouteFor, slugProblem, promoSlugify, countChange, isRevealed, safeUrl, instagramPostUrl,
 } from '../api/_lib/promoRules.js';
 
 test('addresses: /p/<slug>, /p/<slug>/partners and <slug>.cratetv.net', () => {
@@ -97,4 +97,34 @@ test("The Champ comes with its photos and stats, and they survive saving", () =>
     assert.deepEqual(out.hero.media.map(m => m.src), ['/promo/the-champ/ace-face.jpg', '/promo/the-champ/beast-face.jpg']);
     assert.deepEqual(out.sideA.tape[0], ['Record', '24-1']);
     assert.equal(out.countdown.date, '2027-02-20T20:00:00-05:00');
+});
+
+test('interest form: needs name, business and a way to reach them', () => {
+    const packs = ['Ringside', 'Corner'];
+    assert.equal(cleanInterest({ business: 'Gym', phone: '2155550100' }, packs).ok, false);
+    assert.equal(cleanInterest({ name: 'Dee', phone: '2155550100' }, packs).ok, false);
+    assert.equal(cleanInterest({ name: 'Dee', business: 'Gym' }, packs).ok, false);
+    assert.equal(cleanInterest({ name: 'Dee', business: 'Gym', phone: '12' }, packs).ok, false);
+    assert.equal(cleanInterest({ name: 'Dee', business: 'Gym', email: 'nope' }, packs).ok, false);
+    const ok = cleanInterest({ name: ' Dee ', business: 'North Gym', phone: '(215) 555-0100', pack: 'Corner' }, packs);
+    assert.ok(ok.ok && ok.value.name === 'Dee' && ok.value.pack === 'Corner');
+    const made = cleanInterest({ name: 'Dee', business: 'Gym', email: 'DEE@GYM.COM', pack: 'Gold Tier' }, packs);
+    assert.ok(made.ok && made.value.pack === 'Not sure yet' && made.value.email === 'dee@gym.com');
+});
+
+test('interest email: names the business and escapes what they typed', () => {
+    const r = cleanInterest({ name: 'Dee', business: '<b>Gym</b>', phone: '2155550100', pack: 'Corner', message: '<script>x</script>' }, ['Corner']);
+    assert.ok(r.ok);
+    const m = interestEmail('The Champ', r.value);
+    assert.equal(m.subject, 'The Champ: <b>Gym</b> is interested (Corner)');
+    assert.ok(!m.html.includes('<script>') && m.html.includes('&lt;b&gt;Gym&lt;/b&gt;'));
+    assert.ok(m.text.includes('Phone: 2155550100'));
+});
+
+test('older pages get the interest form defaults when cleaned', () => {
+    const old: any = theChampExample('the-champ');
+    delete old.partnerPage.form;
+    const out = cleanPromo(old, 'the-champ', true);
+    assert.equal(out.partnerPage.form.enabled, true);
+    assert.equal(out.partnerPage.form.button, 'Send');
 });

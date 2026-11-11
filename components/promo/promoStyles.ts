@@ -213,6 +213,27 @@ export const FIGHT_NIGHT_CSS = `
 .pp-stat span{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
 .pp-stat small{display:block;margin-top:10px;color:var(--dim);font-size:13px}
 
+/* "I'm interested" form */
+.pp-choose{margin-top:20px;background:transparent;border:1px solid color-mix(in srgb,var(--ink) 25%,transparent);color:var(--ink);border-radius:999px;padding:12px 18px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;transition:.2s}
+.pp-choose:hover,.pp-pack.top .pp-choose{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.pp-if{margin-top:50px;max-width:820px}
+.pp-iflabel,.pp-if label span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.pp-ifpacks{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:34px}
+.pp-ifpacks button{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:12px 20px;font-family:var(--body);font-size:15px;cursor:pointer;transition:.2s}
+.pp-ifpacks button:hover{border-color:color-mix(in srgb,var(--ink) 40%,transparent)}
+.pp-ifpacks button.on{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:700}
+.pp-ifgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px 24px}
+.pp-if input,.pp-if textarea{width:100%;background:transparent;border:0;border-bottom:1px solid color-mix(in srgb,var(--ink) 25%,transparent);color:var(--ink);font:inherit;font-size:18px;padding:8px 0 12px;outline:none;transition:border-color .2s;resize:vertical}
+.pp-if input:focus,.pp-if textarea:focus{border-color:var(--accent)}
+.pp-ifmsg{display:block;margin-top:26px}
+.pp-ifhp{position:absolute!important;left:-9999px;width:1px;height:1px;opacity:0}
+.pp-ifsend{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:34px}
+.pp-ifsend span{color:var(--dim);font-size:13px}
+.pp-iferr{margin-top:16px;color:#ff6b6b;font-family:var(--mono);font-size:12px;letter-spacing:.05em}
+.pp-ifdone{margin-top:50px;border:1px solid var(--accent);border-radius:26px;padding:40px;max-width:820px;background:color-mix(in srgb,var(--accent) 7%,var(--bg))}
+.pp-ifdone h3{font-family:var(--display);font-weight:400;font-size:clamp(36px,4vw,56px);text-transform:uppercase;line-height:1}
+.pp-ifdone p{color:var(--dim);margin-top:14px;font-size:16px}
+@media (max-width:900px){.pp-ifgrid{grid-template-columns:1fr}}
 @media (hover:none){.pp-cursor{display:none}}
 @media (max-width:900px){
   .pp-bar{padding:18px 20px}.pp-bar .meta{display:none}
