@@ -47,6 +47,7 @@ export const useReveal = (root: React.RefObject<HTMLElement>, deps: unknown[]) =
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
+export const PROMO_JUMPS = ['fight', 'countdown', 'vote', 'partners', 'back', 'instagram'];
 const isVideoFile = (u: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u);
 
 const Title: React.FC<{ text: string; o?: string }> = ({ text, o }) => (
@@ -87,6 +88,18 @@ const FightNightTemplate: React.FC<{
     useEffect(() => setCounts(initialCounts), [initialCounts.votesA, initialCounts.votesB]);
     useEffect(() => { const t = setTimeout(() => setReady(true), 150); return () => clearTimeout(t); }, []);
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+    // Jump links for Instagram: …/#vote, #countdown, #fight, #partners, #back (after the reveal).
+    useEffect(() => {
+        const jump = () => {
+            const id = window.location.hash.slice(1);
+            if (!PROMO_JUMPS.includes(id)) return;
+            // Wait for the intro and pictures to settle so we land in the right place.
+            setTimeout(() => rootRef.current?.querySelector(`#${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 700);
+        };
+        jump();
+        window.addEventListener('hashchange', jump);
+        return () => window.removeEventListener('hashchange', jump);
+    }, []);
     useEffect(() => {
         const onHash = () => setHashReveal(window.location.hash === '#reveal');
         window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash);
@@ -228,7 +241,7 @@ const FightNightTemplate: React.FC<{
 
                 {/* ── The two sides ── */}
                 {sections.fight && (
-                    <section className="pp-fight">
+                    <section id="fight" className="pp-fight">
                         {[{ s: sideA, k: 'a' }, { s: sideB, k: 'b' }].map(({ s, k }) => (
                             <div key={k} className={`pp-fighter ${k}`}>
                                 <div className={`pic${s.photo ? '' : ' empty'}`} style={s.photo ? { backgroundImage: `url("${s.photo}")` } : undefined}>
@@ -251,7 +264,7 @@ const FightNightTemplate: React.FC<{
 
                 {/* ── Countdown / reveal ── */}
                 {sections.countdown && (
-                    <section className="pp-sec pp-center">
+                    <section id="countdown" className="pp-sec pp-center">
                         <div className="rv">
                             <p className="pp-eyebrow">{revealed ? countdown.revealEyebrow : countdown.eyebrow}</p>
                             {revealed ? <Title text={countdown.revealHeadline} o={countdown.revealOutlined} /> : <Title text={countdown.headline} o={countdown.outlined} />}
@@ -285,7 +298,7 @@ const FightNightTemplate: React.FC<{
 
                 {/* ── Crowdfund (after the reveal) ── */}
                 {revealed && page.crowdfund.tiers.length > 0 && (
-                    <section className="pp-sec">
+                    <section id="back" className="pp-sec">
                         <div className="rv">
                             <p className="pp-eyebrow">{page.crowdfund.eyebrow}</p>
                             <Title text={page.crowdfund.headline} o={page.crowdfund.outlined} />
@@ -307,7 +320,7 @@ const FightNightTemplate: React.FC<{
 
                 {/* ── Pick a side ── */}
                 {sections.vote && (
-                    <section className="pp-sec pp-center">
+                    <section id="vote" className="pp-sec pp-center">
                         <div className="rv">
                             <p className="pp-eyebrow">{page.vote.eyebrow}</p>
                             <Title text={page.vote.headline} o={page.vote.outlined} />
@@ -342,7 +355,7 @@ const FightNightTemplate: React.FC<{
 
                 {/* ── Instagram ── */}
                 {sections.instagram && page.instagram.posts.length > 0 && (
-                    <section className="pp-sec">
+                    <section id="instagram" className="pp-sec">
                         <div className="rv">
                             <p className="pp-eyebrow">On Instagram</p>
                             <Title text="Follow" o={page.instagram.handle ? `@${page.instagram.handle.replace(/^@/, '')}` : 'along'} />
@@ -359,7 +372,7 @@ const FightNightTemplate: React.FC<{
 
                 {/* ── Partners ── */}
                 {sections.partners && (
-                    <section className="pp-sec">
+                    <section id="partners" className="pp-sec">
                         <div className="rv">
                             <p className="pp-eyebrow">{page.partnersBlock.eyebrow}</p>
                             <Title text={page.partnersBlock.headline} o={page.partnersBlock.outlined} />
