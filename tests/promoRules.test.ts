@@ -128,3 +128,14 @@ test('older pages get the interest form defaults when cleaned', () => {
     assert.equal(out.partnerPage.form.enabled, true);
     assert.equal(out.partnerPage.form.button, 'Send');
 });
+
+test('backer levels: each keeps its own payment link (https only), older levels get an empty one', () => {
+    const page: any = theChampExample('the-champ');
+    page.crowdfund.tiers[2].link = 'https://square.link/u/abc123';
+    page.crowdfund.tiers[3].link = 'javascript:alert(1)';
+    delete page.crowdfund.tiers[4].link;
+    const out = cleanPromo(page, 'the-champ', true);
+    assert.equal(out.crowdfund.tiers[2].link, 'https://square.link/u/abc123');
+    assert.equal(out.crowdfund.tiers[3].link, '');
+    assert.equal(out.crowdfund.tiers[4].link, '');
+});

@@ -328,13 +328,18 @@ const PromoEditor: React.FC<{ initial: PromoPage; onBack: () => void; onChanged:
                             <Text label="Outlined words" value={page.crowdfund.outlined} onChange={v => up('crowdfund', { outlined: v })} />
                         </div>
                         <Text label="What the money is for" long value={page.crowdfund.text} onChange={v => up('crowdfund', { text: v })} />
-                        <Text label="Crowdfund link" value={page.crowdfund.link} onChange={v => up('crowdfund', { link: v })} placeholder="https://…" />
-                        <ListEditor items={page.crowdfund.tiers} onChange={v => up('crowdfund', { tiers: v })} addLabel="Add a backer level" blank={() => ({ amount: '', name: '', text: '' })}
+                        <Text label="Main payment link" value={page.crowdfund.link} onChange={v => up('crowdfund', { link: v })} placeholder="https://…"
+                            hint="The filmmaker's crowdfund page or their own payment page. Money goes straight to them — never through CRATE." />
+                        <ListEditor items={page.crowdfund.tiers} onChange={v => up('crowdfund', { tiers: v })} addLabel="Add a backer level" blank={() => ({ amount: '', name: '', text: '', link: '' })}
                             render={(t, set) => (
-                                <div className="grid sm:grid-cols-3 gap-3">
-                                    <Text label="Amount" value={t.amount} onChange={v => set({ ...t, amount: v })} placeholder="$60" />
-                                    <Text label="Name" value={t.name} onChange={v => set({ ...t, name: v })} placeholder="Fight Tee" />
-                                    <Text label="What they get" value={t.text} onChange={v => set({ ...t, text: v })} />
+                                <div className="space-y-3">
+                                    <div className="grid sm:grid-cols-3 gap-3">
+                                        <Text label="Amount" value={t.amount} onChange={v => set({ ...t, amount: v })} placeholder="$60" />
+                                        <Text label="Name" value={t.name} onChange={v => set({ ...t, name: v })} placeholder="Fight Tee" />
+                                        <Text label="What they get" value={t.text} onChange={v => set({ ...t, text: v })} />
+                                    </div>
+                                    <Text label="Payment link for just this level (optional)" value={t.link || ''} onChange={v => set({ ...t, link: v })} placeholder="https://…"
+                                        hint={t.link ? 'Tapping this level opens this link.' : page.crowdfund.link ? 'Empty: tapping this level opens the main payment link.' : 'Empty, and no main link yet: this level is not clickable.'} />
                                 </div>
                             )} />
                     </div>
