@@ -193,10 +193,10 @@ export function theChampExample(slug: string): PromoPage {
             link: '',
             tiers: [
                 { amount: '$10', name: 'Ringside', text: 'Your name in the credits.' },
-                { amount: '$25', name: 'Fight Card', text: 'Credits + digital fight poster.' },
+                { amount: '$25', name: 'Fight Card', text: 'Credits + both digital posters, the fight and the film, before the public sees them.' },
                 { amount: '$60', name: 'Fight Tee', text: 'Official The Champ t-shirt + credits.' },
                 { amount: '$150', name: 'The Gloves', text: 'Gloves signed by Ace & Beast + tee + credits.' },
-                { amount: '$500', name: 'Corner Team', text: 'Producer thanks credit + everything above.' },
+                { amount: '$500', name: 'Corner Team', text: 'Producer thanks credit, plus every reward from the other levels.' },
             ],
         },
         footer: { line1: 'Ace Broadus vs Beast Johnson', line2: 'Empire Arena · Saturday, February 20', pressEmail: '', credit: 'A CRATE TV promotion for The Champ' },
