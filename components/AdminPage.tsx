@@ -54,6 +54,7 @@ import MoneyHub from './admin/MoneyHub';
 import PaymentsRefundsTab from './admin/PaymentsRefundsTab';
 import StorageCleanupTab from './admin/StorageCleanupTab';
 import BulkFilmUploadTab from './admin/BulkFilmUploadTab';
+import PromoPagesTab from './admin/PromoPagesTab';
 import { TAB_META, SELF_HEADED, groupOf } from './admin/tabMeta';
 import { ACCENT } from './admin/ui';
 
@@ -831,6 +832,7 @@ const AdminPage: React.FC = () => {
                             <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />
                         </div>
                     )}
+                    {activeTab === 'promo' && <PromoPagesTab />}
                     {activeTab === 'share' && <ShareFilmTab movies={movies as Record<string, Movie>} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'roku' && (
