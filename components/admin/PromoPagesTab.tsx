@@ -227,7 +227,7 @@ const PromoEditor: React.FC<{ initial: PromoPage; onBack: () => void; onChanged:
                         <Notice>Address: <b>{pageUrl(slug)}</b> · also <b>{subUrl(slug)}</b> · partners page: <b>{pageUrl(slug)}/partners</b></Notice>
                         <Field label="Jump links for Instagram Stories" hint="Put these on a Story link sticker so people land right on the part you're talking about.">
                             <div className="grid sm:grid-cols-2 gap-2">
-                                {([['vote', 'Pick a side (the vote)'], ['countdown', 'Countdown + email sign-up'], ['fight', 'The two sides'], ['partners', 'Partners'], ['back', 'Back the film (after the reveal)']] as const).map(([h, label]) => (
+                                {([['vote', 'Pick a side (the vote)'], ['countdown', 'Countdown + email sign-up'], ['fight', 'The two sides'], ['partners', 'Partners'], ['back', 'Pick your corner (after the reveal)']] as const).map(([h, label]) => (
                                     <button key={h} type="button" onClick={async () => setMsg((await copyText(`${pageUrl(slug)}#${h}`)) ? { tone: 'success', text: `Copied: ${pageUrl(slug)}#${h}` } : { tone: 'error', text: 'Could not copy.' })}
                                         className="flex items-center justify-between gap-3 rounded-xl bg-[#0B0B0D] border border-white/10 px-3 py-2 text-left hover:border-white/30">
                                         <span><span className="block text-sm text-white">{label}</span><span className="block text-xs text-[#8A8A96] font-mono">…/p/{slug}#{h}</span></span>

@@ -145,7 +145,7 @@ export function blankPromo(slug: string, title: string): PromoPage {
         },
         vote: { eyebrow: 'Pick a side', headline: 'Who', outlined: 'wins?' },
         partnersBlock: { eyebrow: 'Official partners', headline: 'Partner', outlined: 'with us', text: '', email: '', slots: [] },
-        crowdfund: { eyebrow: 'Back the film', headline: 'Get in', outlined: 'the corner', text: '', link: '', tiers: [] },
+        crowdfund: { eyebrow: 'Join the fight', headline: 'Pick your', outlined: 'corner', text: '', link: '', tiers: [] },
         instagram: { handle: '', url: '', posts: [] },
         footer: { line1: '', line2: '', pressEmail: '', credit: `A CRATE TV promotion for ${title}` },
         partnerPage: {
@@ -192,14 +192,14 @@ export function theChampExample(slug: string): PromoPage {
             email: CHAMP_EMAIL, slots: [],
         },
         crowdfund: {
-            eyebrow: 'Back the film', headline: 'Get in', outlined: 'the corner',
-            text: 'The Champ was shot in Philadelphia in January. Help us finish it: editing, sound, music and festival fees. Every backer gets their name in the credits.',
+            eyebrow: 'Join the fight', headline: 'Pick your', outlined: 'corner',
+            text: "The fight was never real. The film is. Pick your corner, wear your side, and get your name in the credits. Every corner that fills up unlocks something new.",
             link: '',
             tiers: [
                 { amount: '$10', name: 'Ringside', text: 'Your name in the credits.', link: '' },
                 { amount: '$25', name: 'Fight Card', text: 'Credits + the fight poster and the movie poster as downloads, sent to you before we post them anywhere.', link: '' },
-                { amount: '$60', name: 'Fight Tee', text: 'Official The Champ t-shirt + credits.', link: '' },
-                { amount: '$150', name: 'The Gloves', text: 'Gloves signed by Ace & Beast + tee + credits.', link: '' },
+                { amount: '$60', name: 'Team Tee', text: 'Wear your side: a Team Ace or Team Beast tee + credits.', link: '' },
+                { amount: '$150', name: 'The Gloves', text: 'Gloves signed by Ace & Beast + your Team tee + credits.', link: '' },
                 { amount: '$500', name: 'Corner Team', text: 'Producer thanks credit, plus every reward from the other levels.', link: '' },
             ],
         },
