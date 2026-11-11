@@ -139,3 +139,10 @@ test('backer levels: each keeps its own payment link (https only), older levels 
     assert.equal(out.crowdfund.tiers[3].link, '');
     assert.equal(out.crowdfund.tiers[4].link, '');
 });
+
+test("The Champ starter sends press and partner mail to the film's own inbox", () => {
+    const p = theChampExample('the-champ');
+    assert.equal(p.partnersBlock.email, 'thechampfilm@gmail.com');
+    assert.equal(p.footer.pressEmail, 'thechampfilm@gmail.com');
+    assert.equal(p.partnerPage.contactEmail, 'thechampfilm@gmail.com');
+});

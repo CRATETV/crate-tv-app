@@ -160,6 +160,8 @@ export function blankPromo(slug: string, title: string): PromoPage {
 // Photos ship with CRATE in public/promo/the-champ/. Swap them in the editor
 // any time; uploads replace these links.
 const CHAMP_IMG = '/promo/the-champ';
+/** The film's own inbox: press, partner enquiries and the "I'm interested" form all go here. */
+const CHAMP_EMAIL = 'thechampfilm@gmail.com';
 export function theChampExample(slug: string): PromoPage {
     const p = blankPromo(slug, 'The Champ');
     return {
@@ -187,7 +189,7 @@ export function theChampExample(slug: string): PromoPage {
         partnersBlock: {
             eyebrow: 'Official partners', headline: 'Put your name', outlined: 'on the fight',
             text: 'Your logo on the poster, the trunks, the ring canvas and the press conference backdrop. Limited spots.',
-            email: '', slots: [],
+            email: CHAMP_EMAIL, slots: [],
         },
         crowdfund: {
             eyebrow: 'Back the film', headline: 'Get in', outlined: 'the corner',
@@ -201,7 +203,7 @@ export function theChampExample(slug: string): PromoPage {
                 { amount: '$500', name: 'Corner Team', text: 'Producer thanks credit, plus every reward from the other levels.', link: '' },
             ],
         },
-        footer: { line1: 'Ace Broadus vs Beast Johnson', line2: 'Empire Arena · Saturday, February 20', pressEmail: '', credit: 'A CRATE TV promotion for The Champ' },
+        footer: { line1: 'Ace Broadus vs Beast Johnson', line2: 'Empire Arena · Saturday, February 20', pressEmail: CHAMP_EMAIL, credit: 'A CRATE TV promotion for The Champ' },
         partnerPage: {
             enabled: true, headline: 'Put your name', outlined: 'on the fight',
             intro: "The Champ is a short film. Ace Broadus vs Beast Johnson is the marketing. For six weeks we promote the fight like it's real, then on February 20 we reveal it's a movie and drop the trailer. Your brand rides the whole thing, from the first poster to the festival screen.",
@@ -241,7 +243,7 @@ export function theChampExample(slug: string): PromoPage {
                 { n: '', label: 'Fight votes', note: 'People who picked a side' },
                 { n: '', label: 'Email list', note: 'Fans signed up for the reveal' },
             ],
-            contactEmail: '', contactPhone: '',
+            contactEmail: CHAMP_EMAIL, contactPhone: '',
             form: { ...DEFAULT_INTEREST_FORM },
         },
     };
