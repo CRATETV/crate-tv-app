@@ -41,6 +41,7 @@ Sub Init()
 
     m.billboard     = m.top.FindNode("billboard")
     m.billboardArt  = m.top.FindNode("billboardArt")
+    m.billboardPlaceholder = m.top.FindNode("billboardPlaceholder")
     m.fadeLeft      = m.top.FindNode("fadeLeft")
     m.billboardInfo = m.top.FindNode("billboardInfo")
     m.heroEyebrow   = m.top.FindNode("heroEyebrow")
@@ -351,6 +352,9 @@ Sub ShowOnBillboard(film as Object, eyebrow as String, immediateArt as Boolean)
     StopTrailer()
     m.previewFilm = film
     m.previewTimer.control = "start"
+
+    ' --- Poster stand-in: instantly, so the background is never bare ---
+    m.billboardPlaceholder.uri = FieldText(film, "posterUrl")
 
     ' --- Artwork (after a short pause, unless immediate) ---
     m.pendingArtFilm = film
