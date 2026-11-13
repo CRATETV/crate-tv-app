@@ -65,6 +65,12 @@
             <!-- ======================= BILLBOARD ======================= -->
             <Group id="billboard" visible="false">
                 <!-- Artwork. HomeScene.brs sizes/positions it for wide vs portrait art. -->
+                <!-- Instant stand-in: the film's poster (already loaded for its row tile)
+                     shows the moment a film is focused, so the background is never empty
+                     while the bigger artwork below downloads and fades in over it. -->
+                <Poster id="billboardPlaceholder" width="1040" height="1080" translation="[880, 0]"
+                        loadDisplayMode="scaleToZoom" loadWidth="1040" loadHeight="1080"
+                        loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" />
                 <Poster id="billboardArt" width="1040" height="1080" translation="[880, 0]"
                         loadDisplayMode="scaleToZoom" loadWidth="1040" loadHeight="1080"
                         loadingBitmapOpacity="0.0" failedBitmapOpacity="0.0" opacity="0.0" />
