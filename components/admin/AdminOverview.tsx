@@ -5,6 +5,7 @@ import { ACCENT, AccentName, Disclosure, PageHeader, SectionTitle, StatTile, adm
 import { TAB_META } from './tabMeta';
 import { PremiereSummary } from './PremiereChecklist';
 import BackupCard from './BackupCard';
+import AwsCostCard from './AwsCostCard';
 import { filmStatus, groupCounts, type FilmGroup } from '../../api/_lib/filmStatus';
 
 // Overview (Nov 2026 redesign): jump links first, then what needs attention, the next premiere, the films and
@@ -159,6 +160,7 @@ const AdminOverview: React.FC<Props> = ({ operatorName, isMaster, allowedTabs, c
             {(isMaster || children) && (
                 <div className="space-y-3">
                     {isMaster && <BackupCard />}
+                    {isMaster && <AwsCostCard />}
                     {children && (
                         <Disclosure id="live" title="Live on CRATE" summary="Real-time activity, views and recent changes">
                             {children}
