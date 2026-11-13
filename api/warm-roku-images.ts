@@ -14,7 +14,8 @@ const BUDGET_MS = 50_000;
 export function warmUrls(movies: any[]): string[] {
     const out = new Set<string>();
     for (const m of movies) {
-        if (!m || m.isUnlisted) continue;
+        // A premiere kept out of the catalog (unlisted) still shows in the Watch Parties row, so warm its pictures too.
+        if (!m || (m.isUnlisted && m.isWatchPartyEnabled !== true)) continue;
         for (const raw of [m.poster, m.tvPoster]) { const u = rokuImageUrl(raw, ROKU_POSTER_WIDTH); if (u.startsWith(SITE)) out.add(u); }
         const hero = rokuImageUrl(m.rokuHeroImage || m.tvPoster || m.poster, ROKU_HERO_WIDTH);
         if (hero.startsWith(SITE)) out.add(hero);
