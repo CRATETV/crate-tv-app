@@ -83,9 +83,9 @@ const SendToTvButton: React.FC<{ movieKey: string; episode?: number | null; comp
             <button
                 onClick={send}
                 disabled={status === 'sending'}
-                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-black py-3.5 rounded-xl uppercase tracking-widest text-xs active:scale-95 transition-all disabled:opacity-60"
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-bold py-2 px-4 rounded-lg uppercase tracking-widest text-[10px] active:scale-95 transition-all disabled:opacity-60"
             >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <rect x="3" y="5" width="18" height="12" rx="2" strokeWidth={2} />
                     <path strokeLinecap="round" strokeWidth={2} d="M8 21h8M12 17v4" />
                 </svg>
