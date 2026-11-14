@@ -305,7 +305,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
           }
       })();
       return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
-  }, [hasAccess, movie, movieKey, embedUrl, episodeStreamOverride, episodeIndex, getUserIdToken, startRetryTick]);
+  // Keyed on the film's key, not the movie object: that object is replaced on every
+  // data refresh, which blanked the video and restarted it from the start (Nov 2026).
+  }, [hasAccess, !!movie, movie?.key, movie?.isSeries, movie?.episodes?.length, movieKey, embedUrl, episodeStreamOverride, episodeIndex, getUserIdToken, startRetryTick]);
 
   const playableUrl = episodeStreamOverride || signedUrl || undefined;
 
@@ -662,7 +664,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             }).catch(() => {});
         }
     }
-  }, [movie, getUserIdToken, markAsWatched]);
+  }, [movie?.key, getUserIdToken, markAsWatched]);
 
   const toggleManualPause = (e: React.MouseEvent) => {
       if (isEnded) return;

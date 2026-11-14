@@ -239,6 +239,29 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
                                 ))}
                             </div>
 
+                            {(performance as any).partyStats && (() => {
+                                const ps = (performance as any).partyStats;
+                                return (
+                                    <div className="space-y-4">
+                                        <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em]">Watch Party</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                            {[
+                                                { label: 'People Who Joined', value: ps.uniqueViewers.toLocaleString() },
+                                                { label: 'Minutes Watched', value: Math.round(ps.totalWatchMinutes).toLocaleString() },
+                                                { label: 'Avg Minutes Each', value: (Math.round(ps.averageWatchMinutes * 10) / 10).toLocaleString() },
+                                                { label: 'Most At Once', value: ps.peakConcurrentViewers.toLocaleString() },
+                                                { label: 'Quick Bounces (<2 min)', value: ps.sessionsUnder2Min.toLocaleString() },
+                                            ].map((stat, i) => (
+                                                <div key={i} className="bg-white/[0.03] border border-white/5 p-6 rounded-3xl text-center print:border-black/10">
+                                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">{stat.label}</p>
+                                                    <p className="text-2xl font-black italic tracking-tighter text-white print:text-black">{stat.value}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
                             <WatchFunnel watch={performance.watch} />
                             <ViewCountries countries={performance.countries} className="pt-6" />
 

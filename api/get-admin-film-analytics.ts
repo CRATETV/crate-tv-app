@@ -5,6 +5,7 @@ import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { sumShards, summarizeWatch } from './_lib/watchStats.js';
 import { viewsByCountry } from './_lib/viewCountries.js';
+import { computeWatchPartyStats } from './_lib/watchPartyStats.js';
 
 export async function POST(request: Request) {
     try {
@@ -67,7 +68,10 @@ export async function POST(request: Request) {
             return { label, ...summarizeWatch(sumShards(shards.docs.map(d => d.data()))) };
         }));
 
-        const performance: FilmmakerFilmPerformance & { trafficEvents?: any[] } = {
+        // Watch party numbers (people, minutes, peak, quick bounces) for this film's party, if it had one.
+        const partyStats = await computeWatchPartyStats(db, movieKey).catch(() => null);
+
+        const performance: FilmmakerFilmPerformance & { trafficEvents?: any[]; partyStats?: any } = {
             key: movie.key,
             title: movie.title,
             views,
@@ -84,7 +88,8 @@ export async function POST(request: Request) {
             sentimentData,
             watch,
             countries: viewsByCountry(trafficEvents as any[]),
-            trafficEvents
+            trafficEvents,
+            partyStats: partyStats && partyStats.uniqueViewers > 0 ? partyStats : null
         };
 
         return new Response(JSON.stringify({ performance }), { status: 200, headers: { 'Content-Type': 'application/json' } });
