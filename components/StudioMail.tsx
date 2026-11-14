@@ -9,7 +9,7 @@ import { MAIL_TEMPLATES, fillTemplate, bookingLink } from './mailTemplates';
 interface MailItem {
     id: string;
     folder: 'in' | 'out';
-    kind: 'EMAIL' | 'CONTACT' | 'INQUIRY' | 'SUBMISSION' | 'SENT';
+    kind: 'EMAIL' | 'CONTACT' | 'INQUIRY' | 'SUBMISSION' | 'HELP' | 'SENT';
     name: string;
     email: string;
     subject: string;
@@ -21,6 +21,14 @@ interface MailItem {
     /** Set for premiere / festival request forms: the film (or festival) named in the request. */
     film?: string;
 }
+
+type MailStatus = 'open' | 'waiting' | 'solved';
+const STATUS_LABEL: Record<MailStatus, string> = { open: 'Open', waiting: 'Waiting', solved: 'Solved' };
+const STATUS_STYLE: Record<MailStatus, string> = {
+    open: 'text-red-300 bg-red-500/10 border-red-500/30',
+    waiting: 'text-amber-300 bg-amber-500/10 border-amber-500/30',
+    solved: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
+};
 
 interface Signature { id: string; name: string; text: string; ownerOnly?: boolean; }
 
@@ -52,7 +60,7 @@ const readAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
 });
 
 const KIND_LABEL: Record<MailItem['kind'], string> = {
-    EMAIL: 'Email', CONTACT: 'Contact form', INQUIRY: 'Talent inquiry', SUBMISSION: 'Film submission', SENT: 'Sent',
+    EMAIL: 'Email', CONTACT: 'Contact form', INQUIRY: 'Talent inquiry', SUBMISSION: 'Film submission', HELP: 'Festival help', SENT: 'Sent',
 };
 
 const StudioMail: React.FC = () => {
@@ -62,6 +70,9 @@ const StudioMail: React.FC = () => {
     const [received, setReceived] = useState<MailItem[]>([]);
     const [sent, setSent] = useState<MailItem[]>([]);
     const [mailboxNote, setMailboxNote] = useState('');
+    // Open / Waiting / Solved marks (no mark = Open), and which of them the Received list shows.
+    const [statuses, setStatuses] = useState<Record<string, MailStatus>>({});
+    const [statusFilter, setStatusFilter] = useState<'todo' | 'solved' | 'all'>('todo');
     const [isLoading, setIsLoading] = useState(true);
     const [selected, setSelected] = useState<MailItem | null>(null);
     // Received emails saved without their text get it fetched when opened.
@@ -144,6 +155,21 @@ const StudioMail: React.FC = () => {
             setMailboxNote(e instanceof Error ? e.message : 'Could not load the mailbox.');
         }
 
+        // 3. Festival Help reports from the Help button (they used to be email only).
+        try {
+            const r = await callMail({ action: 'helpRequests' });
+            (r.requests || []).forEach((h: any) => {
+                const tickets = (h.tickets || []).map((t: any) => `- ${t.label}${(t.count || 1) > 1 ? ` x${t.count}` : ''}: ${t.status}`).join('\n');
+                incoming.push({
+                    id: `help_${h.id}`, folder: 'in', kind: 'HELP', name: h.contactEmail, email: h.contactEmail, subject: `Festival help: ${h.category}`,
+                    text: `${h.message || '(no message)'}\n\nPage: ${h.page || 'unknown'}\nDevice: ${h.userAgent || 'unknown'}\n${h.accountEmail && h.accountEmail !== h.contactEmail ? `Signed in as: ${h.accountEmail}\n` : ''}\nTheir tickets:\n${tickets || (h.accountEmail ? 'No tickets on this account' : 'Not signed in')}`,
+                    when: toMs(h.createdAt), unread: false, attachments: [],
+                });
+            });
+        } catch (e) { console.error('Help requests failed to load', e); }
+
+        try { setStatuses((await callMail({ action: 'statuses' })).map || {}); } catch { /* everything shows as Open */ }
+
         // Website messages you removed from the inbox stay hidden.
         let hiddenIds = new Set<string>();
         try { hiddenIds = new Set<string>((await callMail({ action: 'hidden' })).ids || []); } catch { /* none hidden */ }
@@ -172,7 +198,15 @@ const StudioMail: React.FC = () => {
         return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
     }, [loadAll]);
 
-    const list = folder === 'in' ? received : sent;
+    const statusOf = useCallback((id: string): MailStatus => statuses[id] || 'open', [statuses]);
+    const counts = useMemo(() => ({
+        todo: received.filter(m => statusOf(m.id) !== 'solved').length,
+        solved: received.filter(m => statusOf(m.id) === 'solved').length,
+        all: received.length,
+    }), [received, statusOf]);
+    const list = folder === 'in'
+        ? received.filter(m => statusFilter === 'all' || (statusFilter === 'solved') === (statusOf(m.id) === 'solved'))
+        : sent;
     const unreadCount = useMemo(() => received.filter(m => m.unread).length, [received]);
 
     const resetComposer = () => { setReplyText(''); setFiles([]); if (fileInput.current) fileInput.current.value = ''; };
@@ -224,6 +258,7 @@ const StudioMail: React.FC = () => {
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'The email did not send.');
+            if (selected && selected.folder === 'in' && statusOf(selected.id) === 'open') setStatus(selected, 'waiting');
             setNotice({ ok: true, text: `Sent to ${recipient.trim()}. A copy is in your Sent folder.` });
             resetComposer(); setIsNewCompose(false); setSelected(null);
             await loadAll(); setFolder('out');
@@ -289,6 +324,42 @@ const StudioMail: React.FC = () => {
         }
     }, [selected, loadBody]);
 
+    const setStatus = async (m: MailItem, st: MailStatus) => {
+        const before = statuses[m.id];
+        setStatuses(prev => { const n = { ...prev }; if (st === 'open') delete n[m.id]; else n[m.id] = st; return n; });
+        try { await callMail({ action: 'setStatus', id: m.id, status: st }); }
+        catch (err) {
+            setStatuses(prev => { const n = { ...prev }; if (before) n[m.id] = before; else delete n[m.id]; return n; });
+            setNotice({ ok: false, text: err instanceof Error ? err.message : 'Could not save that.' });
+        }
+    };
+
+    // One clean block to paste to Claude: who, when, what, and the message.
+    const copyForClaude = async (m: MailItem) => {
+        const text = [
+            'CRATE TV SUPPORT MESSAGE',
+            `Type: ${KIND_LABEL[m.kind]}`,
+            `From: ${m.name && m.name !== m.email ? `${m.name} <${m.email}>` : m.email}`,
+            `When: ${m.when ? new Date(m.when).toLocaleString() : 'unknown'}`,
+            `Subject: ${m.subject}`,
+            ...(m.film ? [`Film: ${m.film}`] : []),
+            `Status: ${STATUS_LABEL[statusOf(m.id)]}`,
+            '',
+            'Message:',
+            m.text || '(the message text did not load)',
+        ].join('\n');
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch { /* shown below */ }
+            ta.remove();
+        }
+        setNotice({ ok: true, text: 'Copied. Paste it to Claude.' });
+    };
+
     const showComposer = isNewCompose || (!!selected && selected.folder === 'in' && replying);
 
     return (
@@ -342,6 +413,16 @@ const StudioMail: React.FC = () => {
                             </button>
                         ))}
                     </div>
+                    {folder === 'in' && (
+                        <div className="flex gap-2 px-4 py-3 border-b border-white/5">
+                            {([['todo', 'To do'], ['solved', 'Solved'], ['all', 'All']] as const).map(([key, label]) => (
+                                <button key={key} onClick={() => setStatusFilter(key)}
+                                    className={`px-3 py-1 rounded-full text-[11px] font-bold border ${statusFilter === key ? 'text-white bg-white/10 border-white/20' : 'text-gray-500 border-white/5 hover:text-gray-300'}`}>
+                                    {label} <span className="text-gray-500">{counts[key]}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {checked.size > 0 && (
                         <div className="flex items-center justify-between px-5 py-3 bg-red-600/10 border-b border-red-600/20">
                             <span className="text-xs text-gray-200">{checked.size} selected</span>
@@ -368,6 +449,7 @@ const StudioMail: React.FC = () => {
                                 <p className="truncate text-xs text-gray-400">{m.subject}</p>
                                 <div className="flex items-center gap-2 mt-1.5">
                                     <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{KIND_LABEL[m.kind]}</span>
+                                    {m.folder === 'in' && statusOf(m.id) !== 'open' && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLE[statusOf(m.id)]}`}>{STATUS_LABEL[statusOf(m.id)]}</span>}
                                     {m.attachments.length > 0 && <span className="text-[10px] text-gray-500">📎 {m.attachments.length}</span>}
                                 </div>
                             </button>
@@ -396,10 +478,21 @@ const StudioMail: React.FC = () => {
                                         <div className="flex items-start justify-between gap-4">
                                             <h2 className="text-2xl font-black text-white">{selected.subject}</h2>
                                             <div className="flex gap-2 shrink-0">
+                                                <button type="button" onClick={() => copyForClaude(selected)} className="text-xs font-bold text-gray-200 bg-white/5 hover:bg-white/10 whitespace-nowrap border border-white/10 rounded-lg px-3 py-1.5">📋 Copy for Claude</button>
                                                 {selected.folder === 'in' && !replying && <button type="button" onClick={() => setReplying(true)} className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 whitespace-nowrap rounded-lg px-4 py-1.5">↩ Reply</button>}
                                                 <button type="button" onClick={() => removeItems([selected])} className="text-xs font-bold text-gray-500 hover:text-red-400 whitespace-nowrap border border-white/10 rounded-lg px-3 py-1.5">🗑 Delete</button>
                                             </div>
                                         </div>
+                                        {selected.folder === 'in' && (
+                                            <div className="flex gap-2 mt-3">
+                                                {(['open', 'waiting', 'solved'] as const).map(st => (
+                                                    <button key={st} type="button" onClick={() => setStatus(selected, st)}
+                                                        className={`text-[11px] font-bold px-3 py-1 rounded-full border ${statusOf(selected.id) === st ? STATUS_STYLE[st] : 'text-gray-500 border-white/10 hover:text-gray-300'}`}>
+                                                        {STATUS_LABEL[st]}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                         <p className="text-sm text-gray-400 mt-1">{selected.folder === 'in' ? 'From' : 'To'} {selected.name && selected.name !== selected.email ? `${selected.name} · ` : ''}{selected.email} · {selected.when ? new Date(selected.when).toLocaleString() : ''}</p>
                                     </div>
                                 )}
