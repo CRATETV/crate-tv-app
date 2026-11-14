@@ -175,6 +175,7 @@ export async function POST(request: Request) {
                 if (!message && category === 'other') throw new HelpError(400, 'Tell us what’s happening.');
                 const page = String(body.page || '').slice(0, 300);
                 const userAgent = String(body.userAgent || request.headers.get('user-agent') || '').slice(0, 300);
+                const film = String(body.film || '').trim().slice(0, 120);
 
                 let tickets: { label: string; status: string; count?: number }[] = [];
                 if (who) {
@@ -184,7 +185,7 @@ export async function POST(request: Request) {
                     } catch (e) { console.error('[festival-help] diagnose for report failed:', e); }
                 }
                 const ref = await db.collection('help_requests').add({
-                    uid: who?.uid || null, accountEmail: who?.email || null, contactEmail, category, message, page, userAgent,
+                    uid: who?.uid || null, accountEmail: who?.email || null, contactEmail, category, message, page, userAgent, film,
                     tickets, status: 'open', createdAt: FieldValue.serverTimestamp(),
                 });
                 const reference = ref.id.slice(0, 6).toUpperCase();
@@ -196,12 +197,13 @@ export async function POST(request: Request) {
                         from: `Crate TV Help <${fromEmail}>`,
                         to: [await adminEmail(db)],
                         reply_to: contactEmail,
-                        subject: `🆘 Festival help (${category}) — ${contactEmail} [${reference}]`,
+                        subject: `🆘 Help request (${category}) — ${contactEmail} [${reference}]`,
                         html: renderBrandedEmail({
-                            title: 'Festival Help Request',
+                            title: 'Help Request',
                             bodyHtml: `
                                 <p style="margin:0 0 8px;"><strong>From:</strong> ${escapeHtml(contactEmail)}${who && who.email !== contactEmail ? ` (signed in as ${escapeHtml(who.email)})` : ''}${!who ? ' (not signed in)' : ''}</p>
                                 <p style="margin:0 0 8px;"><strong>Problem:</strong> ${escapeHtml(category)}</p>
+                                ${film ? `<p style="margin:0 0 8px;"><strong>Film:</strong> ${escapeHtml(film)}</p>` : ''}
                                 <p style="margin:0 0 8px;"><strong>Page:</strong> ${escapeHtml(page)}</p>
                                 <p style="margin:0 0 16px;"><strong>Device:</strong> ${escapeHtml(userAgent)}</p>
                                 <div style="padding:14px 16px;background:rgba(255,255,255,0.04);border-left:3px solid #f59e0b;margin:0 0 16px;white-space:pre-wrap;">${escapeHtml(message) || '(no message)'}</div>

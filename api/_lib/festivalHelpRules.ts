@@ -155,5 +155,5 @@ export function pwffWindowOf(blocks: { screeningStartTime?: string | null; watch
     return { firstStartMs: Math.min(...starts), lastStartMs: Math.max(...starts) };
 }
 
-export const HELP_CATEGORIES = ['ticket', 'playback', 'schedule', 'email', 'other'] as const;
+export const HELP_CATEGORIES = ['ticket', 'playback', 'schedule', 'email', 'restart', 'tv', 'signin', 'other'] as const;
 export type HelpCategory = typeof HELP_CATEGORIES[number];
