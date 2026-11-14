@@ -11,6 +11,7 @@ import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { escapeHtml } from './_lib/validation.js';
 import { ownerEmails } from './_lib/partnerEmails.js';
+import { replyToAddress } from './_lib/mailLog.js';
 import { dueViewers, fillThankYou, thankYouSubject, MIN_AGE_MS, MAX_AGE_MS, ViewerRow } from './_lib/thankYou.js';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -24,7 +25,7 @@ const renderBody = (text: string) => text.split(/\n{2,}/).map(p => `<p style="ma
 
 async function sendOne(resend: Resend, to: string, film: string, name: string | null | undefined, template: string) {
     const body = fillThankYou(template, { name, film });
-    return resend.emails.send({ from: `Crate TV <${fromEmail}>`, to, subject: thankYouSubject(film), html: renderBrandedEmail({ title: 'Thank you', bodyHtml: renderBody(body) }) });
+    return resend.emails.send({ from: `Crate TV <${fromEmail}>`, to, reply_to: replyToAddress({ MAIL_INBOUND_ADDRESS: process.env.MAIL_INBOUND_ADDRESS }, fromEmail), subject: thankYouSubject(film), html: renderBrandedEmail({ title: 'Thank you', bodyHtml: renderBody(body) }) });
 }
 
 export async function GET(request: Request) {
