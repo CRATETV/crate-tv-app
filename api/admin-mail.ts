@@ -107,7 +107,20 @@ export async function POST(request: Request) {
             case 'unread': {
                 await addMissingInquiries(db);
                 const snap = await db.collection(MAIL_COLLECTION).orderBy('createdAt', 'desc').limit(400).get();
-                return json({ count: snap.docs.filter(d => d.data().direction === 'in' && d.data().read === false).length });
+                const unreadEmails = snap.docs.filter(d => d.data().direction === 'in' && d.data().read === false).length;
+                // Help requests from /help and the festival Need help button count too:
+                // every one still Open (no status set yet) lights the badge until you
+                // reply (marks it Waiting) or mark it Solved.
+                let openHelp = 0;
+                try {
+                    const [helpSnap, statusSnap] = await Promise.all([
+                        db.collection('help_requests').orderBy('createdAt', 'desc').limit(100).get(),
+                        db.collection(STATUS_COLLECTION).get(),
+                    ]);
+                    const handled = new Set(statusSnap.docs.map(d => d.id));
+                    openHelp = helpSnap.docs.filter(d => !handled.has(`help_${d.id}`)).length;
+                } catch (e) { console.error('[admin-mail] open help count failed', e); }
+                return json({ count: unreadEmails + openHelp });
             }
             case 'delete': {
                 const ids = (Array.isArray(body.ids) ? body.ids : []).filter((x: unknown) => typeof x === 'string' && x).slice(0, 100);
@@ -149,7 +162,7 @@ export async function POST(request: Request) {
                 return json({ success: true });
             }
             case 'helpRequests': {
-                const snap = await db.collection('help_requests').orderBy('createdAt', 'desc').limit(30).get();
+                const snap = await db.collection('help_requests').orderBy('createdAt', 'desc').limit(100).get();
                 return json({ requests: snap.docs.map(d => {
                     const r: any = d.data();
                     return {
