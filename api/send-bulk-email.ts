@@ -1,3 +1,4 @@
+import { replyToAddress } from './_lib/mailLog.js';
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
                 from: `Crate TV <${businessEmail}>`,
                 to: 'delivered@resend.dev', 
                 bcc: batch,
-                reply_to: businessEmail,
+                reply_to: replyToAddress({ MAIL_INBOUND_ADDRESS: process.env.MAIL_INBOUND_ADDRESS }, businessEmail),
                 subject: subject,
                 text: plainText,
                 html: `
