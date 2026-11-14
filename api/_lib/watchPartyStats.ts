@@ -78,3 +78,21 @@ export async function computeWatchPartyStats(db: Firestore, blockId: string): Pr
         watchingNow,
     };
 }
+
+/**
+ * People who watched each watch party, by party key (a film's key for a standalone
+ * party). Watch party viewing never goes through the film page, so it is never in
+ * view_counts; the film numbers add this on top. One count per person per party.
+ */
+export async function partyViewerCounts(db: Firestore): Promise<Record<string, number>> {
+    const snap = await db.collection('watchSessions').select('userId', 'blockId').get();
+    const seen: Record<string, Set<string>> = {};
+    snap.forEach(d => {
+        const { userId, blockId } = d.data() as { userId?: string; blockId?: string };
+        if (!userId || !blockId) return;
+        (seen[blockId] ||= new Set()).add(userId);
+    });
+    const out: Record<string, number> = {};
+    for (const k of Object.keys(seen)) out[k] = seen[k].size;
+    return out;
+}

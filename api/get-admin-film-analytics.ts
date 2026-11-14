@@ -5,7 +5,7 @@ import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { sumShards, summarizeWatch } from './_lib/watchStats.js';
 import { viewsByCountry } from './_lib/viewCountries.js';
-import { computeWatchPartyStats } from './_lib/watchPartyStats.js';
+import { computeWatchPartyStats, partyViewerCounts } from './_lib/watchPartyStats.js';
 
 export async function POST(request: Request) {
     try {
@@ -38,7 +38,9 @@ export async function POST(request: Request) {
         const movie = movies.find(m => m.key === movieKey);
         if (!movie) return new Response(JSON.stringify({ error: 'Movie not found' }), { status: 404 });
 
-        const views = Number(viewsDoc.data()?.count) || 0;
+        // Film page plays, plus the people who watched the watch party (never counted by the film page).
+        const partyViewers = (await partyViewerCounts(db).catch(() => ({} as Record<string, number>)))[movieKey] || 0;
+        const views = (Number(viewsDoc.data()?.count) || 0) + partyViewers;
         const trafficEvents = trafficEventsSnapshot.docs.map(d => ({
             id: d.id,
             ...d.data(),

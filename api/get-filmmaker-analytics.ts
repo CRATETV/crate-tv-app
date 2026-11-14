@@ -1,5 +1,6 @@
 import { viewsByCountry } from './_lib/viewCountries.js';
 import { sumShards, summarizeWatch } from './_lib/watchStats.js';
+import { partyViewerCounts } from './_lib/watchPartyStats.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, User, SentimentPoint } from '../types.js';
 import { fetchAllRelevantPayments, getSquareCredentials, SYSTEM_RESET_DATE, computeRevenueByFilm, fetchFilmDeals } from './_lib/filmmakerBalance.js';
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
 
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
+        // Watch party viewers are never counted by the film page, so add them (one per person per party).
+        const partyViewers = await partyViewerCounts(db).catch(() => ({} as Record<string, number>));
+        for (const [k, n] of Object.entries(partyViewers)) viewCounts[k] = (viewCounts[k] || 0) + n;
 
         const rokuViewsByMovie: Record<string, number> = {};
         rokuEventsSnapshot.forEach(doc => {
