@@ -11,6 +11,7 @@ import { User } from '../types';
 import firebase from 'firebase/compat/app';
 import { toast } from '../components/Toast';
 import { isFestivalPassActive } from '../api/_lib/festivalPass';
+import { emailTypoMessage } from '../services/emailTypo';
 
 interface AuthContextType {
     user: User | null;
@@ -237,6 +238,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const signUp = async (email: string, password: string, name: string) => {
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
+        // A typo like "name@gmail.con" would create an account that can never
+        // receive email (ticket, verification, replies). Stop and say so.
+        const typo = emailTypoMessage(email);
+        if (typo) throw new Error(typo);
         const result = await auth.createUserWithEmailAndPassword(email, password);
         if (result.user) {
             await createUserProfile(result.user.uid, email, name);
