@@ -925,7 +925,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
                                     {/* Video rendered above, this div is for overlays */}
-                                    <CastButton videoElement={videoRef.current} />
+                                    <CastButton videoElement={videoRef.current}><SendToTvButton movieKey={movie.key} compact /></CastButton>
                                     {needsSound && !isPaused && !isEnded && (
                                         <button
                                             onClick={e => { e.stopPropagation(); turnSoundOn(); }}

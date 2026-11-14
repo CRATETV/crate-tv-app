@@ -8,12 +8,17 @@ import { useAuth } from '../contexts/AuthContext';
 
 type Status = 'idle' | 'sending' | 'sent' | 'needsLink' | 'error';
 
-const SendToTvButton: React.FC<{ movieKey: string; episode?: number | null }> = ({ movieKey, episode = null }) => {
+// `compact` = the small round button that sits on the player next to Cast. It only appears for
+// viewers whose account has a Roku linked (a browser cannot see Rokus on the Wi-Fi, and Rokus do
+// not take Chromecast, so "this account has a linked Roku" is the signal we can trust).
+const SendToTvButton: React.FC<{ movieKey: string; episode?: number | null; compact?: boolean }> = ({ movieKey, episode = null, compact = false }) => {
     const { user, getUserIdToken } = useAuth();
     const [status, setStatus] = useState<Status>('idle');
     const [message, setMessage] = useState('');
 
     if (!user) return null;
+    const hasRoku = !!user.rokuDeviceId;
+    if (compact && !hasRoku) return null;
 
     const send = async () => {
         setStatus('sending');
@@ -45,14 +50,42 @@ const SendToTvButton: React.FC<{ movieKey: string; episode?: number | null }> = 
         }
     };
 
+    if (compact) {
+        const label = status === 'sending' ? 'Sending…' : status === 'sent' ? 'Sent to your TV' : status === 'error' || status === 'needsLink' ? 'Could not send' : 'Send to TV';
+        return (
+            <button
+                onClick={(e) => { e.stopPropagation(); send(); }}
+                disabled={status === 'sending'}
+                title={message || label}
+                aria-label="Send to TV"
+                className={`flex items-center gap-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors text-white ${status === 'idle' ? 'p-2' : 'py-2 px-3 text-xs font-bold'} ${status === 'sending' ? 'animate-pulse' : ''}`}
+            >
+                <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="12" rx="2" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeWidth={2} d="M8 21h8M12 17v4" />
+                </svg>
+                {status !== 'idle' && <span>{label}</span>}
+            </button>
+        );
+    }
+
+    // Signed in but no Roku linked yet: point them to the link page instead of a button that cannot work.
+    if (!hasRoku) {
+        return (
+            <p className="mb-3 text-xs text-gray-500 text-center">
+                Have a Roku? <a href="/link" className="text-gray-300 underline hover:text-white">Link it</a> to send films to your TV.
+            </p>
+        );
+    }
+
     return (
         <div className="mb-3">
             <button
                 onClick={send}
                 disabled={status === 'sending'}
-                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-black py-3.5 rounded-xl uppercase tracking-widest text-xs active:scale-95 transition-all disabled:opacity-60"
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-bold py-2 px-4 rounded-lg uppercase tracking-widest text-[10px] active:scale-95 transition-all disabled:opacity-60"
             >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <rect x="3" y="5" width="18" height="12" rx="2" strokeWidth={2} />
                     <path strokeLinecap="round" strokeWidth={2} d="M8 21h8M12 17v4" />
                 </svg>

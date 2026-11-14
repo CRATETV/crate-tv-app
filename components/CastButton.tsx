@@ -11,7 +11,7 @@ interface CastButtonProps {
 // Google Cast Application ID — use the default media receiver for basic video playback
 const CAST_APP_ID = 'CC1AD845'; // Default Media Receiver
 
-const CastButton: React.FC<CastButtonProps> = ({ videoElement, videoUrl, title }) => {
+const CastButton: React.FC<CastButtonProps & { children?: React.ReactNode }> = ({ videoElement, videoUrl, title, children }) => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [connectionState, setConnectionState] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [castType, setCastType] = useState<'chromecast' | 'airplay' | 'remote' | null>(null);
@@ -247,7 +247,7 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement, videoUrl, title }
   };
 
   // Don't render if no casting is available
-  if (!isAvailable) return null;
+  if (!isAvailable && !children) return null;
 
   const iconColor = connectionState === 'connected' ? 'text-red-500' : 'text-white';
   const label = connectionState === 'connected'
@@ -255,9 +255,12 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement, videoUrl, title }
     : 'Cast to device';
 
   return (
+    <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
+    {children}
+    {isAvailable && (
     <button
       onClick={handleCast}
-      className={`absolute top-4 right-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-30 ${iconColor} ${connectionState === 'connecting' ? 'animate-pulse' : ''}`}
+      className={`bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors ${iconColor} ${connectionState === 'connecting' ? 'animate-pulse' : ''}`}
       aria-label={label}
       title={label}
     >
@@ -266,6 +269,8 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement, videoUrl, title }
         <path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm20-7H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
       </svg>
     </button>
+    )}
+    </div>
   );
 };
 
