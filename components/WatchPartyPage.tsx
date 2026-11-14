@@ -2307,6 +2307,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     movie={movie}
                     movieKey={movieKey}
                     blockPrice={parentBlock?.price}
+                    showPwffBadge={!!parentBlock && !isOutsidePartner((parentBlock as any).partnerId)}
                     partyState={partyState}
                     onPartyStart={() => setShowLobby(false)}
                     user={user}

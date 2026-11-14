@@ -27,6 +27,8 @@ interface WatchPartyLobbyProps {
     movieKey?: string;
     blockPrice?: number;
     blockFilms?: any[];
+    /** Only the Playhouse West festival's own blocks carry the PWFF-PHILLY badge. */
+    showPwffBadge?: boolean;
     hasAccess?: boolean;
     onBuyTicket?: () => void;
     onClose?: () => void;
@@ -39,7 +41,7 @@ interface LobbyViewer {
     joinedAt: Date;
 }
 
-const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice, blockFilms }) => {
+const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, onPartyStart, user, hasAccess = true, onBuyTicket, onClose, movieKey: partyKey, blockPrice, blockFilms, showPwffBadge = false }) => {
     // While the lobby shows, the Help button tucks into the corner instead of floating over the poll.
     useEffect(() => { setHelpDock('lobby'); return () => setHelpDock('default'); }, []);
     const [viewers, setViewers] = useState<LobbyViewer[]>([]);
@@ -541,8 +543,10 @@ const WatchPartyLobby: React.FC<WatchPartyLobbyProps> = ({ movie, partyState, on
                 <div className="absolute bottom-8 left-0 right-0 flex justify-center z-10">
                     <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 px-5 py-2.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">PWFF-PHILLY</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        {showPwffBadge && (<>
+                            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">PWFF-PHILLY</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        </>)}
                         <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Crate TV</span>
                     </div>
                 </div>
