@@ -1235,6 +1235,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         dangerouslySetInnerHTML={{ __html: movie.synopsis }}
                     />
 
+                    {/* Quiet help link: opens /help with this film already filled in */}
+                    <p className="text-xs text-gray-600 mb-6">
+                        Trouble watching?{' '}
+                        <a href={`/help?film=${encodeURIComponent(movie.title || '')}`} className="text-gray-400 hover:text-white underline underline-offset-4">Tell us what's happening</a>
+                    </p>
+
                     {/* Director's note (any film; the PWFF page uses its own festival fields) */}
                     {(movie.directorNote || movie.filmmakerBio) && (
                         <div className="mb-8 space-y-4 border-l-2 border-red-600/60 pl-4">

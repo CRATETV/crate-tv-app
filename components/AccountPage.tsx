@@ -243,6 +243,12 @@ const AccountPage: React.FC = () => {
                                 Makes this device the only one with access to paid content on this account.
                             </p>
                         </div>
+
+                        <div className="mt-6 pt-6 border-t border-white/5 text-center">
+                            <a href="/help" className="text-gray-600 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+                                Something not working? Get help
+                            </a>
+                        </div>
                     </div>
                 </div>
             </main>
