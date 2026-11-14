@@ -16,14 +16,15 @@ const codeFromUrl = (): string => {
 };
 
 const LinkRokuPage: React.FC = () => {
-    const { user, getUserIdToken } = useAuth();
+    const { user, authInitialized, getUserIdToken } = useAuth();
     const [code, setCode] = useState(codeFromUrl);
     const [status, setStatus] = useState<'idle' | 'linking' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!code.trim() || !user) return;
+        if (!user) { setStatus('error'); setMessage('Please sign in first, then enter the code.'); return; }
+        if (!code.trim()) return;
 
         setStatus('linking');
         setMessage('');
@@ -103,6 +104,12 @@ const LinkRokuPage: React.FC = () => {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-8">
+                                {authInitialized && !user && (
+                                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 text-left">
+                                        <p className="text-amber-200 text-sm leading-relaxed mb-3">You need to be signed in to link your Roku. Sign in, and you will come straight back here with your code.</p>
+                                        <a href={`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`} className="inline-block bg-white text-black font-black px-6 py-3 rounded-xl uppercase tracking-widest text-xs">Sign in</a>
+                                    </div>
+                                )}
                                 <div>
                                     <label htmlFor="rokuCode" className="text-[10px] font-black uppercase text-gray-500 tracking-[0.4em] mb-4 block">
                                         Code on your TV
