@@ -10,6 +10,9 @@
 //   hide      → { ids } removes website messages (contact form, talent inquiries,
 //                film submissions) from the inbox view; the original record stays
 //   hidden    → ids hidden that way
+//   statuses  → { map } the Open / Waiting / Solved mark on each message (no mark = Open)
+//   setStatus → { id, status } mark a message open | waiting | solved
+//   helpRequests → the newest Festival Help reports, shown in Received next to emails
 //   getSignatures / saveSignatures → the signatures you can pick when writing (saving: owner only)
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -17,6 +20,7 @@ import { verifyAdminPassword, isMasterAdmin, canUseTab } from './_lib/adminAuth.
 import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord, inboundBodyText, explainReceiveFailure } from './_lib/mailLog.js';
 
 const HIDDEN_COLLECTION = 'mail_hidden';
+const STATUS_COLLECTION = 'mail_status';     // id -> { status: 'waiting' | 'solved' }; no document means Open
 const DELETED_COLLECTION = 'mail_deleted';   // ids of website-request copies that were deleted on purpose
 
 // Premiere / festival requests sent before the dashboard copy existed: add the
@@ -128,6 +132,32 @@ export async function POST(request: Request) {
             case 'hidden': {
                 const snap = await db.collection(HIDDEN_COLLECTION).get();
                 return json({ ids: snap.docs.map(d => d.id) });
+            }
+            case 'statuses': {
+                const snap = await db.collection(STATUS_COLLECTION).get();
+                const map: Record<string, string> = {};
+                snap.forEach(d => { const st = d.data()?.status; if (st === 'waiting' || st === 'solved') map[d.id] = st; });
+                return json({ map });
+            }
+            case 'setStatus': {
+                const id = typeof body.id === 'string' ? body.id.trim().slice(0, 200) : '';
+                const st = body.status;
+                if (!id || id.includes('/') || !['open', 'waiting', 'solved'].includes(st)) return json({ error: 'Bad request.' }, 400);
+                const ref = db.collection(STATUS_COLLECTION).doc(id);
+                if (st === 'open') await ref.delete();
+                else await ref.set({ status: st, updatedAt: new Date().toISOString() });
+                return json({ success: true });
+            }
+            case 'helpRequests': {
+                const snap = await db.collection('help_requests').orderBy('createdAt', 'desc').limit(30).get();
+                return json({ requests: snap.docs.map(d => {
+                    const r: any = d.data();
+                    return {
+                        id: d.id, contactEmail: r.contactEmail || '', accountEmail: r.accountEmail || '', category: r.category || 'other',
+                        message: r.message || '', page: r.page || '', userAgent: r.userAgent || '',
+                        tickets: Array.isArray(r.tickets) ? r.tickets : [], createdAt: r.createdAt?.toDate?.()?.toISOString?.() || null,
+                    };
+                }) });
             }
             case 'getSignatures': {
                 const owner = await isMasterAdmin(body.password);
