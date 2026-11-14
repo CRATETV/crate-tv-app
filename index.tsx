@@ -68,6 +68,7 @@ import NotFoundPage from './components/NotFoundPage';
 import ToastContainer from './components/Toast';
 import RedCarpetPage from './components/RedCarpetPage';
 import FaqPage from './components/FaqPage';
+import HelpPage from './components/HelpPage';
 import FestivalHelpButton from './components/FestivalHelpButton';
 import { isOutsidePartner } from './api/_lib/partnerRules';
 import { promoRouteFor } from './api/_lib/promoRules';
@@ -262,6 +263,8 @@ const AppRouter: React.FC = () => {
       return <RedCarpetRoute />;
     case '/faq':
       return <FaqPage />;
+    case '/help':          // shareable link for anyone to send a help request
+      return <HelpPage />;
     case '/public-square':
       return <PublicSquarePage />;
     case '/cratemas':

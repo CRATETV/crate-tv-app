@@ -60,7 +60,7 @@ const readAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
 });
 
 const KIND_LABEL: Record<MailItem['kind'], string> = {
-    EMAIL: 'Email', CONTACT: 'Contact form', INQUIRY: 'Talent inquiry', SUBMISSION: 'Film submission', HELP: 'Festival help', SENT: 'Sent',
+    EMAIL: 'Email', CONTACT: 'Contact form', INQUIRY: 'Talent inquiry', SUBMISSION: 'Film submission', HELP: 'Help request', SENT: 'Sent',
 };
 
 const StudioMail: React.FC = () => {
@@ -161,8 +161,8 @@ const StudioMail: React.FC = () => {
             (r.requests || []).forEach((h: any) => {
                 const tickets = (h.tickets || []).map((t: any) => `- ${t.label}${(t.count || 1) > 1 ? ` x${t.count}` : ''}: ${t.status}`).join('\n');
                 incoming.push({
-                    id: `help_${h.id}`, folder: 'in', kind: 'HELP', name: h.contactEmail, email: h.contactEmail, subject: `Festival help: ${h.category}`,
-                    text: `${h.message || '(no message)'}\n\nPage: ${h.page || 'unknown'}\nDevice: ${h.userAgent || 'unknown'}\n${h.accountEmail && h.accountEmail !== h.contactEmail ? `Signed in as: ${h.accountEmail}\n` : ''}\nTheir tickets:\n${tickets || (h.accountEmail ? 'No tickets on this account' : 'Not signed in')}`,
+                    id: `help_${h.id}`, folder: 'in', kind: 'HELP', name: h.contactEmail, email: h.contactEmail, subject: `Help request: ${h.category}${h.film ? ` — ${h.film}` : ''}`,
+                    text: `${h.message || '(no message)'}\n\n${h.film ? `Film: ${h.film}\n` : ''}Page: ${h.page || 'unknown'}\nDevice: ${h.userAgent || 'unknown'}\n${h.accountEmail && h.accountEmail !== h.contactEmail ? `Signed in as: ${h.accountEmail}\n` : ''}\nTheir tickets:\n${tickets || (h.accountEmail ? 'No tickets on this account' : 'Not signed in')}`,
                     when: toMs(h.createdAt), unread: false, attachments: [],
                 });
             });

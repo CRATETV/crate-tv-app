@@ -154,7 +154,7 @@ export async function POST(request: Request) {
                     const r: any = d.data();
                     return {
                         id: d.id, contactEmail: r.contactEmail || '', accountEmail: r.accountEmail || '', category: r.category || 'other',
-                        message: r.message || '', page: r.page || '', userAgent: r.userAgent || '',
+                        message: r.message || '', film: r.film || '', page: r.page || '', userAgent: r.userAgent || '',
                         tickets: Array.isArray(r.tickets) ? r.tickets : [], createdAt: r.createdAt?.toDate?.()?.toISOString?.() || null,
                     };
                 }) });
