@@ -1,4 +1,5 @@
 import { splittableCents } from './filmFees.js';
+import { watchPartyTicketFilm } from './ticketNote.js';
 import { Firestore } from 'firebase-admin/firestore';
 import { Movie } from '../../types.js';
 import { normalize } from './creditMatch.js';
@@ -48,8 +49,8 @@ export const parseNote = (note: string | undefined): { type: string, title?: str
     if (!note) return { type: 'unknown' };
     const donationMatch = note.match(/Support for film: "(.*)"/);
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim() };
-    const ticketMatch = note.match(/Watch Party Ticket: (.*)/) || note.match(/Live Screening Pass: (.*)/);
-    if (ticketMatch) return { type: 'watchPartyTicket', title: ticketMatch[1].trim() };
+    const ticketFilm = watchPartyTicketFilm(note);
+    if (ticketFilm !== null) return { type: 'watchPartyTicket', title: ticketFilm };
     // FIX: real Square notes for individual on-demand rentals are "VOD
     // Rental: X" — never recognized here before, so this revenue was
     // silently excluded from every filmmaker's balance. Confirmed live
