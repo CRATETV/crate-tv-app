@@ -207,7 +207,9 @@ const StudioMail: React.FC = () => {
     const list = folder === 'in'
         ? received.filter(m => statusFilter === 'all' || (statusFilter === 'solved') === (statusOf(m.id) === 'solved'))
         : sent;
-    const unreadCount = useMemo(() => received.filter(m => m.unread).length, [received]);
+    // A help request counts as "new" until you reply or mark it Solved, same as the sidebar badge.
+    const isNew = useCallback((m: MailItem) => m.unread || (m.kind === 'HELP' && statusOf(m.id) === 'open'), [statusOf]);
+    const unreadCount = useMemo(() => received.filter(isNew).length, [received, isNew]);
 
     const resetComposer = () => { setReplyText(''); setFiles([]); if (fileInput.current) fileInput.current.value = ''; };
 
@@ -366,7 +368,7 @@ const StudioMail: React.FC = () => {
         <div className="flex flex-col h-[calc(100vh-280px)] min-h-[650px]">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-5 bg-white/5 border border-white/10 p-4 rounded-2xl">
                 <p className="text-sm text-gray-300">Sending as <span className="font-bold text-white">{fromAddress}</span>
-                    {unreadCount > 0 && <span className="ml-3 bg-red-600 text-white rounded-full px-3 py-1 text-xs font-black">{unreadCount} new {unreadCount === 1 ? 'email' : 'emails'}</span>}
+                    {unreadCount > 0 && <span className="ml-3 bg-red-600 text-white rounded-full px-3 py-1 text-xs font-black">{unreadCount} new {unreadCount === 1 ? 'message' : 'messages'}</span>}
                 </p>
                 <div className="flex gap-2">
                     {isOwner && <button onClick={() => { setSigDraft(signatures.map(x => ({ ...x }))); setShowSigs(!showSigs); }} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10">Signatures</button>}
@@ -441,8 +443,8 @@ const StudioMail: React.FC = () => {
                             <button onClick={() => openMessage(m)}
                                 className={`flex-grow min-w-0 text-left px-4 py-4 ${selected?.id === m.id ? 'bg-red-600/5' : ''}`}>
                                 <div className="flex justify-between gap-3 mb-1">
-                                    <span className={`truncate text-sm ${m.unread ? 'font-black text-white' : 'font-bold text-gray-300'}`}>
-                                        {m.unread && <span className="inline-block w-2 h-2 rounded-full bg-red-600 mr-2 align-middle" />}{m.name || m.email}
+                                    <span className={`truncate text-sm ${isNew(m) ? 'font-black text-white' : 'font-bold text-gray-300'}`}>
+                                        {isNew(m) && <span className="inline-block w-2 h-2 rounded-full bg-red-600 mr-2 align-middle" />}{m.name || m.email}
                                     </span>
                                     <span className="text-[11px] text-gray-600 whitespace-nowrap">{dateLabel(m.when)}</span>
                                 </div>
