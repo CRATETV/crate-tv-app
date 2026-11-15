@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ACCENT, AccentName, Button, Card, EmptyState, Field, Modal, Notice, PageHeader, Pill, SectionTitle, SplitBar, StatTile,
-    adminPost, copyText, downloadCsv, openPrintable, inputClass, money, shortDate,
+    adminPost, copyText, openPrintable, inputClass, money, shortDate,
 } from './ui';
 import { PAYOUT_METHOD_LABELS, PayoutMethod, payoutLink } from '../../api/_lib/revenueSplit';
 import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
@@ -33,6 +33,7 @@ interface Summary {
     totals: { gross: number; fees: number; filmGross: number; filmmakerShare: number; crateFromFilms: number; festival: number; partner: number; heldDuringFestival: number; crateOnly: number; shopFilmmaker: number; crateKeeps: number; owedNow: number; paidOutAllTime: number };
     monthTieOuts?: Record<string, TieOut>;
     ticketCheck?: TicketCheckResult | null;
+    partnerFestivals?: { id: string; name: string; payeeName: string; gross: number; deductions: number; squareFees: number; net: number; crateSharePct: number; crateAmount: number; partnerAmount: number; paidAmount: number | null; paidAt: string | null; feesPending: number }[] | null;
     festivalSettlement?: { count: number; grossCents: number; sharedFeesCents: number; feesPending: number; owedToFestivalCents: number; crateKeepsCents: number; payeeName: string } | null;
     months: { month: string; gross: number; filmmakers: number; crate: number; festival: number; partner: number; fees: number }[];
     films: FilmRow[];
@@ -208,20 +209,33 @@ const PayDialog: React.FC<{ payee: PayeeRow; request?: Summary['pendingRequests'
 const StatementButton: React.FC<{ movieKey: string; title: string }> = ({ movieKey, title }) => {
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState('');
-    const go = async (kind: 'pdf' | 'csv') => {
+    const go = async () => {
         setBusy(true); setErr('');
         try {
-            const r = await adminPost<{ filename: string; csv: string; html: string }>('/api/admin-watch-party-stats', { blockId: movieKey, action: 'statement' });
-            if (kind === 'pdf') openPrintable(r.html); else downloadCsv(r.filename, r.csv);
+            const r = await adminPost<{ html: string }>('/api/admin-watch-party-stats', { blockId: movieKey, action: 'statement' });
+            openPrintable(r.html);
         } catch (e) { setErr(e instanceof Error ? e.message : 'Could not download.'); }
         finally { setBusy(false); }
     };
     return (
         <div>
-            <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={busy} onClick={() => go('pdf')}>{busy ? 'Preparing…' : `Printable / PDF: ${title}`}</Button>
-                <Button size="sm" disabled={busy} onClick={() => go('csv')}>Spreadsheet</Button>
-            </div>
+            <Button size="sm" disabled={busy} onClick={go}>{busy ? 'Preparing…' : `Sales statement (print / PDF): ${title}`}</Button>
+            {err && <p className="text-xs text-red-400 mt-1">{err}</p>}
+        </div>
+    );
+};
+
+const PartnerStatementButton: React.FC<{ partnerId: string }> = ({ partnerId }) => {
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState('');
+    return (
+        <div>
+            <Button size="sm" disabled={busy} onClick={async () => {
+                setBusy(true); setErr('');
+                try { openPrintable((await adminPost<{ html: string }>('/api/admin-partners', { action: 'statement', partnerId })).html); }
+                catch (e) { setErr(e instanceof Error ? e.message : 'Could not open.'); }
+                finally { setBusy(false); }
+            }}>{busy ? 'Preparing…' : 'Statement (print / PDF)'}</Button>
             {err && <p className="text-xs text-red-400 mt-1">{err}</p>}
         </div>
     );
@@ -485,15 +499,17 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                 )
             )}
 
-            {data.festivalSettlement && data.festivalSettlement.count > 0 && (() => {
-                const f = data.festivalSettlement!;
+            {((data.festivalSettlement && data.festivalSettlement.count > 0) || (data.partnerFestivals && data.partnerFestivals.length > 0)) && (() => {
+                const f = data.festivalSettlement || { count: 0, grossCents: 0, sharedFeesCents: 0, feesPending: 0, owedToFestivalCents: 0, crateKeepsCents: 0, payeeName: '' };
+                const partners = data.partnerFestivals || [];
                 const row = data.payees.find(p => p.name === f.payeeName);
                 const paid = row?.paidOut || 0;
                 const stillOwed = Math.max(0, f.owedToFestivalCents - paid);
                 return (
                     <section>
-                        <SectionTitle title="The festival: what you owe Playhouse West" hint="Festival passes and blocks are split with the festival: 70% to them, 30% stays with CRATE." />
-                        <Card accent={stillOwed > 0 ? 'amber' : 'green'}>
+                        <SectionTitle title="Festivals: what you owe" hint="Each festival's money is split under its own agreement. Playhouse West gets 70%; other festivals use the share set in Partner festivals." />
+                        {f.count > 0 && <Card accent={stillOwed > 0 ? 'amber' : 'green'}>
+                            <p className="text-white font-bold mb-3">Playhouse West Film Festival</p>
                             <div className="space-y-1.5 text-sm">
                                 <div className="flex justify-between"><span className="text-[#A1A1AD]">Festival ticket money that came in ({f.count} {f.count === 1 ? 'sale' : 'sales'})</span><span className="text-white font-bold">{money(f.grossCents)}</span></div>
                                 {f.sharedFeesCents > 0 && <div className="flex justify-between"><span className="text-[#A1A1AD]">Square card fees (taken off first)</span><span className="text-[#FF8A8A] font-bold">−{money(f.sharedFeesCents)}</span></div>}
@@ -504,7 +520,28 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                             </div>
                             {f.feesPending > 0 && <p className="text-xs text-[#8A8A96] mt-3">{f.feesPending} sale{f.feesPending === 1 ? '' : 's'} still waiting on Square's fee, so the festival's share can shift slightly.</p>}
                             <p className="text-xs text-[#8A8A96] mt-3">Already paid the festival? Open them under “Who you owe” and record that payment so this number is right. The full report to hand them is the “Festival revenue report” in the Festival section.</p>
-                        </Card>
+                        </Card>}
+                        {partners.map(pf => {
+                            const c = (d: number) => Math.round(d * 100);
+                            const paid = pf.paidAt !== null;
+                            return (
+                                <Card key={pf.id} accent={paid ? 'green' : 'amber'} className="mt-4">
+                                    <div className="flex items-start justify-between gap-3 mb-3">
+                                        <p className="text-white font-bold">{pf.name}</p>
+                                        <PartnerStatementButton partnerId={pf.id} />
+                                    </div>
+                                    <div className="space-y-1.5 text-sm">
+                                        <div className="flex justify-between"><span className="text-[#A1A1AD]">Ticket sales</span><span className="text-white font-bold">{money(c(pf.gross))}</span></div>
+                                        {pf.deductions > 0 && <div className="flex justify-between"><span className="text-[#A1A1AD]">Deductions</span><span className="text-[#FF8A8A] font-bold">−{money(c(pf.deductions))}</span></div>}
+                                        {pf.squareFees > 0 && <div className="flex justify-between"><span className="text-[#A1A1AD]">Square card fees</span><span className="text-[#FF8A8A] font-bold">−{money(c(pf.squareFees))}</span></div>}
+                                        <div className="flex justify-between"><span className="text-[#A1A1AD]">CRATE keeps ({pf.crateSharePct}%)</span><span className="text-emerald-300 font-bold">{money(c(pf.crateAmount))}</span></div>
+                                        <div className="flex justify-between border-t border-white/10 pt-2"><span className="text-white font-bold">{paid ? `Paid to ${pf.payeeName}` : `Owed to ${pf.payeeName}`}</span><span className={`font-black ${paid ? 'text-emerald-300' : 'text-amber-300'}`}>{money(c(paid ? (pf.paidAmount || 0) : pf.partnerAmount))}</span></div>
+                                    </div>
+                                    {pf.feesPending > 0 && <p className="text-xs text-[#8A8A96] mt-3">{pf.feesPending} recent sale{pf.feesPending === 1 ? '' : 's'} not yet reported by Square, so this can shift slightly.</p>}
+                                    <p className="text-xs text-[#8A8A96] mt-3">Record the payment in Partner festivals (it tracks paid status for this festival).</p>
+                                </Card>
+                            );
+                        })}
                     </section>
                 );
             })()}

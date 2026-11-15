@@ -28,7 +28,9 @@ import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { LedgerLine, LedgerKind, tieOut, phillyMonth, linesForMonth } from './_lib/moneyLedger.js';
 import { checkTicketsAgainstSquare, TicketCheckResult } from './_lib/ticketCheck.js';
 import { festivalSettlement, FestivalPayment, FESTIVAL_PAYEE_NAME } from './_lib/festivalSettlement.js';
-import { PWFF_FEES_SHARED_FROM } from './_lib/partnerFees.js';
+import { PWFF_FEES_SHARED_FROM, sumPartnerFees } from './_lib/partnerFees.js';
+import { PARTNERS, getPartnerSales } from './_lib/partners.js';
+import { computePayout, PWFF_PARTNER_ID, PartnerRecord } from './_lib/partnerRules.js';
 import { Movie } from '../types.js';
 
 const json = (body: unknown, status = 200) =>
@@ -205,6 +207,32 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
         if (!fr.films.includes('Festival tickets & passes')) fr.films.push('Festival tickets & passes');
     }
 
+    // Other festivals on CRATE (Festival in a box): the same numbers their own payout panel shows, so the two always agree.
+    // PWFF is settled above and in its own report, so it is left out here. Never allowed to break the page.
+    type PartnerFestivalRow = { id: string; name: string; payeeName: string; gross: number; deductions: number; squareFees: number; net: number; crateSharePct: number; crateAmount: number; partnerAmount: number; paidAmount: number | null; paidAt: string | null; feesPending: number };
+    let partnerFestivals: PartnerFestivalRow[] | null = null;
+    try {
+        const partnerSnap = await db.collection(PARTNERS).get();
+        const rows: PartnerFestivalRow[] = [];
+        for (const doc of partnerSnap.docs) {
+            if (doc.id === PWFF_PARTNER_ID) continue;
+            const p = { id: doc.id, ...doc.data() } as PartnerRecord;
+            const { sales } = await getPartnerSales(db, p);
+            if (!(sales.totals.gross > 0)) continue;
+            const takeFees = p.payout?.takeSquareFees !== false;
+            const fees = sumPartnerFees(payments, p.id);
+            const payout = computePayout(sales.totals.gross, p.payout?.deductions || 0, p.crateSharePct, takeFees ? fees.amount : 0);
+            rows.push({
+                id: p.id, name: p.name, payeeName: p.payeeName || p.name,
+                gross: payout.gross, deductions: payout.deductions, squareFees: payout.squareFees, net: payout.net,
+                crateSharePct: payout.crateSharePct, crateAmount: payout.crateAmount, partnerAmount: payout.partnerAmount,
+                paidAmount: p.payout?.paidAt ? Number(p.payout.paidAmount) || 0 : null, paidAt: p.payout?.paidAt || null,
+                feesPending: takeFees ? fees.pending : 0,
+            });
+        }
+        partnerFestivals = rows;
+    } catch (e) { console.error('[admin-earnings] partner festivals failed:', e); }
+
     const history = completedSnap.docs.map(d => {
         const x = d.data();
         return {
@@ -256,6 +284,7 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
         squareConnected: !!accessToken,
         ticketCheck,
         festivalSettlement: { ...festivalSettle, payeeName: FESTIVAL_PAYEE_NAME },
+        partnerFestivals,
         minimumPayoutCents: MINIMUM_PAYOUT_CENTS,
         totals: {
             gross, fees, filmGross, filmmakerShare: filmmakerTotal, crateFromFilms,

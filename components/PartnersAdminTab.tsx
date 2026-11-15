@@ -180,7 +180,7 @@ const Sales: React.FC<{ p: AdminPartner; onSaved: () => void }> = ({ p, onSaved 
                     <tr className="border-t border-white/20 font-black"><td className="py-2">Total</td><td className="py-2 text-right">{sales.totals.orders}</td><td className="py-2 text-right">{money(sales.totals.gross)}</td></tr>
                 </tbody>
             </table>
-            {p.id === PWFF_PARTNER_ID && <p className="text-[12px] text-amber-200/80">PWFF sales also appear in the Festival revenue report on the PWFF tab. Record the Playhouse West payout in one place only.</p>}
+            {p.id === PWFF_PARTNER_ID && <p className="text-[12px] text-amber-200/80">PWFF sales also appear in the Festival revenue report on the PWFF tab. Record the Playhouse West payout in one place only: Earnings & Payouts (under “Who you owe”).</p>}
             <div className="grid md:grid-cols-[140px_1fr] gap-3 items-end">
                 <div><label className={label}>Deductions ($)</label><input type="number" min={0} step="0.01" className={input} value={deductions} onChange={e => setDeductions(e.target.value)} /></div>
                 <div><label className={label}>What for (shown to partner)</label><input className={input} value={deductionsNote} onChange={e => setDeductionsNote(e.target.value)} placeholder="e.g. test purchases, refunds" /></div>
@@ -204,6 +204,7 @@ const Sales: React.FC<{ p: AdminPartner; onSaved: () => void }> = ({ p, onSaved 
                 )}
                 <button className={btnGhost} disabled={busy} onClick={() => savePayout(false)}>Save deductions</button>
                 <button className={btnGhost} onClick={downloadCsv}>Download sales CSV</button>
+                <button className={btnGhost} disabled={busy} onClick={async () => { try { const r = await callAdminPartners('statement', { partnerId: p.id }); const u = URL.createObjectURL(new Blob([r.html], { type: 'text/html;charset=utf-8' })); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); } catch (e) { setErr((e as Error).message); } }}>Statement (print / PDF)</button>
                 {!payoutStatus?.paidAt ? (
                     <>
                         <input className={`${input} max-w-xs`} value={paidNote} onChange={e => setPaidNote(e.target.value)} placeholder="Payment note (check #, transfer id)" />

@@ -15,6 +15,7 @@
 //   requestChanges { partnerId, note }
 //   approve     { partnerId, note? }      → publishes the lineup live
 //   sales       { partnerId }             → live sales, ticket lines, payout breakdown
+//   statement   { partnerId }             → printable settlement statement (HTML with CRATE TV watermark)
 //   setPayout   { partnerId, deductions, deductionsNote?, paidAmount?, paidNote?, markPaid? }
 //   deleteFestival { partnerId, confirmName } → removes a festival completely (for test
 //               festivals). Refuses PWFF and any festival with unrefunded paid tickets.
@@ -28,6 +29,7 @@ import { HttpError, PARTNERS, PARTNER_INVITES, getPartner, publishPartner, getPa
 import { loadPartnerFees } from './_lib/partnerFees.js';
 import { BOOKKEEPING_COLLECTION, PARTNER_ENTRY_PREFIX, entryFromPartnerPayout } from './_lib/bookkeeping.js';
 import { checkDraft, computePayout, slugify, emptyDraft, PartnerRecord, PWFF_PARTNER_ID } from './_lib/partnerRules.js';
+import { buildFestivalStatementHtml } from './_lib/festivalStatement.js';
 import { sendPartnerInvite, notifyPartnerReviewed } from './_lib/partnerEmails.js';
 
 const json = (body: unknown, status = 200) =>
@@ -191,6 +193,23 @@ export async function POST(request: Request) {
                 const fees = p.id === PWFF_PARTNER_ID ? null : await loadPartnerFees(p.id);
                 const payout = computePayout(sales.totals.gross, p.payout?.deductions || 0, p.crateSharePct, takeFees && fees ? fees.amount : 0);
                 return json({ sales, tickets, payout, squareFees: fees, takeSquareFees: takeFees, payoutStatus: p.payout || null, generatedAt: new Date().toISOString() });
+            }
+
+            case 'statement': {
+                const p = await load();
+                const { sales } = await getPartnerSales(db, p);
+                const takeFees = p.payout?.takeSquareFees !== false;
+                const fees = p.id === PWFF_PARTNER_ID ? null : await loadPartnerFees(p.id);
+                const payout = computePayout(sales.totals.gross, p.payout?.deductions || 0, p.crateSharePct, takeFees && fees ? fees.amount : 0);
+                const html = buildFestivalStatementHtml({
+                    festival: p.name, payee: p.payeeName || p.name, generatedAtMs: Date.now(),
+                    lines: [...sales.blocks, sales.pass, sales.rentals].map(l => ({ label: l.label, orders: l.orders, gross: l.gross })),
+                    totals: { orders: sales.totals.orders, gross: sales.totals.gross },
+                    payout, deductionsNote: p.payout?.deductionsNote || '',
+                    paid: p.payout?.paidAt ? { amount: Number(p.payout.paidAmount) || 0, atMs: Date.parse(p.payout.paidAt) || null, note: p.payout.paidNote } : null,
+                    feesPending: takeFees && fees ? fees.pending : 0,
+                });
+                return json({ html });
             }
 
             case 'setPayout': {
