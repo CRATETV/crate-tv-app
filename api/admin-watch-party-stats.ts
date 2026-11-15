@@ -17,7 +17,7 @@ import { summarizeSales, splitSales, findDroppedViewers, PIN_MAX_LENGTH } from '
 import { loadAllPayments, ticketFees } from './_lib/partnerFees.js';
 import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { feeIsShared } from './_lib/filmFees.js';
-import { buildStatementCsv, statementFileName } from './_lib/partyStatement.js';
+import { buildStatementCsv, buildStatementHtml, statementFileName } from './_lib/partyStatement.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
             } catch (e) { console.error('[watch-party-stats] statement split failed:', e); }
             const movie = (await db.collection('movies').doc(blockId).get()).data();
             const film = String(movie?.title || blockId);
-            const csv = buildStatementCsv({
+            const input = {
                 film, generatedAtMs: now, split,
                 tickets: docs.map(d => ({
                     atMs: ms(d.x.purchasedAt),
@@ -88,8 +88,8 @@ export async function POST(request: Request) {
                     fee: byId.get(d.id) ?? null,
                     promo: !!d.x.promoCode,
                 })),
-            });
-            return json({ filename: statementFileName(film, now), csv });
+            };
+            return json({ filename: statementFileName(film, now), csv: buildStatementCsv(input), html: buildStatementHtml(input) });
         }
 
         if (action === 'dropped') {

@@ -27,6 +27,8 @@ import { cleanLine, cleanText, isValidEmail, escapeHtml } from './_lib/validatio
 import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { LedgerLine, LedgerKind, tieOut, phillyMonth, linesForMonth } from './_lib/moneyLedger.js';
 import { checkTicketsAgainstSquare, TicketCheckResult } from './_lib/ticketCheck.js';
+import { festivalSettlement, FestivalPayment, FESTIVAL_PAYEE_NAME } from './_lib/festivalSettlement.js';
+import { PWFF_FEES_SHARED_FROM } from './_lib/partnerFees.js';
 import { Movie } from '../types.js';
 
 const json = (body: unknown, status = 200) =>
@@ -119,6 +121,7 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
     }
 
     let gross = 0, fees = 0, festival = 0, partner = 0, crateOnly = 0, heldDuringFestival = 0;
+    const festivalPayments: FestivalPayment[] = [];
     for (const p of payments) {
         const amt = p.amount_money.amount;
         const row = monthRow(monthOf(p.created_at));
@@ -137,7 +140,7 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
             gross: amt, filmmakers: 0, crate: kind === 'crate' ? amt : 0,
             festival: kind === 'festival' ? amt : 0, partner: kind === 'partner' ? amt : 0, cardFees: 0, owedTo: [],
         });
-        if (kind === 'festival') { festival += amt; row.festival += amt; }
+        if (kind === 'festival') { festival += amt; row.festival += amt; festivalPayments.push({ cents: amt, feeCents: (p.processing_fee || []).length ? fee : null, at: p.created_at || null }); }
         else if (kind === 'partner') { partner += amt; row.partner += amt; }
         else {
             // A festival film's rental bought while the festival was still running stays with CRATE.
@@ -194,6 +197,14 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
         payeeRow(entry.directorName).shopEarnings += entry.cents;
     }
 
+    // The festival (Playhouse West) is paid like a filmmaker: its share shows in "Who you owe" and payouts are recorded the same way.
+    const festivalSettle = festivalSettlement(festivalPayments, PWFF_FEES_SHARED_FROM);
+    if (festivalSettle.owedToFestivalCents > 0) {
+        const fr = payeeRow(FESTIVAL_PAYEE_NAME);
+        fr.filmEarnings += festivalSettle.owedToFestivalCents;
+        if (!fr.films.includes('Festival tickets & passes')) fr.films.push('Festival tickets & passes');
+    }
+
     const history = completedSnap.docs.map(d => {
         const x = d.data();
         return {
@@ -244,6 +255,7 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
         generatedAt: new Date().toISOString(),
         squareConnected: !!accessToken,
         ticketCheck,
+        festivalSettlement: { ...festivalSettle, payeeName: FESTIVAL_PAYEE_NAME },
         minimumPayoutCents: MINIMUM_PAYOUT_CENTS,
         totals: {
             gross, fees, filmGross, filmmakerShare: filmmakerTotal, crateFromFilms,
