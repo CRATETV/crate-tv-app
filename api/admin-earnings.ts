@@ -27,6 +27,7 @@ import { cleanLine, cleanText, isValidEmail, escapeHtml } from './_lib/validatio
 import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { LedgerLine, LedgerKind, tieOut, phillyMonth, linesForMonth } from './_lib/moneyLedger.js';
 import { checkTicketsAgainstSquare, TicketCheckResult } from './_lib/ticketCheck.js';
+import { buildScorecard, EventScore } from './_lib/eventScorecard.js';
 import { Movie } from '../types.js';
 
 const json = (body: unknown, status = 200) =>
@@ -230,20 +231,32 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
     }
     const shopFilmmaker = [...payees.values()].reduce((s, p) => s + p.shopEarnings, 0);
 
-    // Numbers check: our own ticket records vs Square, film by film (api/_lib/ticketCheck.ts).
-    // Never allowed to break the page: if it can't run, the page just shows no check.
+    // Numbers check + event scorecard, both from our own ticket records.
+    // Never allowed to break the page: if either can't run, the page just shows nothing for it.
     let ticketCheck: TicketCheckResult | null = null;
-    if (accessToken) {
-        try {
-            const recSnap = await db.collection('festival_tickets').where('paymentType', '==', 'watchPartyTicket').limit(5000).get();
-            ticketCheck = checkTicketsAgainstSquare(recSnap.docs.map(d => d.data()), payments, movies);
-        } catch (e) { console.error('[admin-earnings] ticket check failed:', e); }
-    }
+    let eventScorecard: EventScore[] | null = null;
+    try {
+        const recSnap = await db.collection('festival_tickets').limit(5000).get();
+        const records = recSnap.docs.map(d => {
+            const x = d.data();
+            const t: any = x.purchasedAt;
+            const ms = t?.toMillis ? t.toMillis() : (t ? new Date(t).getTime() : NaN);
+            return { ...x, purchasedAtMs: Number.isFinite(ms) ? ms : null };
+        });
+        if (accessToken) ticketCheck = checkTicketsAgainstSquare(records.filter(r => (r as any).paymentType === 'watchPartyTicket') as any, payments, movies);
+        const costs: Record<string, number> = {};
+        try { (await db.collection('event_costs').get()).forEach(d => { costs[d.id] = Number(d.data().cents) || 0; }); } catch { /* none yet */ }
+        const costNotes: Record<string, string> = {};
+        try { (await db.collection('event_costs').get()).forEach(d => { costNotes[d.id] = String(d.data().note || ''); }); } catch { /* none yet */ }
+        eventScorecard = buildScorecard(records as any, films.map(f => ({ key: f.key, title: f.title, crateCents: f.crateAmount })), costs)
+            .map(e => ({ ...e, costNote: costNotes[e.key] || '' }) as EventScore);
+    } catch (e) { console.error('[admin-earnings] ticket check / scorecard failed:', e); }
 
     return {
         generatedAt: new Date().toISOString(),
         squareConnected: !!accessToken,
         ticketCheck,
+        eventScorecard,
         minimumPayoutCents: MINIMUM_PAYOUT_CENTS,
         totals: {
             gross, fees, filmGross, filmmakerShare: filmmakerTotal, crateFromFilms,
@@ -298,6 +311,17 @@ export async function POST(request: Request) {
             if (error || !deal) return json({ error }, 400);
             await db.collection('film_deals').doc(movieKey).set({ ...deal, updatedAt: FieldValue.serverTimestamp() });
             await audit(db, 'FILM_DEAL_SET', `${movieKey}: filmmaker ${Math.round((deal.filmmakerShare || 0) * 1000) / 10}%${deal.payees?.length ? ` · payees ${deal.payees.map(p => `${p.name} ${p.share}`).join(', ')}` : ''}`);
+            return json({ success: true });
+        }
+
+        if (action === 'set-event-cost') {
+            const movieKey = cleanLine(body.movieKey, 200);
+            if (!movieKey || !(await db.collection('movies').doc(movieKey).get()).exists) return json({ error: 'Film not found.' }, 404);
+            const cents = Math.round(Number(body.costCents));
+            if (!Number.isFinite(cents) || cents < 0 || cents > 1_000_000_00) return json({ error: 'Enter a cost between $0 and $1,000,000.' }, 400);
+            const note = cleanText(body.note, 500);
+            await db.collection('event_costs').doc(movieKey).set({ cents, note, updatedAt: FieldValue.serverTimestamp(), updatedBy: 'admin' });
+            await audit(db, 'EVENT_COST_SET', `${movieKey}: cost to run $${(cents / 100).toFixed(2)}${note ? ` (${note})` : ''}`);
             return json({ success: true });
         }
 

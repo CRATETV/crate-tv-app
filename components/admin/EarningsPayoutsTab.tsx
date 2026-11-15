@@ -8,6 +8,7 @@ import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
 import MonthLedger from './MonthLedger';
 import type { TieOut } from '../../api/_lib/moneyLedger';
 import type { TicketCheckResult } from '../../api/_lib/ticketCheck';
+import type { EventScore } from '../../api/_lib/eventScorecard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Earnings & Payouts — every dollar, who it belongs to, and who CRATE owes.
@@ -33,6 +34,7 @@ interface Summary {
     totals: { gross: number; fees: number; filmGross: number; filmmakerShare: number; crateFromFilms: number; festival: number; partner: number; heldDuringFestival: number; crateOnly: number; shopFilmmaker: number; crateKeeps: number; owedNow: number; paidOutAllTime: number };
     monthTieOuts?: Record<string, TieOut>;
     ticketCheck?: TicketCheckResult | null;
+    eventScorecard?: EventScore[] | null;
     months: { month: string; gross: number; filmmakers: number; crate: number; festival: number; partner: number; fees: number }[];
     films: FilmRow[];
     payees: PayeeRow[];
@@ -332,6 +334,60 @@ const SplitDialog: React.FC<{ film: FilmRow; onClose: () => void; onDone: () => 
     );
 };
 
+// ── Event scorecard: tickets sold, new people, cost to run ──────────────────
+const EventScorecard: React.FC<{ events: EventScore[]; onSaved: () => void }> = ({ events, onSaved }) => {
+    const [drafts, setDrafts] = useState<Record<string, string>>({});
+    const [savingKey, setSavingKey] = useState('');
+    const [err, setErr] = useState('');
+    const save = async (e: EventScore) => {
+        const raw = (drafts[e.key] ?? '').replace(/[$,\s]/g, '');
+        const dollars = Number(raw);
+        if (raw === '' || !Number.isFinite(dollars) || dollars < 0) { setErr('Enter what it cost in dollars, like 25 or 0.'); return; }
+        setSavingKey(e.key); setErr('');
+        try {
+            await adminPost('/api/admin-earnings', { action: 'set-event-cost', movieKey: e.key, costCents: Math.round(dollars * 100) });
+            setDrafts(d => { const n = { ...d }; delete n[e.key]; return n; });
+            onSaved();
+        } catch (x) { setErr(x instanceof Error ? x.message : 'Could not save.'); }
+        finally { setSavingKey(''); }
+    };
+    return (
+        <section>
+            <SectionTitle title="Every event, three numbers" hint="Tickets sold, how many buyers were new to CRATE, and what it cost you to run. Type the cost once per event; the rest fills itself in." />
+            {err && <Notice tone="warn">{err}</Notice>}
+            {events.length === 0 ? (
+                <EmptyState icon="🎟️" title="No events yet" text="Once a watch party sells a ticket it shows up here." />
+            ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                    {events.map(e => (
+                        <Card key={e.key}>
+                            <p className="text-white font-bold truncate">{e.title}</p>
+                            <div className="grid grid-cols-3 gap-3 mt-3 text-center">
+                                <div><p className="text-2xl font-black text-white">{e.ticketsSold}</p><p className="text-xs text-[#8A8A96]">tickets sold</p></div>
+                                <div><p className="text-2xl font-black text-white">{e.newPeople}</p><p className="text-xs text-[#8A8A96]">new people</p></div>
+                                <div><p className="text-2xl font-black text-white">{e.costCents === null ? '—' : money(e.costCents)}</p><p className="text-xs text-[#8A8A96]">cost to run</p></div>
+                            </div>
+                            <p className="text-xs text-[#A1A1AD] mt-3">
+                                {e.paidTickets} paid, {e.freeSeats} free · {e.returningPeople} already knew CRATE · buyers paid {money(e.paidCents)} · CRATE keeps {money(e.crateKeepsCents)}
+                            </p>
+                            {e.netCents !== null && (
+                                <p className={`text-sm font-bold mt-2 ${e.netCents >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                                    {e.netCents >= 0 ? `Paid for itself: ${money(e.netCents)} left over` : `Cost more than it brought in: ${money(Math.abs(e.netCents))} short`}
+                                </p>
+                            )}
+                            <div className="flex gap-2 mt-3">
+                                <input className={inputClass} inputMode="decimal" placeholder={e.costCents === null ? 'What did it cost? e.g. 25' : `Change cost (now ${(e.costCents / 100).toFixed(2)})`}
+                                    value={drafts[e.key] ?? ''} onChange={ev => setDrafts(d => ({ ...d, [e.key]: ev.target.value }))} />
+                                <Button size="sm" disabled={savingKey === e.key || !(drafts[e.key] ?? '').trim()} onClick={() => save(e)}>{savingKey === e.key ? 'Saving…' : 'Save'}</Button>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+};
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ onOpenTab }) => {
     const [data, setData] = useState<Summary | null>(null);
@@ -453,6 +509,8 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
                     </div>
                 )
             )}
+
+            {data.eventScorecard && <EventScorecard events={data.eventScorecard} onSaved={load} />}
 
             <section>
                 <SectionTitle title="Who you owe" hint={`Anyone with money waiting. Filmmakers can request a payout once they pass ${money(data.minimumPayoutCents)}, but you can pay any time.`} />
