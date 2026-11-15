@@ -11,7 +11,7 @@ import { avatars } from './avatars';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
 import { activePin, PIN_MAX_LENGTH } from '../api/_lib/controlRoom';
 import { measureRuntimeMinutes } from '../services/measureRuntime';
-import { downloadCsv, openPrintable } from './admin/ui';
+import { openPrintable } from './admin/ui';
 
 // --- TYPES ---
 
@@ -433,11 +433,11 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
     const [error, setError] = useState('');
     const [hidden, setHidden] = useState(false);
     const [downloading, setDownloading] = useState(false);
-    const downloadStatement = async (kind: 'pdf' | 'csv') => {
+    const downloadStatement = async () => {
         setDownloading(true); setError('');
         try {
-            const r = await controlRoomPost<{ filename: string; csv: string; html: string }>(itemId, 'statement');
-            if (kind === 'pdf') openPrintable(r.html); else downloadCsv(r.filename, r.csv);
+            const r = await controlRoomPost<{ html: string }>(itemId, 'statement');
+            openPrintable(r.html);
         } catch (e) { setError(e instanceof Error ? e.message : 'Could not download.'); }
         finally { setDownloading(false); }
     };
@@ -490,14 +490,9 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
                             ))}
                         </ul>
                     )}
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button onClick={() => downloadStatement('pdf')} disabled={downloading} className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-50">
-                            {downloading ? 'Preparing…' : 'Statement (print / PDF)'}
-                        </button>
-                        <button onClick={() => downloadStatement('csv')} disabled={downloading} className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-50">
-                            Spreadsheet
-                        </button>
-                    </div>
+                    <button onClick={downloadStatement} disabled={downloading} className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                        {downloading ? 'Preparing…' : 'Sales statement (print / PDF) for the filmmaker'}
+                    </button>
                     <p className="text-[11px] text-gray-500 mt-3">
                         Paid tickets only. Free seats and festival all-access passes aren't counted here.{sales.withPromo > 0 ? ` ${sales.withPromo} used a promo code.` : ''}
                     </p>
