@@ -4,6 +4,7 @@ import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebas
 import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig, AdminPayout, BillSavingsTransaction } from '../types.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { fetchAllRelevantPayments } from './_lib/filmmakerBalance.js';
+import { watchPartyTicketFilm } from './_lib/ticketNote.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
@@ -23,8 +24,8 @@ const parseNote = (note: string | undefined, crateFestBlocks: string[]): { type:
     if (!note) return { type: 'unknown' };
     
     // Watch Party Ticket Regex
-    const wpMatch = note.match(/Watch Party Ticket: (.*)/) || note.match(/Live Screening Pass: (.*)/);
-    if (wpMatch) return { type: 'watchPartyTicket', title: wpMatch[1].trim() };
+    const wpFilm = watchPartyTicketFilm(note);
+    if (wpFilm !== null) return { type: 'watchPartyTicket', title: wpFilm };
     
     // Donation Regex
     const donationMatch = note.match(/Support for film: "(.*)"/);

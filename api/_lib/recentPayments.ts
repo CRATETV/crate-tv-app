@@ -9,7 +9,7 @@ export interface PaymentLine { id: string; at: string; what: string; film: strin
 export function describePayment(note: string | undefined): { what: string; film: string } {
     const n = (note || '').trim();
     let m: RegExpMatchArray | null;
-    if ((m = n.match(/^(?:Watch Party Ticket|Live Screening Pass)(?: \(Block\))?: (.*)$/))) return { what: n.includes('(Block)') ? 'Block ticket' : 'Ticket', film: m[1].trim() };
+    if ((m = n.match(/^(?:Watch Party Ticket|Live Screening Pass)(?: \((?:Block|pay what you want|guest code)\))?: (.*)$/))) return { what: n.includes('(Block)') ? 'Block ticket' : 'Ticket', film: m[1].trim() };
     if ((m = n.match(/^Support for film: "(.*)"$/))) return { what: 'Tip', film: m[1].trim() };
     if ((m = n.match(/^VOD Rental: (.*)$/))) return { what: 'Rental', film: m[1].trim() };
     if ((m = n.match(/^Unlock Block: (.*)$/))) return { what: 'Block ticket', film: m[1].trim() };
