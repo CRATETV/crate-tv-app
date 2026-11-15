@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ACCENT, AccentName, Button, Card, EmptyState, Field, Modal, Notice, PageHeader, Pill, SectionTitle, SplitBar, StatTile,
-    adminPost, copyText, inputClass, money, shortDate,
+    adminPost, copyText, downloadCsv, inputClass, money, shortDate,
 } from './ui';
 import { PAYOUT_METHOD_LABELS, PayoutMethod, payoutLink } from '../../api/_lib/revenueSplit';
 import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
@@ -203,8 +203,28 @@ const PayDialog: React.FC<{ payee: PayeeRow; request?: Summary['pendingRequests'
     );
 };
 
+// ── Sales statement download (hand it to the filmmaker) ─────────────────────
+const StatementButton: React.FC<{ movieKey: string; title: string }> = ({ movieKey, title }) => {
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState('');
+    const go = async () => {
+        setBusy(true); setErr('');
+        try {
+            const r = await adminPost<{ filename: string; csv: string }>('/api/admin-watch-party-stats', { blockId: movieKey, action: 'statement' });
+            downloadCsv(r.filename, r.csv);
+        } catch (e) { setErr(e instanceof Error ? e.message : 'Could not download.'); }
+        finally { setBusy(false); }
+    };
+    return (
+        <div>
+            <Button size="sm" disabled={busy} onClick={go}>{busy ? 'Preparing…' : `⬇ Sales statement: ${title}`}</Button>
+            {err && <p className="text-xs text-red-400 mt-1">{err}</p>}
+        </div>
+    );
+};
+
 // ── Payee settings dialog ───────────────────────────────────────────────────
-const PayeeDialog: React.FC<{ payee: PayeeRow; onClose: () => void; onDone: () => void }> = ({ payee, onClose, onDone }) => {
+const PayeeDialog: React.FC<{ payee: PayeeRow; films: { key: string; title: string }[]; onClose: () => void; onDone: () => void }> = ({ payee, films, onClose, onDone }) => {
     const [method, setMethod] = useState<PayoutMethod>(payee.pref?.method || 'paypal');
     const [handle, setHandle] = useState(payee.pref?.handle || '');
     const [email, setEmail] = useState(payee.pref?.email || '');
@@ -234,6 +254,12 @@ const PayeeDialog: React.FC<{ payee: PayeeRow; onClose: () => void; onDone: () =
                     <input type="checkbox" checked={w9} onChange={e => setW9(e.target.checked)} className="w-4 h-4" />
                     W-9 received (keep the form itself in Contracts → Uploaded documents)
                 </label>
+                {films.length > 0 && (
+                    <div className="rounded-xl bg-white/[0.03] p-3 space-y-2">
+                        <p className="text-xs text-[#8A8A96]">Ticket sales to give {payee.name}: a spreadsheet with the totals and every ticket. Buyer emails are not included.</p>
+                        {films.map(f => <StatementButton key={f.key} movieKey={f.key} title={f.title} />)}
+                    </div>
+                )}
                 {error && <Notice tone="error">{error}</Notice>}
                 <div className="flex justify-end gap-2">
                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -273,6 +299,7 @@ const SplitDialog: React.FC<{ film: FilmRow; onClose: () => void; onDone: () => 
     return (
         <Modal title={`Split for “${film.title}”`} onClose={onClose} wide>
             <div className="space-y-6">
+                <StatementButton movieKey={film.key} title={film.title} />
                 <div>
                     <div className="flex items-end justify-between mb-3">
                         <Field label="Filmmaker share (%)">
@@ -570,7 +597,7 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
             )}
 
             {paying && <PayDialog payee={paying.payee} request={paying.request} onClose={() => setPaying(null)} onDone={() => done(`Payout to ${paying.payee.name} recorded.`)} />}
-            {editingPayee && <PayeeDialog payee={editingPayee} onClose={() => setEditingPayee(null)} onDone={() => done(`Saved payout details for ${editingPayee.name}.`)} />}
+            {editingPayee && <PayeeDialog payee={editingPayee} films={data.films.filter(f => editingPayee.films.includes(f.title)).map(f => ({ key: f.key, title: f.title }))} onClose={() => setEditingPayee(null)} onDone={() => done(`Saved payout details for ${editingPayee.name}.`)} />}
             {editingFilm && <SplitDialog film={editingFilm} onClose={() => setEditingFilm(null)} onDone={() => done(`Split for “${editingFilm.title}” saved.`)} />}
         </div>
     );

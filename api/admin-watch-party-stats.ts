@@ -1,6 +1,7 @@
 // Admin → Watch Party Control Room → live numbers and controls.
 //   POST { blockId, password }                         viewership stats for that party
 //   POST { blockId, password, action:'sales' }         tickets sold + money made (top admin only)
+//   POST { blockId, password, action:'statement' }    sales statement CSV to hand the filmmaker (top admin only)
 //   POST { blockId, password, action:'dropped' }       viewers who stopped watching in the last 15 min
 //   POST { blockId, password, action:'pin', text, type } pin an announcement to the top of everyone's chat
 //   POST { blockId, password, action:'unpin' }         remove it
@@ -16,6 +17,7 @@ import { summarizeSales, splitSales, findDroppedViewers, PIN_MAX_LENGTH } from '
 import { loadAllPayments, ticketFees } from './_lib/partnerFees.js';
 import { filmmakerShareOf } from './_lib/revenueSplit.js';
 import { feeIsShared } from './_lib/filmFees.js';
+import { buildStatementCsv, statementFileName } from './_lib/partyStatement.js';
 
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -58,6 +60,36 @@ export async function POST(request: Request) {
                 }
             } catch (e) { console.error('[watch-party-stats] split failed:', e); }
             return json(summary);
+        }
+
+        if (action === 'statement') {
+            if (!(await isMasterAdmin(password))) return json({ error: 'Only the main admin can download sales.' }, 403);
+            const snap = await db.collection('festival_tickets').where('itemId', '==', blockId).limit(2000).get();
+            const docs = snap.docs.map(d => ({ id: d.id, x: d.data() }));
+            const revenue = Math.round(docs.reduce((s, d) => s + (typeof d.x.amountPaid === 'number' && Number.isFinite(d.x.amountPaid) ? d.x.amountPaid : 0), 0) * 100) / 100;
+            let byId = new Map<string, number | null>();
+            let split: ReturnType<typeof splitSales> | undefined;
+            try {
+                const payments = await loadAllPayments();
+                if (payments) {
+                    byId = new Map(ticketFees(docs.map(d => ({ id: d.id, squarePaymentId: d.x.squarePaymentId || null, purchasedAt: null })), payments).map(f => [f.id, f.fee] as [string, number | null]));
+                    const deal = (await db.collection('film_deals').doc(blockId).get()).data();
+                    split = splitSales(revenue, docs.map(d => ({ amount: Number(d.x.amountPaid) || 0, fee: byId.get(d.id) ?? null, shared: feeIsShared(ms(d.x.purchasedAt) ? new Date(ms(d.x.purchasedAt)!).toISOString() : undefined) })), filmmakerShareOf(deal as any));
+                }
+            } catch (e) { console.error('[watch-party-stats] statement split failed:', e); }
+            const movie = (await db.collection('movies').doc(blockId).get()).data();
+            const film = String(movie?.title || blockId);
+            const csv = buildStatementCsv({
+                film, generatedAtMs: now, split,
+                tickets: docs.map(d => ({
+                    atMs: ms(d.x.purchasedAt),
+                    type: d.x.paymentType === 'movie' ? 'Rental' as const : 'Ticket' as const,
+                    amount: typeof d.x.amountPaid === 'number' && Number.isFinite(d.x.amountPaid) ? Math.round(d.x.amountPaid * 100) / 100 : 0,
+                    fee: byId.get(d.id) ?? null,
+                    promo: !!d.x.promoCode,
+                })),
+            });
+            return json({ filename: statementFileName(film, now), csv });
         }
 
         if (action === 'dropped') {
