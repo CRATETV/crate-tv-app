@@ -11,6 +11,7 @@ import { avatars } from './avatars';
 import { PWYW_MIN_DOLLARS } from '../api/_lib/paymentRules';
 import { activePin, PIN_MAX_LENGTH } from '../api/_lib/controlRoom';
 import { measureRuntimeMinutes } from '../services/measureRuntime';
+import { downloadCsv } from './admin/ui';
 
 // --- TYPES ---
 
@@ -431,6 +432,15 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
     const [sales, setSales] = useState<SalesSummaryView | null>(null);
     const [error, setError] = useState('');
     const [hidden, setHidden] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const downloadStatement = async () => {
+        setDownloading(true); setError('');
+        try {
+            const r = await controlRoomPost<{ filename: string; csv: string }>(itemId, 'statement');
+            downloadCsv(r.filename, r.csv);
+        } catch (e) { setError(e instanceof Error ? e.message : 'Could not download.'); }
+        finally { setDownloading(false); }
+    };
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
@@ -480,6 +490,9 @@ const PartySalesCard: React.FC<{ itemId: string; isLive: boolean }> = ({ itemId,
                             ))}
                         </ul>
                     )}
+                    <button onClick={downloadStatement} disabled={downloading} className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                        {downloading ? 'Preparing…' : '⬇ Download sales statement (for the filmmaker)'}
+                    </button>
                     <p className="text-[11px] text-gray-500 mt-3">
                         Paid tickets only. Free seats and festival all-access passes aren't counted here.{sales.withPromo > 0 ? ` ${sales.withPromo} used a promo code.` : ''}
                     </p>

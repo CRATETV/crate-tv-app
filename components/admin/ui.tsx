@@ -30,6 +30,15 @@ export const shortDate = (iso?: string | null) => {
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
+/** Hands the browser a CSV to save (opens in Excel, Numbers or Google Sheets). The byte-order mark keeps accents right in Excel. */
+export function downloadCsv(filename: string, csv: string) {
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export const adminKey = () => sessionStorage.getItem('adminPassword') || '';
 
 /** POST to an admin endpoint with the session pass. Throws with the server's message on failure. */
