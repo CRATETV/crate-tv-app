@@ -39,6 +39,13 @@ export function downloadCsv(filename: string, csv: string) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Opens a finished, printable page in a new tab (the viewer chooses Print → Save as PDF). */
+export function openPrintable(html: string) {
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export const adminKey = () => sessionStorage.getItem('adminPassword') || '';
 
 /** POST to an admin endpoint with the session pass. Throws with the server's message on failure. */

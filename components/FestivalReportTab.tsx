@@ -130,6 +130,8 @@ const FestivalReportTab: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-32" id="festival-report">
+            <style>{`.crate-watermark{display:none}@media print{.crate-watermark{display:block;position:fixed;top:42%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:120px;font-weight:900;letter-spacing:.08em;color:rgba(214,40,57,.12);white-space:nowrap;pointer-events:none;z-index:9999;-webkit-print-color-adjust:exact;print-color-adjust:exact}}`}</style>
+            <div className="crate-watermark" aria-hidden="true">CRATE TV</div>
 
             {fetchError && (
                 <div className="bg-red-950/40 border border-red-500/40 rounded-xl p-4 flex items-start gap-3">
