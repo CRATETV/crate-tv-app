@@ -26,6 +26,7 @@ import { splitRevenue, cleanDeal, filmmakerShareOf, PAYOUT_METHOD_LABELS, Payout
 import { cleanLine, cleanText, isValidEmail, escapeHtml } from './_lib/validation.js';
 import { renderBrandedEmail } from './_lib/emailBranding.js';
 import { LedgerLine, LedgerKind, tieOut, phillyMonth, linesForMonth } from './_lib/moneyLedger.js';
+import { checkTicketsAgainstSquare, TicketCheckResult } from './_lib/ticketCheck.js';
 import { Movie } from '../types.js';
 
 const json = (body: unknown, status = 200) =>
@@ -229,9 +230,20 @@ async function buildSummary(db: FirebaseFirestore.Firestore, ledgerMonth?: strin
     }
     const shopFilmmaker = [...payees.values()].reduce((s, p) => s + p.shopEarnings, 0);
 
+    // Numbers check: our own ticket records vs Square, film by film (api/_lib/ticketCheck.ts).
+    // Never allowed to break the page: if it can't run, the page just shows no check.
+    let ticketCheck: TicketCheckResult | null = null;
+    if (accessToken) {
+        try {
+            const recSnap = await db.collection('festival_tickets').where('paymentType', '==', 'watchPartyTicket').limit(5000).get();
+            ticketCheck = checkTicketsAgainstSquare(recSnap.docs.map(d => d.data()), payments, movies);
+        } catch (e) { console.error('[admin-earnings] ticket check failed:', e); }
+    }
+
     return {
         generatedAt: new Date().toISOString(),
         squareConnected: !!accessToken,
+        ticketCheck,
         minimumPayoutCents: MINIMUM_PAYOUT_CENTS,
         totals: {
             gross, fees, filmGross, filmmakerShare: filmmakerTotal, crateFromFilms,

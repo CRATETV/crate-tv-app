@@ -7,6 +7,7 @@ import { PAYOUT_METHOD_LABELS, PayoutMethod, payoutLink } from '../../api/_lib/r
 import FilmmakerClaimsPanel from './FilmmakerClaimsPanel';
 import MonthLedger from './MonthLedger';
 import type { TieOut } from '../../api/_lib/moneyLedger';
+import type { TicketCheckResult } from '../../api/_lib/ticketCheck';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Earnings & Payouts — every dollar, who it belongs to, and who CRATE owes.
@@ -31,6 +32,7 @@ interface Summary {
     generatedAt: string; squareConnected: boolean; minimumPayoutCents: number;
     totals: { gross: number; fees: number; filmGross: number; filmmakerShare: number; crateFromFilms: number; festival: number; partner: number; heldDuringFestival: number; crateOnly: number; shopFilmmaker: number; crateKeeps: number; owedNow: number; paidOutAllTime: number };
     monthTieOuts?: Record<string, TieOut>;
+    ticketCheck?: TicketCheckResult | null;
     months: { month: string; gross: number; filmmakers: number; crate: number; festival: number; partner: number; fees: number }[];
     films: FilmRow[];
     payees: PayeeRow[];
@@ -420,6 +422,37 @@ const EarningsPayoutsTab: React.FC<{ onOpenTab?: (id: string) => void }> = ({ on
             <MonthLedger months={data.months.map(m => m.month)} tieOuts={data.monthTieOuts || {}} />
 
             <FilmmakerClaimsPanel />
+
+            {data.ticketCheck && (
+                data.ticketCheck.ok ? (
+                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm">
+                        <p className="font-bold text-emerald-300">✓ Numbers check passed</p>
+                        <p className="text-[#A1A1AD] mt-1">Your ticket records and Square agree for {data.ticketCheck.checkedFilms} {data.ticketCheck.checkedFilms === 1 ? 'film' : 'films'}. The amounts below are safe to pay.</p>
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-sm space-y-3">
+                        <p className="font-bold text-amber-300">⚠ Don't pay these films yet: two money records disagree</p>
+                        <p className="text-[#A1A1AD]">Your own ticket records and Square should show the same money for each film. They don't for the films below, so the amount owed could be wrong. Tell Claude what this says.</p>
+                        <ul className="space-y-2">
+                            {data.ticketCheck.films.map(f => (
+                                <li key={f.key} className="rounded-xl bg-black/30 p-3">
+                                    <p className="font-bold text-white">{f.title}</p>
+                                    <p className="text-[#A1A1AD] mt-1">
+                                        Ticket records: {f.recordedCount} paid, {money(f.recordedCents)} · Square: {f.squareCount} payments, {money(f.squareCents)}
+                                        {f.differenceCents !== 0 && <> · <span className="text-amber-300">{f.differenceCents > 0 ? 'records show' : 'Square shows'} {money(Math.abs(f.differenceCents))} more</span></>}
+                                    </p>
+                                    {(f.recordsWithoutPayment > 0 || f.paymentsWithoutRecord > 0) && (
+                                        <p className="text-[#A1A1AD] mt-1">
+                                            {f.recordsWithoutPayment > 0 && <>{f.recordsWithoutPayment} {f.recordsWithoutPayment === 1 ? 'ticket has' : 'tickets have'} no matching Square payment. </>}
+                                            {f.paymentsWithoutRecord > 0 && <>{f.paymentsWithoutRecord} Square {f.paymentsWithoutRecord === 1 ? 'payment has' : 'payments have'} no ticket record.</>}
+                                        </p>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
+            )}
 
             <section>
                 <SectionTitle title="Who you owe" hint={`Anyone with money waiting. Filmmakers can request a payout once they pass ${money(data.minimumPayoutCents)}, but you can pay any time.`} />
