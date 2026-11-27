@@ -23,7 +23,7 @@ export const SUBMISSIONS = 'zine_submissions';
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
-const STORY_TYPES = ['NEWS', 'INTERVIEW', 'SPOTLIGHT', 'DEEP_DIVE', 'FILM_FEATURE', 'DIRECTORS_NOTES', 'FESTIVAL_VOICES'];
+const STORY_TYPES = ['NEWS', 'INTERVIEW', 'SPOTLIGHT', 'DEEP_DIVE', 'FILM_FEATURE', 'DIRECTORS_NOTES', 'FESTIVAL_VOICES', 'OPEN_PAGE'];
 const SECTION_TYPES = ['text', 'header', 'quote', 'image', 'video', 'callout', 'gallery', 'film'];
 
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v : '').slice(0, max);

@@ -225,6 +225,26 @@ export const STORY_TEMPLATES: StoryTemplate[] = [
             t('Bring it home. What should the reader think or do?'),
         ],
     },
+    {
+        id: 'open-page',
+        name: 'Open Page',
+        icon: '💬',
+        tagline: 'Write about whatever you want, in your own voice.',
+        type: 'OPEN_PAGE',
+        length: 'Any length',
+        whenToUse: 'It is not about a film on Crate. If it is about a film, pick Spotlight or Film feature instead.',
+        tips: [
+            'Write the way you talk. Your voice is the point.',
+            'Start with one real moment, then say what it means to you.',
+            'If a Crate film fits, add it as a film card at the end.',
+            'Read it out loud before you send it. Fix anything that does not sound like you.',
+        ],
+        sections: [
+            t('Start with a moment, a feeling or a question.'),
+            t('Say what you really think. One idea per paragraph.'),
+            { type: 'film', content: '', hint: 'Optional: add a Crate film that goes with this piece.' },
+        ],
+    },
 ];
 
 export const BLANK_TEMPLATE: StoryTemplate = {

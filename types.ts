@@ -486,7 +486,7 @@ export interface EditorialStory {
   sections?: ZineSection[];
   heroImage: string;
   author: string;
-  type: 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE' | 'FILM_FEATURE' | 'DIRECTORS_NOTES' | 'FESTIVAL_VOICES';
+  type: 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE' | 'FILM_FEATURE' | 'DIRECTORS_NOTES' | 'FESTIVAL_VOICES' | 'OPEN_PAGE';
   publishedAt?: any;
   linkedMovieKey?: string;
   linkedBlockId?: string;

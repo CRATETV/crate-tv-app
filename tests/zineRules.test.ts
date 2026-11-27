@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isPublishedStory, readingMinutes, storyWords, storyChecklist, sanitizePartnerPiece, pieceToDraftStory, typeLabel, storyDescription, storyToPlainText } from '../api/_lib/zineRules.js';
+import { cleanStory } from '../api/admin-zine.js';
+import { isPublishedStory, readingMinutes, storyWords, storyChecklist, sanitizePartnerPiece, pieceToDraftStory, typeLabel, storyDescription, storyToPlainText, frontPageStories } from '../api/_lib/zineRules.js';
 
 const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
 
@@ -108,4 +109,26 @@ test('a film block for a film that is gone is skipped, and old stories still cop
     assert.ok(!gone.includes('watch'));
     const old = storyToPlainText({ title: 'T', content: 'Old body' }, 'https://l');
     assert.ok(old.includes('Old body'));
+});
+
+test('Open Page is a story type with its own label', () => {
+    assert.equal(typeLabel('OPEN_PAGE'), 'Open Page');
+});
+test('Open Page stories never take the cover or the Just unpacked row', () => {
+    const stories = [
+        { id: 'a', type: 'OPEN_PAGE' }, { id: 'b', type: 'SPOTLIGHT' }, { id: 'c', type: 'OPEN_PAGE' },
+        { id: 'd', type: 'INTERVIEW' }, { id: 'e', type: 'NEWS' }, { id: 'f', type: 'NEWS' }, { id: 'g', type: 'NEWS' },
+    ];
+    const { cover, latest } = frontPageStories(stories);
+    assert.equal(cover?.id, 'b');
+    assert.deepEqual(latest.map(s => s.id), ['d', 'e', 'f']);
+});
+test('with only Open Page stories there is no cover and nothing breaks', () => {
+    const { cover, latest } = frontPageStories([{ id: 'a', type: 'OPEN_PAGE' }]);
+    assert.equal(cover, undefined);
+    assert.deepEqual(latest, []);
+});
+test('saving a story keeps the Open Page type (it must not turn into Spotlight)', () => {
+    assert.equal(cleanStory({ type: 'OPEN_PAGE' }).type, 'OPEN_PAGE');
+    assert.equal(cleanStory({ type: 'nonsense' }).type, 'SPOTLIGHT');
 });
