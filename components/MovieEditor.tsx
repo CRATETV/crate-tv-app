@@ -58,6 +58,7 @@ const emptyMovie: Movie = {
     isTestParty: false,
     watchPartyPrice: 5.00,
     isForSale: false,
+    isInviteOnly: false,
     salePrice: 5.00,
     isLiveStream: false,
     liveStreamEmbed: '',
@@ -953,6 +954,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <span className="text-[10px] font-black uppercase text-gray-300">VOD Paywall</span>
                                                 <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
                                             </div>
+                                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                                <span className="text-[10px] font-black uppercase text-gray-300">Invite only (needs a code)</span>
+                                                <input type="checkbox" name="isInviteOnly" checked={!!formData.isInviteOnly} onChange={e => setFormData((prev: any) => ({ ...prev, isInviteOnly: e.target.checked, ...(e.target.checked ? { isForSale: true } : {}) }))} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-600 focus:ring-purple-500" />
+                                            </div>
+                                            {formData.isInviteOnly && (
+                                                <p className="text-[9px] text-gray-500 font-bold px-2 leading-relaxed">Shows in the catalog but locked. Make codes in Promo Codes: a free gift code (cast and crew) or a 0% code (lets them pay the price above). Both must be linked to this film.</p>
+                                            )}
                                             {formData.isForSale && (
                                                 <div className="relative">
                                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>

@@ -14,7 +14,7 @@ import { getPwffBlocks } from './_lib/festivalTiming.js';
 import { escapeHtml } from './_lib/validation.js';
 import { saleAlertRecipients, shouldAlertSale, saleAlertSubject } from './_lib/saleAlert.js';
 import { ownerEmails } from './_lib/partnerEmails.js';
-import { promoProblem, priceAfterPromo, promoMakesFree, payWhatYouWantCents, PWYW_MIN_DOLLARS, PREMIERE_PRICES_CENTS, PREMIERE_LABELS, isPremierePayment } from './_lib/paymentRules.js';
+import { inviteOnlyProblem, promoProblem, priceAfterPromo, promoMakesFree, payWhatYouWantCents, PWYW_MIN_DOLLARS, PREMIERE_PRICES_CENTS, PREMIERE_LABELS, isPremierePayment } from './_lib/paymentRules.js';
 import { cleanLine } from './_lib/validation.js';
 import { blockAccessExpiry } from './_lib/watchPartyLifecycle.js';
 import { partnerIdFromPassItem, isOutsidePartner } from './_lib/partnerRules.js';
@@ -430,6 +430,12 @@ export async function POST(request: Request) {
             // never sell it (api/_lib/filmAvailability.ts).
             if (isPastAvailableUntil(movieData as any, Date.now())) {
                 return new Response(JSON.stringify({ error: 'This film is no longer available on CRATE.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
+            // Invite-only catalog film: needs a code made for this film (free for cast
+            // and crew, or a 0%-off code that allows buying at the normal price).
+            const inviteProblem = inviteOnlyProblem(movieData, promo, itemId);
+            if (inviteProblem) {
+                return new Response(JSON.stringify({ error: inviteProblem }), { status: 403, headers: { 'Content-Type': 'application/json' } });
             }
             // Code-only screening: the only way in is a free invite code made for
             // this film. No card sale, and no part-discount code (Oct 30 2026).
