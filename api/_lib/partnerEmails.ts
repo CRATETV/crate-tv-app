@@ -57,6 +57,15 @@ export function notifyOwnerPieceSubmitted(partnerName: string, title: string) {
          ${renderEmailButton('Read it in the Editorial tab', `${siteUrl()}/admin`)}`);
 }
 
+/** Tells the owner a team member just published a story, so a typo can be fixed quickly. */
+export function notifyOwnerStoryPublished(writerName: string, title: string, kindLabel: string, storyId: string) {
+    return send(ownerEmails(), `${writerName} published "${title}"`, 'A new story is live on The Unpack',
+        `<p style="font-size:14px;"><strong>${esc(writerName)}</strong> just published <em>${esc(title)}</em> on The Unpack (${esc(kindLabel)}).</p>
+         <p style="font-size:14px;color:#555;">It is live now. If you spot a typo, open it in the Editorial tab, fix it and save.</p>
+         ${renderEmailButton('Read it on The Unpack', `${siteUrl()}/zine/${storyId}`)}
+         ${renderEmailButton('Open the Editorial tab', `${siteUrl()}/admin`)}`);
+}
+
 export function notifyPartnerPiece(to: string[], partnerName: string, title: string, outcome: 'accepted' | 'changes' | 'live', note: string, storyId?: string) {
     const copy = {
         accepted: { subject: `Your piece "${title}" is in the editing queue`, heading: 'We loved it', body: `Thank you for writing for The Unpack. Your piece <strong>${esc(title)}</strong> is accepted. We will edit it lightly and publish it soon. You will get another email when it is live.` },
