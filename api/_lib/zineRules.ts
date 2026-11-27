@@ -37,6 +37,57 @@ export function storyWords(s: StoryLike): number {
 
 export const readingMinutes = (s: StoryLike) => Math.max(1, Math.ceil(storyWords(s) / 200));
 
+const stripTags = (t?: string) => (t || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * The one-line description shown when a story link is shared. Uses the
+ * summary under the headline; if there isn't one, the first paragraph.
+ * (Stories built from blocks have no plain `content`, so the old preview
+ * came up empty when the summary was left blank.)
+ */
+export function storyDescription(s: StoryLike, max = 160): string {
+    const firstText = (s.sections || []).find(sec => sec.type === 'text' && stripTags(sec.content));
+    const raw = stripTags(s.subtitle) || stripTags(firstText?.content) || stripTags(s.content);
+    return raw.length > max ? raw.slice(0, max - 1).trimEnd() + '\u2026' : raw;
+}
+
+/**
+ * The whole story as plain text, ready to paste into a Facebook / Instagram /
+ * LinkedIn post. Pictures and videos are left out (the post carries its own);
+ * a film block becomes a "watch it on Crate" line. Ends with the story link
+ * and a closing Crate line.
+ */
+export function storyToPlainText(
+    s: StoryLike & { author?: string },
+    link: string,
+    filmTitle: (key: string) => string | undefined = () => undefined,
+): string {
+    const parts: string[] = [];
+    if (s.title) parts.push(s.title.trim());
+    if (s.subtitle) parts.push(s.subtitle.trim());
+    if (s.author) parts.push(`By ${s.author.trim()}`);
+
+    const sections = s.sections || [];
+    if (sections.length) {
+        for (const sec of sections) {
+            const text = (sec.content || '').trim();
+            if (sec.type === 'text') { if (text) parts.push(text); }
+            else if (sec.type === 'header') { if (text) parts.push(text.toUpperCase()); }
+            else if (sec.type === 'quote') { if (text) parts.push(`\u201c${text}\u201d`); }
+            else if (sec.type === 'callout') { if (text) parts.push(sec.label ? `${sec.label}: ${text}` : text); }
+            else if (sec.type === 'film') {
+                const title = filmTitle(text);
+                if (title) parts.push(`If this resonates with you, watch ${title} on Crate TV.`);
+            }
+        }
+    } else if ((s.content || '').trim()) {
+        parts.push(s.content!.trim());
+    }
+
+    parts.push(`Read it and more stories on Crate TV: ${link}`);
+    return parts.join('\n\n');
+}
+
 export interface StoryCheck { errors: string[]; tips: string[]; }
 
 /** errors stop a story being published; tips are friendly nudges. */

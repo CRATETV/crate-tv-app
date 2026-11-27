@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { isPublishedStory } from './_lib/zineRules.js';
+import { isPublishedStory, storyDescription } from './_lib/zineRules.js';
 
 /**
  * SOCIAL SHARE PREVIEW FOR THE UNPACK
@@ -63,8 +63,7 @@ export async function GET(request: Request) {
 
         const story = doc.data() as any;
         const title = `${story.title || 'The Unpack'} | Crate TV`;
-        const rawDescription = story.subtitle || story.content || '';
-        const description = rawDescription.replace(/<[^>]+>/g, '').slice(0, 160);
+        const description = storyDescription(story);
         const image = story.heroImage || 'https://cratetv.net/og-image.png';
 
         const html = `<!DOCTYPE html>
@@ -80,6 +79,8 @@ export async function GET(request: Request) {
 <meta property="og:image:height" content="630" />
 <meta property="og:url" content="${escapeHtml(pageUrl)}" />
 <meta property="og:site_name" content="Crate TV" />
+${story.author ? `<meta property="article:author" content="${escapeHtml(story.author)}" />` : ''}
+<meta name="description" content="${escapeHtml(description)}" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="${escapeHtml(title)}" />
 <meta name="twitter:description" content="${escapeHtml(description)}" />
