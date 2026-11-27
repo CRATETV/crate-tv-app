@@ -3,6 +3,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
 import LoadingSpinner from './LoadingSpinner';
 import { MAIL_TEMPLATES, fillTemplate, bookingLink } from './mailTemplates';
+import { splitQuotedReply } from '../api/_lib/mailText';
 
 // One row in either folder. Messages from the website forms, film submissions and
 // real emails all end up in this same shape.
@@ -95,6 +96,8 @@ const StudioMail: React.FC = () => {
     const [subject, setSubject] = useState('');
     const [files, setFiles] = useState<File[]>([]);
     const fileInput = useRef<HTMLInputElement>(null);
+    const replyBox = useRef<HTMLTextAreaElement>(null);
+    const [showQuoted, setShowQuoted] = useState<string | null>(null); // id of the message whose earlier messages are open
 
     const fromAddress = settings.businessEmail || 'studio@cratetv.net';
     const adminKey = () => sessionStorage.getItem('adminPassword');
@@ -369,6 +372,12 @@ const StudioMail: React.FC = () => {
     };
 
     const showComposer = isNewCompose || (!!selected && selected.folder === 'in' && replying);
+    // When you press Reply, take you straight to the box and put the cursor in it.
+    useEffect(() => {
+        if (!showComposer) return;
+        const t = setTimeout(() => { replyBox.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); replyBox.current?.focus({ preventScroll: true }); }, 60);
+        return () => clearTimeout(t);
+    }, [showComposer, selected?.id]);
 
     return (
         <div className="flex flex-col h-[calc(100vh-280px)] min-h-[650px]">
@@ -510,7 +519,22 @@ const StudioMail: React.FC = () => {
                                 {selected && (
                                     <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
                                         {selected.text ? (
-                                            <p className="text-gray-100 whitespace-pre-wrap leading-relaxed text-base">{selected.text}</p>
+                                            (() => {
+                                                const { main, quoted } = splitQuotedReply(selected.text);
+                                                return (
+                                                    <>
+                                                        <p className="text-gray-100 whitespace-pre-wrap leading-relaxed text-base">{main}</p>
+                                                        {quoted && (
+                                                            <div className="mt-5">
+                                                                <button type="button" onClick={() => setShowQuoted(showQuoted === selected.id ? null : selected.id)} className="text-xs font-bold text-gray-400 hover:text-white border border-white/10 rounded-lg px-3 py-1.5">
+                                                                    {showQuoted === selected.id ? 'Hide earlier messages' : 'Show earlier messages'}
+                                                                </button>
+                                                                {showQuoted === selected.id && <p className="mt-3 text-gray-500 whitespace-pre-wrap leading-relaxed text-sm border-l-2 border-white/10 pl-4">{quoted}</p>}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()
                                         ) : body && body.id === selected.id && body.state === 'loading' ? (
                                             <p className="text-gray-400 text-sm">Loading the message…</p>
                                         ) : body && body.id === selected.id && body.state === 'failed' ? (
@@ -561,7 +585,7 @@ const StudioMail: React.FC = () => {
                                                 {isDrafting ? 'Writing…' : '✨ Help me write this'}
                                             </button>
                                         </div>
-                                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)} required placeholder="Write your message…" className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-gray-200 min-h-[220px] focus:border-red-600 focus:outline-none leading-relaxed text-sm" />
+                                        <textarea ref={replyBox} value={replyText} onChange={e => setReplyText(e.target.value)} required placeholder="Write your message…" className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-gray-200 min-h-[220px] focus:border-red-600 focus:outline-none leading-relaxed text-sm" />
 
                                         <div>
                                             <input ref={fileInput} type="file" multiple accept={ACCEPT} className="hidden" onChange={e => addFiles(e.target.files)} />
