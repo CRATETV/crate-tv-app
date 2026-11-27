@@ -3,7 +3,7 @@
 // types are called, which stories are visible, reading time, the "ready to
 // publish?" checklist, and how a festival partner's piece becomes a draft.
 
-export type StoryType = 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE' | 'FILM_FEATURE' | 'DIRECTORS_NOTES' | 'FESTIVAL_VOICES';
+export type StoryType = 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE' | 'FILM_FEATURE' | 'DIRECTORS_NOTES' | 'FESTIVAL_VOICES' | 'OPEN_PAGE';
 
 export const STORY_TYPE_LABELS: Record<StoryType, string> = {
     NEWS: 'News',
@@ -13,6 +13,7 @@ export const STORY_TYPE_LABELS: Record<StoryType, string> = {
     FILM_FEATURE: 'Film feature',
     DIRECTORS_NOTES: "Director's notes",
     FESTIVAL_VOICES: 'From the festivals',
+    OPEN_PAGE: 'Open Page',
 };
 
 export const typeLabel = (t?: string) => STORY_TYPE_LABELS[t as StoryType] || 'Story';
@@ -25,6 +26,16 @@ export interface StoryLike {
 
 /** Old stories have no status; they were published the moment they were saved. */
 export const isPublishedStory = (s: { status?: string } | null | undefined) => !!s && s.status !== 'draft';
+
+/**
+ * The cover story and the "Just unpacked" row come from Crate's own stories.
+ * Open Page stories (writers in their own words, on anything) keep to their
+ * own tab and row so they never take the cover. Stories are newest first.
+ */
+export function frontPageStories<T extends { type?: string }>(stories: T[]): { cover: T | undefined; latest: T[] } {
+    const house = stories.filter(s => s.type !== 'OPEN_PAGE');
+    return { cover: house[0], latest: house.slice(1, 4) };
+}
 
 const wordsIn = (t?: string) => (t || '').trim().split(/\s+/).filter(Boolean).length;
 

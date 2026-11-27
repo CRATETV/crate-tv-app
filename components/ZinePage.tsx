@@ -10,7 +10,7 @@ import { useFestival } from '../contexts/FestivalContext';
 import UnpackCountdown from './UnpackCountdown';
 import ZineArticleBody, { zineImg, SERIF } from './zine/ZineArticleBody';
 import CardImage from './zine/CardImage';
-import { isPublishedStory, readingMinutes, typeLabel } from '../api/_lib/zineRules';
+import { isPublishedStory, readingMinutes, typeLabel, frontPageStories } from '../api/_lib/zineRules';
 
 // THE UNPACK: Crate TV's magazine. Light "paper" look, serif headlines,
 // one cover story, a row of the latest, and shelves for the stories people
@@ -31,6 +31,7 @@ const SECTIONS: { id: EditorialStory['type']; label: string; blurb: string }[] =
     { id: 'FESTIVAL_VOICES', label: 'From the festivals', blurb: 'The people behind our partner festivals, writing about the films and why they do this.' },
     { id: 'NEWS', label: 'News', blurb: "What's happening on Crate." },
     { id: 'DEEP_DIVE', label: 'Deep dives', blurb: 'The long reads.' },
+    { id: 'OPEN_PAGE', label: 'Open Page', blurb: 'Writers in their own words, on whatever they want to write about.' },
 ];
 
 const Kicker: React.FC<{ story: EditorialStory }> = ({ story }) => (
@@ -120,8 +121,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         return () => window.removeEventListener('scroll', onScroll);
     }, [activeStory]);
 
-    const [cover, ...rest] = stories;
-    const latest = rest.slice(0, 3);
+    const { cover, latest } = useMemo(() => frontPageStories(stories), [stories]);
     const filtered = useMemo(() => activeFilter === 'ALL' ? stories : stories.filter(s => s.type === activeFilter), [stories, activeFilter]);
     const presentTypes = useMemo(() => new Set(stories.map(s => s.type)), [stories]);
     // If the chosen tab has no stories (say one was taken down), fall back to Home.
