@@ -10,11 +10,39 @@ interface CastButtonProps {
 
 // Google Cast Application ID — use the default media receiver for basic video playback
 const CAST_APP_ID = 'CC1AD845'; // Default Media Receiver
+/** How long the buttons stay on the film with no activity before they fade out. */
+const CAST_BUTTONS_HIDE_MS = 3500;
 
 const CastButton: React.FC<CastButtonProps & { children?: React.ReactNode }> = ({ videoElement, videoUrl, title, children }) => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [connectionState, setConnectionState] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [castType, setCastType] = useState<'chromecast' | 'airplay' | 'remote' | null>(null);
+
+  // The buttons sit on top of the film, so they fade out a few seconds after the last
+  // tap or mouse move while the film is playing, and come back on any activity or pause.
+  const [overlayVisible, setOverlayVisible] = useState(true);
+  useEffect(() => {
+    let timer: number | undefined;
+    const arm = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (!videoElement || videoElement.paused || videoElement.ended) return; // paused: keep them
+        setOverlayVisible(false);
+      }, CAST_BUTTONS_HIDE_MS);
+    };
+    const wake = () => { setOverlayVisible(true); arm(); };
+    const events = ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const;
+    events.forEach(e => window.addEventListener(e, wake, { passive: true }));
+    videoElement?.addEventListener('pause', wake);
+    videoElement?.addEventListener('play', arm);
+    arm();
+    return () => {
+      window.clearTimeout(timer);
+      events.forEach(e => window.removeEventListener(e, wake));
+      videoElement?.removeEventListener('pause', wake);
+      videoElement?.removeEventListener('play', arm);
+    };
+  }, [videoElement]);
 
   // ══════════════════════════════════════════════════════════════════════════
   // AIRPLAY (Safari/iOS)
@@ -255,7 +283,7 @@ const CastButton: React.FC<CastButtonProps & { children?: React.ReactNode }> = (
     : 'Cast to device';
 
   return (
-    <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
+    <div className={`absolute top-4 right-4 z-30 flex items-center gap-2 transition-opacity duration-500 ${overlayVisible || connectionState === 'connecting' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
     {children}
     {isAvailable && (
     <button

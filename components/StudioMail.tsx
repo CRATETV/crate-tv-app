@@ -210,6 +210,12 @@ const StudioMail: React.FC = () => {
     // A help request counts as "new" until you reply or mark it Solved, same as the sidebar badge.
     const isNew = useCallback((m: MailItem) => m.unread || (m.kind === 'HELP' && statusOf(m.id) === 'open'), [statusOf]);
     const unreadCount = useMemo(() => received.filter(isNew).length, [received, isNew]);
+    // Keep the sidebar badge in step with this list: it used to refresh only every 5 minutes
+    // or when you changed tabs, so it stayed lit after you had read or solved everything.
+    useEffect(() => {
+        if (isLoading) return;
+        window.dispatchEvent(new CustomEvent('crate-mail-unread', { detail: { count: unreadCount } }));
+    }, [unreadCount, isLoading]);
 
     const resetComposer = () => { setReplyText(''); setFiles([]); if (fileInput.current) fileInput.current.value = ''; };
 

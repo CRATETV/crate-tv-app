@@ -292,6 +292,15 @@ const AdminPage: React.FC = () => {
         return () => clearInterval(t);
     }, [isAuthenticated, refreshCounts]);
     useEffect(() => { if (isAuthenticated) refreshCounts(); }, [activeTab]);
+    // The inbox tells the sidebar its exact unread count whenever you read or solve a message.
+    useEffect(() => {
+        const onMail = (e: Event) => {
+            const n = Number((e as CustomEvent).detail?.count);
+            if (Number.isFinite(n)) setCounts(c => ({ ...c, email: n }));
+        };
+        window.addEventListener('crate-mail-unread', onMail);
+        return () => window.removeEventListener('crate-mail-unread', onMail);
+    }, []);
 
     // ── Film submissions: "NEW" badge, mark-as-seen, and background check ──
     const newSubmissionCount = useMemo(() => pipeline.filter(isNewSubmission).length, [pipeline]);
