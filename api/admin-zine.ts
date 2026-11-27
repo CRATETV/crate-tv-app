@@ -11,10 +11,10 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab, staffNameFor } from './_lib/adminAuth.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
-import { storyChecklist, pieceToDraftStory, sanitizePartnerPiece, isPublishedStory } from './_lib/zineRules.js';
-import { notifyPartnerPiece } from './_lib/partnerEmails.js';
+import { storyChecklist, pieceToDraftStory, sanitizePartnerPiece, isPublishedStory, typeLabel } from './_lib/zineRules.js';
+import { notifyPartnerPiece, notifyOwnerStoryPublished } from './_lib/partnerEmails.js';
 import { PARTNERS } from './_lib/partners.js';
 
 export const STORIES = 'editorial_stories';
@@ -103,6 +103,14 @@ export async function POST(request: Request) {
                 if (goingLive && existing.data()?.partnerId) {
                     notifyPartnerPiece(await partnerEmailsFor(db, existing.data()!.partnerId), existing.data()!.partnerName || '', story.title, 'live', '', id)
                         .catch(e => console.error('[admin-zine] partner email failed', e));
+                }
+                // A team member (not you) just made a story live: tell the owner, so a typo can be fixed fast.
+                // (Awaited, because a serverless function can stop right after it answers and drop the email.)
+                if (goingLive) {
+                    try {
+                        const who = await staffNameFor(body.password);
+                        if (who) await notifyOwnerStoryPublished(who, String(story.title || 'Untitled story'), typeLabel(String(story.type)), id);
+                    } catch (e) { console.error('[admin-zine] publish alert failed', e); }
                 }
                 return json({ success: true, id, status });
             }

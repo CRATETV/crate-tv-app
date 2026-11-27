@@ -117,3 +117,25 @@ export async function canUseTab(value: unknown, tabs: string[]): Promise<boolean
         return false;
     }
 }
+
+
+/**
+ * Who is this staff key? Returns null for the owner / master keys (that's you),
+ * and the team member's name (or email) for a collaborator key. Used to tell the
+ * owner "Aliya just published a story". Never throws.
+ */
+export async function staffNameFor(value: unknown): Promise<string | null> {
+    try {
+        if (await isMasterAdmin(value)) return null;
+        const password = await resolveAdminCredential(value);
+        if (!password.trim() || getInitializationError()) return 'A team member';
+        const db = getAdminDb();
+        if (!db) return 'A team member';
+        const snap = await db.collection('collaborator_access').where('accessKey', '==', password.trim()).limit(1).get();
+        if (snap.empty) return 'A team member';
+        const d = snap.docs[0].data();
+        return String(d.name || d.email || 'A team member');
+    } catch {
+        return 'A team member';
+    }
+}
