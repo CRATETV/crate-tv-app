@@ -4,6 +4,7 @@ import { useFestival } from '../contexts/FestivalContext';
 import LoadingSpinner from './LoadingSpinner';
 import { MAIL_TEMPLATES, fillTemplate, bookingLink } from './mailTemplates';
 import { splitQuotedReply } from '../api/_lib/mailText';
+import { tomorrowAt } from '../api/_lib/mailSchedule';
 
 // One row in either folder. Messages from the website forms, film submissions and
 // real emails all end up in this same shape.
@@ -21,6 +22,10 @@ interface MailItem {
     canOpenOriginal?: boolean;
     /** Set for premiere / festival request forms: the film (or festival) named in the request. */
     film?: string;
+    /** Timed emails: when it will go out, and where it stands. */
+    scheduledFor?: number;
+    sendStatus?: 'scheduled' | 'sending' | 'failed';
+    sendError?: string;
 }
 
 type MailStatus = 'open' | 'waiting' | 'solved';
@@ -60,6 +65,9 @@ const readAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
     r.readAsDataURL(file);
 });
 
+/** "Sat, Nov 28, 9:00 AM" in the person's own time zone. */
+const whenLabel = (ms: number) => new Date(ms).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
 const KIND_LABEL: Record<MailItem['kind'], string> = {
     EMAIL: 'Email', CONTACT: 'Contact form', INQUIRY: 'Talent inquiry', SUBMISSION: 'Film submission', HELP: 'Help request', SENT: 'Sent',
 };
@@ -92,6 +100,8 @@ const StudioMail: React.FC = () => {
     const [sigBusy, setSigBusy] = useState(false);
 
     const [replyText, setReplyText] = useState('');
+    const [showLater, setShowLater] = useState(false);
+    const [laterCustom, setLaterCustom] = useState('');
     const [recipient, setRecipient] = useState('');
     const [subject, setSubject] = useState('');
     const [files, setFiles] = useState<File[]>([]);
@@ -152,6 +162,8 @@ const StudioMail: React.FC = () => {
             (outbox.messages || []).forEach((m: any) => outgoing.push({
                 id: m.id, folder: 'out', kind: 'SENT', name: (m.to || [])[0] || '', email: (m.to || [])[0] || '', subject: m.subject || '(no subject)',
                 text: m.text || '', when: toMs(m.createdAt), unread: false, attachments: m.attachments || [],
+                scheduledFor: m.scheduledFor ? new Date(m.scheduledFor).getTime() : undefined,
+                sendStatus: m.status === 'scheduled' || m.status === 'sending' || m.status === 'failed' ? m.status : undefined, sendError: m.error || undefined,
             }));
             setMailboxNote('');
         } catch (e) {
@@ -258,19 +270,21 @@ const StudioMail: React.FC = () => {
         finally { setIsDrafting(false); }
     };
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSend = async (e?: React.FormEvent, sendAt?: Date) => {
+        e?.preventDefault();
+        if (sendAt && files.length) { setNotice({ ok: false, text: 'A timed email cannot carry attachments yet. Remove the file, or send it now.' }); return; }
+        setShowLater(false);
         setIsSending(true); setNotice(null);
         try {
             const attachments = await Promise.all(files.map(async f => ({ filename: f.name, content: await readAsBase64(f) })));
             const res = await fetch('/api/send-individual-email', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: adminKey(), email: recipient.trim(), subject, htmlBody: escapeHtml(replyText).replace(/\n/g, '<br/>'), attachments, signatureId: signatureId || 'none' }),
+                body: JSON.stringify({ password: adminKey(), email: recipient.trim(), subject, htmlBody: escapeHtml(replyText).replace(/\n/g, '<br/>'), attachments, signatureId: signatureId || 'none', scheduledAt: sendAt ? sendAt.toISOString() : undefined }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'The email did not send.');
             if (selected && selected.folder === 'in' && statusOf(selected.id) === 'open') setStatus(selected, 'waiting');
-            setNotice({ ok: true, text: `Sent to ${recipient.trim()}. A copy is in your Sent folder.` });
+            setNotice({ ok: true, text: sendAt ? `Scheduled for ${whenLabel(sendAt.getTime())}. It waits in your Sent folder, and you can delete it there to cancel.` : `Sent to ${recipient.trim()}. A copy is in your Sent folder.` });
             resetComposer(); setIsNewCompose(false); setSelected(null);
             await loadAll(); setFolder('out');
         } catch (err) {
@@ -466,6 +480,8 @@ const StudioMail: React.FC = () => {
                                 <p className="truncate text-xs text-gray-400">{m.subject}</p>
                                 <div className="flex items-center gap-2 mt-1.5">
                                     <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{KIND_LABEL[m.kind]}</span>
+                                    {m.sendStatus === 'scheduled' && m.scheduledFor && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-300 border-blue-500/30">Scheduled · {whenLabel(m.scheduledFor)}</span>}
+                                    {m.sendStatus === 'failed' && <span title={m.sendError} className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-500/10 text-red-300 border-red-500/30">Did not send</span>}
                                     {m.folder === 'in' && statusOf(m.id) !== 'open' && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLE[statusOf(m.id)]}`}>{STATUS_LABEL[statusOf(m.id)]}</span>}
                                     {m.attachments.length > 0 && <span className="text-[10px] text-gray-500">📎 {m.attachments.length}</span>}
                                 </div>
@@ -616,6 +632,27 @@ const StudioMail: React.FC = () => {
                                     </label>
                                     <div className="flex gap-3">
                                         <button type="button" onClick={() => { if (isNewCompose) { setSelected(null); setIsNewCompose(false); } setReplying(false); resetComposer(); }} className="px-5 py-3 text-xs font-bold text-gray-500 hover:text-white">Discard</button>
+                                        <div className="relative">
+                                            <button type="button" disabled={isSending || !replyText || !recipient} onClick={() => setShowLater(v => !v)} className="px-5 py-3 text-xs font-bold text-gray-300 hover:text-white border border-white/10 rounded-xl disabled:opacity-30">
+                                                Send later ▾
+                                            </button>
+                                            {showLater && (
+                                                <div className="absolute bottom-full right-0 mb-2 w-72 bg-[#161616] border border-white/10 rounded-2xl p-4 shadow-2xl z-20">
+                                                    <p className="text-[11px] text-gray-500 mb-3">Goes out at the time you pick (your time zone). It stays in Sent until then.</p>
+                                                    <div className="flex flex-col gap-2 mb-3">
+                                                        {[8, 9, 10].map(h => (
+                                                            <button key={h} type="button" onClick={() => handleSend(undefined, tomorrowAt(new Date(), h))} className="text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-gray-200">
+                                                                Tomorrow at {h}:00 AM
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <input type="datetime-local" value={laterCustom} onChange={e => setLaterCustom(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 mb-2" />
+                                                    <button type="button" disabled={!laterCustom} onClick={() => handleSend(undefined, new Date(laterCustom))} className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-30 text-white font-black py-2 rounded-lg text-xs uppercase tracking-widest">
+                                                        Schedule it
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                         <button type="submit" disabled={isSending || !replyText || !recipient} className="bg-red-600 hover:bg-red-700 disabled:opacity-30 text-white font-black px-8 py-3 rounded-xl text-xs uppercase tracking-widest">
                                             {isSending ? 'Sending…' : 'Send email'}
                                         </button>

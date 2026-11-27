@@ -1,18 +1,9 @@
-import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 import { isMasterAdmin } from './_lib/adminAuth.js';
-import { MAIL_COLLECTION, SIGNATURES_DOC, prepareAttachments, replyToAddress, buildSentRecord, stripHtml, normalizeSignatures, renderSignatureHtml } from './_lib/mailLog.js';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FALLBACK_FROM = 'studio@cratetv.net';
-// This is the dark header bar (#0a0a0a below), so it needs the white/light
-// logo (logo-tagline.png), not crate-logo-email.png — that one is dark text,
-// meant for a light background, and would be nearly invisible here. Also
-// worth knowing: crate-logo-email.png didn't even exist in production until
-// now (a confirmed 404), so this file's logo has never actually rendered for
-// anyone before this fix.
-const LOGO_URL = 'https://cratetv.net/email-logo-on-dark.png';
+import { MAIL_COLLECTION, SIGNATURES_DOC, prepareAttachments, stripHtml, normalizeSignatures } from './_lib/mailLog.js';
+import { deliverEmail } from './_lib/mailSend.js';
+import { checkSendTime, buildScheduledRecord } from './_lib/mailSchedule.js';
 
 export async function POST(request: Request) {
     try {
@@ -52,31 +43,15 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ error: 'Recipient, subject, and body are required.' }), { status: 400 });
         }
 
-        // 3. Fetch professional identity and signature from settings
-        const settingsDoc = await db.collection('content').doc('settings').get();
-        const settingsData = settingsDoc.exists ? settingsDoc.data() : {};
-        
-        const businessEmail = settingsData?.businessEmail || FALLBACK_FROM;
-        // A signature picked in Studio Mail ('none' = no signature). Callers that
-        // don't pick one keep the old behavior: the single site-wide signature.
-        const legacySignature = settingsData?.emailSignature || "";
-        let signatureHtml = '';
-        let signaturePlain = '';
-        if (typeof signatureId === 'string' && signatureId) {
-            if (signatureId !== 'none') {
-                const sigDoc = await db.doc(SIGNATURES_DOC).get();
-                const chosen = normalizeSignatures(sigDoc.data()?.list).find(s => s.id === signatureId);
-                if (!chosen) {
-                    return new Response(JSON.stringify({ error: 'That signature no longer exists. Pick another one.' }), { status: 400 });
-                }
-                if (chosen.ownerOnly && !(await isMasterAdmin(__raw_password))) {
-                    return new Response(JSON.stringify({ error: 'That signature is for the owner only.' }), { status: 403 });
-                }
-                signatureHtml = renderSignatureHtml(chosen);
-                signaturePlain = chosen.text;
+        // A signature picked in Studio Mail must still exist, and owner-only ones are the owner's.
+        if (typeof signatureId === 'string' && signatureId && signatureId !== 'none') {
+            const sigDoc = await db.doc(SIGNATURES_DOC).get();
+            const chosen = normalizeSignatures(sigDoc.data()?.list).find(sg => sg.id === signatureId);
+            if (!chosen) return new Response(JSON.stringify({ error: 'That signature no longer exists. Pick another one.' }), { status: 400 });
+            if (chosen.ownerOnly && !(await isMasterAdmin(__raw_password))) {
+                return new Response(JSON.stringify({ error: 'That signature is for the owner only.' }), { status: 403 });
             }
         }
-        const signature = signatureId ? '' : legacySignature;
 
         // Files (receipts and so on) are checked before anything is sent.
         const prepared = prepareAttachments(attachments);
@@ -85,141 +60,24 @@ export async function POST(request: Request) {
         }
         const files = prepared.files;
 
-        // 4. Handle Scheduling Logic
+        // 4. Timed send: keep it in the Sent folder as "Scheduled"; api/send-scheduled-mail.ts sends it.
         if (scheduledAt) {
             if (files.length) {
-                return new Response(JSON.stringify({ error: 'Scheduled emails cannot carry attachments yet. Send it now, or remove the file.' }), { status: 400 });
+                return new Response(JSON.stringify({ error: 'A timed email cannot carry attachments yet. Send it now, or remove the file.' }), { status: 400 });
             }
-            await db.collection('scheduled_dispatches').add({
-                email,
-                subject,
-                htmlBody,
-                scheduledAt: new Date(scheduledAt),
-                status: 'pending',
-                createdAt: new Date(),
-                movieTitle,
-                posterUrl,
-                synopsis,
-                movieKey
-            });
-            return new Response(JSON.stringify({ success: true, message: 'Transmission scheduled for future dispatch.' }), { status: 200 });
-        }
-
-        // 5. Content Preparation
-        const plainText = htmlBody.replace(/<[^>]+>/g, '').trim() + (signaturePlain ? `\n\n--\n${signaturePlain}` : '');
-
-        // 6. Execute Transmission via Resend
-        const { data: sent, error } = await resend.emails.send({
-            from: `Crate TV <${businessEmail}>`,
-            to: [email],
-            subject: subject,
-            // Replies go to the dashboard mailbox when it has been set up (MAIL_INBOUND_ADDRESS).
-            reply_to: replyToAddress({ MAIL_INBOUND_ADDRESS: process.env.MAIL_INBOUND_ADDRESS }, businessEmail),
-            text: plainText,
-            attachments: files.length ? files.map(f => ({ filename: f.filename, content: f.content })) : undefined,
-            html: `
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <meta name="color-scheme" content="light dark">
-                    <meta name="supported-color-schemes" content="light dark">
-                    <title>${subject}</title>
-                </head>
-                <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f4f4" style="background-color: #f4f4f4;">
-                        <tr>
-                            <td align="center" style="padding: 40px 20px;">
-                                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#ffffff" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
-
-                                    <!-- Dark Header Bar with Logo -->
-                                    <tr>
-                                        <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 32px 40px;">
-                                            <a href="https://cratetv.net" target="_blank">
-                                                <img src="${LOGO_URL}" alt="Crate TV" width="130" style="display: block; border: 0;">
-                                            </a>
-                                        </td>
-                                    </tr>
-
-                                    <!-- Red accent line -->
-                                    <tr>
-                                        <td bgcolor="#ef4444" style="background-color: #ef4444; height: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>
-                                    </tr>
-
-                                    <!-- Core Content -->
-                                    <tr>
-                                        <td style="padding: 40px 40px 32px; background-color: #ffffff;" bgcolor="#ffffff">
-                                            <div style="font-size: 16px; line-height: 1.8; color: #1a1a1a;">
-                                                ${htmlBody}
-                                            </div>
-
-                                            ${posterUrl ? `
-                                            <!-- Film Block -->
-                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5;">
-                                                <tr>
-                                                    <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a;">
-                                                        <img src="${posterUrl}" alt="${movieTitle}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block;">
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 32px 40px;">
-                                                        <p style="font-size: 10px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 4px; margin: 0 0 12px 0;">Official Selection</p>
-                                                        <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; line-height: 1.1;">${movieTitle}</h3>
-                                                        <p style="color: #999999; font-size: 14px; margin: 0 0 28px 0; font-style: italic; line-height: 1.6;">
-                                                            ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 180) + '...' : ''}
-                                                        </p>
-                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #ef4444; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 10px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
-                                                            ▶ Stream Now
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                            </table>
-                                            ` : ''}
-
-                                            ${signatureHtml ? `
-                                            <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e5e5; color: #555555; font-size: 14px; line-height: 1.7;">
-                                                ${signatureHtml}
-                                            </div>
-                                            ` : ''}
-
-                                            ${signature ? `
-                                            <div style="margin-top: 40px; padding-top: 32px; border-top: 1px solid #e5e5e5; color: #555555; font-size: 14px; font-style: italic; white-space: pre-wrap; line-height: 1.7;">
-                                                ${signature}
-                                            </div>
-                                            ` : ''}
-                                        </td>
-                                    </tr>
-
-                                    <!-- Footer -->
-                                    <tr>
-                                        <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 28px 40px;">
-                                            <p style="font-size: 10px; color: #666666; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; margin: 0 0 8px 0;">Independent film, streaming worldwide</p>
-                                            <p style="font-size: 9px; color: #444444; margin: 0;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA // NYC.</p>
-                                        </td>
-                                    </tr>
-
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </body>
-                </html>
-            `,
-        });
-
-        if (error) throw new Error(`Resend Cloud Error: ${error.message}`);
-
-        // Keep a copy in the dashboard Sent folder. If saving the copy fails the
-        // email has still gone out, so this never turns into an error.
-        try {
-            await db.collection(MAIL_COLLECTION).add(buildSentRecord({
-                resendId: sent?.id, fromEmail: businessEmail, to: email, subject,
-                text: stripHtml(htmlBody.replace(/<br\s*\/?>/gi, '\n')), files, movieTitle, nowIso: new Date().toISOString(),
+            const when = checkSendTime(scheduledAt, Date.now());
+            if (!when.ok) return new Response(JSON.stringify({ error: when.error }), { status: 400 });
+            const settingsDoc = await db.collection('content').doc('settings').get();
+            const fromEmail = settingsDoc.data()?.businessEmail || 'studio@cratetv.net';
+            await db.collection(MAIL_COLLECTION).add(buildScheduledRecord({
+                fromEmail, to: email, subject, htmlBody, text: stripHtml(String(htmlBody).replace(/<br\s*\/?>/gi, '\n')),
+                signatureId: typeof signatureId === 'string' ? signatureId : '', movieTitle, posterUrl, synopsis, movieKey,
+                sendAtMs: when.ms, nowIso: new Date().toISOString(),
             }));
-        } catch (logErr) {
-            console.error('[Crate API] Sent copy not saved:', logErr);
+            return new Response(JSON.stringify({ success: true, scheduledFor: new Date(when.ms).toISOString() }), { status: 200 });
         }
+
+        await deliverEmail(db, { email, subject, htmlBody, signatureId, movieTitle, posterUrl, synopsis, movieKey, files });
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
 

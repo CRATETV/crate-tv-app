@@ -21,6 +21,10 @@
       "schedule": "0 */2 * * *"
     },
     {
+      "path": "/api/send-scheduled-mail",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/video-jobs-cron",
       "schedule": "*/10 * * * *"
     },
