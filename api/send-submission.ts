@@ -3,7 +3,7 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { renderBrandedEmail } from './_lib/emailBranding.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { escapeHtml, cleanText, cleanLine, isValidEmail, safeHttpUrl } from './_lib/validation.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         // SECURITY: this endpoint writes to the pipeline and emails the team, and its only
         // callers are admin screens (Submissions tab manual entry, Archive Scout). It used
         // to be open to anyone on the internet.
-        if (!(await verifyAdminPassword(password))) {
+        if (!(await canUseTab(password, ['submissions']))) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 

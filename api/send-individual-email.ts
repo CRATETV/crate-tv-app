@@ -1,6 +1,6 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
-import { isMasterAdmin } from './_lib/adminAuth.js';
+import { isMasterAdmin, canUseTab } from './_lib/adminAuth.js';
 import { MAIL_COLLECTION, SIGNATURES_DOC, prepareAttachments, stripHtml, normalizeSignatures } from './_lib/mailLog.js';
 import { deliverEmail } from './_lib/mailSend.js';
 import { checkSendTime, buildScheduledRecord } from './_lib/mailSchedule.js';
@@ -16,27 +16,9 @@ export async function POST(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error("Database terminal offline.");
 
-        // 2. Comprehensive Authentication Check
-        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-        
-        let isAuthenticated = (primaryAdminPassword && password === primaryAdminPassword) || 
-                              (masterPassword && password === masterPassword);
-
-        // If not a primary admin, check if it's a valid collaborator key
-        if (!isAuthenticated) {
-            const collabSnap = await db.collection('collaborator_access')
-                .where('accessKey', '==', password)
-                .limit(1)
-                .get();
-            
-            if (!collabSnap.empty) {
-                isAuthenticated = true;
-            }
-        }
-
-        if (!isAuthenticated) {
-            return new Response(JSON.stringify({ error: 'Unauthorized: Admin or Collaborator key required.' }), { status: 401 });
+        // 2. Only staff who were given a tab that sends email: Email, Users or Ticket codes.
+        if (!(await canUseTab(__raw_password, ['email', 'users', 'ticketCodes']))) {
+            return new Response(JSON.stringify({ error: 'Unauthorized: your access does not include sending email.' }), { status: 401 });
         }
 
         if (!email || !subject || !htmlBody) {

@@ -1,3 +1,4 @@
+import { canUseTab } from './_lib/adminAuth.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { logServerError } from './_lib/logError.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
@@ -8,14 +9,8 @@ import { resolveAdminCredential } from './_lib/adminSession.js';
 // firestore.rules (falls to the deny-all catch-all) same as generation did
 // before its fix. This routes both through the Admin SDK instead.
 
-async function isAuthenticated(db: FirebaseFirestore.Firestore, password: string): Promise<boolean> {
-    const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-    const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-    if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
-        return true;
-    }
-    const collabSnap = await db.collection('collaborator_access').where('accessKey', '==', password).limit(1).get();
-    return !collabSnap.empty;
+async function isAuthenticated(_db: FirebaseFirestore.Firestore, password: string): Promise<boolean> {
+    return canUseTab(password, ['ticketCodes']);
 }
 
 export async function GET(request: Request) {

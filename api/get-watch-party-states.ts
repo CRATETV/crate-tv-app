@@ -1,3 +1,4 @@
+import { canUseTab } from './_lib/adminAuth.js';
 // api/get-watch-party-states.ts
 //
 // Server-side counterpart to WatchPartyManager.tsx's live status needs.
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
         // key too, same as start-watch-party.ts already does.
         if (!isAuthenticated) {
             const collabSnap = await db.collection('collaborator_access').where('accessKey', '==', password).limit(1).get();
-            if (!collabSnap.empty) isAuthenticated = true;
+            if (!collabSnap.empty && await canUseTab(__raw_password, ['watchParty'])) isAuthenticated = true;
         }
 
         if (!isAuthenticated) {

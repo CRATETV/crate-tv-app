@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     // Any valid admin key may moderate chat — the two main passwords, ADMIN_PASSWORD_*
     // keys and collaborator keys. This used to accept only the first two, so anyone
     // signed in with another kind of key got "Invalid admin password" on every delete.
-    if (!(await verifyAdminPassword(adminPassword))) {
+    if (!(await canUseTab(adminPassword, ['watchParty']))) {
       return json({ error: 'Invalid admin password.' }, 401);
     }
     if (!SAFE_ID.test(String(movieKey)) || !SAFE_ID.test(String(messageId))) {
