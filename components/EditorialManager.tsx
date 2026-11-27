@@ -4,7 +4,7 @@ import LoadingSpinner from './LoadingSpinner';
 import S3Uploader from './S3Uploader';
 import ZineArticleBody, { zineImg, SERIF } from './zine/ZineArticleBody';
 import { STORY_TEMPLATES, BLANK_TEMPLATE, SERIES_IDEAS, sectionsFromTemplate, newSectionId, templateById, StoryTemplate } from './zine/templates';
-import { STORY_TYPE_LABELS, storyChecklist, readingMinutes, storyWords, isPublishedStory, typeLabel, PartnerPiece } from '../api/_lib/zineRules';
+import { STORY_TYPE_LABELS, storyChecklist, readingMinutes, storyWords, isPublishedStory, typeLabel, storyToPlainText, PartnerPiece } from '../api/_lib/zineRules';
 
 // EDITORIAL: where you write The Unpack (the zine). Pick a template, fill in the
 // blocks, check the "ready to publish?" list, and publish. Drafts are private.
@@ -46,6 +46,7 @@ async function callZine<T = any>(action: string, payload: Record<string, unknown
 }
 
 const EditorialManager: React.FC<Props> = ({ allMovies }) => {
+    const [copiedFb, setCopiedFb] = useState(false);
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [loading, setLoading] = useState(true);
@@ -283,6 +284,12 @@ const EditorialManager: React.FC<Props> = ({ allMovies }) => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {isLive && <a href={`/zine/${form.id}`} target="_blank" rel="noreferrer" className={`${btn} bg-white/5 border border-white/10 text-gray-200`}>View live ↗</a>}
+                    {isLive && (
+                        <button className={`${btn} bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10`} onClick={async () => {
+                            const text = storyToPlainText(form, `${window.location.origin}/zine/${form.id}`, key => allMovies[key]?.title);
+                            try { await navigator.clipboard.writeText(text); setCopiedFb(true); setTimeout(() => setCopiedFb(false), 2500); } catch { setMsg({ ok: false, text: 'Your browser blocked copying. Try again.' }); }
+                        }}>{copiedFb ? 'Copied. Paste it in your post' : 'Copy full story for Facebook'}</button>
+                    )}
                     <button disabled={busy} className={`${btn} bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10`} onClick={() => save()}>{busy ? 'Saving…' : isLive ? 'Save changes' : 'Save draft'}</button>
                     {isLive
                         ? <button disabled={busy} className={`${btn} bg-white/5 border border-white/10 text-gray-300`} onClick={unpublish}>Take down</button>
