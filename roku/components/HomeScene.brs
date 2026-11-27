@@ -163,6 +163,25 @@ Sub OnFeedLoaded()
         Return
     End If
 
+    ' Remember every film by its key BEFORE the rows are handed to the row list below.
+    ' Send to TV (a film opened from the phone) looks films up in this index: the saved
+    ' feed can lose rows once they are shown, so a film you can see in a row was
+    ' "not available on Roku yet" when sent from the phone.
+    filmIndex = {}
+    For ri = 0 To m.feedData.GetChildCount() - 1
+        indexRow = m.feedData.GetChild(ri)
+        If indexRow <> Invalid
+            For fi = 0 To indexRow.GetChildCount() - 1
+                indexFilm = indexRow.GetChild(fi)
+                If indexFilm <> Invalid And indexFilm.HasField("movieKey")
+                    indexKey = LCase(indexFilm.movieKey)
+                    If indexKey <> "" And Not filmIndex.DoesExist(indexKey) Then filmIndex[indexKey] = indexFilm
+                End If
+            End For
+        End If
+    End For
+    m.top.filmIndex = filmIndex
+
     ' Let MainScene cache the untouched feed (used by other tabs).
     m.top.feedDataReady = m.feedData
 

@@ -67,6 +67,7 @@ Sub Init()
     m.currentSceneNode = Invalid
     m.focusZone = "content"
     m.cachedFeedData = Invalid
+    m.filmIndex = Invalid
     m.searchScene = Invalid
     m.homeScene = Invalid
     m.appLaunchFired = false
@@ -440,6 +441,10 @@ Sub OnHomeFeedReady()
         If fd <> Invalid
             m.cachedFeedData = fd
             Print "CrateTV: Cached feed from Home (" + Str(fd.GetChildCount()) + " rows)"
+        End If
+        If m.homeScene.HasField("filmIndex")
+            idx = m.homeScene.filmIndex
+            If idx <> Invalid Then m.filmIndex = idx
         End If
     End If
 
@@ -962,6 +967,11 @@ Sub OnSendToTvChecked()
 End Sub
 
 Function FindFilmInCache(key as String) as Object
+    ' First the index Home built before it moved the rows (every film by key).
+    If m.filmIndex <> Invalid And key <> ""
+        found = m.filmIndex[LCase(key)]
+        If found <> Invalid Then Return found
+    End If
     feed = m.cachedFeedData
     If feed = Invalid Or key = "" Then Return Invalid
     For i = 0 To feed.GetChildCount() - 1
