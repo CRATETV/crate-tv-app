@@ -10,7 +10,7 @@ import { useFestival } from '../contexts/FestivalContext';
 import UnpackCountdown from './UnpackCountdown';
 import ZineArticleBody, { zineImg, SERIF } from './zine/ZineArticleBody';
 import CardImage from './zine/CardImage';
-import { isPublishedStory, readingMinutes, typeLabel, storyToPlainText } from '../api/_lib/zineRules';
+import { isPublishedStory, readingMinutes, typeLabel } from '../api/_lib/zineRules';
 
 // THE UNPACK: Crate TV's magazine. Light "paper" look, serif headlines,
 // one cover story, a row of the latest, and shelves for the stories people
@@ -173,16 +173,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         } catch { /* cancelled or blocked: nothing to do */ }
     };
 
-    const [copiedText, setCopiedText] = useState(false);
-    const copyForSocial = async () => {
-        if (!activeStory) return;
-        const text = storyToPlainText(activeStory, window.location.href, key => (movies as Record<string, Movie>)[key]?.title);
-        try {
-            await navigator.clipboard.writeText(text);
-            setCopiedText(true); setTimeout(() => setCopiedText(false), 2500);
-        } catch { /* blocked: nothing to do */ }
-    };
-
     if (isLoading) return <LoadingSpinner />;
 
     const month = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -318,10 +308,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                             <div className="mt-16 pt-8 border-t-2 border-zinc-900 flex flex-wrap items-center justify-between gap-4">
                                 <p className="text-sm text-zinc-600">{activeStory.partnerName ? <>Written for The Unpack by <strong className="text-zinc-900">{activeStory.author}</strong> of {activeStory.partnerName}.</> : <>Written by <strong className="text-zinc-900">{activeStory.author}</strong>.</>}</p>
-                                <div className="flex flex-wrap gap-3">
-                                    <button onClick={copyForSocial} className="border-2 border-zinc-900 text-zinc-900 hover:bg-zinc-900 hover:text-white font-black uppercase tracking-widest text-xs px-6 py-3 rounded-full transition-colors">{copiedText ? 'Copied. Paste it in your post' : 'Copy full story for Facebook'}</button>
-                                    <button onClick={shareStory} className="bg-zinc-900 hover:bg-red-600 text-white font-black uppercase tracking-widest text-xs px-6 py-3 rounded-full transition-colors">{copied ? 'Link copied' : 'Share this story'}</button>
-                                </div>
+                                <button onClick={shareStory} className="bg-zinc-900 hover:bg-red-600 text-white font-black uppercase tracking-widest text-xs px-6 py-3 rounded-full transition-colors">{copied ? 'Link copied' : 'Share this story'}</button>
                             </div>
                             <p className="mt-8 text-sm text-zinc-600">More stories on <a href="/zine" onClick={e => { e.preventDefault(); openStory(null); }} className="font-black text-zinc-900 underline decoration-red-600 underline-offset-4 hover:text-red-600">Crate TV</a>.</p>
                         </article>
