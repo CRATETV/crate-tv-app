@@ -15,6 +15,7 @@
 //   helpRequests → the newest Festival Help reports, shown in Received next to emails
 //   getSignatures / saveSignatures → the signatures you can pick when writing (saving: owner only)
 
+import { countOpenHelp } from './_lib/mailBadge.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { verifyAdminPassword, isMasterAdmin, canUseTab } from './_lib/adminAuth.js';
 import { MAIL_COLLECTION, SIGNATURES_DOC, normalizeSignatures, visibleSignatures, INQUIRY_MAIL_PREFIX, buildInquiryRecord, inboundBodyText, explainReceiveFailure } from './_lib/mailLog.js';
@@ -113,12 +114,12 @@ export async function POST(request: Request) {
                 // reply (marks it Waiting) or mark it Solved.
                 let openHelp = 0;
                 try {
-                    const [helpSnap, statusSnap] = await Promise.all([
+                    const [helpSnap, statusSnap, hiddenSnap] = await Promise.all([
                         db.collection('help_requests').orderBy('createdAt', 'desc').limit(100).get(),
                         db.collection(STATUS_COLLECTION).get(),
+                        db.collection(HIDDEN_COLLECTION).get(),
                     ]);
-                    const handled = new Set(statusSnap.docs.map(d => d.id));
-                    openHelp = helpSnap.docs.filter(d => !handled.has(`help_${d.id}`)).length;
+                    openHelp = countOpenHelp(helpSnap.docs.map(d => d.id), statusSnap.docs.map(d => d.id), hiddenSnap.docs.map(d => d.id));
                 } catch (e) { console.error('[admin-mail] open help count failed', e); }
                 return json({ count: unreadEmails + openHelp });
             }
