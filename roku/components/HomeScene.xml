@@ -39,6 +39,7 @@
         <field id="directPlay"        type="boolean" value="false" />        <!-- true when playContent must skip the Title page -->
         <field id="exitRequested"     type="boolean" value="false" alwaysNotify="true" />  <!-- up/back -> header menu -->
         <field id="feedDataReady"     type="node"    alwaysNotify="true" />  <!-- feed loaded (MainScene caches it) -->
+        <field id="filmIndex"         type="assocarray" />                     <!-- every film by key, built before rows are moved (Send to TV looks films up here) -->
         <!-- MainScene sets these -->
         <field id="deepLinkContentId" type="string"  value="" />
         <field id="feedData"          type="node" />                         <!-- cached feed from a previous visit -->

@@ -67,6 +67,7 @@ Sub Init()
     m.currentSceneNode = Invalid
     m.focusZone = "content"
     m.cachedFeedData = Invalid
+    m.filmIndex = Invalid
     m.searchScene = Invalid
     m.homeScene = Invalid
     m.appLaunchFired = false
@@ -441,6 +442,10 @@ Sub OnHomeFeedReady()
             m.cachedFeedData = fd
             Print "CrateTV: Cached feed from Home (" + Str(fd.GetChildCount()) + " rows)"
         End If
+        If m.homeScene.HasField("filmIndex")
+            idx = m.homeScene.filmIndex
+            If idx <> Invalid Then m.filmIndex = idx
+        End If
     End If
 
     ' Extract the spotlight film from Now Streaming row for the nav scene
@@ -479,7 +484,7 @@ Sub OnHomeFeedReady()
     If m.partyPollTimer <> Invalid Then m.partyPollTimer.control = "start"
     CheckForLiveWatchParty()           ' immediate first check
 
-    ' "Send to TV" from the website: check every 10 s (linked Rokus only)
+    ' "Send to TV" from the website: check every 5 s (linked Rokus only)
     StartSendToTvChecks()
 
 End Sub
@@ -915,7 +920,7 @@ End Function
 ' =============================================================================
 ' A viewer taps "Send to TV" on a film page on cratetv.net. The website leaves
 ' a note for the Roku linked to their account (api/send-to-tv.ts). Every
-' 10 seconds, while the channel is open and linked, we ask for it. When one
+' 5 seconds, while the channel is open and linked, we ask for it. When one
 ' arrives we leave whatever is on screen (stopping any video), open the
 ' film's page, and start playing if the viewer can watch it. A short note
 ' "Sent from your phone" appears at the top.
@@ -923,7 +928,7 @@ Sub StartSendToTvChecks()
     If Not IsDeviceLinked() Then Return
     If m.sendTimer = Invalid
         m.sendTimer = m.top.CreateChild("Timer")
-        m.sendTimer.duration = 10
+        m.sendTimer.duration = 5
         m.sendTimer.repeat = true
         m.sendTimer.ObserveField("fire", "CheckSendToTv")
     End If
@@ -962,6 +967,11 @@ Sub OnSendToTvChecked()
 End Sub
 
 Function FindFilmInCache(key as String) as Object
+    ' First the index Home built before it moved the rows (every film by key).
+    If m.filmIndex <> Invalid And key <> ""
+        found = m.filmIndex[LCase(key)]
+        If found <> Invalid Then Return found
+    End If
     feed = m.cachedFeedData
     If feed = Invalid Or key = "" Then Return Invalid
     For i = 0 To feed.GetChildCount() - 1
