@@ -85,6 +85,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const isPwyw = paymentType === 'watchPartyTicket' && movie?.isWatchPartyPaid === true && movie?.watchPartyPayWhatYouWant === true;
     // Private screening: no price and no card. Only an invite code (a free code made for this film).
     const isPrivate = paymentType === 'watchPartyTicket' && movie?.isPrivateScreening === true;
+    // Invite-only catalog film: a code is required first (free for cast and crew, or it lets the person pay).
+    const isInvite = paymentType === 'movie' && movie?.isInviteOnly === true;
     const [pwywAmount, setPwywAmount] = useState<string>(String(PWYW_SUGGESTED[1] ?? PWYW_MIN_DOLLARS));
     const [pwywOther, setPwywOther] = useState(false);
     // A free code (cast and crew) skips the amount: nothing is being paid.
@@ -246,7 +248,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
         try {
             let sourceId = 'PROMO_VOUCHER';
-            if (isPrivate && !promoCode.trim()) throw new Error('Please enter your invite code.');
+            if ((isPrivate || isInvite) && !promoCode.trim()) throw new Error('Please enter your invite code.');
             
             if (!isFree && !isPrivate) {
                 if (!cardRef.current) throw new Error("Payment node offline.");
@@ -476,11 +478,11 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
                             {!['donation', 'billSavingsDeposit', 'premiereBooking', 'premiereBalance'].includes(paymentType) && (
                                 <div className="space-y-3">
-                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{isPrivate ? 'Invite code' : 'Promotion Logic'}</p>
+                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{(isPrivate || isInvite) ? 'Invite code' : 'Promotion Logic'}</p>
                                     <div className="flex gap-2">
                                         <input 
                                             type="text" 
-                                            placeholder={isPrivate ? "Enter your invite code" : "Voucher Code"} 
+                                            placeholder={(isPrivate || isInvite) ? "Enter your invite code" : "Voucher Code"} 
                                             value={promoCode} 
                                             onChange={e => setPromoCode(e.target.value.toUpperCase())}
                                             className="flex-grow bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-mono tracking-widest text-white outline-none focus:border-red-600"
@@ -508,7 +510,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
 
                             <button 
                                 type="submit" 
-                                disabled={(isLoading && !isPrivate) || isProcessing || !pwywValid || (isPrivate && !promoCode.trim())}
+                                disabled={(isLoading && !isPrivate) || isProcessing || !pwywValid || (isPrivate && !promoCode.trim()) || (isInvite && !appliedPromo)}
                                 className={`w-full ${(isFree || isPrivate) ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3`}
                             >
                                 {isProcessing ? (

@@ -196,6 +196,8 @@ export interface Movie {
   watchPartyPayWhatYouWant?: boolean;
   /** Code-only screening: nobody gets in without a ticket from a free invite code. */
   isPrivateScreening?: boolean;
+  /** Catalog film that shows in the library but needs an invite code to watch (free code) or to buy (pay code). Not a watch party. */
+  isInviteOnly?: boolean;
   /** When its last watch party premiered (kept after the party ends; drives "Just Premiered"). */
   lastPremiereAt?: string;
   isForSale?: boolean;

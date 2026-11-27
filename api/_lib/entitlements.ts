@@ -115,7 +115,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
             if (isBlockUnlocked(parentBlock.id)) granted = true;
             else if (parentBlock.price === 0) granted = true;
             else granted = isRented(movieKey);
-        } else if (!movieData.isForSale && !movieData.isWatchPartyPaid && movieData.isPrivateScreening !== true) {
+        } else if (!movieData.isForSale && !movieData.isInviteOnly && !movieData.isWatchPartyPaid && movieData.isPrivateScreening !== true) {
             // Genuinely free content — safe to grant regardless of whether it's
             // specifically flagged watch-party-enabled, matching MoviePage.tsx's own
             // equivalent free-check (!movie.isForSale). Using isForSale here rather
@@ -162,7 +162,7 @@ export async function resolveMovieAccess(db: Firestore, { uid, deviceId, movieKe
         } else if (status === 'ended' && isRented(movieKey)) {
             granted = true;
         }
-    } else if (!movieData.isForSale) {
+    } else if (!movieData.isForSale && !movieData.isInviteOnly) {
         // A paid watch party film used to be free here: it isn't "for sale",
         // so opening its regular film page played it without a ticket
         // (found Oct 23 2026). Now it needs the party ticket or a rental.

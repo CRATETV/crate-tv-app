@@ -164,7 +164,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       return false;
     }
 
-    if (!movie.isForSale) {
+    if (!movie.isForSale && !movie.isInviteOnly) {
       // A paid watch party film needs the party ticket (or a rental) here too;
       // it used to play for free from this page (Oct 23 2026).
       if (!movie.isWatchPartyPaid) return true;
@@ -1039,11 +1039,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
                              <SafePoster src={movie.poster} title={movie.title} className="w-32 aspect-[2/3] object-cover rounded-lg shadow-xl opacity-50" />
                              <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
-                             <p className="text-gray-400 max-w-md">{isPaidPartyOnly ? 'This film is shown as a paid watch party.' : 'This selection requires a rental to stream.'}</p>
+                             <p className="text-gray-400 max-w-md">{isPaidPartyOnly ? 'This film is shown as a paid watch party.' : movie.isInviteOnly ? 'This film is invite only. If you have an invite code, enter it to watch.' : 'This selection requires a rental to stream.'}</p>
                              {isPaidPartyOnly ? (
                                <button onClick={() => { window.history.pushState({}, '', `/watchparty/${movieKey}`); window.dispatchEvent(new Event('pushstate')); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Get a watch party ticket</button>
                              ) : (
-                               <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">Unlock Selection // ${displayPrice}</button>
+                               <button onClick={() => setIsPurchaseModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest">{movie.isInviteOnly ? 'Enter invite code' : `Unlock Selection // $${displayPrice}`}</button>
                              )}
                              <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>

@@ -459,8 +459,8 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                             <div className="grid grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
                                 {type === 'discount' && (
                                     <div>
-                                        <label className="form-label">Discount %</label>
-                                        <input type="number" value={discountValue} onChange={e => setDiscountValue(parseInt(e.target.value))} className="form-input !bg-black/40" />
+                                        <label className="form-label">Discount % <span className="text-gray-500 normal-case">(0 = unlocks an invite-only film at full price)</span></label>
+                                        <input type="number" value={discountValue} onChange={e => setDiscountValue(Number.isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))} className="form-input !bg-black/40" min="0" max="100" />
                                     </div>
                                 )}
                                 <div className={type === 'one_time_access' ? 'col-span-2' : ''}>

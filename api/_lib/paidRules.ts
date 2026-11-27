@@ -29,9 +29,9 @@ export function paidFestivalFilmKeys(festivalData: unknown): Set<string> {
     return keys;
 }
 
-export function isFreeForEveryone(movie: { key?: string; isForSale?: boolean; isWatchPartyPaid?: boolean } | null | undefined, paidKeys: Set<string>): boolean {
+export function isFreeForEveryone(movie: { key?: string; isForSale?: boolean; isWatchPartyPaid?: boolean; isInviteOnly?: boolean } | null | undefined, paidKeys: Set<string>): boolean {
     if (!movie) return false;
-    if (movie.isForSale === true || movie.isWatchPartyPaid === true) return false;
+    if (movie.isForSale === true || movie.isWatchPartyPaid === true || movie.isInviteOnly === true) return false;
     if (movie.key && paidKeys.has(movie.key)) return false;
     return true;
 }

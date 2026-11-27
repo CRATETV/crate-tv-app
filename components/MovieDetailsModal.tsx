@@ -60,10 +60,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return new Date(expiration) > new Date();
   }, [rentals, movie.key]);
 
-  const needsPurchase = movie.isForSale && !isRented;
+  const needsPurchase = (movie.isForSale || movie.isInviteOnly) && !isRented;
 
   const canCollectDonations = useMemo(() => {
-    return movie.isSupportEnabled !== false && !movie.isForSale;
+    return movie.isSupportEnabled !== false && !movie.isForSale && !movie.isInviteOnly;
   }, [movie]);
 
   useEffect(() => {

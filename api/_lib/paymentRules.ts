@@ -15,6 +15,18 @@ export function promoProblem(promo: any, itemId: unknown, nowMs: number = Date.n
     return null;
 }
 
+/**
+ * Invite-only catalog film: it shows in the library, but nobody can rent it
+ * without a code made for THIS film. A free code (cast and crew) makes it free;
+ * a 0%-off code lets someone buy it at the normal price. Pure, tested.
+ */
+export function inviteOnlyProblem(movie: any, promo: any, itemId: unknown): string | null {
+    if (movie?.isInviteOnly !== true) return null;
+    if (!promo) return 'This film is invite only. Enter your invite code to unlock it.';
+    if (!promo.itemId || promo.itemId !== itemId) return "That code isn't for this film.";
+    return null;
+}
+
 /** Price after a promo code, never below $0 or above the original. Pure, tested. */
 export function priceAfterPromo(amountInCents: number, promo: any): number {
     if (promo?.type === 'one_time_access') return 0;

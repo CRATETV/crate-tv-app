@@ -269,7 +269,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           {willBeFreeSoon && !isActuallyComingSoon && <span className="bg-indigo-600 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">To Catalog</span>}
           {isLeavingSoon  && !isActuallyComingSoon && <span className="bg-amber-600  text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">Leaving Soon</span>}
           {isNew          && !isActuallyComingSoon && <span className="bg-red-600    text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">NEW</span>}
-          {(movie.isForSale || movie.isWatchPartyPaid) && <span className="bg-amber-700 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">PREMIER</span>}
+          {movie.isInviteOnly ? <span className="bg-purple-700 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">🔒 INVITE ONLY</span> : (movie.isForSale || movie.isWatchPartyPaid) && <span className="bg-amber-700 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">PREMIER</span>}
           {movie.isSeries && movie.episodes && movie.episodes.length > 0 && <span className="bg-purple-700 text-[8px] font-black px-2 py-1 rounded text-white uppercase tracking-widest">Series · {movie.episodes.length} EP</span>}
         </div>
 
