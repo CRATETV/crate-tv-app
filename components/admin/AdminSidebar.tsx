@@ -17,9 +17,13 @@ interface Props {
     canLogoutOtherDevices?: boolean;
     onLogoutOtherDevices?: () => void;
     deviceLogoutMsg?: string;
+    /** Staff only: use their own Crate account (and its password) to sign in next time. */
+    canLinkAccount?: boolean;
+    onLinkAccount?: () => void;
+    linkMsg?: string;
 }
 
-const AdminSidebar: React.FC<Props> = ({ allowedTabs, activeTab, onNavigate, badges, operatorName, jobTitle, onLogout, canLogoutOtherDevices, onLogoutOtherDevices, deviceLogoutMsg }) => {
+const AdminSidebar: React.FC<Props> = ({ allowedTabs, activeTab, onNavigate, badges, operatorName, jobTitle, onLogout, canLogoutOtherDevices, onLogoutOtherDevices, deviceLogoutMsg, canLinkAccount, onLinkAccount, linkMsg }) => {
     const [query, setQuery] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -145,6 +149,15 @@ const AdminSidebar: React.FC<Props> = ({ allowedTabs, activeTab, onNavigate, bad
                         title="Signs this account out everywhere except this device"
                     >
                         {deviceLogoutMsg || 'Log out other devices'}
+                    </button>
+                )}
+                {canLinkAccount && (
+                    <button
+                        onClick={onLinkAccount}
+                        className="mt-1 w-full text-left text-[11px] font-semibold text-[#8A8A96] hover:text-white px-1 py-1 rounded-lg hover:bg-white/5"
+                        title="Sign in with your own Crate password next time, instead of the team code"
+                    >
+                        {linkMsg || 'Use my own password to sign in'}
                     </button>
                 )}
             </div>

@@ -1,7 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logServerError } from './_lib/logError.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { finalizeEndedParty } from './_lib/watchPartyLifecycle.js';
 import { setBackstageKey } from './_lib/backstage.js';
 
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const { movieKey, password } = await request.json();
 
-    if (!(await verifyAdminPassword(password))) {
+    if (!(await canUseTab(password, ['watchParty']))) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
     if (!movieKey) {

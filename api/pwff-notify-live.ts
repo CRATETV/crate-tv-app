@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { getAdminDb } from './_lib/firebaseAdmin.js';
-import { isValidAdminKey } from './_lib/adminAuth.js';
+import { isValidAdminKey, canUseTab } from './_lib/adminAuth.js';
 import { renderBrandedEmail, renderEmailButton } from './_lib/emailBranding.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
         // at all, and the link + banner image come from the request body — so
         // anyone could blast a phishing email to your audience from Crate's
         // own address. Admin key required, and links must point at Crate.
-        if (!(await isValidAdminKey(password, db))) {
+        if (!(await canUseTab(password, ['pwff']))) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
         const isCrateUrl = (u: unknown) => typeof u === 'string' && /^https:\/\/(www\.)?cratetv\.net(\/|$)/i.test(u);

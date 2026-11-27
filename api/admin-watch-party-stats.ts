@@ -10,7 +10,7 @@
 // The pure logic lives in api/_lib/controlRoom.ts (tested).
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword, isMasterAdmin } from './_lib/adminAuth.js';
+import { verifyAdminPassword, isMasterAdmin, canUseTab } from './_lib/adminAuth.js';
 import { computeWatchPartyStats } from './_lib/watchPartyStats.js';
 import { cleanLine } from './_lib/validation.js';
 import { summarizeSales, splitSales, findDroppedViewers, PIN_MAX_LENGTH } from './_lib/controlRoom.js';
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         const body = await request.json().catch(() => ({}));
         const { blockId, password } = body;
         const action = typeof body.action === 'string' ? body.action : 'stats';
-        if (!(await verifyAdminPassword(password))) return json({ error: 'Unauthorized' }, 401);
+        if (!(await canUseTab(password, ['watchParty', 'earnings']))) return json({ error: 'Unauthorized' }, 401);
         if (!blockId || typeof blockId !== 'string' || blockId.length > 200 || blockId.includes('/')) return json({ error: 'Missing blockId' }, 400);
 
         const initError = getInitializationError();

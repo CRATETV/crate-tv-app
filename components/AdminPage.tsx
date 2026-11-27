@@ -515,6 +515,31 @@ const AdminPage: React.FC = () => {
         }
     };
 
+    // Staff who signed in with a team code can link their own Crate account, so next time they
+    // sign in with their own Crate password instead of the code.
+    const [linkMsg, setLinkMsg] = useState('');
+    const handleLinkAccount = async () => {
+        const token = sessionStorage.getItem('adminPassword');
+        if (!token) return;
+        if (!crateUser?.email) { window.location.href = '/login?redirect=/admin'; return; }
+        setLinkMsg('Working…');
+        try {
+            const idToken = await getUserIdToken();
+            const res = await fetch('/api/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: token, action: 'link-account', idToken }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Could not link your account.');
+            setLinkMsg(`Done. Next time choose "Continue as ${data.email}".`);
+        } catch (e) {
+            setLinkMsg(e instanceof Error ? e.message : 'Something went wrong.');
+        } finally {
+            setTimeout(() => setLinkMsg(''), 8000);
+        }
+    };
+
     const handleSaveData = async (type: string, dataToSave: any) => {
         setIsSaving(true);
         const pass = sessionStorage.getItem('adminPassword');
@@ -639,6 +664,9 @@ const AdminPage: React.FC = () => {
             canLogoutOtherDevices={role.startsWith('collaborator:')}
             onLogoutOtherDevices={handleLogoutOtherDevices}
             deviceLogoutMsg={deviceLogoutMsg}
+            canLinkAccount={role.startsWith('collaborator:')}
+            onLinkAccount={handleLinkAccount}
+            linkMsg={linkMsg}
         />
     );
 

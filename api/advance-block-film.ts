@@ -1,6 +1,6 @@
 import { getAdminDb } from './_lib/firebaseAdmin.js';
 import { logServerError } from './_lib/logError.js';
-import { verifyAdminPassword } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab } from './_lib/adminAuth.js';
 import { tryAdvanceBlock } from './_lib/watchPartyLifecycle.js';
 
 // Moves a live festival block to its next film.
@@ -29,7 +29,7 @@ export async function POST(request: Request): Promise<Response> {
 
         let isForced = false;
         if (force === true) {
-            if (!(await verifyAdminPassword(adminPassword))) return json({ error: 'Unauthorized' }, 401);
+            if (!(await canUseTab(adminPassword, ['watchParty']))) return json({ error: 'Unauthorized' }, 401);
             isForced = true;
         }
 

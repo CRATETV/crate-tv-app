@@ -86,6 +86,48 @@ export async function POST(request: Request) {
             });
         }
 
+        // "Use my own Crate account to sign in" for staff. A team member who got in with a
+        // code proves their Crate account (verified email) and that email is saved on their
+        // staff record. From then on they sign in with their own Crate password and never need
+        // the code. Only for a currently-valid staff pass, and only for that person's own record.
+        if (action === 'link-account') {
+            const session = verifyAdminSession(__raw_password);
+            if (!session || !session.sub.startsWith('collab:')) {
+                return new Response(JSON.stringify({ success: false, error: 'Sign in with your team code first.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            const initError = getInitializationError();
+            const db = !initError ? getAdminDb() : null;
+            const auth = getAdminAuth();
+            if (!db || !auth) throw new Error('Database terminal offline.');
+            let email = '';
+            try {
+                const decoded = await auth.verifyIdToken(String(idToken || ''));
+                if (!decoded.email || decoded.email_verified === false) {
+                    return new Response(JSON.stringify({ success: false, error: 'Verify your email address on your Crate account first.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+                }
+                email = decoded.email.toLowerCase();
+            } catch {
+                return new Response(JSON.stringify({ success: false, error: 'Your Crate sign-in expired. Sign in again.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            const docId = session.sub.slice('collab:'.length);
+            const ref = db.collection('collaborator_access').doc(docId);
+            const doc = await ref.get();
+            const docData = doc.data();
+            if (!doc.exists || !docData || docData.status === 'revoked') {
+                return new Response(JSON.stringify({ success: false, error: 'This access has been revoked.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (docData.sessionNonce && session.nonce !== docData.sessionNonce) {
+                return new Response(JSON.stringify({ success: false, error: 'This session was already replaced by a newer sign-in.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
+            const owners = (process.env.ADMIN_OWNER_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+            const taken = await db.collection('collaborator_access').where('email', '==', email).get();
+            if (owners.includes(email) || taken.docs.some(d => d.id !== docId)) {
+                return new Response(JSON.stringify({ success: false, error: 'That Crate account is already used for something else. Try a different one.' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+            }
+            await ref.set({ email }, { merge: true });
+            return new Response(JSON.stringify({ success: true, email }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;

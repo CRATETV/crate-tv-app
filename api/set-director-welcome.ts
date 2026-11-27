@@ -1,3 +1,4 @@
+import { canUseTab } from './_lib/adminAuth.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { resolveAdminCredential } from './_lib/adminSession.js';
 
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
         const db = getAdminDb();
         if (db) {
             const collabSnap = await db.collection('collaborator_access').where('accessKey', '==', password).limit(1).get();
-            if (!collabSnap.empty) isAuthenticated = true;
+            if (!collabSnap.empty && await canUseTab(__raw_password, ['watchParty'])) isAuthenticated = true;
         }
     }
 

@@ -1,3 +1,4 @@
+import { canUseTab } from './_lib/adminAuth.js';
 import { randomBytes } from 'crypto';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { logServerError } from './_lib/logError.js';
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
             isAuthenticated = true;
         } else {
             const collabSnap = await db.collection('collaborator_access').where('accessKey', '==', password).limit(1).get();
-            if (!collabSnap.empty) isAuthenticated = true;
+            if (!collabSnap.empty && await canUseTab(__raw_password, ['ticketCodes'])) isAuthenticated = true;
         }
         if (!isAuthenticated) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
