@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isPublishedStory, readingMinutes, storyWords, storyChecklist, sanitizePartnerPiece, pieceToDraftStory, typeLabel } from '../api/_lib/zineRules.js';
+import { isPublishedStory, readingMinutes, storyWords, storyChecklist, sanitizePartnerPiece, pieceToDraftStory, typeLabel, storyDescription, storyToPlainText } from '../api/_lib/zineRules.js';
 
 const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
 
@@ -73,4 +73,39 @@ test('an approved piece becomes a draft story: first photo is the cover, rest sp
     assert.equal(imgs.length, 1);
     assert.equal(imgs[0].caption, 'The crowd');
     assert.equal(new Set(story.sections.map(s => s.id)).size, story.sections.length);
+});
+
+test('share preview falls back to the first paragraph when there is no summary', () => {
+    assert.equal(storyDescription({ subtitle: 'A short summary', sections: [{ type: 'text', content: 'Body' }] }), 'A short summary');
+    assert.equal(storyDescription({ subtitle: '', sections: [{ type: 'image', content: 'x.jpg' }, { type: 'text', content: '<p>First  paragraph</p>' }] }), 'First paragraph');
+    assert.equal(storyDescription({ content: 'Old style story' }), 'Old style story');
+    assert.equal(storyDescription({}), '');
+    const long = storyDescription({ subtitle: 'a'.repeat(300) });
+    assert.equal(long.length, 160);
+    assert.ok(long.endsWith('\u2026'));
+});
+test('the copy-for-Facebook text holds the whole story, the film line and the Crate link', () => {
+    const text = storyToPlainText({
+        title: 'How We Love', subtitle: 'On showing up', author: 'Aliya, love story writer',
+        sections: [
+            { type: 'text', content: 'First paragraph.' },
+            { type: 'image', content: 'https://x/y.jpg' },
+            { type: 'header', content: 'Rising' },
+            { type: 'quote', content: 'We rise.' },
+            { type: 'film', content: 'film-1' },
+        ],
+    }, 'https://cratetv.net/zine/abc', k => (k === 'film-1' ? 'You Don\'t Know My Name' : undefined));
+    assert.ok(text.startsWith('How We Love\n\nOn showing up\n\nBy Aliya, love story writer'));
+    assert.ok(text.includes('First paragraph.'));
+    assert.ok(!text.includes('y.jpg'));
+    assert.ok(text.includes('RISING'));
+    assert.ok(text.includes('\u201cWe rise.\u201d'));
+    assert.ok(text.includes("If this resonates with you, watch You Don't Know My Name on Crate TV."));
+    assert.ok(text.trim().endsWith('Read it and more stories on Crate TV: https://cratetv.net/zine/abc'));
+});
+test('a film block for a film that is gone is skipped, and old stories still copy', () => {
+    const gone = storyToPlainText({ title: 'T', sections: [{ type: 'film', content: 'nope' }] }, 'https://l');
+    assert.ok(!gone.includes('watch'));
+    const old = storyToPlainText({ title: 'T', content: 'Old body' }, 'https://l');
+    assert.ok(old.includes('Old body'));
 });
