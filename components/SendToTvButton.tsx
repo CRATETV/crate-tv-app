@@ -1,7 +1,7 @@
 // "Send to TV": opens this film on the viewer's own linked Roku.
 // Shown on the film page to signed-in viewers. The server (api/send-to-tv.ts)
 // finds the Roku linked to their account; the Crate TV channel picks it up
-// within about 10 seconds while it's open.
+// within about 5 seconds while it's open.
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';

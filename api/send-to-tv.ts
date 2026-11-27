@@ -5,7 +5,7 @@
 //      POST { idToken, movieKey, episode? } → we look up the Roku linked to
 //      THEIR account (users/{uid}.rokuDeviceId, set when they linked it) and
 //      leave a note for it in roku_commands/{deviceId}.
-//   2. The Crate TV Roku channel, while open and linked, asks every 10 seconds:
+//   2. The Crate TV Roku channel, while open and linked, asks every 5 seconds:
 //      GET ?deviceId=… → returns the note once (then deletes it) if it's less
 //      than 2 minutes old. The Roku opens the film's page and starts playing
 //      (if the viewer has access; otherwise the page shows how to unlock it).
