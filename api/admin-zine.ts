@@ -11,7 +11,8 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { verifyAdminPassword, canUseTab, staffNameFor } from './_lib/adminAuth.js';
+import { verifyAdminPassword, canUseTab, staffNameFor, isMasterAdmin } from './_lib/adminAuth.js';
+import { STATS_COLLECTION, lastSevenDays } from './_lib/zineStats.js';
 import { assembleAndSyncMasterData } from './publish-data.js';
 import { storyChecklist, pieceToDraftStory, sanitizePartnerPiece, isPublishedStory, typeLabel } from './_lib/zineRules.js';
 import { notifyPartnerPiece, notifyOwnerStoryPublished } from './_lib/partnerEmails.js';
@@ -73,6 +74,20 @@ export async function POST(request: Request) {
                     return { id: d.id, ...data, status: data.status === 'draft' ? 'draft' : 'published' };
                 });
                 return json({ stories });
+            }
+
+            // How many people read each story. OWNER ONLY, so a writer never sees (or is
+            // discouraged by) her own or anyone else's numbers.
+            case 'stats': {
+                if (!(await isMasterAdmin(body?.password))) return json({ error: 'Only the owner can see read counts.' }, 403);
+                const snap = await db.collection(STATS_COLLECTION).get();
+                const now = new Date();
+                const stats: Record<string, { views: number; last7: number }> = {};
+                snap.docs.forEach(d => {
+                    const v: any = d.data();
+                    stats[d.id] = { views: Number(v.views) || 0, last7: lastSevenDays(v.days, now) };
+                });
+                return json({ stats });
             }
 
             case 'saveStory': {

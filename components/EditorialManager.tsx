@@ -59,6 +59,8 @@ const EditorialManager: React.FC<Props> = ({ allMovies }) => {
     const [showGuide, setShowGuide] = useState(false);
     const [openSub, setOpenSub] = useState<string | null>(null);
     const [returnNote, setReturnNote] = useState('');
+    // Read counts: the server only sends these to the owner, so writers never get them.
+    const [reads, setReads] = useState<Record<string, { views: number; last7: number }> | null>(null);
 
     const load = useCallback(async () => {
         try {
@@ -69,6 +71,7 @@ const EditorialManager: React.FC<Props> = ({ allMovies }) => {
         finally { setLoading(false); }
     }, []);
     useEffect(() => { load(); }, [load]);
+    useEffect(() => { callZine<{ stats: Record<string, { views: number; last7: number }> }>('stats').then(r => setReads(r.stats)).catch(() => setReads(null)); }, []);
 
     useEffect(() => {
         if (!dirty) return;
@@ -262,6 +265,7 @@ const EditorialManager: React.FC<Props> = ({ allMovies }) => {
                                         <p className="font-bold text-white truncate">{s.title || 'Untitled story'}</p>
                                         <p className="text-xs text-gray-500 mt-0.5">{typeLabel(s.type)} · {s.author || 'no byline'} · {readingMinutes(s)} min read{dateOf(s) ? ` · ${dateOf(s)!.toLocaleDateString()}` : ''}</p>
                                     </div>
+                                    {reads && isPublishedStory(s) && <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap">{(reads[s.id]?.views || 0).toLocaleString()} reads · {(reads[s.id]?.last7 || 0).toLocaleString()} this week</span>}
                                     {s.partnerName && <span className="text-[10px] font-black uppercase tracking-widest bg-indigo-500/20 text-indigo-300 rounded-full px-3 py-1">{s.partnerName}</span>}
                                 </button>
                             ))}

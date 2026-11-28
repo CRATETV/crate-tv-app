@@ -107,6 +107,23 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     }, [storyId, stories]);
 
     // Reading progress bar on a story.
+    // Count a read once the visitor has stayed a few seconds. Once per browser per story per day,
+    // and never for staff browsing while signed in to the admin panel.
+    useEffect(() => {
+        const id = activeStory?.id;
+        if (!id) return;
+        try { if (sessionStorage.getItem('adminPassword')) return; } catch { /* ignore */ }
+        const key = `zine-read:${id}`;
+        const today = new Date().toISOString().slice(0, 10);
+        try { if (localStorage.getItem(key) === today) return; } catch { /* ignore */ }
+        const t = setTimeout(() => {
+            fetch('/api/zine-view', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+                .then(r => { if (r.ok) { try { localStorage.setItem(key, today); } catch { /* ignore */ } } })
+                .catch(() => {});
+        }, 8000);
+        return () => clearTimeout(t);
+    }, [activeStory?.id]);
+
     useEffect(() => {
         if (!activeStory) { setProgress(0); return; }
         const onScroll = () => {
